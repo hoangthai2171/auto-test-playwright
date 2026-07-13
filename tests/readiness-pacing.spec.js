@@ -1,3 +1,5 @@
+const fs = require("fs");
+const path = require("path");
 const {test, expect} = require("playwright/test");
 const api = require("./lib");
 const helpers = require("./lib/mytv-helpers");
@@ -58,6 +60,35 @@ test("compatibility barrel exposes the shared readiness and pacing API", () => {
   expect(helpers.waitForFocusState).toBe(api.waitForFocusState);
   expect(helpers.waitForContentVisible).toBe(api.waitForContentVisible);
   expect(helpers.waitForPlayerReady).toBe(api.waitForPlayerReady);
+});
+
+test("profile-to-home workflow contract removes the PERF-02 delay", () => {
+  const source = fs.readFileSync(path.join(__dirname, "lib", "workflows.js"), "utf8");
+  const functionStart = source.indexOf("async function chooseFirstProfileAndEnterHome");
+  const functionEnd = source.indexOf("async function closeHomePopupsAndVerifyHome");
+  const profileFlow = source.slice(functionStart, functionEnd);
+  const activationStart = profileFlow.indexOf("await activateVerifiedTarget");
+  const readinessStart = profileFlow.indexOf("await waitForHomeReady(page, testInfo)");
+  const activation = profileFlow.slice(activationStart, readinessStart);
+
+  expect(functionStart).toBeGreaterThanOrEqual(0);
+  expect(functionEnd).toBeGreaterThan(functionStart);
+  expect(activation).toEqual(expect.stringContaining("testInfo"));
+  expect(activation).toEqual(expect.stringContaining('name: "profile-selection"'));
+  expect(activation).toEqual(expect.stringContaining('contractName: "contentItem"'));
+  expect(activation).toEqual(expect.stringContaining('expectedId: "item_0"'));
+  expect(profileFlow).not.toMatch(/delay\s*:\s*10000/);
+  expect(readinessStart).toBeGreaterThan(activationStart);
+
+  const nonProfileSource = source.slice(0, functionStart) + source.slice(functionEnd);
+  const nonProfileDelays = [...nonProfileSource.matchAll(/delay\s*:\s*(\d+)/g)]
+    .map((match) => Number(match[1]));
+  expect(nonProfileDelays).toEqual([
+    2000, 2000, 1500, 2000, 5000,
+    3000, 3000, 3000, 2000, 3000,
+    2500, 3000, 6000, 6000, 6000,
+    6000, 2500, 2500, 2500,
+  ]);
 });
 
 test("app-open readiness accepts login, welcome, and authenticated-home markers", async ({page}) => {
