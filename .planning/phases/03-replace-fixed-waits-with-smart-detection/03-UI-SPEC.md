@@ -1,7 +1,8 @@
 ---
 phase: 3
 slug: replace-fixed-waits-with-smart-detection
-status: draft
+status: approved
+reviewed_at: 2026-07-13T00:00:00+07:00
 shadcn_initialized: false
 preset: none
 created: 2026-07-13
@@ -20,7 +21,7 @@ This is a diagnostics and interaction contract, not a consumer-facing redesign. 
 | Tool | none |
 | Preset | not applicable |
 | Component library | none — vanilla HTML/CSS/JS Electron renderer |
-| Icon library | none — retain existing text controls and `×` close affordance |
+| Icon library | none — retain existing text controls and visible `×` close affordances; add accessible `Close Logs` / `Close Settings` text labels |
 | Font | Existing `Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif` stack |
 
 Source: existing `app/renderer/index.html`, `app/renderer/renderer.js`, and `app/renderer/styles.css`. No `components.json`, React stack, or shadcn registry is present.
@@ -36,6 +37,10 @@ Only these UI-facing surfaces are in scope:
 
 Do not add timing environment variables, a consumer-facing timing-settings screen, a progress dashboard, a new preview overlay, or Phase 4 DOM-scanning controls. Smart waits are surfaced through concise logs and bounded report artifacts.
 
+## Visual Hierarchy
+
+Primary focal point: the live/interactive browser preview in the workspace, where the TV app state is observed. Establish hierarchy in this order: preview first, status bar second as the immediate run-state cue, sidebar controls third for test configuration/actions, and Logs/report actions fourth as secondary diagnostics. Smart-wait feedback must support the preview and status bar without obscuring either.
+
 ## Spacing Scale
 
 Declared values (must be multiples of 4):
@@ -50,7 +55,7 @@ Declared values (must be multiples of 4):
 | 2xl | 48px | Major section breaks |
 | 3xl | 64px | Page-level spacing |
 
-Exceptions: retain existing renderer dimensions where changing them would be unrelated to Phase 3: 48px toolbar height, 54px status-bar height, 42px preview toolbar height, 40px form/button controls, 56px modal headers, 6px control radius, and existing 10–28px local paddings/gaps. No new spacing values are needed for smart-wait feedback.
+Exceptions: none. Preserve existing renderer-only dimensions that are unrelated to Phase 3 without introducing them as new spacing tokens; no new spacing values are needed for smart-wait feedback.
 
 ## Typography
 
@@ -61,7 +66,7 @@ Exceptions: retain existing renderer dimensions where changing them would be unr
 | Heading | 18px | 700 | 1.2 |
 | Display | 24px | 700 | 1.2 |
 
-Use the existing 12px monospace treatment for diagnostic log output as a utility-surface exception; do not introduce another general UI type scale. Keep the contract to the existing two weights: 400 and 700.
+Use the existing monospace treatment for diagnostic log output as a utility-surface implementation detail; it is not a declared contract font size and must not expand the general UI type scale. Keep the contract to the existing two weights: 400 and 700.
 
 ## Color
 
@@ -110,6 +115,8 @@ Do not claim `Ready` or `Playing` before the corresponding predicate is true. Do
 | Browser preview | No screenshot yet / preview disabled | Retain the current empty copy and `Preview is disabled.` behavior. |
 | Run/Stop controls | Test active | Disable form inputs and `Run Test`; enable `Stop`. Preserve current keyboard/mouse behavior of the Electron controls. |
 
+Modal close affordances: retain the visible `×`, and provide an accessible text label for each control (`Close Logs` and `Close Settings`) via an accessible name plus visually hidden text fallback. The label must remain available to assistive technology even if the symbol is not announced.
+
 The TV app itself remains a remote-navigation surface: use Arrow keys, Enter, Backspace, and Escape as already implemented. The phase may reduce navigation-loop and virtual-keyboard pacing to the configured 100ms floor, but must not visually or behaviorally convert TV actions into mouse clicks.
 
 ## Diagnostics Contract
@@ -145,11 +152,11 @@ Playback polling must show the final `hasVideo`, `isProbablyPlaying`, popup/erro
 
 ## Checker Sign-Off
 
-- [ ] Dimension 1 Copywriting: PASS
-- [ ] Dimension 2 Visuals: PASS
-- [ ] Dimension 3 Color: PASS
-- [ ] Dimension 4 Typography: PASS
-- [ ] Dimension 5 Spacing: PASS
-- [ ] Dimension 6 Registry Safety: PASS
+- [x] Dimension 1 Copywriting: PASS
+- [x] Dimension 2 Visuals: PASS
+- [x] Dimension 3 Color: PASS
+- [x] Dimension 4 Typography: PASS
+- [x] Dimension 5 Spacing: PASS
+- [x] Dimension 6 Registry Safety: PASS
 
-**Approval:** pending
+**Approval:** approved
