@@ -472,9 +472,10 @@ async function submitSearchFromVirtualKeyboard(page, testInfo) {
   await page.waitForTimeout(2000);
 }
 
-async function waitForAppReady(page, testInfo) {
+async function waitForAppReady(page, testInfo, waitOptions = {}) {
   await page.waitForLoadState("domcontentloaded");
   return waitForFocusState(page, {
+    ...waitOptions,
     name: "app-ready",
     testInfo,
     getFocusedState: observeAppReadyState,
@@ -483,8 +484,9 @@ async function waitForAppReady(page, testInfo) {
   });
 }
 
-async function waitForHomeReady(page, testInfo) {
+async function waitForHomeReady(page, testInfo, waitOptions = {}) {
   return waitForContentVisible(page, {
+    ...waitOptions,
     name: "home-ready",
     testInfo,
     getContentState: observeHomeReadyState,

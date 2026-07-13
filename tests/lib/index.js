@@ -6,6 +6,7 @@ const artifacts = require("./artifacts");
 const workflows = require("./workflows");
 const selectors = require("./selectors");
 const selectorValidation = require("./selector-validation");
+const waits = require("./waits");
 
 module.exports = {
   ...textUtils,
@@ -16,6 +17,7 @@ module.exports = {
   ...workflows,
   ...selectors,
   ...selectorValidation,
+  ...waits,
   __internal: {
     ...navigation.__internal,
     focusFirstRowStart: contentRows.focusFirstRowStart,
