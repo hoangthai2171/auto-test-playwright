@@ -106,11 +106,11 @@ Extract content-row discovery, playback verification, and artifact/report genera
       Create `tests/lib/artifacts.js` with `runStep`, `attachCurrentAppScreenshot`, `attachMovieSearchFailureArtifacts`, `attachSearchNoResultArtifacts`, `attachFailureArtifacts`, `attachFirstRowPlaybackReport`, `renderPlaybackResultsHtml`, `renderPlaybackErrorCell`, `imageDataUrl`, `escapeHtml`, and `safeArtifactName`. Preserve attachment names/content types, JSON fields (`step`, `url`, `focused`, `error`, candidate lists), HTML escaping, embedded screenshot data URLs, and the existing `test.step` wrapper. For focused-state and candidate collection used only for diagnostics, accept callbacks in an optional dependency object rather than importing navigation or workflow modules. Keep the four-argument `runStep(page,testInfo,title,action)` contract available through the composition binding.
     </action>
     <verify>
-      Require the module and assert all listed artifact functions exist. Call `safeArtifactName("Căn phòng / lỗi")` and assert it returns `can-phong-loi`; call `renderPlaybackResultsHtml` with one failed result containing quote/angle-bracket text and assert the output contains escaped entities and the expected HTML report heading.
+      Require the module and assert all listed artifact functions exist. Call `safeArtifactName("Căn phòng / lỗi")` and assert it returns the legacy-compatible `c-n-ph-ng-l-i`; call `renderPlaybackResultsHtml` with one failed result containing quote/angle-bracket text and assert the output contains escaped entities and the expected HTML report heading.
     </verify>
     <acceptance_criteria>
       <criterion>All current artifact filenames and content types remain unchanged for screenshot, text, JSON, and HTML attachments.</criterion>
-      <criterion>`safeArtifactName` produces lowercase ASCII hyphenated names with the `artifact` fallback for empty input.</criterion>
+      <criterion>`safeArtifactName` preserves the legacy lowercase ASCII hyphenation behavior (`safeArtifactName("Căn phòng / lỗi")` equals `c-n-ph-ng-l-i`) with the `artifact` fallback for empty input.</criterion>
       <criterion>`renderPlaybackResultsHtml` escapes item titles, error text, poster URLs, and screenshot data before interpolation.</criterion>
       <criterion>The module contains no imports from `text-utils.js`, `navigation.js`, `content-rows.js`, `playback.js`, or `workflows.js`.</criterion>
     </acceptance_criteria>
@@ -120,7 +120,7 @@ Extract content-row discovery, playback verification, and artifact/report genera
 
 <verification>
   <command>node -e 'for (const file of ["./tests/lib/content-rows","./tests/lib/playback","./tests/lib/artifacts"]) require(file);'</command>
-  <command>node -e 'const a=require("./tests/lib/artifacts"); if(a.safeArtifactName("Căn phòng / lỗi")!=="can-phong-loi") process.exit(1); if(!a.renderPlaybackResultsHtml([{index:1,title:"&lt;bad&gt;",status:"failed",errorPopup:"\"x\""}]).includes("AI first-row playback results")) process.exit(1);'</command>
+  <command>node -e 'const a=require("./tests/lib/artifacts"); if(a.safeArtifactName("Căn phòng / lỗi")!=="c-n-ph-ng-l-i") process.exit(1); if(!a.renderPlaybackResultsHtml([{index:1,title:"&lt;bad&gt;",status:"failed",errorPopup:"\"x\""}]).includes("AI first-row playback results")) process.exit(1);'</command>
 </verification>
 
 <success_criteria>
