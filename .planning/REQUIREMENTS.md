@@ -9,13 +9,13 @@ Requirements for code quality and performance improvements milestone.
 
 ### Code Quality - Module Refactoring
 
-- [ ] **REFACTOR-01**: Extract text normalization and fuzzy matching into dedicated `text-utils.js` module with exported `normalizeVietnameseText()` and `fuzzyMatch()` functions
-- [ ] **REFACTOR-02**: Extract navigation primitives (arrow key movement, Enter, Backspace) into `navigation.js` module with `remoteFocusById()`, `remoteFocusByText()`, `remoteFocus()` functions
-- [ ] **REFACTOR-03**: Extract content row discovery logic into `content-rows.js` module with `collectVisibleContentRows()` and `focusRequestedContentRow()` functions
-- [ ] **REFACTOR-04**: Extract playback verification into `playback.js` module with `assertPlayback()` and player state checking functions
-- [ ] **REFACTOR-05**: Extract artifact capture logic into `artifacts.js` module with screenshot, JSON attachment, and report generation functions
-- [ ] **REFACTOR-06**: Create central `index.js` that re-exports all module functions to maintain backward compatibility with existing test specs
-- [ ] **REFACTOR-07**: Update all test spec files to import from new modular structure without breaking existing test scenarios
+- [x] **REFACTOR-01**: Extract text normalization and fuzzy matching into dedicated `text-utils.js` module with exported `normalizeVietnameseText()` and `fuzzyMatch()` functions
+- [x] **REFACTOR-02**: Extract navigation primitives (arrow key movement, Enter, Backspace) into `navigation.js` module with `remoteFocusById()`, `remoteFocusByText()`, `remoteFocus()` functions
+- [x] **REFACTOR-03**: Extract content row discovery logic into `content-rows.js` module with `collectVisibleContentRows()` and `focusRequestedContentRow()` functions
+- [x] **REFACTOR-04**: Extract playback verification into `playback.js` module with `assertPlayback()` and player state checking functions
+- [x] **REFACTOR-05**: Extract artifact capture logic into `artifacts.js` module with screenshot, JSON attachment, and report generation functions
+- [x] **REFACTOR-06**: Create central `index.js` that re-exports all module functions to maintain backward compatibility with existing test specs
+- [x] **REFACTOR-07**: Update all test spec files to import from new modular structure without breaking existing test scenarios
 
 ### Code Quality - Selector Stability
 
@@ -86,13 +86,13 @@ Which phases cover which requirements. Updated during roadmap creation.
 
 | Requirement | Phase | Status |
 |-------------|-------|--------|
-| REFACTOR-01 | Phase 1 | Pending |
-| REFACTOR-02 | Phase 1 | Pending |
-| REFACTOR-03 | Phase 1 | Pending |
-| REFACTOR-04 | Phase 1 | Pending |
-| REFACTOR-05 | Phase 1 | Pending |
-| REFACTOR-06 | Phase 1 | Pending |
-| REFACTOR-07 | Phase 1 | Pending |
+| REFACTOR-01 | Phase 1 | Complete |
+| REFACTOR-02 | Phase 1 | Complete |
+| REFACTOR-03 | Phase 1 | Complete |
+| REFACTOR-04 | Phase 1 | Complete |
+| REFACTOR-05 | Phase 1 | Complete |
+| REFACTOR-06 | Phase 1 | Complete |
+| REFACTOR-07 | Phase 1 | Complete |
 | SELECTOR-01 | Phase 2 | Pending |
 | SELECTOR-02 | Phase 2 | Pending |
 | SELECTOR-03 | Phase 2 | Pending |
