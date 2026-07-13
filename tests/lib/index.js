@@ -4,6 +4,8 @@ const contentRows = require("./content-rows");
 const playback = require("./playback");
 const artifacts = require("./artifacts");
 const workflows = require("./workflows");
+const selectors = require("./selectors");
+const selectorValidation = require("./selector-validation");
 
 module.exports = {
   ...textUtils,
@@ -12,6 +14,8 @@ module.exports = {
   ...playback,
   ...artifacts,
   ...workflows,
+  ...selectors,
+  ...selectorValidation,
   __internal: {
     ...navigation.__internal,
     focusFirstRowStart: contentRows.focusFirstRowStart,

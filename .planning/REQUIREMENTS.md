@@ -19,10 +19,10 @@ Requirements for code quality and performance improvements milestone.
 
 ### Code Quality - Selector Stability
 
-- [ ] **SELECTOR-01**: Define selector contracts in a central `selectors.js` config file with explicit attribute names, class patterns, and geometry constraints
-- [ ] **SELECTOR-02**: Add candidate validation that captures and attaches DOM snapshots when selector matching fails
-- [ ] **SELECTOR-03**: Verify selected element title/ID immediately before activation and fail fast if mismatch detected
-- [ ] **SELECTOR-04**: Add selector health check that validates expected DOM structure exists before running test scenarios
+- [x] **SELECTOR-01**: Define selector contracts in a central `selectors.js` config file with explicit attribute names, class patterns, and geometry constraints
+- [x] **SELECTOR-02**: Add candidate validation that captures and attaches DOM snapshots when selector matching fails
+- [x] **SELECTOR-03**: Verify selected element title/ID immediately before activation and fail fast if mismatch detected
+- [x] **SELECTOR-04**: Add selector health check that validates expected DOM structure exists before running test scenarios
 
 ### Performance - Smart State Detection
 
@@ -93,10 +93,10 @@ Which phases cover which requirements. Updated during roadmap creation.
 | REFACTOR-05 | Phase 1 | Complete |
 | REFACTOR-06 | Phase 1 | Complete |
 | REFACTOR-07 | Phase 1 | Complete |
-| SELECTOR-01 | Phase 2 | Pending |
-| SELECTOR-02 | Phase 2 | Pending |
-| SELECTOR-03 | Phase 2 | Pending |
-| SELECTOR-04 | Phase 2 | Pending |
+| SELECTOR-01 | Phase 2 | Complete |
+| SELECTOR-02 | Phase 2 | Complete |
+| SELECTOR-03 | Phase 2 | Complete |
+| SELECTOR-04 | Phase 2 | Complete |
 | PERF-01 | Phase 3 | Pending |
 | PERF-02 | Phase 3 | Pending |
 | PERF-03 | Phase 3 | Pending |

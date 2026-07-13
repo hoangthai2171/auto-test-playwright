@@ -4,11 +4,13 @@ const navigation=require("./navigation");
 const contentRows=require("./content-rows");
 const playback=require("./playback");
 const artifacts=require("./artifacts");
+const selectorValidation=require("./selector-validation");
 
 const {remotePress,remoteFocusById,remoteFocusByText,enterWithVirtualKeyboard,searchKeyboardInput,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange}=navigation;
 const {collectVisibleContentRows,focusRequestedContentRow,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback}=contentRows;
 const {getPlayerState,inspectPlaybackAfterWait}=playback;
 const {runStep,attachCurrentAppScreenshot,attachMovieSearchFailureArtifacts,attachSearchNoResultArtifacts,attachFailureArtifacts,attachFirstRowPlaybackReport,renderPlaybackResultsHtml,renderPlaybackErrorCell,imageDataUrl,safeArtifactName}=artifacts;
+const {activateVerifiedTarget,assertSelectorHealth}=selectorValidation;
 
 
 const DEFAULT_OPTIONS = {
@@ -54,7 +56,7 @@ function getTestOptions() {
       : null,
   };
 }
-async function openAppAndEnterLoginPage(page, options) {
+async function openAppAndEnterLoginPage(page, options, testInfo) {
   await gotoApp(page, options.APP_URL);
   await waitForAppReady(page);
 
@@ -71,7 +73,7 @@ async function openAppAndEnterLoginPage(page, options) {
       await remoteFocusByText(page, /^Đăng nhập$/);
     }
 
-    await remotePress(page, "Enter", 2000);
+    await activateVerifiedTarget(page, {testInfo, name: "login-welcome", contractName: "menuItem", expectedLabel: "Đăng nhập", delay: 2000});
   }
 
   if (
@@ -82,15 +84,15 @@ async function openAppAndEnterLoginPage(page, options) {
     (await hasVisibleText(page, /^Đăng nhập$/))
   ) {
     await remoteFocusByText(page, /^Đăng nhập$/);
-    await remotePress(page, "Enter", 2000);
+    await activateVerifiedTarget(page, {testInfo, name: "login-entry", contractName: "menuItem", expectedLabel: "Đăng nhập", delay: 2000});
   }
 
   await expect(page.locator("#login-tabs")).toBeVisible();
 }
 
-async function loginWithAccount(page, options) {
+async function loginWithAccount(page, options, testInfo) {
   await remoteFocusById(page, "remote-login-method");
-  await remotePress(page, "Enter", 1500);
+  await activateVerifiedTarget(page, {testInfo, name: "login-method", contractName: "menuItem", expectedId: "remote-login-method", delay: 1500});
 
   await expect(page.locator("#new_ui_login_input_label")).toContainText(
     "Nhập số điện thoại / Tài khoản MyTV"
@@ -98,65 +100,66 @@ async function loginWithAccount(page, options) {
   await enterWithVirtualKeyboard(page, options.USERNAME);
 
   await remoteFocusById(page, "new_ui_login_btn_ok");
-  await remotePress(page, "Enter", 2000);
+  await activateVerifiedTarget(page, {testInfo, name: "login-username-submit", contractName: "menuItem", expectedId: "new_ui_login_btn_ok", delay: 2000});
 
   await expect(page.locator("#new_ui_login_input_label")).toContainText("Nhập mật khẩu");
   await enterWithVirtualKeyboard(page, options.PASSWORD);
 
   await remoteFocusById(page, "new_ui_login_btn_ok");
-  await remotePress(page, "Enter", 5000);
+  await activateVerifiedTarget(page, {testInfo, name: "login-password-submit", contractName: "menuItem", expectedId: "new_ui_login_btn_ok", delay: 5000});
 
   await expect(page.locator("body")).not.toContainText("Nhập mật khẩu", {
     timeout: 30000,
   });
 }
 
-async function chooseFirstProfileAndEnterHome(page) {
+async function chooseFirstProfileAndEnterHome(page, testInfo) {
   await waitForProfileSelection(page);
   await remoteFocusById(page, "item_0");
-  await remotePress(page, "Enter", 10000);
+  await activateVerifiedTarget(page, {testInfo, name: "profile-selection", contractName: "contentItem", expectedId: "item_0", delay: 10000});
 
   await expect.poll(() => getSubpage(page.url()), { timeout: 30000 }).toBe("homeNewUI");
 }
 
-async function closeHomePopupsAndVerifyHome(page) {
-  await closeHomePopups(page);
+async function closeHomePopupsAndVerifyHome(page, testInfo) {
+  await closeHomePopups(page, testInfo);
   await expectFocusedText(page, /^Xem ngay$/i);
+  await assertSelectorHealth(page, {testInfo});
 }
 
-async function openTelevisionFromLeftMenu(page) {
+async function openTelevisionFromLeftMenu(page, testInfo) {
   await openLeftMenuFromHome(page);
   await focusLeftMenuItem(page, /^Truyền hình$/i);
-  await remotePress(page, "Enter", 3000);
+  await activateVerifiedTarget(page, {testInfo, name: "open-television", contractName: "menuItem", expectedLabel: "Truyền hình", delay: 3000});
 }
 
-async function openMovieFromLeftMenu(page) {
+async function openMovieFromLeftMenu(page, testInfo) {
   await openLeftMenuFromHome(page);
   await focusLeftMenuItem(page, /^Phim truyện$/i);
-  await remotePress(page, "Enter", 3000);
+  await activateVerifiedTarget(page, {testInfo, name: "open-movie", contractName: "menuItem", expectedLabel: "Phim truyện", delay: 3000});
 }
 
-async function openSettingFromLeftMenu(page) {
+async function openSettingFromLeftMenu(page, testInfo) {
   await openLeftMenuFromHome(page);
   await focusLeftMenuItem(page, /^Cài đặt$/i);
-  await remotePress(page, "Enter", 3000);
+  await activateVerifiedTarget(page, {testInfo, name: "open-settings", contractName: "menuItem", expectedLabel: "Cài đặt", delay: 3000});
   await expect(page.locator("body")).toContainText(/Thông tin tài khoản/i, { timeout: 10000 });
 }
 
-async function openSearchFromLeftMenu(page) {
+async function openSearchFromLeftMenu(page, testInfo) {
   await openLeftMenuFromHome(page);
   await focusSearchMenuItem(page);
-  await remotePress(page, "Enter", 2000);
+  await activateVerifiedTarget(page, {testInfo, name: "open-search", contractName: "menuItem", expectedLabel: "Tìm kiếm", delay: 2000});
   await expect(page.locator("body")).toContainText(/Tìm kiếm/i, { timeout: 10000 });
 }
 
-async function openServiceFromLeftMenuOrAllServices(page, serviceName) {
+async function openServiceFromLeftMenuOrAllServices(page, serviceName, testInfo) {
   await openLeftMenuFromHome(page);
 
   const leftMenuItemId = await findLeftMenuItemIdByFuzzyText(page, serviceName).catch(() => "");
   if (leftMenuItemId) {
     await remoteFocusById(page, leftMenuItemId, 100);
-    await remotePress(page, "Enter", 3000);
+    await activateVerifiedTarget(page, {testInfo, name: `open-service-${serviceName}`, contractName: "menuItem", expectedId: leftMenuItemId, expectedLabel: serviceName, delay: 3000});
     return;
   }
 
@@ -164,24 +167,24 @@ async function openServiceFromLeftMenuOrAllServices(page, serviceName) {
   expect(allServicesId, "Left menu should contain Tat ca dich vu fallback").toBeTruthy();
 
   await remoteFocusById(page, allServicesId, 100);
-  await remotePress(page, "Enter", 2500);
+  await activateVerifiedTarget(page, {testInfo, name: "open-all-services", contractName: "menuItem", expectedId: allServicesId, expectedLabel: "Tất cả dịch vụ", delay: 2500});
 
   const serviceId = await findServiceIdInAllServices(page, serviceName);
   await remoteFocusById(page, serviceId, 120);
-  await remotePress(page, "Enter", 3000);
+  await activateVerifiedTarget(page, {testInfo, name: `open-service-${serviceName}-fallback`, contractName: "menuItem", expectedId: serviceId, expectedLabel: serviceName, delay: 3000});
 }
 
-async function openChannel(page, options) {
+async function openChannel(page, options, testInfo) {
   await expect
     .poll(() => getSubpage(page.url()), { timeout: 30000 })
     .toMatch(/^(channel|tv|television|listChannel|liveTV|homeLiveTV)$/i);
 
   const channelId = await findChannelIdByName(page, options.CHANNEL_NAME);
   await remoteFocusById(page, channelId, 120);
-  await remotePress(page, "Enter", 6000);
+  await activateVerifiedTarget(page, {testInfo, name: `open-channel-${options.CHANNEL_NAME}`, contractName: "channel", expectedId: channelId, expectedLabel: options.CHANNEL_NAME, delay: 6000});
 }
 
-async function openFirstMovieContent(page) {
+async function openFirstMovieContent(page, testInfo) {
   await page.waitForFunction(
     () => {
       const focused = document.querySelector(".focused");
@@ -190,10 +193,8 @@ async function openFirstMovieContent(page) {
       const rect = focused.getBoundingClientRect();
       const style = getComputedStyle(focused);
       return (
-        rect.x >= 100 &&
-        rect.y >= 500 &&
-        rect.width >= 120 &&
-        rect.height >= 90 &&
+        rect.width > 0 &&
+        rect.height > 0 &&
         style.display !== "none" &&
         style.visibility !== "hidden"
       );
@@ -201,7 +202,7 @@ async function openFirstMovieContent(page) {
     null,
     { timeout: 15000 }
   );
-  await remotePress(page, "Enter", 6000);
+  await activateVerifiedTarget(page, {testInfo, name: "open-first-movie", contractName: "contentItem", delay: 6000});
 }
 
 async function playAllItemsInFirstRow(page, testInfo, options = {}) {
@@ -257,7 +258,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
           body: JSON.stringify(item, null, 2),
           contentType: "application/json",
         });
-        await openFocusedContentForPlayback(page);
+    await openFocusedContentForPlayback(page, testInfo);
 
         const playback = await inspectPlaybackAfterWait(page, waitSeconds);
         result.status = playback.ok ? "playable" : "failed";
@@ -317,7 +318,7 @@ async function openMovieContent(page, options, testInfo) {
     return;
   }
 
-  await openFirstMovieContent(page);
+  await openFirstMovieContent(page, testInfo);
 }
 
 async function openMovieContentByName(page, options, testInfo) {
@@ -340,7 +341,7 @@ async function openMovieContentByName(page, options, testInfo) {
   }
 
   await remoteFocusById(page, movieId, 160);
-  await remotePress(page, "Enter", 6000);
+  await activateVerifiedTarget(page, {testInfo, name: `open-movie-${options.MOVIE_NAME}`, contractName: "contentItem", expectedId: movieId, expectedLabel: options.MOVIE_NAME, delay: 6000});
 }
 
 async function searchAndOpenBestContent(page, options, testInfo) {
@@ -349,7 +350,7 @@ async function searchAndOpenBestContent(page, options, testInfo) {
 
   const keyboardKeyword = searchKeyboardInput(keyword);
   await enterWithVirtualKeyboard(page, keyboardKeyword);
-  await submitSearchFromVirtualKeyboard(page);
+  await submitSearchFromVirtualKeyboard(page, testInfo);
   await page.waitForTimeout(5000);
 
   const result = await findBestSearchResult(page, keyword);
@@ -364,7 +365,7 @@ async function searchAndOpenBestContent(page, options, testInfo) {
   });
 
   await focusStableSearchResult(page, result);
-  await remotePress(page, "Enter", 6000);
+  await activateVerifiedTarget(page, {testInfo, name: `open-search-result-${result.id}`, contractName: "contentItem", expectedId: result.id, expectedLabel: result.label || result.normalizedLabel, delay: 6000});
   return true;
 }
 
@@ -446,7 +447,7 @@ function parseSearchRowId(id) {
   };
 }
 
-async function submitSearchFromVirtualKeyboard(page) {
+async function submitSearchFromVirtualKeyboard(page, testInfo) {
   const searchButtonId = await page
     .evaluate(() => {
       const button = document.querySelector("#keyboard_btn_wr #callSearch, #callSearch");
@@ -468,7 +469,7 @@ async function submitSearchFromVirtualKeyboard(page) {
   if (!searchButtonId) return;
 
   await remoteFocusById(page, searchButtonId, 80);
-  await remotePress(page, "Enter", 2500);
+  await activateVerifiedTarget(page, {testInfo, name: "submit-search", contractName: "menuItem", expectedId: searchButtonId, delay: 2500});
   await page.waitForTimeout(2000);
 }
 
@@ -530,7 +531,7 @@ async function waitForProfileSelection(page) {
   await expect(page.locator("#item_0")).toBeVisible();
 }
 
-async function closeHomePopups(page) {
+async function closeHomePopups(page, testInfo) {
   for (let attempt = 0; attempt < 8; attempt++) {
     await page.waitForTimeout(1500);
 
@@ -544,13 +545,14 @@ async function closeHomePopups(page) {
     }
 
     if (CLOSE_POPUP_TEXT.test(focused.text) || CLOSE_POPUP_TEXT.test(focused.label)) {
-      await remotePress(page, "Enter", 2500);
+      await activateVerifiedTarget(page, {testInfo, name: "close-home-popup-focused", contractName: "menuItem", expectedId: focused.id, expectedLabel: focused.text, delay: 2500});
       continue;
     }
 
     if (await hasVisibleText(page, CLOSE_POPUP_TEXT)) {
       await remoteFocusByText(page, CLOSE_POPUP_TEXT, 80);
-      await remotePress(page, "Enter", 2500);
+      const closeTarget = await getFocusedState(page);
+      await activateVerifiedTarget(page, {testInfo, name: "close-home-popup-search", contractName: "menuItem", expectedId: closeTarget.id, expectedLabel: closeTarget.text, delay: 2500});
       continue;
     }
 
@@ -1419,7 +1421,7 @@ async function collectMovieSearchCandidates(page) {
   });
 }
 
-contentRows.configureContentRows({remotePress,remoteFocusById,remoteFocusByText,getFocusedState,getPlayerState,hasVisibleText,expectFocusedText});
+contentRows.configureContentRows({remotePress,remoteFocusById,remoteFocusByText,getFocusedState,getPlayerState,hasVisibleText,expectFocusedText,activateVerifiedTarget});
 artifacts.configureArtifacts({getFocusedState,collectMovieSearchCandidates,collectSearchResultCandidates});
 
 

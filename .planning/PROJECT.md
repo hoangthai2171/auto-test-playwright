@@ -25,6 +25,7 @@ QA engineers can reliably test MyTV TV app functionality through remote-control 
 - ✓ HTML test reports with screenshots and artifacts — existing
 - ✓ macOS and Windows desktop app packaging — existing
 - ✓ Terminal-based test execution modes — existing
+- ✓ Role-based selector contracts, bounded activation verification, and ready-state health checks — Phase 2
 
 ### Active
 
@@ -57,7 +58,7 @@ The codebase is a fully functional Electron + Playwright test automation applica
 **Current Challenges:**
 - Large monolithic helper module (2,825 lines) with duplicated logic
 - Heavy use of fixed waits affecting test speed and reliability
-- Heuristic selectors coupled to external UI without version contracts
+- External UI drift remains possible, but Phase 2 now centralizes selector contracts and reports bounded activation/health diagnostics
 - Hard-coded credentials in multiple locations
 - No CI/CD pipeline
 - Limited test coverage for Electron IPC and AI features
@@ -84,7 +85,7 @@ QA engineers and testers working on the MyTV platform who need to verify TV app 
 | CommonJS modules | Project initialized before widespread ES modules adoption; Playwright and Electron both support CommonJS | — Pending — May revisit for ES modules |
 | Bundle Playwright browsers with app | Users may not have internet access or npm global cache on test machines | ✓ Good — Enables offline test execution |
 | AI mode with local + cloud planners | Provides value without requiring API keys; cloud option available for complex requests | ✓ Good — Flexible for different user needs |
-| Fuzzy Vietnamese text matching | MyTV UI uses dynamic content without stable test IDs; exact matching too brittle | ⚠️ Revisit — Works but creates maintenance burden when UI changes |
+| Fuzzy Vietnamese text matching | MyTV UI uses dynamic content without stable test IDs; exact matching too brittle | ⚠️ Revisit — Works with Phase 2 score thresholds and ambiguity checks, but still needs maintenance when UI changes |
 
 ## Evolution
 
@@ -104,4 +105,4 @@ This document evolves at phase transitions and milestone boundaries.
 4. Update Context with current state
 
 ---
-*Last updated: 2026-07-13 after initialization*
+*Last updated: 2026-07-13 after Phase 2 completion*

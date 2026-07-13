@@ -1,4 +1,7 @@
 const {expect}=require("playwright/test");
+const {getSelectorContract}=require("./selectors");
+
+const FOCUS_SELECTOR = `.${getSelectorContract("focus").alternatives[0].classPatterns[0]}`;
 
 function normalizeVietnameseText(value){return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").replace(/\s+/g," ").trim().toLowerCase();}
 
@@ -11,8 +14,8 @@ async function expectFocusedText(page, text) {
 }
 
 async function expectFocusedElementToLookOrange(page) {
-  const orangeScore = await page.evaluate(() => {
-    const focused = document.querySelector(".focused");
+  const orangeScore = await page.evaluate((focusSelector) => {
+    const focused = document.querySelector(focusSelector);
     if (!focused) return 0;
     const style = getComputedStyle(focused);
     const colors = [style.backgroundColor, style.borderColor, style.boxShadow, style.color].join(" ");
@@ -25,7 +28,7 @@ async function expectFocusedElementToLookOrange(page) {
     })
       ? 1
       : 0;
-  });
+  }, FOCUS_SELECTOR);
 
   expect(orangeScore).toBe(1);
 }
@@ -193,12 +196,12 @@ async function remoteFocusById(page, id, maxMoves = 50) {
       // rather than the container itself.  Accept focus if the focused element
       // is contained within the target element.
       return page.evaluate(
-        ({ focusedId, targetId }) => {
+        ({ focusedId, targetId, focusSelector }) => {
           const target = document.getElementById(targetId);
           if (!target) return false;
           const focusedEl = focusedId
             ? document.getElementById(focusedId)
-            : document.querySelector(".focused");
+            : document.querySelector(focusSelector);
           if (!focusedEl) return false;
           // Accept focus when:
           //   1. focused element is a descendant of the target (e.g. focus on img child of #space)
@@ -206,7 +209,7 @@ async function remoteFocusById(page, id, maxMoves = 50) {
           //      while target is the #key-space-v2 img child inside it)
           return target.contains(focusedEl) || focusedEl.contains(target);
         },
-        { focusedId: state.id, targetId: id }
+        { focusedId: state.id, targetId: id, focusSelector: FOCUS_SELECTOR }
       );
     },
     getTargetRect: async () =>
@@ -300,8 +303,8 @@ function center(rect) {
 }
 
 async function getFocusedState(page) {
-  return page.evaluate(() => {
-    const focused = Array.from(document.querySelectorAll(".focused")).find((element) => {
+  return page.evaluate((focusSelector) => {
+    const focused = Array.from(document.querySelectorAll(focusSelector)).find((element) => {
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
       return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
@@ -335,7 +338,7 @@ async function getFocusedState(page) {
         height: rect.height,
       },
     };
-  });
+  }, FOCUS_SELECTOR);
 }
 
 module.exports={remotePress,enterWithVirtualKeyboard,remoteFocusByVirtualKey,virtualKeyIds,searchKeyboardInput,remoteFocusByText,remoteFocusByKeyText,remoteFocusById,remoteFocus,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange,__internal:{chooseDirection,rangesOverlap,fallbackDirection,center}};

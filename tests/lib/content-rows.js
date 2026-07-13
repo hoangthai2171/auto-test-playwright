@@ -1,4 +1,5 @@
 const {expect}=require("playwright/test");
+const {getSelectorContract}=require("./selectors");
 
 const dependencies={
   remotePress:async(page,key,delay=250)=>{await page.keyboard.press(key);await page.waitForTimeout(delay);},
@@ -8,7 +9,10 @@ const dependencies={
   getPlayerState:async()=>({hasVideo:false,isProbablyPlaying:false}),
   hasVisibleText:async()=>false,
   expectFocusedText:async()=>{},
+  activateVerifiedTarget:async()=>{throw new Error("Content-row activation dependency is not configured");},
 };
+
+const CONTENT_ITEM_CONTRACT = getSelectorContract("contentItem");
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
 function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
@@ -19,6 +23,7 @@ function getFocusedState(...args){return dependencies.getFocusedState(...args);}
 function getPlayerState(...args){return dependencies.getPlayerState(...args);}
 function hasVisibleText(...args){return dependencies.hasVisibleText(...args);}
 function expectFocusedText(...args){return dependencies.expectFocusedText(...args);}
+function activateVerifiedTarget(...args){return dependencies.activateVerifiedTarget(...args);}
 function normalizeVietnameseText(value){return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").replace(/\s+/g," ").trim().toLowerCase();}
 async function collectFirstRowPlayableItems(page) {
   const rows = await collectVisibleContentRows(page);
@@ -150,7 +155,7 @@ function scoreNormalizedTextMatch(label, target) {
 }
 
 async function collectVisibleContentRows(page) {
-  return page.evaluate(() => {
+  return page.evaluate(({geometry, excludeIdPrefixes}) => {
     const menuText = /^(Tìm kiếm|Trang chủ|Truyền hình|Phim truyện|Thiếu nhi|Thể thao|Cá nhân|Tất cả dịch vụ)$/i;
     const candidates = Array.from(document.querySelectorAll("[id]"))
       .map((element) => {
@@ -171,17 +176,16 @@ async function collectVisibleContentRows(page) {
             height: Math.round(rect.height),
           },
           visible:
-            rect.width >= 100 &&
-            rect.height >= 80 &&
-            rect.width <= 520 &&
-            rect.height <= 420 &&
+            rect.width >= geometry.minWidth &&
+            rect.height >= geometry.minHeight &&
+            rect.width <= geometry.maxWidth &&
+            rect.height <= geometry.maxHeight &&
             rect.x >= 100 &&
             rect.y >= 100 &&
             style.display !== "none" &&
             style.visibility !== "hidden" &&
             Number(style.opacity) !== 0 &&
-            !element.id.startsWith("menu_") &&
-            !element.id.startsWith("key-") &&
+            !excludeIdPrefixes.some((prefix) => element.id.startsWith(prefix)) &&
             !menuText.test(title),
         };
       })
@@ -300,6 +304,9 @@ async function collectVisibleContentRows(page) {
         .trim()
         .toLowerCase();
     }
+  }, {
+    geometry: CONTENT_ITEM_CONTRACT.geometry,
+    excludeIdPrefixes: CONTENT_ITEM_CONTRACT.excludeIdPrefixes || [],
   });
 }
 
@@ -492,8 +499,16 @@ async function getFocusedContentMetadata(page) {
   });
 }
 
-async function openFocusedContentForPlayback(page) {
-  await remotePress(page, "Enter", 3500);
+async function openFocusedContentForPlayback(page, testInfo) {
+  const focusedContent = await getFocusedContentMetadata(page).catch(() => ({id: "", title: ""}));
+  await activateVerifiedTarget(page, {
+    testInfo,
+    name: `content-${focusedContent.id || "focused"}`,
+    contractName: "contentItem",
+    expectedId: focusedContent.id,
+    expectedLabel: focusedContent.title,
+    delay: 3500,
+  });
 
   const hasVideo = await getPlayerState(page)
     .then((state) => state.hasVideo)
@@ -504,7 +519,15 @@ async function openFocusedContentForPlayback(page) {
   const xemNgay = /^Xem ngay$/i;
   if (xemNgay.test(focused.text) || xemNgay.test(focused.label) || (await hasVisibleText(page, xemNgay))) {
     await remoteFocusByText(page, xemNgay, 60).catch(() => {});
-    await remotePress(page, "Enter", 6000);
+    const fallback = await getFocusedState(page).catch(() => ({id: "", text: ""}));
+    await activateVerifiedTarget(page, {
+      testInfo,
+      name: "content-xem-ngay-fallback",
+      contractName: "menuItem",
+      expectedId: fallback.id,
+      expectedLabel: fallback.text,
+      delay: 6000,
+    });
   }
 }
 
