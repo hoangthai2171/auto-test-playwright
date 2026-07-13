@@ -1,4 +1,5 @@
 const {expect}=require("playwright/test");
+const {waitForPlayerReady}=require("./waits");
 
 const CLOSE_POPUP_TEXT=/^(Đóng|Huỷ|Hủy|Quay về|Quay về trang chủ)$/i;
 function safeArtifactName(value){return String(value).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"artifact";}
@@ -25,56 +26,79 @@ async function assertSearchContentPlayback(page, testInfo, options) {
   });
 }
 
-async function assertPlayback(page, testInfo, { label, artifactPrefix }) {
-  await page.waitForTimeout(6000);
+async function attachPlaybackTimeout(page, testInfo, artifactPrefix, label, readiness, popup, playerState) {
+  if (!testInfo?.attach) return;
 
-  const popup = await getVisiblePopup(page);
-  if (popup) {
-    const playerState = await getPlayerState(page).catch((error) => ({
+  await testInfo.attach(`${safeArtifactName(artifactPrefix)}-playback-timeout.json`, {
+    body: JSON.stringify({
+      label,
+      popup,
+      playerState,
+      wait: readiness?.diagnostic || readiness,
+    }, null, 2),
+    contentType: "application/json",
+  });
+  await testInfo.attach(`${safeArtifactName(artifactPrefix)}-playback-timeout.png`, {
+    body: await page.screenshot({ fullPage: false }),
+    contentType: "image/png",
+  });
+}
+
+async function assertPlayback(page, testInfo, { label, artifactPrefix, ...waitOptions }) {
+  let readiness;
+  try {
+    readiness = await waitForPlayerReady(page, {
+      ...waitOptions,
+      testInfo,
+      getVisiblePopup,
+      getPlayerState,
+    });
+  } catch (error) {
+    const observation = error?.diagnostic?.lastObservation || {};
+    const popup = observation.popup || await getVisiblePopup(page).catch(() => null);
+    const playerState = observation.playerState || await getPlayerState(page).catch((playerError) => ({
       hasVideo: false,
       isProbablyPlaying: false,
-      reason: error?.message || String(error),
+      reason: playerError?.message || String(playerError),
     }));
 
-    await testInfo.attach(`${safeArtifactName(artifactPrefix)}-error-popup.txt`, {
-      body: `${label}\n\n${popup.text}`,
-      contentType: "text/plain",
-    });
-    await testInfo.attach(`${safeArtifactName(artifactPrefix)}-error-popup.png`, {
-      body: await page.screenshot({ fullPage: false }),
-      contentType: "image/png",
-    });
-    await testInfo.attach(`${safeArtifactName(artifactPrefix)}-error-player-state.json`, {
-      body: JSON.stringify({ label, popup, ...playerState }, null, 2),
-      contentType: "application/json",
-    });
+    await attachPlaybackTimeout(page, testInfo, artifactPrefix, label, error, popup, playerState);
 
-    throw new Error(`${label} playback failed with popup: ${popup.text}`);
+    if (popup) {
+      await testInfo.attach(`${safeArtifactName(artifactPrefix)}-error-popup.txt`, {
+        body: `${label}\n\n${popup.text}`,
+        contentType: "text/plain",
+      });
+      await testInfo.attach(`${safeArtifactName(artifactPrefix)}-error-popup.png`, {
+        body: await page.screenshot({ fullPage: false }),
+        contentType: "image/png",
+      });
+      await testInfo.attach(`${safeArtifactName(artifactPrefix)}-error-player-state.json`, {
+        body: JSON.stringify({ label, popup, ...playerState }, null, 2),
+        contentType: "application/json",
+      });
+
+      throw new Error(`${label} playback failed with popup: ${popup.text}`);
+    }
+
+    readiness = {ok: false, diagnostic: error?.diagnostic, error: error?.message || String(error)};
+    await attachPlayerFailureArtifacts(page, testInfo, artifactPrefix, label, playerState);
+    expect(playerState.hasVideo, "Player video element should exist").toBe(true);
+    expect(
+      playerState.isProbablyPlaying,
+      `Player should be playing normally: ${JSON.stringify(playerState)}`
+    ).toBe(true);
+    return readiness;
   }
 
-  const playerState = await getPlayerState(page);
+  const playerState = readiness.observation.playerState;
   await testInfo.attach(`${safeArtifactName(artifactPrefix)}-player-state.json`, {
     body: JSON.stringify({ label, ...playerState }, null, 2),
     contentType: "application/json",
   });
 
   if (!playerState.hasVideo || !playerState.isProbablyPlaying) {
-    await testInfo.attach(`${safeArtifactName(artifactPrefix)}-playback-failure.png`, {
-      body: await page.screenshot({ fullPage: false }),
-      contentType: "image/png",
-    });
-    await testInfo.attach(`${safeArtifactName(artifactPrefix)}-playback-failure.txt`, {
-      body: [
-        `${label} playback did not look healthy.`,
-        "",
-        `hasVideo: ${playerState.hasVideo}`,
-        `isProbablyPlaying: ${playerState.isProbablyPlaying}`,
-        `reason: ${playerState.reason || ""}`,
-        "",
-        JSON.stringify(playerState, null, 2),
-      ].join("\n"),
-      contentType: "text/plain",
-    });
+    await attachPlayerFailureArtifacts(page, testInfo, artifactPrefix, label, playerState);
   }
 
   expect(playerState.hasVideo, "Player video element should exist").toBe(true);
@@ -83,20 +107,49 @@ async function assertPlayback(page, testInfo, { label, artifactPrefix }) {
     `Player should be playing normally: ${JSON.stringify(playerState)}`
   ).toBe(true);
 }
-async function inspectPlaybackAfterWait(page, waitSeconds) {
-  await page.waitForTimeout(waitSeconds * 1000);
 
-  const popup = await getVisiblePopup(page);
-  const playerState = await getPlayerState(page).catch((error) => ({
+async function attachPlayerFailureArtifacts(page, testInfo, artifactPrefix, label, playerState) {
+  if (!testInfo?.attach) return;
+  await testInfo.attach(`${safeArtifactName(artifactPrefix)}-playback-failure.png`, {
+    body: await page.screenshot({ fullPage: false }),
+    contentType: "image/png",
+  });
+  await testInfo.attach(`${safeArtifactName(artifactPrefix)}-playback-failure.txt`, {
+    body: [
+      `${label} playback did not look healthy.`,
+      "",
+      `hasVideo: ${playerState.hasVideo}`,
+      `isProbablyPlaying: ${playerState.isProbablyPlaying}`,
+      `reason: ${playerState.reason || ""}`,
+      "",
+      JSON.stringify(playerState, null, 2),
+    ].join("\n"),
+    contentType: "text/plain",
+  });
+}
+
+async function inspectPlaybackAfterWait(page, waitSeconds, options = {}) {
+  const viewingDurationMs = Math.max(0, Number(waitSeconds || 0) * 1000);
+  await page.waitForTimeout(viewingDurationMs);
+
+  const readiness = await waitForPlayerReady(page, {
+    ...options,
+    nonThrowing: true,
+    getVisiblePopup: options.getVisiblePopup || getVisiblePopup,
+    getPlayerState: options.getPlayerState || getPlayerState,
+  });
+  const observation = readiness.observation || readiness.lastObservation || {};
+  const playerState = observation.playerState || {
     hasVideo: false,
     isProbablyPlaying: false,
-    reason: error?.message || String(error),
-  }));
+    reason: readiness.reason || "Player readiness timed out",
+  };
 
   return {
-    ok: !popup && playerState.hasVideo && playerState.isProbablyPlaying,
-    popup,
+    ok: readiness.ok === true,
+    popup: observation.popup || null,
     playerState,
+    waitResult: readiness,
   };
 }
 async function getVisiblePopup(page) {
@@ -207,7 +260,7 @@ async function getVisiblePopup(page) {
 }
 
 async function getPlayerState(page) {
-  return page.evaluate(async () => {
+  return page.evaluate(() => {
     const videos = Array.from(document.querySelectorAll("video"));
     const video =
       videos.find((item) => {
@@ -233,8 +286,6 @@ async function getPlayerState(page) {
       height: video.videoHeight,
       src: video.currentSrc || video.src || "",
     };
-
-    await new Promise((resolve) => setTimeout(resolve, 1500));
 
     const after = {
       currentTime: video.currentTime,
@@ -280,4 +331,4 @@ async function getPlayerState(page) {
 }
 
 
-module.exports={assertPlayback,assertChannelPlayback,assertMoviePlayback,assertSearchContentPlayback,getVisiblePopup,getPlayerState,inspectPlaybackAfterWait,safeArtifactName};
+module.exports={assertPlayback,assertChannelPlayback,assertMoviePlayback,assertSearchContentPlayback,getVisiblePopup,getPlayerState,inspectPlaybackAfterWait,waitForPlayerReady,safeArtifactName};
