@@ -118,7 +118,7 @@ async function loginWithAccount(page, options, testInfo) {
 async function chooseFirstProfileAndEnterHome(page, testInfo) {
   await waitForProfileSelection(page);
   await remoteFocusById(page, "item_0");
-  await activateVerifiedTarget(page, {testInfo, name: "profile-selection", contractName: "contentItem", expectedId: "item_0", delay: 10000});
+  await activateVerifiedTarget(page, {testInfo, name: "profile-selection", contractName: "contentItem", expectedId: "item_0"});
 
   await waitForHomeReady(page, testInfo);
 }
