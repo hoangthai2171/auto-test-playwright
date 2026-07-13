@@ -292,7 +292,7 @@ async function waitForContentVisible(page, options = {}) {
   const getContentState = options.getContentState || defaultContentState;
   return pollWait(page, {
     ...waitOptions,
-    getFocusedState: options.getFocusedState,
+    getFocusedState: options.getFocusedState || defaultFocusedState,
     testInfo: options.testInfo,
     throwOnTimeout: options.throwOnTimeout !== false,
     reason: options.reason || "visible content was not observed",
@@ -308,7 +308,7 @@ async function waitForPlayerReady(page, options = {}) {
 
   return pollWait(page, {
     ...waitOptions,
-    getFocusedState: options.getFocusedState,
+    getFocusedState: options.getFocusedState || defaultFocusedState,
     testInfo: options.testInfo,
     throwOnTimeout: options.throwOnTimeout !== false && options.nonThrowing !== true,
     reason: options.reason || "popup remained visible or player state was not healthy",
