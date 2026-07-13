@@ -45,24 +45,30 @@ async function attachPlaybackTimeout(page, testInfo, artifactPrefix, label, read
 }
 
 async function assertPlayback(page, testInfo, { label, artifactPrefix, ...waitOptions }) {
+  const popupObserver = waitOptions.getVisiblePopup || getVisiblePopup;
+  const playerObserver = waitOptions.getPlayerState || getPlayerState;
   let readiness;
   try {
     readiness = await waitForPlayerReady(page, {
       ...waitOptions,
       testInfo,
-      getVisiblePopup,
-      getPlayerState,
+      getVisiblePopup: popupObserver,
+      getPlayerState: playerObserver,
     });
   } catch (error) {
     const observation = error?.diagnostic?.lastObservation || {};
-    const popup = observation.popup || await getVisiblePopup(page).catch(() => null);
-    const playerState = observation.playerState || await getPlayerState(page).catch((playerError) => ({
+    const popup = observation.popup || await popupObserver(page).catch(() => null);
+    const playerState = observation.playerState || await playerObserver(page).catch((playerError) => ({
       hasVideo: false,
       isProbablyPlaying: false,
       reason: playerError?.message || String(playerError),
     }));
 
     await attachPlaybackTimeout(page, testInfo, artifactPrefix, label, error, popup, playerState);
+    await testInfo.attach(`${safeArtifactName(artifactPrefix)}-player-state.json`, {
+      body: JSON.stringify({label, ...playerState}, null, 2),
+      contentType: "application/json",
+    });
 
     if (popup) {
       await testInfo.attach(`${safeArtifactName(artifactPrefix)}-error-popup.txt`, {
