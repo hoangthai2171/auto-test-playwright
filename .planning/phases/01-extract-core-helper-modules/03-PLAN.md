@@ -139,7 +139,7 @@ Complete the modularization by extracting the high-level workflows, composing ad
     </verify>
     <acceptance_criteria>
       <criterion>`tests/lib/mytv-helpers.legacy.js` exists and `tests/lib/mytv-helpers.js` is a compatibility shim requiring `./index`.</criterion>
-      <criterion>The new shim's sorted public export keys and nested `__internal` keys match the legacy module's keys.</criterion>
+      <criterion>The new shim contains every sorted public export key and nested `__internal` key from the legacy module; additional focused-module exports are allowed.</criterion>
       <criterion>`npx playwright test tests/ai-row-selection.spec.js` exits 0.</criterion>
       <criterion>`npm test` executes all seven existing specs under the configured single worker; it exits 0 in a fully configured environment, or the plan records a concrete environment/staging blocker with the generated report path rather than claiming equivalence.</criterion>
       <criterion>No source file outside the legacy reference itself contains a runtime require of `mytv-helpers.legacy.js`, and no consumer import was changed for convenience.</criterion>
@@ -149,7 +149,7 @@ Complete the modularization by extracting the high-level workflows, composing ad
 </tasks>
 
 <verification>
-  <command>node -e 'const legacy=require("./tests/lib/mytv-helpers.legacy"); const current=require("./tests/lib/mytv-helpers"); const keys=x=>Object.keys(x).filter(k=>k!=="__internal").sort(); const internal=x=>Object.keys(x.__internal||{}).sort(); if(JSON.stringify(keys(legacy))!==JSON.stringify(keys(current))) throw new Error("public export parity failed"); if(JSON.stringify(internal(legacy))!==JSON.stringify(internal(current))) throw new Error("internal export parity failed");'</command>
+  <command>node -e 'const legacy=require("./tests/lib/mytv-helpers.legacy"); const current=require("./tests/lib/mytv-helpers"); const keys=x=>Object.keys(x).filter(k=>k!=="__internal").sort(); const internal=x=>Object.keys(x.__internal||{}).sort(); const missing=keys(legacy).filter(k=>!keys(current).includes(k)); const missingInternal=internal(legacy).filter(k=>!internal(current).includes(k)); if(missing.length||missingInternal.length) throw new Error(`compatibility export parity failed: ${missing} ${missingInternal}`);'</command>
   <command>npx playwright test tests/ai-row-selection.spec.js</command>
   <command>npm test</command>
 </verification>
