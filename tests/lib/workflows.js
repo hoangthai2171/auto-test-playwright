@@ -5,12 +5,14 @@ const contentRows=require("./content-rows");
 const playback=require("./playback");
 const artifacts=require("./artifacts");
 const selectorValidation=require("./selector-validation");
+const waits=require("./waits");
 
 const {remotePress,remoteFocusById,remoteFocusByText,enterWithVirtualKeyboard,searchKeyboardInput,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange}=navigation;
 const {collectVisibleContentRows,focusRequestedContentRow,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback}=contentRows;
 const {getPlayerState,inspectPlaybackAfterWait}=playback;
 const {runStep,attachCurrentAppScreenshot,attachMovieSearchFailureArtifacts,attachSearchNoResultArtifacts,attachFailureArtifacts,attachFirstRowPlaybackReport,renderPlaybackResultsHtml,renderPlaybackErrorCell,imageDataUrl,safeArtifactName}=artifacts;
 const {activateVerifiedTarget,assertSelectorHealth}=selectorValidation;
+const {waitForFocusState,waitForContentVisible}=waits;
 
 
 const DEFAULT_OPTIONS = {
@@ -58,7 +60,7 @@ function getTestOptions() {
 }
 async function openAppAndEnterLoginPage(page, options, testInfo) {
   await gotoApp(page, options.APP_URL);
-  await waitForAppReady(page);
+  await waitForAppReady(page, testInfo);
 
   const isLoginTabsVisible = await page
     .locator("#login-tabs")
@@ -118,7 +120,7 @@ async function chooseFirstProfileAndEnterHome(page, testInfo) {
   await remoteFocusById(page, "item_0");
   await activateVerifiedTarget(page, {testInfo, name: "profile-selection", contractName: "contentItem", expectedId: "item_0", delay: 10000});
 
-  await expect.poll(() => getSubpage(page.url()), { timeout: 30000 }).toBe("homeNewUI");
+  await waitForHomeReady(page, testInfo);
 }
 
 async function closeHomePopupsAndVerifyHome(page, testInfo) {
@@ -185,23 +187,14 @@ async function openChannel(page, options, testInfo) {
 }
 
 async function openFirstMovieContent(page, testInfo) {
-  await page.waitForFunction(
-    () => {
-      const focused = document.querySelector(".focused");
-      if (!focused) return false;
-
-      const rect = focused.getBoundingClientRect();
-      const style = getComputedStyle(focused);
-      return (
-        rect.width > 0 &&
-        rect.height > 0 &&
-        style.display !== "none" &&
-        style.visibility !== "hidden"
-      );
-    },
-    null,
-    { timeout: 15000 }
-  );
+  await waitForFocusState(page, {
+    name: "first-movie-focus",
+    timeout: 15000,
+    testInfo,
+    getFocusedState,
+    isReady: ({observation}) => isValidFocusedState(observation),
+    reason: "visible focus was not ready before opening the first movie",
+  });
   await activateVerifiedTarget(page, {testInfo, name: "open-first-movie", contractName: "contentItem", delay: 6000});
 }
 
@@ -213,7 +206,13 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
   const rowPosition = options.rowPosition || "";
   const itemLimit = Number(options.itemLimit);
   const maxItems = Number.isFinite(itemLimit) && itemLimit > 0 ? itemLimit : Number(options.maxItems || 60);
-  await page.waitForTimeout(2500);
+  await waitForContentVisible(page, {
+    name: "first-row-content",
+    testInfo,
+    getContentState: observeVisibleContentRows,
+    getFocusedState,
+    reason: "no visible playable content row was ready before first-row navigation",
+  });
 
   const targetRow = await focusRequestedContentRow(page, {
     rowName,
@@ -473,12 +472,120 @@ async function submitSearchFromVirtualKeyboard(page, testInfo) {
   await page.waitForTimeout(2000);
 }
 
-async function waitForAppReady(page) {
+async function waitForAppReady(page, testInfo) {
   await page.waitForLoadState("domcontentloaded");
-  await page.waitForFunction(() => {
-    const text = document.body?.innerText || "";
-    return /Đăng nhập|Trải nghiệm|Nhập số điện thoại|Nhập mật khẩu/.test(text);
+  return waitForFocusState(page, {
+    name: "app-ready",
+    testInfo,
+    getFocusedState: observeAppReadyState,
+    isReady: ({observation}) => Boolean(observation?.marker && isValidFocusedState(observation.focused)),
+    reason: "recognized login, welcome, or authenticated-home marker plus visible focus was not observed",
   });
+}
+
+async function waitForHomeReady(page, testInfo) {
+  return waitForContentVisible(page, {
+    name: "home-ready",
+    testInfo,
+    getContentState: observeHomeReadyState,
+    getFocusedState,
+    isReady: ({observation}) => Boolean(
+      observation?.route &&
+      observation?.menu &&
+      observation?.content &&
+      isValidFocusedState(observation?.focused)
+    ),
+    reason: "home route, visible left menu, content row, and focused state were not all ready",
+  });
+}
+
+async function observeAppReadyState(page) {
+  const screen = await page.evaluate(() => {
+    const text = document.body?.innerText || "";
+    const hash = location.hash || "";
+    const visible = (element) => {
+      if (!element) return false;
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return Boolean(
+        rect.width > 0 &&
+        rect.height > 0 &&
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        style.opacity !== "0"
+      );
+    };
+    const login = visible(document.querySelector("#login-tabs")) ||
+      /Nhập số điện thoại|Nhập mật khẩu/i.test(text);
+    const welcome = /welcomePage/i.test(hash) || (/Đăng nhập/i.test(text) && /Trải nghiệm/i.test(text));
+    const home = /homeNewUI/i.test(hash);
+
+    return {
+      marker: login ? "login" : welcome ? "welcome" : home ? "home" : "",
+      hash,
+      login,
+      welcome,
+      home,
+    };
+  });
+  const focused = await getFocusedState(page);
+  return {...screen, focused};
+}
+
+async function observeHomeReadyState(page) {
+  const [routeState, rows, focused] = await Promise.all([
+    page.evaluate(() => {
+      const visible = (element) => {
+        if (!element) return false;
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return Boolean(
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          style.opacity !== "0"
+        );
+      };
+      const menu = document.querySelector("#menu_text_dynamic_menu_1") ||
+        document.querySelector('[id^="menu_text_"]');
+      return {
+        routeValue: location.hash.replace(/^#/, "").split("?")[0],
+        menu: visible(menu),
+      };
+    }),
+    collectVisibleContentRows(page),
+    getFocusedState(page),
+  ]);
+
+  return {
+    route: routeState.routeValue === "homeNewUI",
+    routeValue: routeState.routeValue,
+    menu: routeState.menu,
+    content: rows.length > 0,
+    contentCount: rows.reduce((count, row) => count + row.items.length, 0),
+    rowCount: rows.length,
+    focused,
+  };
+}
+
+async function observeVisibleContentRows(page) {
+  const rows = await collectVisibleContentRows(page);
+  return {
+    visible: rows.length > 0,
+    visibleCount: rows.reduce((count, row) => count + row.items.length, 0),
+    rowCount: rows.length,
+  };
+}
+
+function isValidFocusedState(state) {
+  return Boolean(
+    state &&
+    state.rect &&
+    state.rect.width > 0 &&
+    state.rect.height > 0 &&
+    (state.id || state.text || state.label)
+  );
 }
 
 async function gotoApp(page, appUrl) {
@@ -1425,4 +1532,4 @@ contentRows.configureContentRows({remotePress,remoteFocusById,remoteFocusByText,
 artifacts.configureArtifacts({getFocusedState,collectMovieSearchCandidates,collectSearchResultCandidates});
 
 
-module.exports={getTestOptions,runStep,openAppAndEnterLoginPage,loginWithAccount,chooseFirstProfileAndEnterHome,closeHomePopupsAndVerifyHome,openSearchFromLeftMenu,openTelevisionFromLeftMenu,openMovieFromLeftMenu,openSettingFromLeftMenu,openServiceFromLeftMenuOrAllServices,openChannel,searchAndOpenBestContent,openMovieContent,openFirstMovieContent,playAllItemsInFirstRow,assertChannelPlayback:playback.assertChannelPlayback,assertMoviePlayback:playback.assertMoviePlayback,assertSearchContentPlayback:playback.assertSearchContentPlayback,attachCurrentAppScreenshot,__internal:{focusFirstRowStart,findServiceIdInAllServices,closeAdvertisePopupIfVisible,getVisiblePopup:playback.getVisiblePopup,chooseDirection:navigation.__internal.chooseDirection}};
+module.exports={getTestOptions,runStep,openAppAndEnterLoginPage,loginWithAccount,chooseFirstProfileAndEnterHome,closeHomePopupsAndVerifyHome,openSearchFromLeftMenu,openTelevisionFromLeftMenu,openMovieFromLeftMenu,openSettingFromLeftMenu,openServiceFromLeftMenuOrAllServices,openChannel,searchAndOpenBestContent,openMovieContent,openFirstMovieContent,playAllItemsInFirstRow,assertChannelPlayback:playback.assertChannelPlayback,assertMoviePlayback:playback.assertMoviePlayback,assertSearchContentPlayback:playback.assertSearchContentPlayback,attachCurrentAppScreenshot,__internal:{focusFirstRowStart,findServiceIdInAllServices,closeAdvertisePopupIfVisible,getVisiblePopup:playback.getVisiblePopup,chooseDirection:navigation.__internal.chooseDirection,waitForAppReady,waitForHomeReady,observeAppReadyState,observeHomeReadyState,observeVisibleContentRows,isValidFocusedState}};
