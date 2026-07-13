@@ -2,10 +2,11 @@ const {expect}=require("playwright/test");
 const {getSelectorContract}=require("./selectors");
 
 const FOCUS_SELECTOR = `.${getSelectorContract("focus").alternatives[0].classPatterns[0]}`;
+const DEFAULT_REMOTE_PRESS_DELAY = 100;
 
 function normalizeVietnameseText(value){return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").replace(/\s+/g," ").trim().toLowerCase();}
 
-async function remotePress(page, key, delay = 250) {
+async function remotePress(page, key, delay = DEFAULT_REMOTE_PRESS_DELAY) {
   await page.keyboard.press(key);
   await page.waitForTimeout(delay);
 }
@@ -35,7 +36,7 @@ async function expectFocusedElementToLookOrange(page) {
 async function enterWithVirtualKeyboard(page, value) {
   for (const char of value) {
     await remoteFocusByVirtualKey(page, char);
-    await remotePress(page, "Enter", 250);
+    await remotePress(page, "Enter");
   }
 }
 
@@ -341,4 +342,4 @@ async function getFocusedState(page) {
   }, FOCUS_SELECTOR);
 }
 
-module.exports={remotePress,enterWithVirtualKeyboard,remoteFocusByVirtualKey,virtualKeyIds,searchKeyboardInput,remoteFocusByText,remoteFocusByKeyText,remoteFocusById,remoteFocus,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange,__internal:{chooseDirection,rangesOverlap,fallbackDirection,center}};
+module.exports={DEFAULT_REMOTE_PRESS_DELAY,remotePress,enterWithVirtualKeyboard,remoteFocusByVirtualKey,virtualKeyIds,searchKeyboardInput,remoteFocusByText,remoteFocusByKeyText,remoteFocusById,remoteFocus,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange,__internal:{chooseDirection,rangesOverlap,fallbackDirection,center}};
