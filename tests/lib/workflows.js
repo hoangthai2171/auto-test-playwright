@@ -6,6 +6,7 @@ const playback=require("./playback");
 const artifacts=require("./artifacts");
 const selectorValidation=require("./selector-validation");
 const waits=require("./waits");
+const {createScopedDomScanner}=require("./dom-scan");
 
 const {remotePress,remoteFocusById,remoteFocusByText,enterWithVirtualKeyboard,searchKeyboardInput,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange}=navigation;
 const {collectVisibleContentRows,focusRequestedContentRow,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback}=contentRows;
@@ -580,6 +581,12 @@ async function observeVisibleContentRows(page) {
   };
 }
 
+async function scopedScanRecords(page, options = {}) {
+  const scanner = createScopedDomScanner(page);
+  const result = await scanner.scan(options);
+  return result.records;
+}
+
 function isValidFocusedState(state) {
   return Boolean(
     state &&
@@ -795,8 +802,8 @@ async function findServiceIdInAllServices(page, serviceName) {
 
   for (let attempt = 0; attempt < 18; attempt++) {
     const serviceId =
-      (await findVisibleServiceIdByTitleAttribute(page, serviceName).catch(() => "")) ||
-      (await findVisibleElementIdByFuzzyLabel(page, serviceName, {
+      (await findVisibleServiceIdByTitleAttributeScoped(page, serviceName).catch(() => "")) ||
+      (await findVisibleElementIdByFuzzyLabelScoped(page, serviceName, {
         minWidth: 60,
         minHeight: 30,
         maxWidth: 460,
@@ -812,7 +819,7 @@ async function findServiceIdInAllServices(page, serviceName) {
     await remotePress(page, attempt % 5 === 4 ? "ArrowRight" : "ArrowDown", 500);
   }
 
-  const visibleServices = await collectVisibleAllServiceLabels(page);
+  const visibleServices = await collectVisibleAllServiceLabelsScoped(page);
   throw new Error(
     `Không tìm thấy dịch vụ "${serviceName}" trong Tất cả dịch vụ. Các mục đang thấy: ${visibleServices.join(", ")}`
   );
@@ -1533,5 +1540,98 @@ async function collectMovieSearchCandidates(page) {
 contentRows.configureContentRows({remotePress,remoteFocusById,remoteFocusByText,getFocusedState,getPlayerState,hasVisibleText,expectFocusedText,activateVerifiedTarget});
 artifacts.configureArtifacts({getFocusedState,collectMovieSearchCandidates,collectSearchResultCandidates});
 
+
+async function findVisibleServiceIdByTitleAttributeScoped(page, serviceName) {
+  const normalizedTarget = normalizeVietnameseText(serviceName);
+  const serviceId = await waitForScopedCandidate(page, {
+    contractName: "serviceContainer",
+    candidateSelector: "[service_title]",
+    attributeNames: ["service_title"],
+    geometry: {minWidth: 40, minHeight: 30, maxWidth: 460, maxHeight: 280},
+    excludeIdPrefixes: ["menu_"],
+  }, (records) => records
+    .map((record, index) => {
+      const label = (record.attrs.service_title || record.text || "").replace(/\s+/g, " ").trim();
+      return {id: record.id, label, score: scoreWorkflowText(normalizeVietnameseText(label), normalizedTarget), index};
+    })
+    .filter((item) => item.id && item.label && item.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index)[0]?.id || "", 1200);
+
+  expect(serviceId, `Service with service_title similar to "${serviceName}" should have id`).toBeTruthy();
+  return serviceId;
+}
+
+async function collectVisibleAllServiceLabelsScoped(page) {
+  const records = await scopedScanRecords(page, {
+    contractName: "serviceContainer",
+    candidateSelector: "[id]",
+    attributeNames: ["title", "title_text", "service_title", "service_name", "menu_name", "alt"],
+    geometry: {minWidth: 60, minHeight: 30, maxWidth: 460, maxHeight: 280},
+    excludeIdPrefixes: ["menu_"],
+  });
+
+  return records
+    .filter((record) => record.visible)
+    .map((record) => [record.text, ...Object.values(record.attrs || {})].join(" ").replace(/\s+/g, " ").trim())
+    .filter(Boolean)
+    .filter((label, index, labels) => labels.indexOf(label) === index)
+    .slice(0, 30);
+}
+
+async function findVisibleElementIdByFuzzyLabelScoped(page, text, filters = {}) {
+  const normalizedTarget = normalizeVietnameseText(text);
+  const elementId = await waitForScopedCandidate(page, {
+    contractName: filters.contractName || "contentContainer",
+    candidateSelector: "[id]",
+    attributeNames: ["title", "title_text", "service_title", "service_name", "menu_name", "alt"],
+    geometry: {
+      minWidth: filters.minWidth || 1,
+      minHeight: filters.minHeight || 1,
+      maxWidth: filters.maxWidth || Number.MAX_SAFE_INTEGER,
+      maxHeight: filters.maxHeight || Number.MAX_SAFE_INTEGER,
+      minX: filters.minX || 0,
+      minY: filters.minY || 0,
+    },
+    excludeIdPrefixes: filters.excludeIdPrefixes || [],
+  }, (records) => records
+    .map((record, index) => {
+      const label = [record.text, ...Object.values(record.attrs || {})].join(" ").replace(/\s+/g, " ").trim();
+      return {id: record.id, label, score: scoreWorkflowText(normalizeVietnameseText(label), normalizedTarget), index};
+    })
+    .filter((item) => item.id && item.label && item.score > 0)
+    .sort((a, b) => b.score - a.score || a.index - b.index)[0]?.id || "", filters.timeout || 15000);
+
+  expect(elementId, `Visible element similar to "${text}" should have id`).toBeTruthy();
+  return elementId;
+}
+
+async function waitForScopedCandidate(page, options, pick, timeout) {
+  const deadline = Date.now() + timeout;
+  let lastRecords = [];
+  while (Date.now() <= deadline) {
+    lastRecords = await scopedScanRecords(page, options).catch(() => []);
+    const candidate = pick(lastRecords);
+    if (candidate) return candidate;
+    await page.waitForTimeout(Math.min(150, Math.max(25, deadline - Date.now())));
+  }
+  return pick(lastRecords) || "";
+}
+
+function scoreWorkflowText(label, target) {
+  if (!label || !target) return 0;
+  if (label === target) return 100;
+  if (label.includes(target) || target.includes(label)) return 90;
+
+  const labelTokens = label.split(/[^a-z0-9]+/).filter((token) => token.length >= 2);
+  const targetTokens = target.split(/[^a-z0-9]+/).filter((token) => token.length >= 2);
+  if (!labelTokens.length || !targetTokens.length) return 0;
+  const matchedTokens = targetTokens.filter((token) =>
+    labelTokens.some((labelToken) => labelToken === token || labelToken.includes(token) || token.includes(labelToken))
+  );
+  const coverage = matchedTokens.length / targetTokens.length;
+  if (coverage === 1) return 80;
+  if (targetTokens.length >= 2 && coverage >= 0.6) return Math.round(50 + coverage * 20);
+  return 0;
+}
 
 module.exports={getTestOptions,runStep,openAppAndEnterLoginPage,loginWithAccount,chooseFirstProfileAndEnterHome,closeHomePopupsAndVerifyHome,openSearchFromLeftMenu,openTelevisionFromLeftMenu,openMovieFromLeftMenu,openSettingFromLeftMenu,openServiceFromLeftMenuOrAllServices,openChannel,searchAndOpenBestContent,openMovieContent,openFirstMovieContent,playAllItemsInFirstRow,assertChannelPlayback:playback.assertChannelPlayback,assertMoviePlayback:playback.assertMoviePlayback,assertSearchContentPlayback:playback.assertSearchContentPlayback,attachCurrentAppScreenshot,__internal:{focusFirstRowStart,findServiceIdInAllServices,closeAdvertisePopupIfVisible,getVisiblePopup:playback.getVisiblePopup,chooseDirection:navigation.__internal.chooseDirection,waitForAppReady,waitForHomeReady,observeAppReadyState,observeHomeReadyState,observeVisibleContentRows,isValidFocusedState}};

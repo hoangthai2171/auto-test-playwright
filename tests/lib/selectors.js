@@ -23,6 +23,7 @@ const SELECTOR_CONTRACTS = Object.freeze({
   },
   contentContainer: {
     severity: "required",
+    roots: [".content-area", ".service-grid", "[class*='content']", "[id*='content']", "[id*='service']"],
     alternatives: [
       {
         name: "known-content-containers",
@@ -31,6 +32,22 @@ const SELECTOR_CONTRACTS = Object.freeze({
       {
         name: "content-id",
         idIncludes: ["content", "service", "row"],
+      },
+    ],
+  },
+  serviceContainer: {
+    severity: "required",
+    roots: [
+      "[id^='dropdown_service_items_row']",
+      ".service-grid",
+      ".content-area",
+      "[class*='service']",
+      "[id*='service']",
+    ],
+    alternatives: [
+      {
+        name: "service-rows",
+        selectors: ["[id^='dropdown_service_items_row']", ".service-grid"],
       },
     ],
   },

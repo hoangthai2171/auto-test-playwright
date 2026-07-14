@@ -7,6 +7,7 @@ const workflows = require("./workflows");
 const selectors = require("./selectors");
 const selectorValidation = require("./selector-validation");
 const waits = require("./waits");
+const domScan = require("./dom-scan");
 
 module.exports = {
   ...textUtils,
@@ -18,6 +19,7 @@ module.exports = {
   ...selectors,
   ...selectorValidation,
   ...waits,
+  ...domScan,
   __internal: {
     ...navigation.__internal,
     focusFirstRowStart: contentRows.focusFirstRowStart,

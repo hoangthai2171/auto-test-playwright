@@ -1,5 +1,6 @@
 const {expect}=require("playwright/test");
 const {getSelectorContract}=require("./selectors");
+const {createScopedDomScanner}=require("./dom-scan");
 
 const dependencies={
   remotePress:async(page,key,delay=250)=>{await page.keyboard.press(key);await page.waitForTimeout(delay);},
@@ -155,159 +156,88 @@ function scoreNormalizedTextMatch(label, target) {
 }
 
 async function collectVisibleContentRows(page) {
-  return page.evaluate(({geometry, excludeIdPrefixes}) => {
-    const menuText = /^(Tìm kiếm|Trang chủ|Truyền hình|Phim truyện|Thiếu nhi|Thể thao|Cá nhân|Tất cả dịch vụ)$/i;
-    const candidates = Array.from(document.querySelectorAll("[id]"))
-      .map((element) => {
-        const rect = element.getBoundingClientRect();
-        const style = getComputedStyle(element);
-        const title = contentLabel(element);
-        const img = element.querySelector("img");
-        const backgroundImage = getComputedStyle(element).backgroundImage || "";
+  const scanner = createScopedDomScanner(page);
+  const scan = await scanner.scan({
+    contractName: "contentContainer",
+    candidateSelector: "[id]",
+    includeHeadings: true,
+    attributeNames: CONTENT_ITEM_CONTRACT.attributes || [],
+    includeText: true,
+    includePoster: true,
+    includeBackgroundImage: true,
+    geometry: {...CONTENT_ITEM_CONTRACT.geometry, minX: 100, minY: 100},
+    headingGeometry: {minWidth: 30, minHeight: 12, maxHeight: 70, minX: 80, minY: 40},
+    excludeIdPrefixes: CONTENT_ITEM_CONTRACT.excludeIdPrefixes || [],
+  });
 
-        return {
-          id: element.id,
-          title,
-          poster: img?.currentSrc || img?.src || extractCssUrl(backgroundImage),
-          rect: {
-            x: Math.round(rect.x),
-            y: Math.round(rect.y),
-            width: Math.round(rect.width),
-            height: Math.round(rect.height),
-          },
-          visible:
-            rect.width >= geometry.minWidth &&
-            rect.height >= geometry.minHeight &&
-            rect.width <= geometry.maxWidth &&
-            rect.height <= geometry.maxHeight &&
-            rect.x >= 100 &&
-            rect.y >= 100 &&
-            style.display !== "none" &&
-            style.visibility !== "hidden" &&
-            Number(style.opacity) !== 0 &&
-            !excludeIdPrefixes.some((prefix) => element.id.startsWith(prefix)) &&
-            !menuText.test(title),
-        };
-      })
-      .filter((item) => item.visible && item.title)
-      .sort((a, b) => {
-        if (Math.abs(a.rect.y - b.rect.y) > 40) return a.rect.y - b.rect.y;
-        return a.rect.x - b.rect.x;
-      });
-
-    const rowBuckets = [];
-    for (const item of candidates) {
-      let row = rowBuckets.find((bucket) => Math.abs(bucket.rowY - item.rect.y) <= 40);
-      if (!row) {
-        row = {
-          rowY: item.rect.y,
-          title: "",
-          normalizedTitle: "",
-          items: [],
-        };
-        rowBuckets.push(row);
-      }
-      row.items.push(item);
-    }
-
-    const headings = collectVisibleHeadings();
-    return rowBuckets
-      .map((row) => {
-        row.items = dedupeByPosition(row.items).slice(0, 30);
-        const heading = headings
-          .filter((item) => item.rect.y < row.rowY && row.rowY - item.rect.y <= 150)
-          .sort((a, b) => row.rowY - b.rect.y - (row.rowY - a.rect.y))[0];
-        row.title = heading?.text || "";
-        row.normalizedTitle = normalizeText(row.title);
-        return row;
-      })
-      .filter((row) => row.items.length > 0)
-      .sort((a, b) => a.rowY - b.rowY);
-
-    function collectVisibleHeadings() {
-      return Array.from(document.querySelectorAll("body *"))
-        .map((element) => {
-          const rect = element.getBoundingClientRect();
-          const style = getComputedStyle(element);
-          const text = (element.textContent || "").replace(/\s+/g, " ").trim();
-          return {
-            text,
-            rect: {
-              x: Math.round(rect.x),
-              y: Math.round(rect.y),
-              width: Math.round(rect.width),
-              height: Math.round(rect.height),
-            },
-            visible:
-              text &&
-              text.length <= 80 &&
-              rect.width > 30 &&
-              rect.height > 12 &&
-              rect.height <= 70 &&
-              rect.x >= 80 &&
-              rect.y >= 40 &&
-              style.display !== "none" &&
-              style.visibility !== "hidden" &&
-              Number(style.opacity) !== 0 &&
-              !element.id.startsWith("menu_") &&
-              !element.id.startsWith("key-"),
-          };
-        })
-        .filter((item) => item.visible)
-        .sort((a, b) => a.rect.y - b.rect.y);
-    }
-
-    function contentLabel(element) {
-      return [
-        element.getAttribute("title") || "",
-        element.getAttribute("title_text") || "",
-        element.getAttribute("movie_name") || "",
-        element.getAttribute("vod_name") || "",
-        element.getAttribute("content_name") || "",
-        element.getAttribute("channel_name") || "",
-        element.textContent || "",
+  const menuText = /^(Tìm kiếm|Trang chủ|Truyền hình|Phim truyện|Thiếu nhi|Thể thao|Cá nhân|Tất cả dịch vụ)$/i;
+  const candidates = scan.records
+    .map((record) => {
+      const title = [
+        ...Object.values(record.attrs || {}),
+        record.text || "",
       ]
         .join(" ")
         .replace(/\s+/g, " ")
         .trim();
+
+      return {
+        id: record.id,
+        title,
+        poster: record.poster || extractCssUrl(record.backgroundImage),
+        rect: record.rect,
+        visible: record.visible && !menuText.test(title),
+      };
+    })
+    .filter((item) => item.visible && item.title)
+    .sort((a, b) => {
+      if (Math.abs(a.rect.y - b.rect.y) > 40) return a.rect.y - b.rect.y;
+      return a.rect.x - b.rect.x;
+    });
+
+  const headings = scan.headings
+    .filter((item) => item.visible && item.text && !item.id.startsWith("menu_") && !item.id.startsWith("key-"))
+    .map((item) => ({text: item.text, rect: item.rect}))
+    .sort((a, b) => a.rect.y - b.rect.y);
+
+  const rowBuckets = [];
+  for (const item of candidates) {
+    let row = rowBuckets.find((bucket) => Math.abs(bucket.rowY - item.rect.y) <= 40);
+    if (!row) {
+      row = {rowY: item.rect.y, title: "", normalizedTitle: "", items: []};
+      rowBuckets.push(row);
     }
+    row.items.push(item);
+  }
 
-    function extractCssUrl(value) {
-      const match = value.match(/url\(["']?(.+?)["']?\)/);
-      return match?.[1] || "";
+  return rowBuckets
+    .map((row) => {
+      row.items = dedupeByPosition(row.items).slice(0, 30);
+      const heading = headings
+        .filter((item) => item.rect.y < row.rowY && row.rowY - item.rect.y <= 150)
+        .sort((a, b) => row.rowY - b.rect.y - (row.rowY - a.rect.y))[0];
+      row.title = heading?.text || "";
+      row.normalizedTitle = normalizeVietnameseText(row.title);
+      return row;
+    })
+    .filter((row) => row.items.length > 0)
+    .sort((a, b) => a.rowY - b.rowY);
+
+  function extractCssUrl(value) {
+    const match = String(value || "").match(/url\(["']?(.+?)["']?\)/);
+    return match?.[1] || "";
+  }
+
+  function dedupeByPosition(items) {
+    const output = [];
+    for (const item of items) {
+      const duplicate = output.find(
+        (existing) => Math.abs(existing.rect.x - item.rect.x) <= 24 && Math.abs(existing.rect.y - item.rect.y) <= 24
+      );
+      if (!duplicate) output.push(item);
     }
-
-    function dedupeByPosition(items) {
-      const output = [];
-      for (const item of items) {
-        const duplicate = output.find(
-          (existing) =>
-            Math.abs(existing.rect.x - item.rect.x) <= 24 &&
-            Math.abs(existing.rect.y - item.rect.y) <= 24
-        );
-
-        if (!duplicate) {
-          output.push(item);
-        }
-      }
-
-      return output.sort((a, b) => a.rect.x - b.rect.x);
-    }
-
-    function normalizeText(value) {
-      return value
-        .normalize("NFD")
-        .replace(/[\u0300-\u036f]/g, "")
-        .replace(/đ/g, "d")
-        .replace(/Đ/g, "D")
-        .replace(/\s+/g, " ")
-        .trim()
-        .toLowerCase();
-    }
-  }, {
-    geometry: CONTENT_ITEM_CONTRACT.geometry,
-    excludeIdPrefixes: CONTENT_ITEM_CONTRACT.excludeIdPrefixes || [],
-  });
+    return output.sort((a, b) => a.rect.x - b.rect.x);
+  }
 }
 
 async function focusFirstRowStart(page, firstItem) {
