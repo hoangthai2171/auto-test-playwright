@@ -36,7 +36,7 @@ Requirements for code quality and performance improvements milestone.
 
 - [x] **PERF-06**: Scope content item queries to container selectors instead of `body *` full-page scan
 - [x] **PERF-07**: Extract only required attributes during element enumeration instead of computing full bounding rectangles for all elements
-- [ ] **PERF-08**: Cache screen snapshot during a navigation step to avoid repeated full-DOM scans in retry loops
+- [x] **PERF-08**: Cache screen snapshot during a navigation step to avoid repeated full-DOM scans in retry loops
 - [ ] **PERF-09**: Use Playwright Locator filtering for stable elements instead of evaluate-based full-DOM traversal where possible
 - [ ] **PERF-10**: Reduce default `maxItems` batch playback limit from 60 to 10 and enforce total run time budget
 
@@ -104,7 +104,7 @@ Which phases cover which requirements. Updated during roadmap creation.
 | PERF-05 | Phase 3 | Pending |
 | PERF-06 | Phase 4 | Complete |
 | PERF-07 | Phase 4 | Complete |
-| PERF-08 | Phase 4 | Pending |
+| PERF-08 | Phase 4 | Complete |
 | PERF-09 | Phase 4 | Pending |
 | PERF-10 | Phase 4 | Pending |
 
