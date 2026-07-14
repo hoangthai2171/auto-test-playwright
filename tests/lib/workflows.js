@@ -7,6 +7,7 @@ const artifacts=require("./artifacts");
 const selectorValidation=require("./selector-validation");
 const waits=require("./waits");
 const {createScopedDomScanner}=require("./dom-scan");
+const {createBatchBudget}=require("./batch-budget");
 
 const {remotePress,remoteFocusById,remoteFocusByText,enterWithVirtualKeyboard,searchKeyboardInput,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange}=navigation;
 const {collectVisibleContentRows,focusRequestedContentRow,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback}=contentRows;
@@ -205,8 +206,6 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
   const rowName = options.rowName || "";
   const rowIndex = Number.isInteger(options.rowIndex) ? options.rowIndex : undefined;
   const rowPosition = options.rowPosition || "";
-  const itemLimit = Number(options.itemLimit);
-  const maxItems = Number.isFinite(itemLimit) && itemLimit > 0 ? itemLimit : Number(options.maxItems || 60);
   await waitForContentVisible(page, {
     name: "first-row-content",
     testInfo,
@@ -224,10 +223,18 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
   expect(items.length, "First row should contain playable items").toBeGreaterThan(0);
 
   const firstRowY = (await getFocusedContentMetadata(page)).rect?.y || targetRow.rowY || items[0].rect.y;
+  const batchBudget = createBatchBudget({
+    itemLimit: options.itemLimit,
+    maxItems: options.maxItems,
+    runtimeBudgetMs: options.runtimeBudgetMs,
+  });
 
   const results = [];
   const seenItems = new Set();
-  for (let index = 0; index < maxItems; index++) {
+  let attempted = 0;
+  let stopReason = "row-exhausted";
+  let budgetLimited = false;
+  for (let index = 0; ; index++) {
     await expectFocusedContent(page);
     const focusedItem = await getFocusedContentMetadata(page);
     const item = focusedItem.id ? focusedItem : items[index] || focusedItem;
@@ -237,6 +244,18 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
       break;
     }
 
+    const startDecision = batchBudget.canStart({
+      completed: results.length,
+      attempted,
+      estimatedDurationMs: waitSeconds * 1000,
+    });
+    if (!startDecision.allowed) {
+      stopReason = startDecision.reason;
+      budgetLimited = true;
+      break;
+    }
+
+    attempted += 1;
     seenItems.add(signature);
     const label = item.title || `Item ${index + 1}`;
 
@@ -302,14 +321,26 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
     });
 
     if (!movedToNext) {
+      stopReason = "row-exhausted";
       break;
     }
   }
 
+  const budgetReport = batchBudget.report({
+    completed: results.length,
+    attempted,
+    reason: stopReason,
+    budgetLimited,
+  });
+  await testInfo.attach("ai-first-row-playback-budget.json", {
+    body: JSON.stringify(budgetReport, null, 2),
+    contentType: "application/json",
+  });
   await attachFirstRowPlaybackReport(testInfo, results);
 
   const playableCount = results.filter((item) => item.status === "playable").length;
   expect(playableCount, "At least one first-row content item should play successfully").toBeGreaterThan(0);
+  return {results, budget: budgetReport};
 }
 
 async function openMovieContent(page, options, testInfo) {

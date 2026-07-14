@@ -39,6 +39,7 @@ async function runAiPlan(page, testInfo, plan) {
           rowIndex: step.rowIndex,
           rowPosition: step.rowPosition,
           itemLimit: step.itemLimit,
+          runtimeBudgetMs: step.runtimeBudgetMs,
         });
       });
       continue;

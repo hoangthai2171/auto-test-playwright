@@ -9,6 +9,7 @@ const selectorValidation = require("./selector-validation");
 const waits = require("./waits");
 const domScan = require("./dom-scan");
 const domSnapshots = require("./dom-snapshots");
+const batchBudget = require("./batch-budget");
 
 module.exports = {
   ...textUtils,
@@ -22,6 +23,7 @@ module.exports = {
   ...waits,
   ...domScan,
   ...domSnapshots,
+  ...batchBudget,
   __internal: {
     ...navigation.__internal,
     focusFirstRowStart: contentRows.focusFirstRowStart,
