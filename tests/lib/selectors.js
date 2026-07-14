@@ -10,6 +10,7 @@ const SELECTOR_CONTRACTS = Object.freeze({
   },
   leftMenu: {
     severity: "required",
+    locatorRoots: ["[id^='menu_text_']"],
     alternatives: [
       {
         name: "menu-id",
@@ -100,6 +101,16 @@ const SELECTOR_CONTRACTS = Object.freeze({
       {
         name: "menu-label-attributes",
         attributes: ["menu_name", "service_name", "service_title", "title", "title_text"],
+      },
+    ],
+  },
+  searchAction: {
+    severity: "required",
+    locatorRoots: ["#keyboard_btn_wr #callSearch", "#callSearch"],
+    alternatives: [
+      {
+        name: "search-action-id",
+        idIncludes: ["callSearch"],
       },
     ],
   },

@@ -12,7 +12,7 @@ const {remotePress,remoteFocusById,remoteFocusByText,enterWithVirtualKeyboard,se
 const {collectVisibleContentRows,focusRequestedContentRow,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback}=contentRows;
 const {getPlayerState,inspectPlaybackAfterWait}=playback;
 const {runStep,attachCurrentAppScreenshot,attachMovieSearchFailureArtifacts,attachSearchNoResultArtifacts,attachFailureArtifacts,attachFirstRowPlaybackReport,renderPlaybackResultsHtml,renderPlaybackErrorCell,imageDataUrl,safeArtifactName}=artifacts;
-const {activateVerifiedTarget,assertSelectorHealth}=selectorValidation;
+const {activateVerifiedTarget,assertSelectorHealth,getContractLocator,resolveContractLocatorId}=selectorValidation;
 const {waitForFocusState,waitForContentVisible}=waits;
 
 
@@ -132,26 +132,26 @@ async function closeHomePopupsAndVerifyHome(page, testInfo) {
 
 async function openTelevisionFromLeftMenu(page, testInfo) {
   await openLeftMenuFromHome(page);
-  await focusLeftMenuItem(page, /^Truyền hình$/i);
+  await focusLeftMenuItem(page, /^Truyền hình$/i, testInfo);
   await activateVerifiedTarget(page, {testInfo, name: "open-television", contractName: "menuItem", expectedLabel: "Truyền hình", delay: 3000});
 }
 
 async function openMovieFromLeftMenu(page, testInfo) {
   await openLeftMenuFromHome(page);
-  await focusLeftMenuItem(page, /^Phim truyện$/i);
+  await focusLeftMenuItem(page, /^Phim truyện$/i, testInfo);
   await activateVerifiedTarget(page, {testInfo, name: "open-movie", contractName: "menuItem", expectedLabel: "Phim truyện", delay: 3000});
 }
 
 async function openSettingFromLeftMenu(page, testInfo) {
   await openLeftMenuFromHome(page);
-  await focusLeftMenuItem(page, /^Cài đặt$/i);
+  await focusLeftMenuItem(page, /^Cài đặt$/i, testInfo);
   await activateVerifiedTarget(page, {testInfo, name: "open-settings", contractName: "menuItem", expectedLabel: "Cài đặt", delay: 3000});
   await expect(page.locator("body")).toContainText(/Thông tin tài khoản/i, { timeout: 10000 });
 }
 
 async function openSearchFromLeftMenu(page, testInfo) {
   await openLeftMenuFromHome(page);
-  await focusSearchMenuItem(page);
+  await focusSearchMenuItem(page, testInfo);
   await activateVerifiedTarget(page, {testInfo, name: "open-search", contractName: "menuItem", expectedLabel: "Tìm kiếm", delay: 2000});
   await expect(page.locator("body")).toContainText(/Tìm kiếm/i, { timeout: 10000 });
 }
@@ -448,28 +448,22 @@ function parseSearchRowId(id) {
 }
 
 async function submitSearchFromVirtualKeyboard(page, testInfo) {
-  const searchButtonId = await page
-    .evaluate(() => {
+  const resolved = await resolveContractLocatorId(page, {
+    contractName: "searchAction",
+    fallback: () => page.evaluate(() => {
       const button = document.querySelector("#keyboard_btn_wr #callSearch, #callSearch");
       if (!button?.id) return "";
-
       const rect = button.getBoundingClientRect();
       const style = getComputedStyle(button);
-      const visible =
-        rect.width > 0 &&
-        rect.height > 0 &&
-        style.display !== "none" &&
-        style.visibility !== "hidden" &&
-        Number(style.opacity) !== 0;
-
-      return visible ? button.id : "";
-    })
-    .catch(() => "");
-
-  if (!searchButtonId) return;
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" &&
+        style.visibility !== "hidden" && Number(style.opacity) !== 0 ? button.id : "";
+    }),
+  });
+  await attachLocatorContractMiss(testInfo, resolved, "search-action");
+  const searchButtonId = resolved.id;
 
   await remoteFocusById(page, searchButtonId, 80);
-  await activateVerifiedTarget(page, {testInfo, name: "submit-search", contractName: "menuItem", expectedId: searchButtonId, delay: 2500});
+  await activateVerifiedTarget(page, {testInfo, name: "submit-search", contractName: "searchAction", expectedId: searchButtonId, delay: 2500});
   await page.waitForTimeout(2000);
 }
 
@@ -706,35 +700,43 @@ async function openLeftMenuFromHome(page) {
   await expect(page.getByText(/^Truyền hình$/i).first()).toBeVisible({ timeout: 10000 });
 }
 
-async function focusLeftMenuItem(page, text) {
-  await expect(page.getByText(text).first()).toBeVisible({ timeout: 10000 });
-  const menuItemId = await findLeftMenuItemIdByText(page, text);
+async function focusLeftMenuItem(page, text, testInfo) {
+  await expect(getContractLocator(page, "leftMenu", {hasText: text}).first()).toBeVisible({ timeout: 10000 });
+  const menuItemId = await findLeftMenuItemIdByText(page, text, testInfo);
   await remoteFocusById(page, menuItemId, 80);
 }
 
-async function focusSearchMenuItem(page) {
-  const searchMenuItemId = await findLeftMenuItemIdByText(page, /^Tìm kiếm$/i).catch(() => "");
+async function focusSearchMenuItem(page, testInfo) {
+  await expect(getContractLocator(page, "leftMenu", {hasText: /^Tìm kiếm$/i}).first()).toBeVisible({ timeout: 10000 });
+  const searchMenuItemId = await findLeftMenuItemIdByText(page, /^Tìm kiếm$/i, testInfo);
   await remoteFocusById(page, searchMenuItemId || "menu_item_search", 80);
 }
 
-async function findLeftMenuItemIdByText(page, text) {
-  const itemId = await page.waitForFunction(
-    (source) => {
-      const pattern = new RegExp(source, "i");
+async function findLeftMenuItemIdByText(page, text, testInfo) {
+  const pattern = text instanceof RegExp ? text : new RegExp(String(text), "i");
+  const resolved = await resolveContractLocatorId(page, {
+    contractName: "leftMenu",
+    hasText: pattern,
+    fallback: () => page.evaluate(({source, flags}) => {
+      const matcher = new RegExp(source, flags);
       const textElement = Array.from(document.querySelectorAll('[id^="menu_text_"]')).find(
-        (element) => pattern.test((element.textContent || "").replace(/\s+/g, " ").trim())
+        (element) => matcher.test((element.textContent || "").replace(/\s+/g, " ").trim())
       );
+      return textElement?.id ? textElement.id.replace(/^menu_text_/, "menu_item_") : "";
+    }, {source: pattern.source, flags: pattern.flags || "i"}),
+  });
+  await attachLocatorContractMiss(testInfo, resolved, "left-menu");
+  const menuItemId = resolved.id.replace(/^menu_text_/, "menu_item_");
+  expect(menuItemId, `Left menu item ${text} should have id`).toBeTruthy();
+  return menuItemId;
+}
 
-      if (!textElement) return "";
-      return textElement.id.replace(/^menu_text_/, "menu_item_");
-    },
-    text.source,
-    { timeout: 10000 }
-  );
-
-  const id = await itemId.jsonValue();
-  expect(id, `Left menu item ${text} should have id`).toBeTruthy();
-  return id;
+async function attachLocatorContractMiss(testInfo, result, name) {
+  if (!result?.contractMiss || !testInfo?.attach) return;
+  await testInfo.attach(`${safeArtifactName(`${name}-locator-contract-miss`)}.json`, {
+    body: JSON.stringify(result.diagnostics, null, 2),
+    contentType: "application/json",
+  });
 }
 
 async function findLeftMenuItemIdByFuzzyText(page, text) {

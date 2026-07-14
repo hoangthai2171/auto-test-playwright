@@ -341,6 +341,68 @@ function fuzzyLabelMatch(value, target) {
   );
 }
 
+function getContractLocator(page, contractName, options = {}) {
+  const contract = getSelectorContract(contractName);
+  const selectors = contract.locatorRoots || [];
+  if (!selectors.length) {
+    const error = new Error(`No stable Locator roots declared for selector contract "${contractName}"`);
+    error.code = "LOCATOR_CONTRACT_MISS";
+    error.contractName = contractName;
+    throw error;
+  }
+
+  const locator = page.locator(selectors.join(", "));
+  return options.hasText === undefined ? locator : locator.filter({hasText: options.hasText});
+}
+
+async function resolveContractLocatorId(page, {
+  contractName,
+  hasText,
+  fallback,
+} = {}) {
+  const locator = getContractLocator(page, contractName, {hasText});
+  const candidateCount = await locator.count().catch(() => 0);
+
+  for (let index = 0; index < candidateCount; index += 1) {
+    const candidate = locator.nth(index);
+    if (!(await candidate.isVisible().catch(() => false))) continue;
+    const id = await candidate.getAttribute("id").catch(() => "");
+    if (id) {
+      return {
+        id,
+        source: "locator",
+        contractName,
+        candidateCount,
+        contractMiss: false,
+      };
+    }
+  }
+
+  const fallbackId = typeof fallback === "function" ? await fallback() : "";
+  const diagnostics = {
+    contractName,
+    candidateCount,
+    fallbackUsed: true,
+    fallbackId: fallbackId || "",
+  };
+  if (!fallbackId) {
+    const error = new Error(`Locator contract "${contractName}" did not resolve a visible target`);
+    error.code = "LOCATOR_CONTRACT_MISS";
+    error.contractName = contractName;
+    error.diagnostics = diagnostics;
+    throw error;
+  }
+
+  return {
+    id: fallbackId,
+    source: "evaluate-fallback",
+    contractName,
+    candidateCount,
+    contractMiss: true,
+    diagnostics,
+  };
+}
+
 function describeVerificationFailure({focused, candidate, expectedId, expectedLabel, matchOptions}) {
   return JSON.stringify({
     expectedId,
@@ -363,4 +425,6 @@ module.exports = {
   assertSelectorHealth,
   getFocusedState,
   fuzzyLabelMatch,
+  getContractLocator,
+  resolveContractLocatorId,
 };

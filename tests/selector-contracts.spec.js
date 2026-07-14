@@ -27,10 +27,37 @@ const CONTENT_FIXTURE = `
 
 test("selector contracts expose role-based alternatives and geometry", () => {
   expect(Object.keys(SELECTOR_CONTRACTS)).toEqual(
-    expect.arrayContaining(["focus", "leftMenu", "contentContainer", "contentItem", "channel", "menuItem", "popup", "player"])
+    expect.arrayContaining(["focus", "leftMenu", "contentContainer", "contentItem", "channel", "menuItem", "searchAction", "popup", "player"])
   );
   expect(getSelectorAlternatives("contentItem").length).toBeGreaterThan(0);
   expect(getSelectorContract("contentItem").geometry.minWidth).toBe(100);
+  expect(getSelectorAlternatives("searchAction")).toEqual([
+    expect.objectContaining({idIncludes: ["callSearch"]}),
+  ]);
+});
+
+test("search action verification ignores the virtual-keyboard input candidate", async ({page}) => {
+  await page.setContent(`
+    <style>
+      #keyboard_search_keyword { width: 1540px; height: 42px; }
+      #callSearch { width: 156px; height: 68px; }
+    </style>
+    <input id="keyboard_search_keyword" title="can phong tu than search" />
+    <button id="callSearch" class="focused">Tìm kiếm</button>
+  `);
+
+  const diagnostics = await collectSelectorDiagnostics(page, {
+    contractName: "searchAction",
+    expectedId: "callSearch",
+  });
+  expect(diagnostics.candidate.id).toBe("callSearch");
+  expect(diagnostics.candidate.score).toBe(100);
+
+  const verified = await verifyFocusedTarget(page, {
+    contractName: "searchAction",
+    expectedId: "callSearch",
+  });
+  expect(verified.valid).toBe(true);
 });
 
 test("diagnostics keep only the top candidate and focused state", async ({page}) => {
