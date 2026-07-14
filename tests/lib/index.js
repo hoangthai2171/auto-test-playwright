@@ -8,6 +8,7 @@ const selectors = require("./selectors");
 const selectorValidation = require("./selector-validation");
 const waits = require("./waits");
 const domScan = require("./dom-scan");
+const domSnapshots = require("./dom-snapshots");
 
 module.exports = {
   ...textUtils,
@@ -20,6 +21,7 @@ module.exports = {
   ...selectorValidation,
   ...waits,
   ...domScan,
+  ...domSnapshots,
   __internal: {
     ...navigation.__internal,
     focusFirstRowStart: contentRows.focusFirstRowStart,

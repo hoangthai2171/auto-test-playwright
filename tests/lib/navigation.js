@@ -6,8 +6,9 @@ const DEFAULT_REMOTE_PRESS_DELAY = 100;
 
 function normalizeVietnameseText(value){return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").replace(/\s+/g," ").trim().toLowerCase();}
 
-async function remotePress(page, key, delay = DEFAULT_REMOTE_PRESS_DELAY) {
+async function remotePress(page, key, delay = DEFAULT_REMOTE_PRESS_DELAY, options = {}) {
   await page.keyboard.press(key);
+  options.snapshotCache?.invalidate();
   await page.waitForTimeout(delay);
 }
 async function expectFocusedText(page, text) {

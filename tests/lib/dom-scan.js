@@ -65,6 +65,11 @@ function createScopedDomScanner(page) {
           } catch {
             matches = [];
           }
+          try {
+            if (scope.matches?.(selector)) matches.unshift(scope);
+          } catch {
+            // Invalid selectors are already handled by querySelectorAll above.
+          }
           for (const element of matches) {
             if (seen.has(element)) continue;
             seen.add(element);

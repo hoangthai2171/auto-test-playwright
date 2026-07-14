@@ -1,6 +1,7 @@
 const {expect}=require("playwright/test");
 const {getSelectorContract}=require("./selectors");
 const {createScopedDomScanner}=require("./dom-scan");
+const {createDomSnapshotCache,getDomSnapshotIdentity}=require("./dom-snapshots");
 
 const dependencies={
   remotePress:async(page,key,delay=250)=>{await page.keyboard.press(key);await page.waitForTimeout(delay);},
@@ -26,12 +27,15 @@ function hasVisibleText(...args){return dependencies.hasVisibleText(...args);}
 function expectFocusedText(...args){return dependencies.expectFocusedText(...args);}
 function activateVerifiedTarget(...args){return dependencies.activateVerifiedTarget(...args);}
 function normalizeVietnameseText(value){return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").replace(/\s+/g," ").trim().toLowerCase();}
-async function collectFirstRowPlayableItems(page) {
-  const rows = await collectVisibleContentRows(page);
+async function collectFirstRowPlayableItems(page, options = {}) {
+  const rows = await collectVisibleContentRows(page, options);
   return rows[0]?.items || [];
 }
 
 async function focusRequestedContentRow(page, rowSelector = {}) {
+  const snapshotCache = typeof rowSelector === "object" && rowSelector.snapshotCache
+    ? rowSelector.snapshotCache
+    : createDomSnapshotCache();
   const selector =
     typeof rowSelector === "string"
       ? { rowName: rowSelector }
@@ -43,9 +47,9 @@ async function focusRequestedContentRow(page, rowSelector = {}) {
 
   const { rowName, rowIndex, rowPosition } = selector;
   if (!rowName) {
-    const row = await findContentRowByPosition(page, { rowIndex, rowPosition });
+    const row = await findContentRowByPosition(page, { rowIndex, rowPosition, snapshotCache });
     const items = row.items;
-    await focusFirstRowStart(page, items[0]);
+    await focusFirstRowStart(page, items[0], {snapshotCache});
     return {
       title: row.title || "",
       rowY: row.rowY || items[0]?.rect.y || 0,
@@ -55,18 +59,18 @@ async function focusRequestedContentRow(page, rowSelector = {}) {
 
   const targetPattern = normalizeVietnameseText(rowName);
   for (let attempt = 0; attempt < 18; attempt++) {
-    const rows = await collectVisibleContentRows(page);
+    const rows = await collectVisibleContentRows(page, {snapshotCache});
     const matchedRow = findBestContentRowMatch(rows, targetPattern);
     if (matchedRow) {
-      await focusFirstRowStart(page, matchedRow.items[0]);
+      await focusFirstRowStart(page, matchedRow.items[0], {snapshotCache});
       await expect.poll(() => isFocusedOnRowItems(page, matchedRow.items), { timeout: 6000 }).toBe(true);
       return matchedRow;
     }
 
-    await remotePress(page, "ArrowDown", 700);
+    await remotePress(page, "ArrowDown", 700, {snapshotCache});
   }
 
-  const visibleRows = await collectVisibleContentRows(page);
+  const visibleRows = await collectVisibleContentRows(page, {snapshotCache});
   throw new Error(
     `Không tìm thấy hàng/cate "${rowName}". Các hàng đang thấy: ${visibleRows
       .map((row) => row.title || `y=${row.rowY}`)
@@ -74,21 +78,21 @@ async function focusRequestedContentRow(page, rowSelector = {}) {
   );
 }
 
-async function findContentRowByPosition(page, { rowIndex, rowPosition } = {}) {
+async function findContentRowByPosition(page, { rowIndex, rowPosition, snapshotCache = createDomSnapshotCache() } = {}) {
   if (rowPosition === "last") {
-    return findLastContentRow(page);
+    return findLastContentRow(page, {snapshotCache});
   }
 
   const index = Number.isInteger(rowIndex) ? rowIndex : 0;
   for (let attempt = 0; attempt < 12; attempt++) {
-    const rows = await collectVisibleContentRows(page);
+    const rows = await collectVisibleContentRows(page, {snapshotCache});
     const cateRows = rows.filter((row) => row.title);
     const selectableRows = cateRows.length ? cateRows : rows;
     if (selectableRows[index]) return selectableRows[index];
-    await remotePress(page, "ArrowDown", 700);
+    await remotePress(page, "ArrowDown", 700, {snapshotCache});
   }
 
-  const visibleRows = await collectVisibleContentRows(page);
+  const visibleRows = await collectVisibleContentRows(page, {snapshotCache});
   throw new Error(
     `Không tìm thấy hàng thứ ${index + 1}. Các hàng đang thấy: ${visibleRows
       .map((row) => row.title || `y=${row.rowY}`)
@@ -96,13 +100,13 @@ async function findContentRowByPosition(page, { rowIndex, rowPosition } = {}) {
   );
 }
 
-async function findLastContentRow(page) {
+async function findLastContentRow(page, {snapshotCache = createDomSnapshotCache()} = {}) {
   let lastRows = [];
   let lastSignature = "";
   let stableCount = 0;
 
   for (let attempt = 0; attempt < 18; attempt++) {
-    const rows = await collectVisibleContentRows(page);
+    const rows = await collectVisibleContentRows(page, {snapshotCache});
     const cateRows = rows.filter((row) => row.title);
     const selectableRows = cateRows.length ? cateRows : rows;
     if (selectableRows.length) {
@@ -118,7 +122,7 @@ async function findLastContentRow(page) {
       lastSignature = signature;
     }
 
-    await remotePress(page, "ArrowDown", 700);
+    await remotePress(page, "ArrowDown", 700, {snapshotCache});
   }
 
   const row = lastRows[lastRows.length - 1];
@@ -155,7 +159,14 @@ function scoreNormalizedTextMatch(label, target) {
   return 0;
 }
 
-async function collectVisibleContentRows(page) {
+async function collectVisibleContentRows(page, options = {}) {
+  const snapshotCache = options.snapshotCache;
+  const snapshotIdentity = snapshotCache
+    ? await getDomSnapshotIdentity(page, "contentContainer")
+    : null;
+  const cached = snapshotCache?.get("visible-content-rows", snapshotIdentity);
+  if (cached?.rows) return cached.rows;
+
   const scanner = createScopedDomScanner(page);
   const scan = await scanner.scan({
     contractName: "contentContainer",
@@ -210,7 +221,7 @@ async function collectVisibleContentRows(page) {
     row.items.push(item);
   }
 
-  return rowBuckets
+  const rows = rowBuckets
     .map((row) => {
       row.items = dedupeByPosition(row.items).slice(0, 30);
       const heading = headings
@@ -222,6 +233,9 @@ async function collectVisibleContentRows(page) {
     })
     .filter((row) => row.items.length > 0)
     .sort((a, b) => a.rowY - b.rowY);
+
+  if (snapshotCache) snapshotCache.set("visible-content-rows", snapshotIdentity, {rows});
+  return rows;
 
   function extractCssUrl(value) {
     const match = String(value || "").match(/url\(["']?(.+?)["']?\)/);
@@ -240,7 +254,7 @@ async function collectVisibleContentRows(page) {
   }
 }
 
-async function focusFirstRowStart(page, firstItem) {
+async function focusFirstRowStart(page, firstItem, options = {}) {
   if (!firstItem?.id) {
     await expectFocusedContent(page);
     return;
@@ -248,7 +262,9 @@ async function focusFirstRowStart(page, firstItem) {
 
   const hasTargetFocus = await isFocusedOnContentItem(page, firstItem);
   if (!hasTargetFocus) {
-    await remoteFocusById(page, firstItem.id, 80).catch(() => {});
+    options.snapshotCache?.invalidate();
+    await remoteFocusById(page, firstItem.id, 80, {snapshotCache: options.snapshotCache}).catch(() => {});
+    options.snapshotCache?.invalidate();
   }
 
   await expectFocusedContent(page);
