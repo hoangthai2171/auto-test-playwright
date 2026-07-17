@@ -333,6 +333,27 @@ test("presses Backspace sequentially for every requested back press", async () =
   ]);
 });
 
+test("presses Backspace once when the action count is omitted", async () => {
+  const events = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers(),
+  });
+  const page = {
+    keyboard: {
+      async press(key) {
+        events.push(key);
+      },
+    },
+  };
+
+  await handlers.press_back({
+    page,
+    action: { action: "press_back" },
+  });
+
+  assert.deepEqual(events, ["Backspace"]);
+});
+
 test("asserts that the page body contains the requested screen text", async () => {
   const calls = [];
   const handlers = createDefaultActionHandlers({
@@ -342,8 +363,13 @@ test("asserts that the page body contains the requested screen text", async () =
     locator(selector) {
       calls.push(selector);
       return {
-        async toContainText(text) {
-          calls.push(text);
+        _apiName: "Locator",
+        async _expect(matcher, options) {
+          calls.push([matcher, options.expectedText]);
+          return {
+            matches: true,
+            received: { value: "Trang chủ" },
+          };
         },
       };
     },
@@ -354,7 +380,11 @@ test("asserts that the page body contains the requested screen text", async () =
     action: { action: "assert_screen", text: "Trang chủ" },
   });
 
-  assert.deepEqual(calls, ["body", "Trang chủ"]);
+  assert.equal(calls[0], "body");
+  assert.equal(calls[1][0], "to.have.text");
+  assert.equal(calls[1][1][0].string, "Trang chủ");
+  assert.equal(calls[1][1][0].matchSubstring, true);
+  assert.equal(calls[1][1][0].normalizeWhiteSpace, true);
 });
 
 test("waits for app readiness through the workflow helper", async () => {

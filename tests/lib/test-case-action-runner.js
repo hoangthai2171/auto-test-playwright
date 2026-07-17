@@ -1,7 +1,5 @@
 const { compileTestCase } = require("./test-case-compiler");
 const { expect } = require("playwright/test");
-const helpers = require("./mytv-helpers");
-const workflows = require("./workflows");
 
 function attachJson(testInfo, name, value) {
   if (!testInfo || typeof testInfo.attach !== "function") return Promise.resolve();
@@ -109,16 +107,19 @@ function createDefaultActionHandlers({ helpers: actionHelpers }) {
         await page.keyboard.press("Backspace");
       }
     },
-    assert_screen: ({ page, action }) =>
-      page.locator("body").toContainText(action.text),
+    assert_screen: async ({ page, action }) => {
+      await expect(page.locator("body")).toContainText(action.text);
+    },
   };
 }
 
 async function runTestCase(page, testInfo, testCase, options = {}) {
   const handlers = options.handlers || createDefaultActionHandlers({
-    helpers: options.helpers || helpers,
+    helpers: options.helpers,
   });
-  const stepRunner = options.stepRunner || helpers.runStep;
+  const stepRunner =
+    options.stepRunner ||
+    (async (_page, _testInfo, _label, callback) => callback());
 
   return createActionRunner({ handlers, stepRunner })(
     page,
