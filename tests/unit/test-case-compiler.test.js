@@ -96,6 +96,17 @@ test("compiles every supported back and readiness form", () => {
   ]);
 });
 
+test("accepts terminal punctuation for parameterless commands", () => {
+  assert.deepEqual(
+    compileQaDescription("B1. Vào trang chủ app.\nB2. Quay lại!\nB3. Chờ home?"),
+    [
+      {action: "open_home"},
+      {action: "press_back"},
+      {action: "wait_for_ready", name: "home"},
+    ]
+  );
+});
+
 test("preserves literal punctuation in credential and service values", () => {
   const result = compileQaDescription(
     "B1. Đăng nhập app với tài khoản User_Đ/PaSS123.\nB2. Vào dịch vụ VTVcab ON)."

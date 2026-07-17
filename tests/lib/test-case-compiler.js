@@ -58,7 +58,7 @@ const STEP_COMPILERS = [
       return /\b(?:vao trang chu(?: app)?|vao home)\b/u.test(normalizedLine);
     },
     compile(_preparedLine, normalizedLine) {
-      if (!/^(?:vao trang chu(?: app)?|vao home)$/u.test(normalizedLine)) {
+      if (!/^(?:vao trang chu(?: app)?|vao home)[.!?…。！？]*$/u.test(normalizedLine)) {
         return null;
       }
 
@@ -91,7 +91,7 @@ const STEP_COMPILERS = [
       return /\b(?:quay lai|quay ve|nhan back)\b/u.test(normalizedLine);
     },
     compile(_preparedLine, normalizedLine) {
-      if (!/^(?:quay lai|quay ve|nhan back)$/u.test(normalizedLine)) {
+      if (!/^(?:quay lai|quay ve|nhan back)[.!?…。！？]*$/u.test(normalizedLine)) {
         return null;
       }
 
@@ -104,7 +104,7 @@ const STEP_COMPILERS = [
     },
     compile(_preparedLine, normalizedLine) {
       const readyMatch = normalizedLine.match(
-        /^cho (app|home|content|player)$/u
+        /^cho (app|home|content|player)[.!?…。！？]*$/u
       );
 
       if (!readyMatch) {
