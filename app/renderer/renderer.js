@@ -6,6 +6,13 @@ function maskActionForDisplay(action) {
     return displayAction;
 }
 
+function redactSensitiveText(value) {
+    return String(value ?? "")
+        .replace(/((?:tài khoản|tai khoan|username|user)\s*[=:]?\s*[\w.+-]+)\s*\/\s*([^\s,.;)\]}]+)/gi, "$1/••••••")
+        .replace(/((?:mật khẩu|mat khau|password)\s*[=:]?\s*)([^\s,.;)\]}]+)/gi, "$1••••••")
+        .replace(/("password"\s*:\s*")[^"]*(")/gi, "$1••••••$2");
+}
+
 function validateRunValues(values) {
     if (!values?.TEST_CASE_ID?.trim()) {
         return "Vui lòng chọn một test case trước khi chạy.";
@@ -69,7 +76,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     function appendLog(value) {
         if (!logOutput) return;
-        logOutput.textContent += value;
+        logOutput.textContent += redactSensitiveText(value);
         logOutput.scrollTop = logOutput.scrollHeight;
     }
 
@@ -113,7 +120,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const heading = doc.createElement("strong");
         heading.textContent = label;
         const content = doc.createElement("span");
-        content.textContent = value || "—";
+        content.textContent = redactSensitiveText(value || "—");
         row.append(heading, content);
         return row;
     }
@@ -384,6 +391,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         renderCaseDetails,
         selectCase,
         maskActionForDisplay,
+        redactSensitiveText,
         validateRunValues,
     };
 }
@@ -409,6 +417,7 @@ if (typeof module !== "undefined" && module.exports) {
         selectCase: (id, dependencies) => createRendererController(dependencies).selectCase(id),
         renderCaseDetails: (testCase, dependencies) => createRendererController(dependencies).renderCaseDetails(testCase),
         maskActionForDisplay,
+        redactSensitiveText,
         validateRunValues,
     };
 }

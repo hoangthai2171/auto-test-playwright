@@ -271,7 +271,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
 
       try {
         await expectFocusedContent(page);
-        await testInfo.attach(`${safeArtifactName(`ai-first-row-${index + 1}-focused-item`)}.json`, {
+        await testInfo.attach(`${safeArtifactName(`first-row-${index + 1}-focused-item`)}.json`, {
           body: JSON.stringify(item, null, 2),
           contentType: "application/json",
         });
@@ -283,7 +283,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
         result.playerState = playback.playerState;
 
         if (!playback.ok) {
-          const screenshotName = `${safeArtifactName(`ai-first-row-${index + 1}-${label}`)}.png`;
+          const screenshotName = `${safeArtifactName(`first-row-${index + 1}-${label}`)}.png`;
           const screenshot = await page.screenshot({ fullPage: false });
           await testInfo.attach(screenshotName, {
             body: screenshot,
@@ -295,7 +295,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
       } catch (error) {
         result.status = "failed";
         result.errorPopup = error?.message || String(error);
-        const screenshotName = `${safeArtifactName(`ai-first-row-${index + 1}-${label}-error`)}.png`;
+          const screenshotName = `${safeArtifactName(`first-row-${index + 1}-${label}-error`)}.png`;
         const screenshot = await page.screenshot({ fullPage: false });
         await testInfo.attach(screenshotName, {
           body: screenshot,
@@ -330,7 +330,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
     reason: stopReason,
     budgetLimited,
   });
-  await testInfo.attach("ai-first-row-playback-budget.json", {
+  await testInfo.attach("first-row-playback-budget.json", {
     body: JSON.stringify(budgetReport, null, 2),
     contentType: "application/json",
   });

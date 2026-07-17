@@ -352,6 +352,16 @@ test("masks action passwords while keeping usernames visible and source data int
   assert.equal(action.password, "secret");
 });
 
+test("redacts credential-shaped descriptions and log text", () => {
+  assert.equal(loadError, undefined, loadError?.message);
+
+  const text = "Đăng nhập với tài khoản ts1/111222, password=secret";
+  const redacted = renderer.redactSensitiveText(text);
+
+  assert.equal(redacted, "Đăng nhập với tài khoản ts1/••••••, password=••••••");
+  assert.doesNotMatch(redacted, /111222|secret/);
+});
+
 test("refuses to run until a test case id is selected", () => {
   assert.equal(loadError, undefined, loadError?.message);
 
@@ -372,5 +382,13 @@ test("index markup contains the case browser and no API-key or mode controls", (
   assert.match(html, /id="test-case-details"/);
   assert.match(html, /id="selected-test-case-id"/);
   assert.match(html, /id="settings-message"/);
+  const retiredAiControls = new RegExp(
+    [
+      ["ai", "api-key-input"].join("-"),
+      ["AI", "API key"].join(" "),
+      ["AI", "TEST_DESCRIPTION"].join("_"),
+    ].join("|")
+  );
+  assert.doesNotMatch(html, retiredAiControls);
   assert.doesNotMatch(html, /username-input|password-input|mode-select|test-description-input/);
 });

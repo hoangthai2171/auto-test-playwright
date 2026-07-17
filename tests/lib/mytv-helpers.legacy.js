@@ -241,7 +241,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
 
       try {
         await expectFocusedContent(page);
-        await testInfo.attach(`${safeArtifactName(`ai-first-row-${index + 1}-focused-item`)}.json`, {
+        await testInfo.attach(`${safeArtifactName(`first-row-${index + 1}-focused-item`)}.json`, {
           body: JSON.stringify(item, null, 2),
           contentType: "application/json",
         });
@@ -253,7 +253,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
         result.playerState = playback.playerState;
 
         if (!playback.ok) {
-          const screenshotName = `${safeArtifactName(`ai-first-row-${index + 1}-${label}`)}.png`;
+          const screenshotName = `${safeArtifactName(`first-row-${index + 1}-${label}`)}.png`;
           const screenshot = await page.screenshot({ fullPage: false });
           await testInfo.attach(screenshotName, {
             body: screenshot,
@@ -265,7 +265,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
       } catch (error) {
         result.status = "failed";
         result.errorPopup = error?.message || String(error);
-        const screenshotName = `${safeArtifactName(`ai-first-row-${index + 1}-${label}-error`)}.png`;
+          const screenshotName = `${safeArtifactName(`first-row-${index + 1}-${label}-error`)}.png`;
         const screenshot = await page.screenshot({ fullPage: false });
         await testInfo.attach(screenshotName, {
           body: screenshot,
@@ -2186,12 +2186,12 @@ function contentItemSignature(item) {
 }
 
 async function attachFirstRowPlaybackReport(testInfo, results) {
-  await testInfo.attach("ai-first-row-playback-results.json", {
+  await testInfo.attach("first-row-playback-results.json", {
     body: JSON.stringify(results, null, 2),
     contentType: "application/json",
   });
 
-  await testInfo.attach("ai-first-row-playback-results.html", {
+  await testInfo.attach("first-row-playback-results.html", {
     body: renderPlaybackResultsHtml(results),
     contentType: "text/html",
   });
@@ -2230,7 +2230,7 @@ function renderPlaybackResultsHtml(results) {
   </style>
 </head>
 <body>
-  <h1>AI first-row playback results</h1>
+  <h1>First-row playback results</h1>
   <table>
     <thead>
       <tr>

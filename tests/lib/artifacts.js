@@ -110,12 +110,12 @@ async function attachFailureArtifacts(page, testInfo, title, error) {
 }
 
 async function attachFirstRowPlaybackReport(testInfo, results) {
-  await testInfo.attach("ai-first-row-playback-results.json", {
+  await testInfo.attach("first-row-playback-results.json", {
     body: JSON.stringify(results, null, 2),
     contentType: "application/json",
   });
 
-  await testInfo.attach("ai-first-row-playback-results.html", {
+  await testInfo.attach("first-row-playback-results.html", {
     body: renderPlaybackResultsHtml(results),
     contentType: "text/html",
   });
@@ -154,7 +154,7 @@ function renderPlaybackResultsHtml(results) {
   </style>
 </head>
 <body>
-  <h1>AI first-row playback results</h1>
+  <h1>First-row playback results</h1>
   <table>
     <thead>
       <tr>

@@ -57,6 +57,13 @@ function sanitizeCaseForUi(testCase) {
     return cloneForUi(testCase);
 }
 
+function redactSensitiveText(value) {
+    return String(value ?? "")
+        .replace(/((?:tài khoản|tai khoan|username|user)\s*[=:]?\s*[\w.+-]+)\s*\/\s*([^\s,.;)\]}]+)/gi, "$1/••••••")
+        .replace(/((?:mật khẩu|mat khau|password)\s*[=:]?\s*)([^\s,.;)\]}]+)/gi, "$1••••••")
+        .replace(/("password"\s*:\s*")[^"]*(")/gi, "$1••••••$2");
+}
+
 function cloneForUi(value) {
     if (Array.isArray(value)) {
         return value.map(cloneForUi);
@@ -157,11 +164,11 @@ ipcMain.handle("run-test", async (event, values = {}) => {
     }
 
     runningProcess.stdout.on("data", (chunk) => {
-        event.sender.send("test-log", chunk.toString());
+        event.sender.send("test-log", redactSensitiveText(chunk.toString()));
     });
 
     runningProcess.stderr.on("data", (chunk) => {
-        event.sender.send("test-log", chunk.toString());
+        event.sender.send("test-log", redactSensitiveText(chunk.toString()));
     });
 
     runningProcess.on("error", (error) => {
