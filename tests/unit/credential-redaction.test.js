@@ -11,8 +11,9 @@ test("buffers split and long log credentials until a complete line or flush", ()
   const redactor = createLogRedactor((value) => chunks.push(value));
   const longPassword = "x".repeat(200) + "]tail";
 
-  redactor.push(`password=${longPassword.slice(0, 80)}`);
-  redactor.push(`${longPassword.slice(80)}\nnext line`);
+  redactor.push(`password=${longPassword.slice(0, 120)}`);
+  assert.deepEqual(chunks, []);
+  redactor.push(`${longPassword.slice(120)}\nnext line`);
 
   assert.deepEqual(chunks, ["password=••••••\n"]);
   redactor.flush();
