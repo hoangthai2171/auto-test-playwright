@@ -13,7 +13,6 @@ const DEFAULT_OPTIONS = {
   MOVIE_CATE_NAME: "",
   MOVIE_CATE_LIMIT: "0",
   SEARCH_KEYWORD: "",
-  AI_PLAN_PATH: "",
 };
 
 const CLOSE_POPUP_TEXT = /^(Đóng|Huỷ|Hủy|Quay về|Quay về trang chủ)$/i;
@@ -32,7 +31,6 @@ function getTestOptions() {
     MOVIE_CATE_NAME: process.env.MOVIE_CATE_NAME || DEFAULT_OPTIONS.MOVIE_CATE_NAME,
     MOVIE_CATE_LIMIT: process.env.MOVIE_CATE_LIMIT || DEFAULT_OPTIONS.MOVIE_CATE_LIMIT,
     SEARCH_KEYWORD: process.env.SEARCH_KEYWORD || DEFAULT_OPTIONS.SEARCH_KEYWORD,
-    AI_PLAN_PATH: process.env.AI_PLAN_PATH || DEFAULT_OPTIONS.AI_PLAN_PATH,
   };
 
   return {

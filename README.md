@@ -1,11 +1,9 @@
 # MyTV Auto Test
 
-Desktop runner and Playwright test suite for the MyTV HTML5 TV web app.
-
-The project can be used in two ways:
-
-- Run tests from terminal with Playwright.
-- Run tests from the Electron desktop UI and build a standalone app for macOS or Windows.
+Desktop runner and Playwright regression suite for the MyTV HTML5 TV web app.
+The Electron app runs server-shaped cases from a local fixture, while the
+terminal suite keeps the older helper-based specs available for regression
+coverage.
 
 ## Requirements
 
@@ -14,161 +12,155 @@ The project can be used in two ways:
 - Network access to the target MyTV app URL.
 - Network access when installing dependencies or Playwright browser binaries.
 
-Install dependencies:
+Install dependencies and the platform-specific browser bundle:
 
 ```bash
 npm install
-```
-
-Install Playwright browser binaries into the local bundle folder:
-
-```bash
 npm run browsers:install
 ```
 
-This creates `.playwright-browsers/`, which is bundled into the Electron app.
+The browser command creates `.playwright-browsers/`, which is bundled into the
+Electron application.
 
 ## Project Structure
 
 ```text
-app/                         Electron desktop app
-  main.js                    Main process, starts Playwright
-  preload.js                 Safe IPC bridge
-  renderer/                  UI files
-scripts/
-  run-headed.js              Interactive terminal runner
-  run-electron-app.js        Starts Electron in dev mode
-  install-playwright-browsers.js
+testcased.json                  Read-only local server-shaped fixture
+app/
+  main.js                       Electron main process and test-case runner IPC
+  preload.js                    Safe IPC bridge
+  renderer/                     Case browser, preview, logs, and settings UI
 tests/
-  run-ai-plan-mytv.spec.js
-  login-mytv.spec.js
-  play-channel-mytv.spec.js
-  play-movie-mytv.spec.js
-  search-content-mytv.spec.js
-  open-setting-mytv.spec.js
-  fixtures/mytv-session-fixture.js
-  lib/mytv-helpers.js
+  run-test-case-mytv.spec.js    Generic Playwright entry point
+  login-mytv.spec.js            Legacy login regression spec
+  play-channel-mytv.spec.js     Legacy channel regression spec
+  play-movie-mytv.spec.js       Legacy movie regression spec
+  search-content-mytv.spec.js   Legacy search regression spec
+  open-setting-mytv.spec.js     Legacy settings regression spec
+  fixtures/                     Shared browser-session fixture
+  lib/
+    test-case-schema.js         Test-case and action validation
+    test-case-source.js         Local fixture loading and case lookup
+    test-case-compiler.js       Limited qaDescription fallback compiler
+    test-case-action-runner.js  Validated action dispatch and step results
+    mytv-helpers.js             Public helper facade
+    workflows.js                Current helper workflows
+    mytv-helpers.legacy.js      Retained legacy helper copy
+scripts/
+  run-headed.js                 Interactive terminal runner for legacy specs
+  run-electron-app.js           Starts Electron in development mode
+  install-playwright-browsers.js
 playwright.config.js
 ```
 
-## Run With Desktop UI
+## Run With the Electron Case Browser
 
-Start the Electron app in development mode:
+The first local source is `testcased.json`. It is a development fixture and is
+read at runtime; the app does not rewrite it.
 
-```bash
-npm run app:dev
-```
+1. Add or update server-shaped cases in `testcased.json`.
+2. Start the desktop runner:
 
-In the app UI:
+   ```bash
+   npm run app:dev
+   ```
 
-1. Enter `APP_URL`, `USERNAME`, and `PASSWORD`.
-2. Choose a test case:
-   - Play kênh
-   - Play phim truyện
-   - Tìm kiếm nội dung
-   - Mở cài đặt
-   - Mô tả thủ công (A.I)
-3. Fill the extra field for the chosen test:
-   - `CHANNEL_NAME` for channel playback.
-   - movie mode and `MOVIE_NAME` for movie playback by name.
-   - `SEARCH_KEYWORD` for search playback.
-   - `AI_TEST_DESCRIPTION` for the A.I mode.
-4. Click `Run Test`.
-5. Watch realtime logs in the app.
-6. Click `Open Report` after the run finishes.
+3. Select a case in the case browser.
+4. Review its metadata, expected result, and normalized action preview.
+5. Click `Run Test` and watch the logs and optional browser preview.
+6. Open the Playwright report after the run finishes.
 
-Reports created by the packaged app are written to the Electron user data folder, not inside the app bundle.
+The Electron runner sends the selected case ID, `APP_URL`, and preview settings
+to the main process. `app/main.js` validates the ID, then starts the single
+generic spec `tests/run-test-case-mytv.spec.js`. The generic spec loads the
+case, validates or compiles its actions, and executes them in order.
 
-### A.I Manual Mode
+### Case execution contract
 
-`Mô tả thủ công (A.I)` turns a natural-language request into a structured JSON test plan, then runs that plan with the fixed Playwright executor.
+Explicit `actions` are the preferred and authoritative representation. The
+initial action vocabulary is:
 
-The current executor supports:
-
-- Opening a service from the left menu.
-- If the service is not visible in the left menu, opening `Tất cả dịch vụ` and finding the service there.
-- Playing all visible items in the first content row.
-- Finding a requested cate/content row by title such as `Phim song song`, then playing items in that row.
-- Limiting playback to the requested number of items such as `3 phim đầu tiên`.
-- Waiting 6 seconds per item by default.
-- Capturing playback status, popup text, poster, title, screenshots for failed items, and JSON/HTML report attachments.
-
-If `AI API key` is left blank, the app uses the built-in local planner for requests like:
-
-```text
-Mở dịch vụ phim truyện và play toàn bộ hàng nội dung đầu tiên trong dịch vụ đó
-Mở dịch vụ phim truyện và play 3 phim đầu tiên của cate "Phim song song"
-```
-
-If `AI API key` is provided, the app calls the configured OpenAI-compatible chat completions endpoint and expects JSON using the allowed actions:
-
+- `login`
+- `open_home`
 - `open_service`
-- `play_all_items_in_first_row`
+- `assert_screen`
+- `press_back`
+- `wait_for_ready`
 
-The generated plan is saved under Electron `userData/ai-plans/latest-plan.json` and is attached to the Playwright report as `ai-plan.json`.
+If a case has no explicit actions, `test-case-compiler.js` supports a small,
+deterministic subset of `qaDescription`: login with a literal account, enter
+home, open a named service, press back, and wait for the known app/home/content
+or player readiness states. Unsupported or ambiguous lines fail with the case
+ID and original source line. The compiler is a migration fallback, not a
+general natural-language executor.
 
-## Run From Terminal
+Case login actions may contain literal test credentials because different
+cases can use different accounts. Treat `testcased.json` as sensitive runtime
+data and keep it out of commits when it contains private credentials. Passwords
+are masked in the Electron action preview, and the main-process run log records
+case metadata rather than action credentials. Playwright case attachments are
+generated from the source case, so report folders also require appropriate
+access control.
 
-Interactive headed runner:
+The local runner currently has one source: `testcased.json`. API retrieval and
+an Electron user-data cache are intentionally separate follow-up work. A future
+source/cache layer should validate downloaded cases, atomically replace a
+user-data cache only after a successful refresh, and feed the same generic
+executor without changing action handlers.
+
+Reports created by the packaged app are written to the Electron user-data
+folder, not inside the application bundle.
+
+## Legacy Terminal Regression Specs
+
+The older terminal specs remain available for helper and navigation regression
+coverage. They retain their non-case-specific environment options and should be
+run with the login spec first when a shared authenticated session is required.
+
+Interactive terminal runner:
 
 ```bash
 npm run test:headed
 ```
 
-The script asks for:
-
-- `APP_URL`
-- `USERNAME`
-- `PASSWORD`
-- test mode
-- mode-specific values such as `CHANNEL_NAME`, `MOVIE_NAME`, or `SEARCH_KEYWORD`
-
-Run the full Playwright suite:
-
-```bash
-npm test
-```
-
-List all tests:
-
-```bash
-npm run test -- --list
-```
-
-Run specific tests:
+Direct legacy spec examples:
 
 ```bash
 npx playwright test tests/login-mytv.spec.js tests/play-channel-mytv.spec.js --project=chromium
-```
-
-Run with environment variables:
-
-```bash
-APP_URL="https://html5stage.mytv.vn/" \
-USERNAME="ts1" \
-PASSWORD="111222" \
-CHANNEL_NAME="VTV1 HD" \
-npx playwright test tests/login-mytv.spec.js tests/play-channel-mytv.spec.js --project=chromium
-```
-
-Movie by name:
-
-```bash
-MOVIE_PLAY_MODE=by_name \
-MOVIE_NAME="can phong tu than" \
 npx playwright test tests/login-mytv.spec.js tests/play-movie-mytv.spec.js --project=chromium
+npx playwright test tests/login-mytv.spec.js tests/search-content-mytv.spec.js --project=chromium
+npx playwright test tests/login-mytv.spec.js tests/open-setting-mytv.spec.js --project=chromium
 ```
 
-Search:
+The retained legacy options are `APP_URL`, `USERNAME`, `PASSWORD`,
+`CHANNEL_NAME`, `CHANNEL_PLAY_MODE`, `CHANNEL_CATE_NAME`,
+`CHANNEL_CATE_LIMIT`, `MOVIE_PLAY_MODE`, `MOVIE_NAME`, `MOVIE_CATE_NAME`,
+`MOVIE_CATE_LIMIT`, and `SEARCH_KEYWORD`. These options are consumed by the
+legacy terminal specs only; the Electron case browser uses the selected case's
+actions instead.
+
+Run the pure local tests with:
 
 ```bash
-SEARCH_KEYWORD="can phong tu than" \
-npx playwright test tests/login-mytv.spec.js tests/search-content-mytv.spec.js --project=chromium
+npm run test:unit
 ```
 
-## Build Desktop App
+## Test Behavior Notes
 
-Always install browser binaries for the current platform before building:
+- The suite uses `workers: 1` because the shared fixture intentionally reuses
+  one browser session.
+- MyTV interaction is keyboard-only: Arrow keys navigate, Enter activates, and
+  Backspace/Escape goes back.
+- Text input uses the app's virtual keyboard character by character, not normal
+  browser typing.
+- Vietnamese matching ignores accents and case, maps `đ` to `d`, and supports
+  partial token matches.
+- Readiness checks and action failures preserve screenshots, focused-element
+  state, popup text, and other existing artifacts where available.
+
+## Build the Desktop App
+
+Install browser binaries for the current platform before building:
 
 ```bash
 npm run browsers:install
@@ -176,30 +168,22 @@ npm run browsers:install
 
 ### macOS
 
-Build macOS zip:
+Build the macOS zip:
 
 ```bash
 npm run app:build:mac
 ```
 
-Output:
-
-```text
-dist/MyTV Auto Test-1.0.0-arm64-mac.zip
-dist/mac-arm64/MyTV Auto Test.app
-```
-
-Build macOS DMG:
+Build a DMG when local signing and disk-image tooling are available:
 
 ```bash
 npm run app:build:mac:dmg
 ```
 
-DMG creation may fail on some machines because it depends on `hdiutil`, APFS/HFS support, and signing/notarization setup. The zip target is the safer default for now.
-
 ### Windows
 
-Build on a Windows machine or Windows CI:
+Build on Windows or Windows CI so the bundled browser binaries match the
+target platform:
 
 ```bash
 npm install
@@ -207,97 +191,56 @@ npm run browsers:install
 npm run app:build:win
 ```
 
-Output is written to `dist/`.
-
-Important: Playwright browser binaries are platform-specific. Do not build the Windows installer using the macOS `.playwright-browsers` folder. Run `npm run browsers:install` on Windows before `npm run app:build:win`.
+Do not use macOS browser binaries for a Windows package.
 
 ## Browser Bundle Notes
 
-The app bundles Playwright browsers via Electron Builder `extraResources`:
+Electron Builder copies:
 
 ```text
 .playwright-browsers -> Contents/Resources/playwright-browsers
 ```
 
-At runtime, the Electron app sets:
+Packaged runs set `PLAYWRIGHT_BROWSERS_PATH` to that resource directory.
+Development runs use `.playwright-browsers/` from the project root.
 
-```text
-PLAYWRIGHT_BROWSERS_PATH=<app resources>/playwright-browsers
-```
+## Reports and Artifacts
 
-This lets the packaged app use the bundled browser instead of relying on the user's global Playwright cache.
-
-For development mode, the app uses:
-
-```text
-.playwright-browsers/
-```
-
-## Test Behavior Notes
-
-- The suite uses `workers: 1` because specs intentionally share one browser session.
-- `login-mytv.spec.js` should run before playback/search/settings specs.
-- The app is controlled with TV remote-style keys:
-  - Arrow keys for navigation.
-  - Enter for OK.
-  - Backspace/Escape for Back.
-- Text input uses the app's virtual keyboard, not normal browser typing.
-- Search supports fuzzy matching:
-  - accents are ignored,
-  - case is ignored,
-  - `đ` is treated as `d`,
-  - partial names can match longer titles.
-
-## Reports And Artifacts
-
-Playwright HTML report opens automatically for terminal runs because of `playwright.config.js`.
-
-Failure artifacts can include:
-
-- screenshots,
-- popup text,
-- player state JSON,
-- search result candidates,
-- no-result details.
-
-For packaged Electron app runs, report and test output are stored under Electron `userData`, and can be opened from the app UI.
+Terminal runs use the Playwright HTML reporter configured in
+`playwright.config.js`. Failure artifacts can include screenshots, popup text,
+player state, focus state, and search or movie candidate details. Electron runs
+store reports and test output under Electron `userData` and expose report
+controls in the UI.
 
 ## Common Issues
 
 ### Electron binary failed to install
 
-If Electron reports that it failed to install correctly, reinstall dependencies:
+Reinstall dependencies:
 
 ```bash
 npm install
 ```
 
-If needed, remove `node_modules` and install again.
+### Playwright cannot find a browser
 
-### Playwright cannot find browser
-
-Run:
+Install the local bundle and rebuild if necessary:
 
 ```bash
 npm run browsers:install
 ```
 
-Then rebuild the app.
-
 ### macOS blocks the app
 
-Unsigned apps may be blocked by Gatekeeper. For internal testing, open from Finder with right click > Open. For distribution outside the team, configure Apple Developer ID signing and notarization.
+Unsigned internal builds may be blocked by Gatekeeper. Open the app from
+Finder with right-click > Open, or configure signing and notarization for
+distribution.
 
-### Windows build from macOS
+### DMG creation fails
 
-The project can define a Windows target, but a reliable Windows package should be built on Windows or Windows CI so the correct browser binaries and installer tooling are used.
-
-### DMG build fails
-
-Use the zip target:
+Use the zip target while `hdiutil`, signing, and notarization setup are being
+stabilized:
 
 ```bash
 npm run app:build:mac
 ```
-
-DMG can be revisited after signing/notarization and local `hdiutil` behavior are stable.

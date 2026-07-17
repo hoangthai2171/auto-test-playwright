@@ -372,5 +372,5 @@ test("index markup contains the case browser and no API-key or mode controls", (
   assert.match(html, /id="test-case-details"/);
   assert.match(html, /id="selected-test-case-id"/);
   assert.match(html, /id="settings-message"/);
-  assert.doesNotMatch(html, /ai-api-key-input|AI API key|AI_TEST_DESCRIPTION|mode-select/);
+  assert.doesNotMatch(html, /username-input|password-input|mode-select|test-description-input/);
 });
