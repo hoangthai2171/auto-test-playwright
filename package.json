@@ -32,6 +32,7 @@
     "files": [
       "app/**/*",
       "tests/**/*",
+      "testcased.json",
       "playwright.config.js",
       "package.json",
       "node_modules/**/*"

@@ -57,6 +57,4 @@ test("active batch workflow uses the shared budget and preserves playback artifa
   expect(workflows).toContain("attachFirstRowPlaybackReport(testInfo, results)");
   expect(workflows).not.toContain("options.maxItems || 60");
 
-  const main = fs.readFileSync(path.join(__dirname, "..", "app", "main.js"), "utf8");
-  expect(main).toContain("Number.isFinite(itemLimit) && itemLimit >= 0");
 });

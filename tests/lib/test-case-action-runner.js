@@ -1,6 +1,6 @@
 const { compileTestCase } = require("./test-case-compiler");
-const { expect } = require("playwright/test");
 const workflows = require("./workflows");
+const { normalizeVietnameseText } = require("./text-utils");
 
 function attachJson(testInfo, name, value) {
   if (!testInfo || typeof testInfo.attach !== "function") return Promise.resolve();
@@ -80,6 +80,7 @@ function createActionRunner({ handlers = {}, stepRunner }) {
       steps.push(step);
     }
 
+    await attachJson(testInfo, "test-case-result.json", result);
     return result;
   };
 }
@@ -131,12 +132,36 @@ function createDefaultActionHandlers({ helpers }) {
         testInfo
       ),
     press_back: async ({ page, action }) => {
-      for (let index = 0; index < (action.count || 1); index += 1) {
+      for (let index = 0; index < (action.count ?? 1); index += 1) {
         await page.keyboard.press("Backspace");
       }
     },
     assert_screen: async ({ page, action }) => {
-      await expect(page.locator("body")).toContainText(action.text);
+      const expected = normalizeVietnameseText(action.text);
+      const visible = await page.evaluate((needle) => {
+        const normalize = (value) => value
+          .normalize("NFD")
+          .replace(/[\u0300-\u036f]/g, "")
+          .replace(/đ/gi, "d")
+          .replace(/\s+/g, " ")
+          .trim()
+          .toLowerCase();
+        return Array.from(document.querySelectorAll("body *")).some((element) => {
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return (
+            rect.width > 0 &&
+            rect.height > 0 &&
+            style.display !== "none" &&
+            style.visibility !== "hidden" &&
+            Number(style.opacity) !== 0 &&
+            normalize(element.innerText || "").includes(needle)
+          );
+        });
+      }, expected);
+      if (!visible) {
+        throw new Error(`Visible screen text not found: ${action.text}`);
+      }
     },
     wait_for_ready: ({ page, testInfo, action }) =>
       resolveReadyWait(helpers, page, testInfo, action.name),

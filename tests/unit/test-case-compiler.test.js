@@ -107,13 +107,10 @@ test("preserves literal punctuation in credential and service values", () => {
   ]);
 });
 
-test("rejects the unsupported trang chu app form", () => {
-  assert.throws(
-    () =>
-      compileQaDescription("B1. Vào trang chủ app", {
-        caseId: "home-grammar-case",
-      }),
-    /home-grammar-case.*unsupported.*Vào trang chủ app/i
+test("compiles the provided trang chu app form", () => {
+  assert.deepEqual(
+    compileQaDescription("B1. Vào trang chủ app", {caseId: "home-grammar-case"}),
+    [{action: "open_home"}]
   );
 });
 
@@ -134,6 +131,17 @@ test("rejects a service step followed by another command", () => {
       }),
     /trailing-command-case.*ambiguous.*Vào dịch vụ Phim truyện và vào home/i
   );
+});
+
+test("rejects service steps followed by roi, sau do, comma, or semicolon commands", () => {
+  for (const line of [
+    "B1. Vào dịch vụ Phim truyện rồi quay lại",
+    "B1. Vào dịch vụ Phim truyện sau đó vào home",
+    "B1. Vào dịch vụ Phim truyện, vào home",
+    "B1. Vào dịch vụ Phim truyện; vào home",
+  ]) {
+    assert.throws(() => compileQaDescription(line), /ambiguous/i, line);
+  }
 });
 
 test("rejects a line that matches multiple supported patterns", () => {

@@ -227,6 +227,25 @@ test("attaches the original case and compiled action payloads", async () => {
     ),
     [{ action: "open_home" }]
   );
+  assert.deepEqual(
+    JSON.parse(
+      testInfo.attachments.find(({ name }) => name === "test-case-result.json").body
+    ),
+    {
+      testCaseId: "12066",
+      name: "Compiled home case",
+      status: "passed",
+      source: "local",
+      steps: [{
+        index: 0,
+        action: "open_home",
+        status: "passed",
+        durationMs: 0,
+        message: "",
+      }],
+      expectedResult: "Home is visible",
+    }
+  );
   assert.equal(testInfo.attachments[0].contentType, "application/json");
   assert.equal(testInfo.attachments[1].contentType, "application/json");
 });
@@ -357,24 +376,25 @@ test("presses Backspace once when the action count is omitted", async () => {
   assert.deepEqual(events, ["Backspace"]);
 });
 
+test("does not press Backspace when the action count is zero", async () => {
+  const events = [];
+  const handlers = createDefaultActionHandlers({helpers: createHandlerHelpers()});
+  await handlers.press_back({
+    page: {keyboard: {press: async (key) => events.push(key)}},
+    action: {action: "press_back", count: 0},
+  });
+  assert.deepEqual(events, []);
+});
+
 test("asserts that the page body contains the requested screen text", async () => {
   const calls = [];
   const handlers = createDefaultActionHandlers({
     helpers: createHandlerHelpers(),
   });
   const page = {
-    locator(selector) {
-      calls.push(selector);
-      return {
-        _apiName: "Locator",
-        async _expect(matcher, options) {
-          calls.push([matcher, options.expectedText]);
-          return {
-            matches: true,
-            received: { value: "Trang chủ" },
-          };
-        },
-      };
+    async evaluate(callback, expected) {
+      calls.push([callback, expected]);
+      return true;
     },
   };
 
@@ -383,11 +403,22 @@ test("asserts that the page body contains the requested screen text", async () =
     action: { action: "assert_screen", text: "Trang chủ" },
   });
 
-  assert.equal(calls[0], "body");
-  assert.equal(calls[1][0], "to.have.text");
-  assert.equal(calls[1][1][0].string, "Trang chủ");
-  assert.equal(calls[1][1][0].matchSubstring, true);
-  assert.equal(calls[1][1][0].normalizeWhiteSpace, true);
+  assert.equal(typeof calls[0][0], "function");
+  assert.equal(calls[0][1], "trang chu");
+});
+
+test("rejects screen text that exists only in hidden content", async () => {
+  const handlers = createDefaultActionHandlers({helpers: createHandlerHelpers()});
+  const page = {
+    async evaluate() {
+      return false;
+    },
+  };
+
+  await assert.rejects(
+    () => handlers.assert_screen({page, action: {action: "assert_screen", text: "Trang chủ"}}),
+    /Visible screen text not found/
+  );
 });
 
 test("waits for app readiness through the workflow helper", async () => {

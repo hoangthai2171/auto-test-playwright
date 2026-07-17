@@ -8,6 +8,14 @@ const ALLOWED_ACTIONS = new Set([
 ]);
 
 const READY_NAMES = new Set(["app", "home", "content", "player"]);
+const ACTION_KEYS = {
+  login: ["action", "username", "password"],
+  open_home: ["action"],
+  open_service: ["action", "service"],
+  assert_screen: ["action", "text"],
+  press_back: ["action", "count"],
+  wait_for_ready: ["action", "name"],
+};
 
 function hasOwn(value, key) {
   return Object.prototype.hasOwnProperty.call(value, key);
@@ -24,6 +32,13 @@ function validateAction(action, path = "action") {
 
   if (!ALLOWED_ACTIONS.has(action.action)) {
     throw new Error(`${path}: unsupported action "${action.action}"`);
+  }
+
+  const unknownKeys = Object.keys(action).filter(
+    (key) => !ACTION_KEYS[action.action].includes(key)
+  );
+  if (unknownKeys.length) {
+    throw new Error(`${path}: unknown field "${unknownKeys[0]}"`);
   }
 
   if (action.action === "login") {
@@ -58,7 +73,11 @@ function validateAction(action, path = "action") {
     throw new Error(`${path}.name must be one of app, home, content, or player`);
   }
 
-  return { ...action };
+  return Object.fromEntries(
+    ACTION_KEYS[action.action]
+      .filter((key) => hasOwn(action, key))
+      .map((key) => [key, action[key]])
+  );
 }
 
 function normalizeTestCase(testCase) {
@@ -70,7 +89,7 @@ function normalizeTestCase(testCase) {
 
   if (Array.isArray(normalized.actions)) {
     normalized.actions = normalized.actions.map((action, actionIndex) =>
-      validateAction(action, `testCases[0].actions[${actionIndex}]`)
+      validateAction(action, `actions[${actionIndex}]`)
     );
   }
 
@@ -101,8 +120,8 @@ function validateTestCase(testCase, index = 0) {
   const hasActions = hasOwn(testCase, "actions");
   const hasDescription = hasOwn(testCase, "qaDescription");
 
-  if (!hasActions && !hasDescription) {
-    throw new Error(`${path} requires actions or qaDescription`);
+  if ((!hasActions || testCase.actions.length === 0) && !hasDescription) {
+    throw new Error(`${path} ${testCase.id} requires actions or qaDescription`);
   }
 
   if (hasActions && !Array.isArray(testCase.actions)) {

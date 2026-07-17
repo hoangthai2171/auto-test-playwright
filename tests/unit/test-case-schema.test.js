@@ -37,6 +37,13 @@ test("rejects an unknown action", () => {
   );
 });
 
+test("rejects undeclared action fields", () => {
+  assert.throws(
+    () => validateAction({action: "open_home", selector: "#home"}),
+    /unknown field.*selector/i
+  );
+});
+
 test("requires id and name", () => {
   assert.throws(
     () => validateTestCaseList([{ name: "missing id", actions: [] }]),
@@ -52,6 +59,10 @@ test("requires actions or qaDescription", () => {
   assert.throws(
     () => validateTestCaseList([{ id: "1", name: "empty" }]),
     /actions|qaDescription/i
+  );
+  assert.throws(
+    () => validateTestCaseList([{id: "2", name: "empty actions", actions: []}]),
+    /actions.*qaDescription|qaDescription.*actions/i
   );
 });
 

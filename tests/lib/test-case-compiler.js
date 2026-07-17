@@ -55,10 +55,10 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
-      return /\b(?:vao trang chu|vao home)\b/u.test(normalizedLine);
+      return /\b(?:vao trang chu(?: app)?|vao home)\b/u.test(normalizedLine);
     },
     compile(_preparedLine, normalizedLine) {
-      if (!/^(?:vao trang chu|vao home)$/u.test(normalizedLine)) {
+      if (!/^(?:vao trang chu(?: app)?|vao home)$/u.test(normalizedLine)) {
         return null;
       }
 
@@ -117,7 +117,7 @@ const STEP_COMPILERS = [
 ];
 
 function hasTrailingCommand(normalizedLine) {
-  return /\bva\s+(?:dang nhap\b|vao trang chu\b|vao home\b|vao dich vu\b|quay lai\b|quay ve\b|nhan back\b|cho (?:app|home|content|player)\b)/u.test(
+  return /(?:\b(?:va|roi|sau do)\s+|[,;]\s*)(?:dang nhap\b|vao trang chu(?: app)?\b|vao home\b|vao dich vu\b|quay lai\b|quay ve\b|nhan back\b|cho (?:app|home|content|player)\b)/u.test(
     normalizedLine
   );
 }
@@ -128,7 +128,7 @@ function compileLine(originalLine, context, actionIndex) {
   const serviceCompiler = STEP_COMPILERS.find((compiler) => compiler.isService);
   const startsWithService = serviceCompiler.startsLine(normalizedLine);
 
-  if (startsWithService && hasTrailingCommand(normalizedLine)) {
+  if (hasTrailingCommand(normalizedLine)) {
     throw ambiguousStepError(context, originalLine);
   }
 
