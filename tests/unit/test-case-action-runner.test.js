@@ -1,7 +1,13 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { createActionRunner } = require("../lib/test-case-action-runner");
+const {
+  createActionRunner,
+  createDefaultActionHandlers,
+  runTestCase,
+} = require("../lib/test-case-action-runner");
+const defaultHelpers = require("../lib/mytv-helpers");
+const workflows = require("../lib/workflows");
 
 function createTestInfo() {
   const attachments = [];
@@ -12,6 +18,35 @@ function createTestInfo() {
       attachments.push({ name, ...payload });
     },
   };
+}
+
+function createHandlerHelpers(overrides = {}) {
+  return {
+    openAppAndEnterLoginPage: async () => {},
+    loginWithAccount: async () => {},
+    chooseFirstProfileAndEnterHome: async () => {},
+    closeHomePopupsAndVerifyHome: async () => {},
+    openServiceFromLeftMenuOrAllServices: async () => {},
+    waitForContentVisible: async () => {},
+    waitForPlayerReady: async () => {},
+    getPlayerState: async () => ({
+      hasVideo: true,
+      isProbablyPlaying: true,
+    }),
+    __internal: {
+      getVisiblePopup: async () => null,
+    },
+    ...overrides,
+  };
+}
+
+function replaceWorkflowInternals(overrides) {
+  const originals = Object.fromEntries(
+    Object.keys(overrides).map((key) => [key, workflows.__internal[key]])
+  );
+  Object.assign(workflows.__internal, overrides);
+
+  return () => Object.assign(workflows.__internal, originals);
 }
 
 test("runs each declared action through its handler in order", async () => {
@@ -193,4 +228,286 @@ test("attaches the original case and compiled action payloads", async () => {
   );
   assert.equal(testInfo.attachments[0].contentType, "application/json");
   assert.equal(testInfo.attachments[1].contentType, "application/json");
+});
+
+test("creates exactly the default handlers and logs in with action credentials in helper order", async () => {
+  const calls = [];
+  const page = { id: "page" };
+  const testInfo = { id: "test-info" };
+  const options = {
+    APP_URL: "https://example.test/",
+    USERNAME: "environment-user",
+    PASSWORD: "environment-password",
+    source: "server",
+  };
+  const action = {
+    action: "login",
+    username: "case-user",
+    password: "case-password",
+  };
+  const helpers = createHandlerHelpers({
+    openAppAndEnterLoginPage: async (...args) => {
+      calls.push(["openAppAndEnterLoginPage", ...args]);
+    },
+    loginWithAccount: async (...args) => {
+      calls.push(["loginWithAccount", ...args]);
+    },
+    chooseFirstProfileAndEnterHome: async (...args) => {
+      calls.push(["chooseFirstProfileAndEnterHome", ...args]);
+    },
+    closeHomePopupsAndVerifyHome: async (...args) => {
+      calls.push(["closeHomePopupsAndVerifyHome", ...args]);
+    },
+  });
+  const handlers = createDefaultActionHandlers({ helpers });
+  const account = {
+    ...options,
+    USERNAME: action.username,
+    PASSWORD: action.password,
+  };
+
+  assert.deepEqual(Object.keys(handlers).sort(), [
+    "assert_screen",
+    "login",
+    "open_service",
+    "press_back",
+  ]);
+
+  await handlers.login({ page, testInfo, action, options });
+
+  assert.deepEqual(calls, [
+    ["openAppAndEnterLoginPage", page, account, testInfo],
+    ["loginWithAccount", page, account, testInfo],
+    ["chooseFirstProfileAndEnterHome", page, testInfo],
+    ["closeHomePopupsAndVerifyHome", page, testInfo],
+  ]);
+});
+
+test("opens a service with the action service and test context", async () => {
+  const calls = [];
+  const page = { id: "page" };
+  const testInfo = { id: "test-info" };
+  const helpers = createHandlerHelpers({
+    openServiceFromLeftMenuOrAllServices: async (...args) => {
+      calls.push(args);
+    },
+  });
+  const handlers = createDefaultActionHandlers({ helpers });
+
+  await handlers.open_service({
+    page,
+    testInfo,
+    action: { action: "open_service", service: "Phim truyện" },
+  });
+
+  assert.deepEqual(calls, [[page, "Phim truyện", testInfo]]);
+});
+
+test("presses Backspace sequentially for every requested back press", async () => {
+  const events = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers(),
+  });
+  const page = {
+    keyboard: {
+      async press(key) {
+        events.push(`start:${key}`);
+        await Promise.resolve();
+        events.push(`end:${key}`);
+      },
+    },
+  };
+
+  await handlers.press_back({
+    page,
+    action: { action: "press_back", count: 3 },
+  });
+
+  assert.deepEqual(events, [
+    "start:Backspace",
+    "end:Backspace",
+    "start:Backspace",
+    "end:Backspace",
+    "start:Backspace",
+    "end:Backspace",
+  ]);
+});
+
+test("asserts that the page body contains the requested screen text", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers(),
+  });
+  const page = {
+    locator(selector) {
+      calls.push(selector);
+      return {
+        async toContainText(text) {
+          calls.push(text);
+        },
+      };
+    },
+  };
+
+  await handlers.assert_screen({
+    page,
+    action: { action: "assert_screen", text: "Trang chủ" },
+  });
+
+  assert.deepEqual(calls, ["body", "Trang chủ"]);
+});
+
+test("waits for app readiness through the workflow helper", async () => {
+  const calls = [];
+  const page = { id: "page" };
+  const testInfo = { id: "test-info" };
+  const restore = replaceWorkflowInternals({
+    waitForAppReady: async (...args) => {
+      calls.push(args);
+    },
+  });
+
+  try {
+    const handlers = createDefaultActionHandlers({
+      helpers: createHandlerHelpers(),
+    });
+
+    await handlers.wait_for_ready({
+      page,
+      testInfo,
+      action: { action: "wait_for_ready", name: "app" },
+    });
+  } finally {
+    restore();
+  }
+
+  assert.deepEqual(calls, [[page, testInfo]]);
+});
+
+test("waits for home readiness through the workflow helper", async () => {
+  const calls = [];
+  const page = { id: "page" };
+  const testInfo = { id: "test-info" };
+  const restore = replaceWorkflowInternals({
+    waitForHomeReady: async (...args) => {
+      calls.push(args);
+    },
+  });
+
+  try {
+    const handlers = createDefaultActionHandlers({
+      helpers: createHandlerHelpers(),
+    });
+
+    await handlers.wait_for_ready({
+      page,
+      testInfo,
+      action: { action: "wait_for_ready", name: "home" },
+    });
+  } finally {
+    restore();
+  }
+
+  assert.deepEqual(calls, [[page, testInfo]]);
+});
+
+test("waits for content readiness with the visible-content observer", async () => {
+  const calls = [];
+  const page = { id: "page" };
+  const testInfo = { id: "test-info" };
+  const getContentState = async () => ({ visible: true });
+  const restore = replaceWorkflowInternals({ observeVisibleContentRows: getContentState });
+  const helpers = createHandlerHelpers({
+    waitForContentVisible: async (...args) => {
+      calls.push(args);
+    },
+  });
+
+  try {
+    const handlers = createDefaultActionHandlers({ helpers });
+
+    await handlers.wait_for_ready({
+      page,
+      testInfo,
+      action: { action: "wait_for_ready", name: "content" },
+    });
+  } finally {
+    restore();
+  }
+
+  assert.deepEqual(calls, [[page, { testInfo, getContentState }]]);
+});
+
+test("waits for player readiness with MyTV popup and player observers", async () => {
+  const calls = [];
+  const page = { id: "page" };
+  const testInfo = { id: "test-info" };
+  const getVisiblePopup = async () => null;
+  const getPlayerState = async () => ({
+    hasVideo: true,
+    isProbablyPlaying: true,
+  });
+  const helpers = createHandlerHelpers({
+    waitForPlayerReady: async (...args) => {
+      calls.push(args);
+    },
+    getPlayerState,
+    __internal: { getVisiblePopup },
+  });
+  const handlers = createDefaultActionHandlers({ helpers });
+
+  await handlers.wait_for_ready({
+    page,
+    testInfo,
+    action: { action: "wait_for_ready", name: "player" },
+  });
+
+  assert.deepEqual(calls, [[page, { testInfo, getVisiblePopup, getPlayerState }]]);
+});
+
+test("rejects unsupported readiness targets", async () => {
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers(),
+  });
+
+  await assert.rejects(
+    () =>
+      handlers.wait_for_ready({
+        action: { action: "wait_for_ready", name: "unknown" },
+      }),
+    /Unsupported readiness target "unknown"/
+  );
+});
+
+test("runTestCase uses default handlers through the existing helpers.runStep", async () => {
+  const events = [];
+  const page = { id: "page" };
+  const testInfo = createTestInfo();
+  const originalRunStep = defaultHelpers.runStep;
+  const restore = replaceWorkflowInternals({
+    waitForHomeReady: async (...args) => {
+      events.push(["waitForHomeReady", ...args]);
+    },
+  });
+  defaultHelpers.runStep = async (_page, _testInfo, label, callback) => {
+    events.push(["runStep", _page, _testInfo, label]);
+    return callback();
+  };
+
+  try {
+    const result = await runTestCase(page, testInfo, {
+      id: "default-runner",
+      name: "Default runner",
+      actions: [{ action: "open_home" }],
+    });
+
+    assert.deepEqual(events, [
+      ["runStep", page, testInfo, "open_home"],
+      ["waitForHomeReady", page, testInfo],
+    ]);
+    assert.equal(result.status, "passed");
+  } finally {
+    defaultHelpers.runStep = originalRunStep;
+    restore();
+  }
 });

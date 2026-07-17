@@ -1,4 +1,7 @@
 const { compileTestCase } = require("./test-case-compiler");
+const { expect } = require("playwright/test");
+const helpers = require("./mytv-helpers");
+const workflows = require("./workflows");
 
 function attachJson(testInfo, name, value) {
   if (!testInfo || typeof testInfo.attach !== "function") return Promise.resolve();
@@ -82,17 +85,40 @@ function createActionRunner({ handlers = {}, stepRunner }) {
   };
 }
 
-function createDefaultActionHandlers() {
-  return {};
+function createDefaultActionHandlers({ helpers: actionHelpers }) {
+  return {
+    login: async ({ page, testInfo, action, options }) => {
+      const account = {
+        ...options,
+        USERNAME: action.username,
+        PASSWORD: action.password,
+      };
+      await actionHelpers.openAppAndEnterLoginPage(page, account, testInfo);
+      await actionHelpers.loginWithAccount(page, account, testInfo);
+      await actionHelpers.chooseFirstProfileAndEnterHome(page, testInfo);
+      await actionHelpers.closeHomePopupsAndVerifyHome(page, testInfo);
+    },
+    open_service: ({ page, testInfo, action }) =>
+      actionHelpers.openServiceFromLeftMenuOrAllServices(
+        page,
+        action.service,
+        testInfo
+      ),
+    press_back: async ({ page, action }) => {
+      for (let index = 0; index < (action.count || 1); index += 1) {
+        await page.keyboard.press("Backspace");
+      }
+    },
+    assert_screen: ({ page, action }) =>
+      page.locator("body").toContainText(action.text),
+  };
 }
 
 async function runTestCase(page, testInfo, testCase, options = {}) {
   const handlers = options.handlers || createDefaultActionHandlers({
-    helpers: options.helpers,
+    helpers: options.helpers || helpers,
   });
-  const stepRunner =
-    options.stepRunner ||
-    (async (_page, _testInfo, _label, callback) => callback());
+  const stepRunner = options.stepRunner || helpers.runStep;
 
   return createActionRunner({ handlers, stepRunner })(
     page,
