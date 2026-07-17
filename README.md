@@ -65,15 +65,16 @@ read at runtime; the app does not rewrite it.
    npm run app:dev
    ```
 
-3. Select a case in the case browser.
-4. Review its metadata, expected result, and normalized action preview.
-5. Click `Run Test` and watch the logs and optional browser preview.
-6. Open the Playwright report after the run finishes.
+3. Search by case ID substring or name with the instant filter, then check one or more visible cases in the table.
+4. Use `Detail` to review metadata, expected result, and normalized actions.
+5. Click `Run Selected (N)` and watch the cases execute sequentially in the logs and optional browser preview.
+6. Open the Playwright report after the batch finishes.
 
-The Electron runner sends the selected case ID, `APP_URL`, and preview settings
-to the main process. `app/main.js` validates the ID, then starts the single
-generic spec `tests/run-test-case-mytv.spec.js`. The generic spec loads the
-case, validates or compiles its actions, and executes them in order.
+The renderer captures checked case IDs in table order and sends one unchanged
+`TEST_CASE_ID`, `APP_URL`, and preview-settings payload at a time to the main
+process. `app/main.js` validates each ID, then starts the single generic spec
+`tests/run-test-case-mytv.spec.js`. The renderer waits for each process to
+finish, records its row status, and continues after a pass or failure.
 
 ### Case execution contract
 

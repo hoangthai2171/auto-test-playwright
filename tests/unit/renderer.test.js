@@ -176,7 +176,13 @@ function createRendererFixture() {
     "app-url-input",
     "selected-test-case-id",
     "test-case-list",
+    "test-case-list-body",
+    "test-case-search-input",
+    "select-all-test-cases",
+    "selected-test-case-count",
     "test-case-details",
+    "test-case-details-modal",
+    "test-case-details-close-button",
     "run-button",
     "stop-button",
     "open-report-button",
@@ -206,6 +212,12 @@ function createRendererFixture() {
     elements[id] = element;
     root.append(element);
   });
+
+  elements["test-case-list"].tagName = "TABLE";
+  elements["test-case-list-body"].tagName = "TBODY";
+  elements["test-case-list"].append(elements["test-case-list-body"]);
+
+  elements["test-case-details-modal"].className = "modal hidden";
 
   const stage = new FakeElement("div");
   stage.className = "browser-preview-stage";
@@ -248,7 +260,10 @@ function createRendererFixture() {
     onStarted: () => {},
     onLog: () => {},
     onPreview: () => {},
-    onFinished: () => {},
+    finishedCallback: null,
+    onFinished(callback) {
+      this.finishedCallback = callback;
+    },
   };
 
   return {
@@ -266,6 +281,160 @@ function createRendererFixture() {
 test("renderer entry is available to lightweight UI tests", () => {
   assert.equal(loadError, undefined, loadError?.message);
   assert.equal(typeof renderer.createRendererController, "function");
+});
+
+test("renders test cases as selectable table rows with a disabled empty batch action", () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+
+  controller.renderCaseList([
+    { id: "case-1", name: "First case", platform: "tv", actions: [] },
+    { id: "case-2", name: "Second case", platform: "web", actions: [] },
+  ]);
+
+  const rows = fixture.elements["test-case-list-body"].querySelectorAll("tr");
+  assert.equal(rows.length, 2);
+  assert.equal(rows[0].querySelector("input").checked, false);
+  assert.match(rows[0].textContent, /case-1/);
+  assert.match(rows[0].textContent, /First case/);
+  assert.equal(rows[0].querySelectorAll("button").length, 1);
+  assert.equal(fixture.elements["selected-test-case-count"].textContent, "0 selected");
+  assert.equal(fixture.elements["run-button"].textContent, "Run Selected (0)");
+  assert.equal(fixture.elements["run-button"].disabled, true);
+});
+
+test("select-all and per-row checkboxes update the selected count in table order", () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCaseList([
+    { id: "case-1", name: "First case", actions: [] },
+    { id: "case-2", name: "Second case", actions: [] },
+  ]);
+
+  const header = fixture.elements["select-all-test-cases"];
+  header.checked = true;
+  header.dispatchEvent("change", {target: header});
+
+  const rows = fixture.elements["test-case-list-body"].querySelectorAll("tr");
+  assert.equal(rows[0].querySelector("input").checked, true);
+  assert.equal(rows[1].querySelector("input").checked, true);
+  assert.equal(fixture.elements["selected-test-case-count"].textContent, "2 selected");
+  assert.equal(fixture.elements["run-button"].disabled, false);
+
+  const secondRowCheckbox = rows[1].querySelector("input");
+  secondRowCheckbox.checked = false;
+  secondRowCheckbox.dispatchEvent("change", {target: secondRowCheckbox});
+
+  assert.equal(fixture.elements["select-all-test-cases"].checked, false);
+  assert.equal(fixture.elements["selected-test-case-count"].textContent, "1 selected");
+  assert.deepEqual(controller.getSelectedCaseIds(), ["case-1"]);
+});
+
+test("filters rows instantly by ID substring and normalized name", () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCaseList([
+    {id: "12066", name: "Phim truyện", actions: []},
+    {id: "22000", name: "Trang chủ", actions: []},
+  ]);
+  const rows = fixture.elements["test-case-list-body"].querySelectorAll("tr");
+  const search = fixture.elements["test-case-search-input"];
+
+  search.value = "1206";
+  search.dispatchEvent("input", {target: search});
+  assert.equal(rows[0].classList.contains("hidden"), false);
+  assert.equal(rows[1].classList.contains("hidden"), true);
+
+  search.value = "12065";
+  search.dispatchEvent("input", {target: search});
+  assert.equal(rows[0].classList.contains("hidden"), true);
+
+  search.value = "phim truyen";
+  search.dispatchEvent("input", {target: search});
+  assert.equal(rows[0].classList.contains("hidden"), false);
+  assert.equal(rows[1].classList.contains("hidden"), true);
+});
+
+test("visible-row select-all preserves selections outside the active filter", () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCaseList([
+    {id: "case-1", name: "First case", actions: []},
+    {id: "case-2", name: "Second case", actions: []},
+  ]);
+  const rows = fixture.elements["test-case-list-body"].querySelectorAll("tr");
+  const firstCheckbox = rows[0].querySelector("input");
+  firstCheckbox.checked = true;
+  firstCheckbox.dispatchEvent("change", {target: firstCheckbox});
+
+  const search = fixture.elements["test-case-search-input"];
+  search.value = "Second";
+  search.dispatchEvent("input", {target: search});
+  const header = fixture.elements["select-all-test-cases"];
+  header.checked = true;
+  header.dispatchEvent("change", {target: header});
+
+  assert.deepEqual(controller.getSelectedCaseIds(), ["case-1", "case-2"]);
+  header.checked = false;
+  header.dispatchEvent("change", {target: header});
+  assert.deepEqual(controller.getSelectedCaseIds(), ["case-1"]);
+});
+
+test("opens a detail modal with execution fields and masked normalized actions", () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCaseList([
+    {
+      id: "case-1",
+      name: "Login case",
+      preCondition: "Signed out",
+      qaDescription: "Login with the test account",
+      expectedResult: "Home is visible",
+      platform: "tv",
+      environment: "staging",
+      metadata: {category: "smoke", owner: "qa"},
+      actions: [{action: "login", username: "visible-user", password: "secret"}],
+    },
+  ]);
+
+  fixture.elements["test-case-list-body"].querySelector("button").dispatchEvent("click");
+
+  assert.equal(fixture.elements["test-case-details-modal"].classList.contains("hidden"), false);
+  const details = fixture.elements["test-case-details"].textContent;
+  assert.match(details, /Login case/);
+  assert.match(details, /Signed out/);
+  assert.match(details, /Login with the test account/);
+  assert.match(details, /Home is visible/);
+  assert.match(details, /staging/);
+  assert.match(details, /smoke/);
+  assert.match(details, /login/);
+  assert.match(details, /••••••/);
+  assert.doesNotMatch(details, /secret/);
+});
+
+test("opening another case detail does not change the checked selection", () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCaseList([
+    {id: "case-1", name: "First case", actions: []},
+    {id: "case-2", name: "Second case", actions: []},
+  ]);
+
+  const rows = fixture.elements["test-case-list-body"].querySelectorAll("tr");
+  const firstCheckbox = rows[0].querySelector("input");
+  firstCheckbox.checked = true;
+  firstCheckbox.dispatchEvent("change", {target: firstCheckbox});
+  rows[1].querySelector("button").dispatchEvent("click");
+
+  assert.deepEqual(controller.getSelectedCaseIds(), ["case-1"]);
+  assert.equal(rows[0].querySelector("input").checked, true);
+  assert.equal(rows[1].querySelector("input").checked, false);
 });
 
 test("selecting a case updates the hidden id and rendered details", () => {
@@ -324,6 +493,7 @@ test("submits only the generic test-run payload", async () => {
   let submittedValues;
   fixture.runner.runTest = async (values) => {
     submittedValues = values;
+    queueMicrotask(() => fixture.runner.finishedCallback({code: 0}));
     return { ok: true };
   };
   const controller = renderer.createRendererController(fixture);
@@ -339,6 +509,125 @@ test("submits only the generic test-run payload", async () => {
     TEST_CASE_ID: "case-1",
     PREVIEW_TYPE: "live",
   });
+});
+
+test("runs selected cases sequentially and preserves the generic IPC payload", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const calls = [];
+  fixture.runner.runTest = async (values) => {
+    calls.push(values);
+    return {ok: true};
+  };
+  const controller = renderer.createRendererController(fixture);
+  fixture.elements["app-url-input"].value = "  https://example.test/  ";
+  controller.renderCaseList([
+    {id: "case-1", name: "First case", actions: []},
+    {id: "case-2", name: "Second case", actions: []},
+  ]);
+  const header = fixture.elements["select-all-test-cases"];
+  header.checked = true;
+  header.dispatchEvent("change", {target: header});
+
+  const runPromise = fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+  await Promise.resolve();
+  assert.equal(calls.length, 1);
+  assert.deepEqual(calls[0], {
+    APP_URL: "https://example.test/",
+    TEST_CASE_ID: "case-1",
+    PREVIEW_TYPE: "live",
+  });
+  assert.equal(fixture.elements["test-case-list-body"].querySelector('[data-test-case-status="case-1"]').textContent, "Running");
+
+  fixture.runner.finishedCallback({code: 0});
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(calls.length, 2);
+  assert.equal(calls[1].TEST_CASE_ID, "case-2");
+  fixture.runner.finishedCallback({code: 0});
+  await runPromise;
+
+  assert.equal(fixture.elements["test-case-list-body"].querySelector('[data-test-case-status="case-1"]').textContent, "Passed");
+  assert.equal(fixture.elements["test-case-list-body"].querySelector('[data-test-case-status="case-2"]').textContent, "Passed");
+  assert.match(fixture.elements["form-message"].textContent, /Completed: 2, Failed: 0, Skipped: 0/);
+});
+
+test("continues the batch after a failed case and reports isolated statuses", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const calls = [];
+  fixture.runner.runTest = async (values) => {
+    calls.push(values.TEST_CASE_ID);
+    return {ok: true};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCaseList([
+    {id: "case-1", name: "First case", actions: []},
+    {id: "case-2", name: "Second case", actions: []},
+  ]);
+  fixture.elements["select-all-test-cases"].checked = true;
+  fixture.elements["select-all-test-cases"].dispatchEvent("change", {target: fixture.elements["select-all-test-cases"]});
+
+  const runPromise = fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+  await Promise.resolve();
+  fixture.runner.finishedCallback({code: 1, message: "failed"});
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(calls, ["case-1", "case-2"]);
+  assert.equal(fixture.elements["test-case-list-body"].querySelector('[data-test-case-status="case-1"]').textContent, "Failed");
+  fixture.runner.finishedCallback({code: 0});
+  await runPromise;
+
+  assert.equal(fixture.elements["test-case-list-body"].querySelector('[data-test-case-status="case-2"]').textContent, "Passed");
+  assert.match(fixture.elements["form-message"].textContent, /Completed: 1, Failed: 1, Skipped: 0/);
+});
+
+test("stopping a batch prevents queued cases from starting and counts them as skipped", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const calls = [];
+  let stopCalls = 0;
+  fixture.runner.runTest = async (values) => {
+    calls.push(values.TEST_CASE_ID);
+    return {ok: true};
+  };
+  fixture.runner.stopTest = async () => {
+    stopCalls += 1;
+    return {ok: true};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCaseList([
+    {id: "case-1", name: "First case", actions: []},
+    {id: "case-2", name: "Second case", actions: []},
+  ]);
+  fixture.elements["select-all-test-cases"].checked = true;
+  fixture.elements["select-all-test-cases"].dispatchEvent("change", {target: fixture.elements["select-all-test-cases"]});
+
+  const runPromise = fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+  await Promise.resolve();
+  await fixture.elements["stop-button"].listeners.get("click")();
+  await runPromise;
+
+  assert.deepEqual(calls, ["case-1"]);
+  assert.equal(stopCalls, 1);
+  assert.equal(fixture.elements["test-case-list-body"].querySelector('[data-test-case-status="case-1"]').textContent, "Failed");
+  assert.equal(fixture.elements["test-case-list-body"].querySelector('[data-test-case-status="case-2"]').textContent, "Skipped");
+  assert.match(fixture.elements["form-message"].textContent, /Completed: 0, Failed: 1, Skipped: 1/);
+});
+
+test("rejects an empty batch before calling run-test IPC", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let runCalls = 0;
+  fixture.runner.runTest = async () => {
+    runCalls += 1;
+    return {ok: true};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCaseList([{id: "case-1", name: "First case", actions: []}]);
+
+  await fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+
+  assert.equal(runCalls, 0);
+  assert.match(fixture.elements["form-message"].textContent, /test case/i);
 });
 
 test("masks action passwords while keeping usernames visible and source data intact", () => {
@@ -385,6 +674,11 @@ test("index markup contains the case browser and no API-key or mode controls", (
   );
 
   assert.match(html, /id="test-case-list"/);
+  assert.match(html, /<table[^>]+id="test-case-list"/);
+  assert.match(html, /id="test-case-search-input"/);
+  assert.match(html, /id="select-all-test-cases"/);
+  assert.match(html, /id="test-case-list-body"/);
+  assert.match(html, /id="test-case-details-modal"/);
   assert.match(html, /id="test-case-details"/);
   assert.match(html, /id="selected-test-case-id"/);
   assert.match(html, /id="settings-message"/);
@@ -401,4 +695,13 @@ test("index markup contains the case browser and no API-key or mode controls", (
   );
   assert.doesNotMatch(html, retiredAiControls);
   assert.doesNotMatch(html, /username-input|password-input|mode-select|test-description-input/);
+});
+
+test("keeps the test-case table at 35vh and scrolls overflowing rows", () => {
+  const css = fs.readFileSync(
+    path.join(__dirname, "../../app/renderer/styles.css"),
+    "utf8"
+  );
+
+  assert.match(css, /\.test-case-table-wrap\s*\{[^}]*height:\s*35vh;[^}]*overflow:\s*auto;/s);
 });

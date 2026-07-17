@@ -84,17 +84,124 @@ h1 {
   min-height: 0;
 }
 
+.test-case-browser-header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+}
+
 .test-case-browser h2 {
   margin: 0;
   font-size: 16px;
 }
 
-.test-case-list {
-  display: grid;
-  gap: 8px;
-  max-height: 260px;
+.selected-test-case-count {
+  color: #9aa3b2;
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.test-case-search {
+  gap: 6px;
+  color: #9aa3b2;
+  font-size: 11px;
+  font-weight: 700;
+  text-transform: uppercase;
+}
+
+.test-case-search input {
+  height: 36px;
+  text-transform: none;
+}
+
+.test-case-table-wrap {
+  height: 33vh;
   overflow: auto;
-  padding-right: 4px;
+  border: 1px solid #2f3440;
+  border-radius: 6px;
+}
+
+.test-case-table {
+  width: 100%;
+  border-collapse: collapse;
+  background: #0f1117;
+  font-size: 12px;
+}
+
+.test-case-table th,
+.test-case-table td {
+  padding: 9px 8px;
+  border-bottom: 1px solid #252a34;
+  text-align: left;
+  vertical-align: middle;
+}
+
+.test-case-table th {
+  position: sticky;
+  top: 0;
+  z-index: 1;
+  background: #1a1e27;
+  color: #9aa3b2;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.test-case-table tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.test-case-table tbody tr[aria-selected="true"] {
+  background: #182638;
+}
+
+.test-case-table td:nth-child(2) {
+  color: #9aa3b2;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  white-space: nowrap;
+}
+
+.selection-column {
+  width: 34px;
+  text-align: center !important;
+}
+
+.test-case-table input[type="checkbox"] {
+  width: 16px;
+  height: 16px;
+  padding: 0;
+  margin: 0;
+  cursor: pointer;
+}
+
+.detail-button {
+  width: auto;
+  height: 30px;
+  padding: 0 10px;
+  font-size: 12px;
+}
+
+.test-case-status {
+  color: #7b8494;
+  font-size: 11px;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.test-case-status.running {
+  color: #f7b955;
+}
+
+.test-case-status.passed {
+  color: #46d083;
+}
+
+.test-case-status.failed {
+  color: #ff7a7a;
+}
+
+.test-case-status.skipped {
+  color: #9aa3b2;
 }
 
 .test-case-card {
@@ -417,6 +524,30 @@ button:disabled {
   background: #17191f;
   box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
   transform: translate(-50%, -50%);
+}
+
+.test-case-details-dialog {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  display: grid;
+  grid-template-rows: 56px 1fr;
+  width: min(760px, calc(100vw - 48px));
+  height: min(680px, calc(100vh - 48px));
+  overflow: hidden;
+  border: 1px solid #343946;
+  border-radius: 8px;
+  background: #17191f;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+  transform: translate(-50%, -50%);
+}
+
+.test-case-details-dialog .test-case-details {
+  max-height: none;
+  border: 0;
+  border-radius: 0;
+  padding: 22px;
+  overflow: auto;
 }
 
 .logs-dialog {

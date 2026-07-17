@@ -26,11 +26,30 @@
                     </label>
 
                     <section class="test-case-browser">
-                        <h2>Test cases</h2>
-                        <div id="test-case-list" class="test-case-list" role="listbox" aria-label="Test cases"></div>
-                        <article id="test-case-details" class="test-case-details">
-                            <p class="empty-state">Select a test case to see its details.</p>
-                        </article>
+                        <div class="test-case-browser-header">
+                            <h2>Test cases</h2>
+                            <span id="selected-test-case-count" class="selected-test-case-count">0 selected</span>
+                        </div>
+                        <label class="test-case-search">
+                            Search by ID or name
+                            <input id="test-case-search-input" type="search" placeholder="Search test cases..." autocomplete="off" />
+                        </label>
+                        <div class="test-case-table-wrap">
+                            <table id="test-case-list" class="test-case-table" aria-label="Test cases">
+                                <thead>
+                                    <tr>
+                                        <th scope="col" class="selection-column">
+                                            <input id="select-all-test-cases" type="checkbox" aria-label="Select all test cases" />
+                                        </th>
+                                        <th scope="col">ID</th>
+                                        <th scope="col">Name</th>
+                                        <th scope="col">Details</th>
+                                        <th scope="col">Status</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="test-case-list-body"></tbody>
+                            </table>
+                        </div>
                     </section>
 
                     <input id="selected-test-case-id" name="TEST_CASE_ID" type="hidden" />
@@ -38,7 +57,7 @@
                     <div id="form-message" class="form-message hidden" role="alert"></div>
 
                     <div class="actions">
-                        <button type="submit" id="run-button">Run Test</button>
+                        <button type="submit" id="run-button" disabled>Run Selected (0)</button>
                         <button type="button" id="stop-button" disabled>Stop</button>
                     </div>
 
@@ -66,6 +85,19 @@
                 </section>
             </section>
         </main>
+
+        <div id="test-case-details-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="test-case-details-title">
+            <div class="modal-backdrop" data-close-test-case-details></div>
+            <section class="test-case-details-dialog">
+                <header class="settings-header">
+                    <h2 id="test-case-details-title">Test Case Details</h2>
+                    <button type="button" id="test-case-details-close-button" class="icon-button">×</button>
+                </header>
+                <article id="test-case-details" class="test-case-details">
+                    <p class="empty-state">Select a test case to see its details.</p>
+                </article>
+            </section>
+        </div>
 
         <div id="logs-modal" class="modal hidden" role="dialog" aria-modal="true">
             <div class="modal-backdrop" data-close-logs></div>
