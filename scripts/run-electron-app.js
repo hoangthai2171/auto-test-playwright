@@ -1,0 +1,22 @@
+const { spawn } = require("node:child_process");
+const electronPath = require("electron");
+
+const env = {
+  ...process.env,
+  MYTV_NODE_BINARY: process.execPath,
+};
+delete env.ELECTRON_RUN_AS_NODE;
+
+const child = spawn(electronPath, ["."], {
+  stdio: "inherit",
+  env,
+});
+
+child.on("exit", (code, signal) => {
+  if (signal) {
+    process.kill(process.pid, signal);
+    return;
+  }
+
+  process.exit(code ?? 0);
+});

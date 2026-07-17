@@ -1,0 +1,59 @@
+{
+  "name": "auto-test-playwright",
+  "version": "1.0.0",
+  "description": "MyTV automated test desktop runner",
+  "main": "app/main.js",
+  "scripts": {
+    "app:dev": "node scripts/run-electron-app.js",
+    "app:build": "electron-builder",
+    "app:build:mac": "electron-builder --mac",
+    "app:build:mac:dmg": "electron-builder --mac dmg",
+    "app:build:win": "electron-builder --win",
+    "browsers:install": "node scripts/install-playwright-browsers.js",
+    "test": "playwright test",
+    "test:headed": "node scripts/run-headed.js"
+  },
+  "keywords": [],
+  "author": "",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "playwright": "^1.61.1"
+  },
+  "devDependencies": {
+    "electron": "^31.7.7",
+    "electron-builder": "^24.13.3"
+  },
+  "build": {
+    "appId": "vn.mytv.autotest",
+    "productName": "MyTV Auto Test",
+    "asar": false,
+    "files": [
+      "app/**/*",
+      "tests/**/*",
+      "playwright.config.js",
+      "package.json",
+      "node_modules/**/*"
+    ],
+    "extraResources": [
+      {
+        "from": ".playwright-browsers",
+        "to": "playwright-browsers"
+      }
+    ],
+    "directories": {
+      "output": "dist"
+    },
+    "electronDist": "node_modules/electron/dist",
+    "mac": {
+      "target": [
+        "zip"
+      ]
+    },
+    "win": {
+      "target": [
+        "nsis"
+      ]
+    }
+  }
+}

@@ -1,0 +1,237 @@
+<!doctype html>
+<html lang="vi">
+    <head>
+        <meta charset="UTF-8" />
+        <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+        <title>MyTV Auto Test</title>
+        <link rel="stylesheet" href="./styles.css" />
+    </head>
+    <body>
+        <header class="toolbar">
+            <button type="button" id="settings-button" class="toolbar-button">Settings</button>
+            <button type="button" id="logs-button" class="toolbar-button">Logs</button>
+        </header>
+
+        <main class="app-shell">
+            <section class="sidebar">
+                <div>
+                    <h1>MyTV Auto Test</h1>
+                    <p class="muted">Chạy Playwright test bằng giao diện desktop.</p>
+                </div>
+
+                <form id="test-form" class="form-grid">
+                    <label>
+                        APP_URL
+                        <input name="APP_URL" value="https://html5stage.mytv.vn/" />
+                    </label>
+
+                    <div class="two-col">
+                        <label>
+                            USERNAME
+                            <input name="USERNAME" value="ts1" />
+                        </label>
+                        <label>
+                            PASSWORD
+                            <input name="PASSWORD" type="password" value="111222" />
+                        </label>
+                    </div>
+
+                    <label>
+                        Test case
+                        <select name="PLAYBACK_MODE" id="mode-select">
+                            <option value="channel">Play kênh</option>
+                            <option value="movie">Play phim truyện</option>
+                            <option value="search">Tìm kiếm nội dung</option>
+                            <option value="setting">Mở cài đặt</option>
+                            <option value="ai-manual">Mô tả thủ công (A.I) (Not stable)</option>
+                        </select>
+                    </label>
+
+                    <div data-field="channel" class="form-grid">
+                        <label>
+                            Kiểu play kênh
+                            <select name="CHANNEL_PLAY_MODE" id="channel-mode-select">
+                                <option value="by_name">Tự nhập tên kênh</option>
+                                <option value="by_cate">Play theo cate</option>
+                            </select>
+                        </label>
+                        <label data-field="channel-name">
+                            CHANNEL_NAME
+                            <input name="CHANNEL_NAME" value="VTV1 HD" />
+                        </label>
+                        <label data-field="channel-cate" class="hidden">
+                            Tên cate
+                            <input name="CHANNEL_CATE_NAME" placeholder="VTV" />
+                        </label>
+                        <label data-field="channel-cate" class="hidden">
+                            Số lượng kênh
+                            <span class="field-note">Nhập 0 để play toàn bộ kênh</span>
+                            <input name="CHANNEL_CATE_LIMIT" type="number" min="0" value="0" />
+                        </label>
+                    </div>
+
+                    <div data-field="movie" class="form-grid hidden">
+                        <label>
+                            Kiểu play phim
+                            <select name="MOVIE_PLAY_MODE" id="movie-mode-select">
+                                <option value="first">Phim đầu tiên</option>
+                                <option value="by_name">Tự nhập tên phim</option>
+                                <option value="by_cate">Play theo cate</option>
+                            </select>
+                        </label>
+                        <label data-field="movie-name" class="hidden">
+                            MOVIE_NAME
+                            <input name="MOVIE_NAME" placeholder="can phong tu than" />
+                        </label>
+                        <label data-field="movie-cate" class="hidden">
+                            Tên cate
+                            <input name="MOVIE_CATE_NAME" placeholder="Phim song song" />
+                        </label>
+                        <label data-field="movie-cate" class="hidden">
+                            Số lượng phim
+                            <span class="field-note">Nhập 0 để play toàn bộ phim</span>
+                            <input name="MOVIE_CATE_LIMIT" type="number" min="0" value="0" />
+                        </label>
+                    </div>
+
+                    <label data-field="search" class="hidden">
+                        SEARCH_KEYWORD
+                        <input name="SEARCH_KEYWORD" placeholder="can phong tu than" />
+                    </label>
+
+                    <label data-field="ai-manual" class="hidden">
+                        Mô tả test
+                        <textarea name="AI_TEST_DESCRIPTION" rows="7" placeholder="Nhập mô tả test bạn muốn chạy..."></textarea>
+                    </label>
+
+                    <div id="form-message" class="form-message hidden" role="alert"></div>
+
+                    <div class="actions">
+                        <button type="submit" id="run-button">Run Test</button>
+                        <button type="button" id="stop-button" disabled>Stop</button>
+                    </div>
+
+                    <div class="actions secondary">
+                        <button type="button" id="open-report-button">Open Report</button>
+                        <button type="button" id="show-report-button">Show Folder</button>
+                    </div>
+                </form>
+            </section>
+
+            <section class="workspace">
+                <div class="status-bar">
+                    <span id="status-dot" class="status-dot idle"></span>
+                    <span id="status-text">Ready</span>
+                </div>
+                <section class="browser-preview">
+                    <div class="browser-preview-toolbar">
+                        <button type="button" id="browser-mute-button" class="preview-control hidden">Unmute</button>
+                    </div>
+                    <div class="browser-preview-stage">
+                        <div id="browser-preview-empty" class="browser-preview-empty">Browser preview will appear here when a test starts.</div>
+                        <img id="browser-preview-image" class="browser-preview-image hidden" alt="Browser preview" />
+                        <webview id="interactive-browser" class="interactive-browser hidden" allowpopups></webview>
+                    </div>
+                </section>
+            </section>
+        </main>
+
+        <div id="logs-modal" class="modal hidden" role="dialog" aria-modal="true">
+            <div class="modal-backdrop" data-close-logs></div>
+            <section class="logs-dialog">
+                <header class="settings-header">
+                    <h2>Logs</h2>
+                    <button type="button" id="logs-close-button" class="icon-button">×</button>
+                </header>
+                <pre id="log-output" class="log-output"></pre>
+            </section>
+        </div>
+
+        <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true">
+            <div class="modal-backdrop" data-close-settings></div>
+            <section class="settings-dialog">
+                <header class="settings-header">
+                    <h2>Settings</h2>
+                    <button type="button" id="settings-close-button" class="icon-button">×</button>
+                </header>
+
+                <div class="settings-body">
+                    <nav class="settings-nav">
+                        <button type="button" class="settings-nav-item active" data-settings-panel="api-key">API key</button>
+                        <button type="button" class="settings-nav-item" data-settings-panel="gui">GUI</button>
+                    </nav>
+
+                    <section class="settings-content">
+                        <div class="settings-panel" data-settings-content="api-key">
+                            <h3>API key</h3>
+
+                            <label>
+                                Model A.I
+                                <select id="ai-provider-select">
+                                    <option value="openai">OpenAI</option>
+                                    <option value="gemini">Gemini</option>
+                                    <option value="custom">Custom endpoint</option>
+                                </select>
+                            </label>
+
+                            <label>
+                                AI API key
+                                <input id="ai-api-key-input" type="password" placeholder="Nhập API key" />
+                            </label>
+
+                            <label>
+                                Model name
+                                <select id="ai-model-select"></select>
+                            </label>
+
+                            <label id="custom-model-field" class="hidden">
+                                Custom model name
+                                <input id="ai-custom-model-input" placeholder="vd: gpt-4.1-mini" />
+                            </label>
+
+                            <label>
+                                Endpoint
+                                <input id="ai-endpoint-input" />
+                            </label>
+
+                            <div id="settings-message" class="settings-message"></div>
+
+                            <div class="settings-actions">
+                                <button type="button" id="settings-save-button">Save</button>
+                                <button type="button" id="settings-test-button" class="secondary-button">Test connection</button>
+                            </div>
+                        </div>
+
+                        <div class="settings-panel hidden" data-settings-content="gui">
+                            <h3>GUI</h3>
+
+                            <section class="settings-section">
+                                <h4>Preview Type</h4>
+                                <div class="tickbox-row">
+                                    <label class="tickbox-option" title="Không hiển thị preview ở workspace khi chạy test. Phù hợp khi muốn giảm tải CPU.">
+                                        <input type="radio" name="preview-type" value="none" />
+                                        <span>None</span>
+                                    </label>
+                                    <label class="tickbox-option" title="Hiển thị ảnh chụp màn hình browser được cập nhật liên tục. Ổn định nhất cho auto test.">
+                                        <input type="radio" name="preview-type" value="live" />
+                                        <span>Live preview (Recommended)</span>
+                                    </label>
+                                    <label class="tickbox-option" title="Hiển thị chính browser session đang được Playwright dùng để chạy test; user cũng có thể tương tác trực tiếp trong workspace.">
+                                        <input type="radio" name="preview-type" value="interactive" />
+                                        <span>Interactive browser (Not stable)</span>
+                                    </label>
+                                </div>
+                            </section>
+
+                            <div class="settings-actions">
+                                <button type="button" id="gui-settings-save-button">Save</button>
+                            </div>
+                        </div>
+                    </section>
+                </div>
+            </section>
+        </div>
+
+        <script src="./renderer.js"></script>
+    </body>
+</html>

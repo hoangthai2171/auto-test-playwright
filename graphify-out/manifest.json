@@ -1,0 +1,152 @@
+{
+  ".opencode/opencode.json": {
+    "mtime": 1783874011.4473376,
+    "ast_hash": "abcc8b9dcd80bca5f9dde6d9f0c3ae79",
+    "semantic_hash": ""
+  },
+  ".opencode/plugins/graphify.js": {
+    "mtime": 1783874011.4472334,
+    "ast_hash": "3ea725724bc8ebe483c9f13d6aa1124f",
+    "semantic_hash": ""
+  },
+  "app/main.js": {
+    "mtime": 1783564726.567273,
+    "ast_hash": "cd5106ff33edb8c60878249b7a0efee4",
+    "semantic_hash": ""
+  },
+  "app/preload.js": {
+    "mtime": 1783479293.023497,
+    "ast_hash": "c06e7ab226c1561ca03ad60a9ed32883",
+    "semantic_hash": ""
+  },
+  "app/renderer/renderer.js": {
+    "mtime": 1783564664.5959177,
+    "ast_hash": "404c05d8beef4cab74438e5582b888c3",
+    "semantic_hash": ""
+  },
+  "package.json": {
+    "mtime": 1783414418.9093645,
+    "ast_hash": "1f936db9f74d5fe558d02e25de2d919d",
+    "semantic_hash": ""
+  },
+  "playwright.config.js": {
+    "mtime": 1783476849.0252042,
+    "ast_hash": "a02242d4b40caddf3becc5c3c3924a91",
+    "semantic_hash": ""
+  },
+  "scripts/install-playwright-browsers.js": {
+    "mtime": 1783414419.0192559,
+    "ast_hash": "3a8a910b006b8f02b5a31735d444ffa4",
+    "semantic_hash": ""
+  },
+  "scripts/run-electron-app.js": {
+    "mtime": 1783415125.5419166,
+    "ast_hash": "f3eacb0499dd9ed58d886b786cde3d2d",
+    "semantic_hash": ""
+  },
+  "scripts/run-headed.js": {
+    "mtime": 1783564752.3954222,
+    "ast_hash": "01909bbbcd4936d4cf0606fad9907217",
+    "semantic_hash": ""
+  },
+  "tests/ai-row-selection.spec.js": {
+    "mtime": 1783589419.9644237,
+    "ast_hash": "a9aa691b4f6e82d636b5c55b0953f048",
+    "semantic_hash": ""
+  },
+  "tests/fixtures/mytv-session-fixture.js": {
+    "mtime": 1783479741.06983,
+    "ast_hash": "6a4bfc49312a02c03a3c592bbd9c8c99",
+    "semantic_hash": ""
+  },
+  "tests/lib/ai-plan-runner.js": {
+    "mtime": 1783503062.5323615,
+    "ast_hash": "95289c3d5644b83762ea9a19d5f65a47",
+    "semantic_hash": ""
+  },
+  "tests/lib/mytv-helpers.js": {
+    "mtime": 1783589452.3291123,
+    "ast_hash": "5b92abee882a751bbc98df84f7e86966",
+    "semantic_hash": ""
+  },
+  "tests/login-mytv.spec.js": {
+    "mtime": 1782807319.6949208,
+    "ast_hash": "c54ce4a9f51ee8ded8f0a7dbcd091f4f",
+    "semantic_hash": ""
+  },
+  "tests/open-setting-mytv.spec.js": {
+    "mtime": 1783054443.107773,
+    "ast_hash": "3af83fb8b5b573bb8dfe20873d890cfe",
+    "semantic_hash": ""
+  },
+  "tests/play-channel-mytv.spec.js": {
+    "mtime": 1783564716.7152627,
+    "ast_hash": "f38145e8b7dee3decbc0717e9f66a6ba",
+    "semantic_hash": ""
+  },
+  "tests/play-movie-mytv.spec.js": {
+    "mtime": 1783563509.9688895,
+    "ast_hash": "945263eed1fe428f8e1bf78bf70de151",
+    "semantic_hash": ""
+  },
+  "tests/run-ai-plan-mytv.spec.js": {
+    "mtime": 1783417769.9707932,
+    "ast_hash": "022ffff297e0c8333c0e99d022183a84",
+    "semantic_hash": ""
+  },
+  "tests/search-content-mytv.spec.js": {
+    "mtime": 1783331907.2726057,
+    "ast_hash": "198b54fa6545e9722233bcfef2eea30d",
+    "semantic_hash": ""
+  },
+  ".codex/skills/playwright-interactive/LICENSE.txt": {
+    "mtime": 1782458528.6329029,
+    "ast_hash": "51ba449917ba68e93887b3e265813f38",
+    "semantic_hash": ""
+  },
+  ".codex/skills/playwright-interactive/NOTICE.txt": {
+    "mtime": 1782458528.6318426,
+    "ast_hash": "f3a24f45a93b639b3041821ecb4163ff",
+    "semantic_hash": ""
+  },
+  ".codex/skills/playwright-interactive/SKILL.md": {
+    "mtime": 1782458528.6323206,
+    "ast_hash": "cbc7789c688de700e2f1ea6ff13b92b6",
+    "semantic_hash": ""
+  },
+  ".codex/skills/playwright-interactive/agents/openai.yaml": {
+    "mtime": 1782458528.6312485,
+    "ast_hash": "0ee5ac54bdfcb7cf23182b57072a2adc",
+    "semantic_hash": ""
+  },
+  "AGENTS.md": {
+    "mtime": 1783873429.9560392,
+    "ast_hash": "93bedcef3de5ac87f91fc934f940b6a3",
+    "semantic_hash": ""
+  },
+  "IDEA.md": {
+    "mtime": 1783675453.0780425,
+    "ast_hash": "b2c72bf7984693b3e3a3abaa9393b5e1",
+    "semantic_hash": ""
+  },
+  "README.md": {
+    "mtime": 1783483491.5615258,
+    "ast_hash": "c7bfe39ee083f748b8e6ecff7da4911f",
+    "semantic_hash": ""
+  },
+  "SESSION_HANDOFF.md": {
+    "mtime": 1783653133.3672397,
+    "ast_hash": "9636dc77b9575fb7416ab5e8bb9178cd",
+    "semantic_hash": ""
+  },
+  "app/renderer/index.html": {
+    "mtime": 1783564653.8279457,
+    "ast_hash": "5a77803c7832e5278a4ab082c887d3b9",
+    "semantic_hash": ""
+  },
+  ".codex/skills/playwright-interactive/assets/playwright-small.svg": {
+    "mtime": 1782458528.6336317,
+    "ast_hash": "4ac5ebc208482f17e1093a44245259d7",
+    "semantic_hash": ""
+  }
+}

@@ -3,6 +3,12 @@ const {getSelectorContract}=require("./selectors");
 
 const FOCUS_SELECTOR = `.${getSelectorContract("focus").alternatives[0].classPatterns[0]}`;
 const DEFAULT_REMOTE_PRESS_DELAY = 100;
+const VIRTUAL_KEYBOARD_ROWS = [
+  ["a", "b", "c", "d", "e", "f", "1", "2", "3"],
+  ["g", "h", "i", "j", "k", "l", "4", "5", "6"],
+  ["m", "n", "o", "p", "q", "r", "7", "8", "9"],
+  ["s", "t", "u", "v", "w", "x", "y", "z", "0"],
+];
 
 function normalizeVietnameseText(value){return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").replace(/\s+/g," ").trim().toLowerCase();}
 
@@ -37,11 +43,20 @@ async function expectFocusedElementToLookOrange(page) {
 async function enterWithVirtualKeyboard(page, value) {
   for (const char of value) {
     await remoteFocusByVirtualKey(page, char);
-    await remotePress(page, "Enter");
+    // Let the app finish updating the query/suggestion layer before the next
+    // remote-navigation lookup.  The keyboard is rerendered after the third
+    // character on staging, so the default key delay is too short here.
+    await remotePress(page, "Enter", 250);
   }
 }
 
 async function remoteFocusByVirtualKey(page, char) {
+  const focused = await getFocusedState(page);
+  if (isVirtualKeyboardActionFocus(focused) && /^[a-z0-9]$/i.test(char)) {
+    const focusedFromKeyboardOrigin = await focusVirtualKeyFromKeyboardOrigin(page, char);
+    if (focusedFromKeyboardOrigin) return;
+  }
+
   for (const keyId of virtualKeyIds(char)) {
     const hasKeyId = await page
       .evaluate((id) => {
@@ -64,7 +79,10 @@ async function remoteFocusByVirtualKey(page, char) {
       .catch(() => false);
 
     if (hasKeyId) {
-      await remoteFocusById(page, keyId);
+      const focused = await getFocusedState(page);
+      const fromActionRow = ["space", "clearAll", "callSearch", "key-space-v2"].includes(focused.id);
+      const preferredDirection = fromActionRow && /^[a-z]$/i.test(char) ? "ArrowUp" : undefined;
+      await remoteFocusById(page, keyId, 50, {preferredDirection});
       return;
     }
   }
@@ -72,10 +90,40 @@ async function remoteFocusByVirtualKey(page, char) {
   await remoteFocusByKeyText(page, char);
 }
 
+async function focusVirtualKeyFromKeyboardOrigin(page, char) {
+  const normalizedChar = char.toLowerCase();
+  const rowIndex = VIRTUAL_KEYBOARD_ROWS.findIndex((row) => row.includes(normalizedChar));
+  if (rowIndex < 0) return false;
+  const columnIndex = VIRTUAL_KEYBOARD_ROWS[rowIndex].indexOf(normalizedChar);
+
+  // ArrowUp from the action row enters the keyboard at its middle column. Keep
+  // moving until the first key is reached, then use the stable row/column grid
+  // to reach the requested key without crossing the overlapping action row.
+  for (let attempt = 0; attempt < 8; attempt++) {
+    if ((await getFocusedState(page)).id === "key-a-v2") break;
+    await remotePress(page, "ArrowUp", 160);
+  }
+
+  if ((await getFocusedState(page)).id !== "key-a-v2") return false;
+
+  for (let row = 0; row < rowIndex; row++) await remotePress(page, "ArrowDown", 160);
+  for (let column = 0; column < columnIndex; column++) await remotePress(page, "ArrowRight", 160);
+
+  const finalState = await getFocusedState(page);
+  return finalState.id === `key-${normalizedChar}-v2`;
+}
+
+function isVirtualKeyboardActionFocus(state) {
+  return ["space", "clearAll", "callSearch", "key-space-v2"].includes(state.id);
+}
+
 function virtualKeyIds(char) {
   const keyMap = {
     ".": "key-dot-v2",
-    " ": ["space", "key-space-v2"],
+    // Prefer the actual spacebar key.  On some app layouts `#space` is a
+    // wrapper for the whole action row, so its rectangle overlaps the letter
+    // keys and spatial navigation can bounce between them indefinitely.
+    " ": ["key-space-v2", "space"],
     "-": "key-dash-v2",
     _: "key-underline-v2",
     "!": "key-exclamation-v2",
@@ -188,9 +236,11 @@ async function remoteFocusByKeyText(page, char, maxMoves = 50) {
   });
 }
 
-async function remoteFocusById(page, id, maxMoves = 50) {
+async function remoteFocusById(page, id, maxMoves = 50, options = {}) {
   await remoteFocus(page, {
     maxMoves,
+    preferredDirection: options.preferredDirection,
+    snapshotCache: options.snapshotCache,
     isTarget: (state) => {
       if (state.id === id) return true;
       // When the target is a container element (e.g. id="space" wrapping the
@@ -229,7 +279,7 @@ async function remoteFocusById(page, id, maxMoves = 50) {
   });
 }
 
-async function remoteFocus(page, { isTarget, getTargetRect, maxMoves }) {
+async function remoteFocus(page, { isTarget, getTargetRect, maxMoves, preferredDirection, snapshotCache }) {
   const targetRect = await getTargetRect();
   expect(targetRect).toBeTruthy();
 
@@ -237,13 +287,13 @@ async function remoteFocus(page, { isTarget, getTargetRect, maxMoves }) {
     const state = await getFocusedState(page);
     if (await Promise.resolve(isTarget(state))) return;
 
-    const key = chooseDirection(state.rect, targetRect);
+    const key = preferredDirection || chooseDirection(state.rect, targetRect);
     const before = state.id || state.text;
-    await remotePress(page, key, 160);
+    await remotePress(page, key, 160, {snapshotCache});
     const after = await getFocusedState(page);
 
     if ((after.id || after.text) === before) {
-      await remotePress(page, fallbackDirection(key), 160);
+      await remotePress(page, fallbackDirection(key), 160, {snapshotCache});
     }
   }
 
@@ -268,6 +318,14 @@ function chooseDirection(fromRect, toRect) {
   const isRight = toRect.x >= fromRect.x + fromRect.width;
   const horizontalOverlap = rangesOverlap(fromRect.x, fromRect.x + fromRect.width, toRect.x, toRect.x + toRect.width);
   const verticalOverlap = rangesOverlap(fromRect.y, fromRect.y + fromRect.height, toRect.y, toRect.y + toRect.height);
+
+  // A wide action key can overlap the last letter row on the staging layout.
+  // Treat it as the next row when the current key is inside that rectangle;
+  // otherwise left/right selection oscillates between the overlapping keys.
+  if (horizontalOverlap && verticalOverlap && toRect.width >= fromRect.width * 2) {
+    if (toRect.y >= fromRect.y) return "ArrowDown";
+    if (toRect.y + toRect.height <= fromRect.y) return "ArrowUp";
+  }
 
   if ((isAbove || isBelow) && horizontalOverlap) {
     return isBelow ? "ArrowDown" : "ArrowUp";
