@@ -55,6 +55,13 @@ test("requires id and name", () => {
   );
 });
 
+test("rejects malformed actions values", () => {
+  assert.throws(
+    () => validateTestCaseList([{id: "null-actions", name: "Malformed", actions: null}]),
+    /actions must be an array/i
+  );
+});
+
 test("requires actions or qaDescription", () => {
   assert.throws(
     () => validateTestCaseList([{ id: "1", name: "empty" }]),

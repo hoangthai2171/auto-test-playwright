@@ -120,12 +120,12 @@ function validateTestCase(testCase, index = 0) {
   const hasActions = hasOwn(testCase, "actions");
   const hasDescription = hasOwn(testCase, "qaDescription");
 
-  if ((!hasActions || testCase.actions.length === 0) && !hasDescription) {
-    throw new Error(`${path} ${testCase.id} requires actions or qaDescription`);
-  }
-
   if (hasActions && !Array.isArray(testCase.actions)) {
     throw new Error(`${path}.actions must be an array`);
+  }
+
+  if ((!hasActions || testCase.actions.length === 0) && !hasDescription) {
+    throw new Error(`${path} ${testCase.id} requires actions or qaDescription`);
   }
 
   if (

@@ -1,4 +1,5 @@
 const { compileTestCase } = require("./test-case-compiler");
+const { expect } = require("playwright/test");
 const workflows = require("./workflows");
 const { normalizeVietnameseText } = require("./text-utils");
 
@@ -17,6 +18,55 @@ function actionName(action) {
 
 function errorMessage(error) {
   return error && error.message ? error.message : String(error);
+}
+
+function visibleScreenTextPredicate(page, expected) {
+  return page.evaluate((needle) => {
+    const normalize = (value) => value
+      .normalize("NFD")
+      .replace(/[\u0300-\u036f]/g, "")
+      .replace(/đ/gi, "d")
+      .replace(/\s+/g, " ")
+      .trim()
+      .toLowerCase();
+    const viewportWidth = window.innerWidth || 1920;
+    const viewportHeight = window.innerHeight || 1080;
+    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
+
+    while (walker.nextNode()) {
+      const node = walker.currentNode;
+      if (!normalize(node.nodeValue || "").includes(needle)) continue;
+      let element = node.parentElement;
+      let visible = true;
+      while (element && element !== document.body) {
+        const style = getComputedStyle(element);
+        const rect = element.getBoundingClientRect();
+        if (
+          style.display === "none" ||
+          style.visibility === "hidden" ||
+          Number(style.opacity) === 0 ||
+          rect.right <= 0 ||
+          rect.bottom <= 0 ||
+          rect.left >= viewportWidth ||
+          rect.top >= viewportHeight
+        ) {
+          visible = false;
+          break;
+        }
+        element = element.parentElement;
+      }
+      if (visible) return true;
+    }
+
+    return false;
+  }, expected);
+}
+
+async function assertVisibleScreenText(page, text, {timeoutMs = 30000, pollIntervalMs = 100} = {}) {
+  const expected = normalizeVietnameseText(text);
+  await expect
+    .poll(() => visibleScreenTextPredicate(page, expected), {timeout: timeoutMs, intervals: [pollIntervalMs]})
+    .toBe(true);
 }
 
 function createActionRunner({ handlers = {}, stepRunner }) {
@@ -137,31 +187,7 @@ function createDefaultActionHandlers({ helpers }) {
       }
     },
     assert_screen: async ({ page, action }) => {
-      const expected = normalizeVietnameseText(action.text);
-      const visible = await page.evaluate((needle) => {
-        const normalize = (value) => value
-          .normalize("NFD")
-          .replace(/[\u0300-\u036f]/g, "")
-          .replace(/đ/gi, "d")
-          .replace(/\s+/g, " ")
-          .trim()
-          .toLowerCase();
-        return Array.from(document.querySelectorAll("body *")).some((element) => {
-          const rect = element.getBoundingClientRect();
-          const style = getComputedStyle(element);
-          return (
-            rect.width > 0 &&
-            rect.height > 0 &&
-            style.display !== "none" &&
-            style.visibility !== "hidden" &&
-            Number(style.opacity) !== 0 &&
-            normalize(element.innerText || "").includes(needle)
-          );
-        });
-      }, expected);
-      if (!visible) {
-        throw new Error(`Visible screen text not found: ${action.text}`);
-      }
+      await assertVisibleScreenText(page, action.text);
     },
     wait_for_ready: ({ page, testInfo, action }) =>
       resolveReadyWait(helpers, page, testInfo, action.name),
@@ -185,4 +211,5 @@ module.exports = {
   createActionRunner,
   createDefaultActionHandlers,
   runTestCase,
+  assertVisibleScreenText,
 };

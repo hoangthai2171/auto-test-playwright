@@ -5,6 +5,7 @@ const {
   createActionRunner,
   createDefaultActionHandlers,
   runTestCase,
+  assertVisibleScreenText,
 } = require("../lib/test-case-action-runner");
 const defaultHelpers = require("../lib/mytv-helpers");
 const workflows = require("../lib/workflows");
@@ -408,7 +409,6 @@ test("asserts that the page body contains the requested screen text", async () =
 });
 
 test("rejects screen text that exists only in hidden content", async () => {
-  const handlers = createDefaultActionHandlers({helpers: createHandlerHelpers()});
   const page = {
     async evaluate() {
       return false;
@@ -416,9 +416,22 @@ test("rejects screen text that exists only in hidden content", async () => {
   };
 
   await assert.rejects(
-    () => handlers.assert_screen({page, action: {action: "assert_screen", text: "Trang chủ"}}),
-    /Visible screen text not found/
+    () => assertVisibleScreenText(page, "Trang chủ", {timeoutMs: 1, pollIntervalMs: 1}),
+    /Timeout.*predicate|Expected: true/s
   );
+});
+
+test("retries screen assertions while the page becomes ready", async () => {
+  let evaluations = 0;
+  const page = {
+    async evaluate() {
+      evaluations += 1;
+      return evaluations > 1;
+    },
+  };
+
+  await assertVisibleScreenText(page, "Trang chủ", {timeoutMs: 1000, pollIntervalMs: 1});
+  assert.ok(evaluations > 1);
 });
 
 test("waits for app readiness through the workflow helper", async () => {
