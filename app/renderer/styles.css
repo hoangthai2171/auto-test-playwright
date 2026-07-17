@@ -78,6 +78,97 @@ h1 {
   gap: 16px;
 }
 
+.test-case-browser {
+  display: grid;
+  gap: 12px;
+  min-height: 0;
+}
+
+.test-case-browser h2 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.test-case-list {
+  display: grid;
+  gap: 8px;
+  max-height: 260px;
+  overflow: auto;
+  padding-right: 4px;
+}
+
+.test-case-card {
+  display: grid;
+  gap: 4px;
+  width: 100%;
+  min-height: 64px;
+  padding: 10px 12px;
+  border: 1px solid #3a3f4a;
+  background: #0f1117;
+  text-align: left;
+}
+
+.test-case-card.selected {
+  border-color: #55a7ff;
+  background: #182638;
+}
+
+.test-case-card-meta {
+  color: #9aa3b2;
+  font-size: 12px;
+  font-weight: 500;
+}
+
+.test-case-details {
+  display: grid;
+  gap: 8px;
+  max-height: 360px;
+  overflow: auto;
+  padding: 12px;
+  border: 1px solid #2f3440;
+  border-radius: 6px;
+  background: #12151c;
+  color: #c5cad4;
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+.test-case-details h3,
+.test-case-details h4 {
+  margin: 0;
+  color: #f2f4f8;
+  font-size: 14px;
+}
+
+.test-case-detail-row {
+  display: grid;
+  gap: 2px;
+}
+
+.test-case-detail-row strong {
+  color: #9aa3b2;
+  font-size: 11px;
+  text-transform: uppercase;
+}
+
+.test-case-detail-row span {
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.action-preview {
+  display: grid;
+  gap: 6px;
+  margin: 0;
+  padding-left: 22px;
+}
+
+.action-preview li {
+  color: #d9dee8;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 11px;
+}
+
 .form-message {
   padding: 12px 14px;
   border: 1px solid #3a3f4a;

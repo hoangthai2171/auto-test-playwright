@@ -22,87 +22,18 @@
                 <form id="test-form" class="form-grid">
                     <label>
                         APP_URL
-                        <input name="APP_URL" value="https://html5stage.mytv.vn/" />
+                        <input id="app-url-input" name="APP_URL" value="https://html5stage.mytv.vn/" />
                     </label>
 
-                    <div class="two-col">
-                        <label>
-                            USERNAME
-                            <input name="USERNAME" value="ts1" />
-                        </label>
-                        <label>
-                            PASSWORD
-                            <input name="PASSWORD" type="password" value="111222" />
-                        </label>
-                    </div>
+                    <section class="test-case-browser">
+                        <h2>Test cases</h2>
+                        <div id="test-case-list" class="test-case-list" role="listbox" aria-label="Test cases"></div>
+                        <article id="test-case-details" class="test-case-details">
+                            <p class="empty-state">Select a test case to see its details.</p>
+                        </article>
+                    </section>
 
-                    <label>
-                        Test case
-                        <select name="PLAYBACK_MODE" id="mode-select">
-                            <option value="channel">Play kênh</option>
-                            <option value="movie">Play phim truyện</option>
-                            <option value="search">Tìm kiếm nội dung</option>
-                            <option value="setting">Mở cài đặt</option>
-                            <option value="ai-manual">Mô tả thủ công (A.I) (Not stable)</option>
-                        </select>
-                    </label>
-
-                    <div data-field="channel" class="form-grid">
-                        <label>
-                            Kiểu play kênh
-                            <select name="CHANNEL_PLAY_MODE" id="channel-mode-select">
-                                <option value="by_name">Tự nhập tên kênh</option>
-                                <option value="by_cate">Play theo cate</option>
-                            </select>
-                        </label>
-                        <label data-field="channel-name">
-                            CHANNEL_NAME
-                            <input name="CHANNEL_NAME" value="VTV1 HD" />
-                        </label>
-                        <label data-field="channel-cate" class="hidden">
-                            Tên cate
-                            <input name="CHANNEL_CATE_NAME" placeholder="VTV" />
-                        </label>
-                        <label data-field="channel-cate" class="hidden">
-                            Số lượng kênh
-                            <span class="field-note">Nhập 0 để play toàn bộ kênh</span>
-                            <input name="CHANNEL_CATE_LIMIT" type="number" min="0" value="0" />
-                        </label>
-                    </div>
-
-                    <div data-field="movie" class="form-grid hidden">
-                        <label>
-                            Kiểu play phim
-                            <select name="MOVIE_PLAY_MODE" id="movie-mode-select">
-                                <option value="first">Phim đầu tiên</option>
-                                <option value="by_name">Tự nhập tên phim</option>
-                                <option value="by_cate">Play theo cate</option>
-                            </select>
-                        </label>
-                        <label data-field="movie-name" class="hidden">
-                            MOVIE_NAME
-                            <input name="MOVIE_NAME" placeholder="can phong tu than" />
-                        </label>
-                        <label data-field="movie-cate" class="hidden">
-                            Tên cate
-                            <input name="MOVIE_CATE_NAME" placeholder="Phim song song" />
-                        </label>
-                        <label data-field="movie-cate" class="hidden">
-                            Số lượng phim
-                            <span class="field-note">Nhập 0 để play toàn bộ phim</span>
-                            <input name="MOVIE_CATE_LIMIT" type="number" min="0" value="0" />
-                        </label>
-                    </div>
-
-                    <label data-field="search" class="hidden">
-                        SEARCH_KEYWORD
-                        <input name="SEARCH_KEYWORD" placeholder="can phong tu than" />
-                    </label>
-
-                    <label data-field="ai-manual" class="hidden">
-                        Mô tả test
-                        <textarea name="AI_TEST_DESCRIPTION" rows="7" placeholder="Nhập mô tả test bạn muốn chạy..."></textarea>
-                    </label>
+                    <input id="selected-test-case-id" name="TEST_CASE_ID" type="hidden" />
 
                     <div id="form-message" class="form-message hidden" role="alert"></div>
 
@@ -157,52 +88,11 @@
 
                 <div class="settings-body">
                     <nav class="settings-nav">
-                        <button type="button" class="settings-nav-item active" data-settings-panel="api-key">API key</button>
-                        <button type="button" class="settings-nav-item" data-settings-panel="gui">GUI</button>
+                        <button type="button" class="settings-nav-item active" data-settings-panel="gui">GUI</button>
                     </nav>
 
                     <section class="settings-content">
-                        <div class="settings-panel" data-settings-content="api-key">
-                            <h3>API key</h3>
-
-                            <label>
-                                Model A.I
-                                <select id="ai-provider-select">
-                                    <option value="openai">OpenAI</option>
-                                    <option value="gemini">Gemini</option>
-                                    <option value="custom">Custom endpoint</option>
-                                </select>
-                            </label>
-
-                            <label>
-                                AI API key
-                                <input id="ai-api-key-input" type="password" placeholder="Nhập API key" />
-                            </label>
-
-                            <label>
-                                Model name
-                                <select id="ai-model-select"></select>
-                            </label>
-
-                            <label id="custom-model-field" class="hidden">
-                                Custom model name
-                                <input id="ai-custom-model-input" placeholder="vd: gpt-4.1-mini" />
-                            </label>
-
-                            <label>
-                                Endpoint
-                                <input id="ai-endpoint-input" />
-                            </label>
-
-                            <div id="settings-message" class="settings-message"></div>
-
-                            <div class="settings-actions">
-                                <button type="button" id="settings-save-button">Save</button>
-                                <button type="button" id="settings-test-button" class="secondary-button">Test connection</button>
-                            </div>
-                        </div>
-
-                        <div class="settings-panel hidden" data-settings-content="gui">
+                        <div class="settings-panel" data-settings-content="gui">
                             <h3>GUI</h3>
 
                             <section class="settings-section">
