@@ -59,9 +59,27 @@ function sanitizeCaseForUi(testCase) {
 
 function redactSensitiveText(value) {
     return String(value ?? "")
-        .replace(/((?:tài khoản|tai khoan|username|user)\s*[=:]?\s*[\w.+-]+)\s*\/\s*([^\s,.;)\]}]+)/gi, "$1/••••••")
+        .replace(/((?:tài khoản|tai khoan|username|user)\s*[=:]?\s*[^\/\s,;:]+)\s*\/\s*([^\s,.;)\]}]+)/gi, "$1/••••••")
         .replace(/((?:mật khẩu|mat khau|password)\s*[=:]?\s*)([^\s,.;)\]}]+)/gi, "$1••••••")
         .replace(/("password"\s*:\s*")[^"]*(")/gi, "$1••••••$2");
+}
+
+function createLogRedactor(send) {
+    let pending = "";
+    return {
+        push(chunk) {
+            pending += String(chunk ?? "");
+            const emitLength = Math.max(pending.lastIndexOf("\n") + 1, pending.length - 96);
+            if (emitLength <= 0) return;
+            send(redactSensitiveText(pending.slice(0, emitLength)));
+            pending = pending.slice(emitLength);
+        },
+        flush() {
+            if (!pending) return;
+            send(redactSensitiveText(pending));
+            pending = "";
+        },
+    };
 }
 
 function cloneForUi(value) {
@@ -163,15 +181,20 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         previewWatcher = startPreviewWatcher(event, previewPath);
     }
 
+    const stdoutLogRedactor = createLogRedactor((text) => event.sender.send("test-log", text));
+    const stderrLogRedactor = createLogRedactor((text) => event.sender.send("test-log", text));
+
     runningProcess.stdout.on("data", (chunk) => {
-        event.sender.send("test-log", redactSensitiveText(chunk.toString()));
+        stdoutLogRedactor.push(chunk.toString());
     });
 
     runningProcess.stderr.on("data", (chunk) => {
-        event.sender.send("test-log", redactSensitiveText(chunk.toString()));
+        stderrLogRedactor.push(chunk.toString());
     });
 
     runningProcess.on("error", (error) => {
+        stdoutLogRedactor.flush();
+        stderrLogRedactor.flush();
         stopPreviewWatcher();
         applyInteractiveViewFitZoom();
         event.sender.send("test-finished", {
@@ -183,6 +206,8 @@ ipcMain.handle("run-test", async (event, values = {}) => {
     });
 
     runningProcess.on("exit", (code, signal) => {
+        stdoutLogRedactor.flush();
+        stderrLogRedactor.flush();
         stopPreviewWatcher();
         applyInteractiveViewFitZoom();
         event.sender.send("test-finished", {

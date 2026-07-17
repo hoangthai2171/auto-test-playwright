@@ -360,6 +360,9 @@ test("redacts credential-shaped descriptions and log text", () => {
 
   assert.equal(redacted, "Đăng nhập với tài khoản ts1/••••••, password=••••••");
   assert.doesNotMatch(redacted, /111222|secret/);
+
+  const unicodeRedacted = renderer.redactSensitiveText("username=User_Đ/PaSS123.");
+  assert.equal(unicodeRedacted, "username=User_Đ/••••••.");
 });
 
 test("refuses to run until a test case id is selected", () => {
@@ -385,8 +388,12 @@ test("index markup contains the case browser and no API-key or mode controls", (
   const retiredAiControls = new RegExp(
     [
       ["ai", "api-key-input"].join("-"),
+      ["ai", "provider-select"].join("-"),
+      ["ai", "model-select"].join("-"),
+      ["ai", "endpoint-input"].join("-"),
       ["AI", "API key"].join(" "),
       ["AI", "TEST_DESCRIPTION"].join("_"),
+      ["API", "key", "settings", "panel"].join("[ -]"),
     ].join("|")
   );
   assert.doesNotMatch(html, retiredAiControls);
