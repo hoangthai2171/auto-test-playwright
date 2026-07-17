@@ -1,0 +1,54 @@
+[
+  {
+    "id": "12066",
+    "projectId": "1",
+    "folderId": "24",
+    "slug": "case_mrol8f13",
+    "name": "Kiểm tra vào dịch vụ phim truyện",
+    "qaDescription": "B1. Đăng nhập vào app với tài khoản ts1/111222\nB2. Vào trang chủ app\nB3. Vào dịch vụ phim truyện",
+    "platform": "tv",
+    "environment": "UI",
+    "preCondition": "Chưa đăng nhập tài khoản",
+    "expectedResult": "Vào màn hình dịch vụ phim truyện thành công",
+    "category": "Auto test demo",
+    "status": "created",
+    "mode": "script",
+    "scriptVersion": 1,
+    "actions": [
+      {
+        "action": "login",
+        "username": "ts1",
+        "password": "111222"
+      },
+      {
+        "action": "open_home"
+      },
+      {
+        "action": "open_service",
+        "service": "Phim truyện"
+      },
+      {
+        "action": "assert_screen",
+        "text": "Phim truyện"
+      }
+    ]
+  },
+  {
+    "id": "12065",
+    "name": "Vào trang chủ app",
+    "actions": [
+      {
+        "action": "login",
+        "username": "ts1",
+        "password": "111222"
+      },
+      {
+        "action": "open_home"
+      },
+      {
+        "action": "assert_screen",
+        "text": "Xem ngay"
+      }
+    ]
+  }
+]

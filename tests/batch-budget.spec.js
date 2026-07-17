@@ -53,14 +53,8 @@ test("item limit blocks another start without throwing", () => {
 test("active batch workflow uses the shared budget and preserves playback artifacts", () => {
   const workflows = fs.readFileSync(path.join(__dirname, "lib", "workflows.js"), "utf8");
   expect(workflows).toContain("createBatchBudget");
-  expect(workflows).toContain("ai-first-row-playback-budget.json");
+  expect(workflows).toContain("first-row-playback-budget.json");
   expect(workflows).toContain("attachFirstRowPlaybackReport(testInfo, results)");
   expect(workflows).not.toContain("options.maxItems || 60");
 
-  const aiRunner = fs.readFileSync(path.join(__dirname, "lib", "ai-plan-runner.js"), "utf8");
-  expect(aiRunner).toContain("itemLimit: step.itemLimit");
-  expect(aiRunner).toContain("runtimeBudgetMs: step.runtimeBudgetMs");
-
-  const main = fs.readFileSync(path.join(__dirname, "..", "app", "main.js"), "utf8");
-  expect(main).toContain("Number.isFinite(itemLimit) && itemLimit >= 0");
 });

@@ -11,6 +11,7 @@
     "app:build:win": "electron-builder --win",
     "browsers:install": "node scripts/install-playwright-browsers.js",
     "test": "playwright test",
+    "test:unit": "node --test tests/unit/*.test.js",
     "test:headed": "node scripts/run-headed.js"
   },
   "keywords": [],
@@ -31,6 +32,7 @@
     "files": [
       "app/**/*",
       "tests/**/*",
+      "testcased.json",
       "playwright.config.js",
       "package.json",
       "node_modules/**/*"
