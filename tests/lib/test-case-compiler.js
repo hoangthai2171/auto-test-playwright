@@ -8,22 +8,8 @@ function hasOwn(value, key) {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
-function stripSurroundingPunctuation(value) {
-  return value
-    .trim()
-    .replace(/^[\s"'“”‘’()[\]{}:;,.!?…\-–—]+/u, "")
-    .replace(/[\s"'“”‘’()[\]{}:;,.!?…\-–—]+$/u, "")
-    .trim();
-}
-
 function prepareStepLine(line) {
-  const withoutOuterPunctuation = stripSurroundingPunctuation(line);
-  const withoutStepPrefix = withoutOuterPunctuation.replace(
-    /^B\d+\s*\.\s*/iu,
-    ""
-  );
-
-  return stripSurroundingPunctuation(withoutStepPrefix);
+  return line.replace(/^B\d+\s*\.\s*/iu, "").trim();
 }
 
 function getCaseId(context) {
@@ -69,10 +55,10 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
-      return /\b(?:vao trang chu(?: app)?|vao home)\b/u.test(normalizedLine);
+      return /\b(?:vao trang chu|vao home)\b/u.test(normalizedLine);
     },
     compile(_preparedLine, normalizedLine) {
-      if (!/^(?:vao trang chu(?: app)?|vao home)$/u.test(normalizedLine)) {
+      if (!/^(?:vao trang chu|vao home)$/u.test(normalizedLine)) {
         return null;
       }
 
@@ -80,8 +66,12 @@ const STEP_COMPILERS = [
     },
   },
   {
+    isService: true,
     matches(normalizedLine) {
       return /\bvao dich vu\b/u.test(normalizedLine);
+    },
+    startsLine(normalizedLine) {
+      return /^vao dich vu\b/u.test(normalizedLine);
     },
     compile(preparedLine, normalizedLine) {
       if (!/^vao dich vu\s+.+$/u.test(normalizedLine)) {
@@ -129,9 +119,10 @@ const STEP_COMPILERS = [
 function compileLine(originalLine, context, actionIndex) {
   const preparedLine = prepareStepLine(originalLine);
   const normalizedLine = normalizeVietnameseText(preparedLine);
-  const matchingCompilers = STEP_COMPILERS.filter((compiler) =>
-    compiler.matches(normalizedLine)
-  );
+  const serviceCompiler = STEP_COMPILERS.find((compiler) => compiler.isService);
+  const matchingCompilers = serviceCompiler.startsLine(normalizedLine)
+    ? [serviceCompiler]
+    : STEP_COMPILERS.filter((compiler) => compiler.matches(normalizedLine));
 
   if (matchingCompilers.length > 1) {
     throw ambiguousStepError(context, originalLine);
@@ -177,7 +168,9 @@ function compileTestCase(testCase) {
   }
 
   if (!hasOwn(validatedTestCase, "qaDescription")) {
-    return validatedTestCase;
+    throw new Error(
+      `Test case ${validatedTestCase.id} actions must be non-empty when qaDescription is absent`
+    );
   }
 
   const actions = compileQaDescription(validatedTestCase.qaDescription, {

@@ -24,7 +24,7 @@ test("compiles a test case while preserving server metadata and actions", () => 
 
 test("compiles login, home, and service Vietnamese steps", () => {
   const result = compileQaDescription(
-    "B1. Đăng nhập vào app với tài khoản ts1/111222\nB2. Vào trang chủ app\nB3. Vào dịch vụ phim truyện"
+    "B1. Đăng nhập vào app với tài khoản ts1/111222\nB2. Vào trang chủ\nB3. Vào dịch vụ phim truyện"
   );
 
   assert.deepEqual(result, [
@@ -43,6 +43,18 @@ test("compiles the description when actions is an empty array", () => {
   });
 
   assert.deepEqual(result.actions, [{ action: "open_home" }]);
+});
+
+test("rejects an empty action list without a description using the case id", () => {
+  assert.throws(
+    () =>
+      compileTestCase({
+        id: "empty-actions-case",
+        name: "Empty actions",
+        actions: [],
+      }),
+    /empty-actions-case.*actions/i
+  );
 });
 
 test("does not parse a description when explicit actions are present", () => {
@@ -84,15 +96,32 @@ test("compiles every supported back and readiness form", () => {
   ]);
 });
 
-test("strips step punctuation while preserving credential and service text", () => {
+test("preserves literal punctuation in credential and service values", () => {
   const result = compileQaDescription(
-    '- B1. "Đăng nhập app với tài khoản User_Đ/PaSS123."\nB2. (Vào dịch vụ VTVcab ON).'
+    "B1. Đăng nhập app với tài khoản User_Đ/PaSS123.\nB2. Vào dịch vụ VTVcab ON)."
   );
 
   assert.deepEqual(result, [
-    { action: "login", username: "User_Đ", password: "PaSS123" },
-    { action: "open_service", service: "VTVcab ON" },
+    { action: "login", username: "User_Đ", password: "PaSS123." },
+    { action: "open_service", service: "VTVcab ON)." },
   ]);
+});
+
+test("rejects the unsupported trang chu app form", () => {
+  assert.throws(
+    () =>
+      compileQaDescription("B1. Vào trang chủ app", {
+        caseId: "home-grammar-case",
+      }),
+    /home-grammar-case.*unsupported.*Vào trang chủ app/i
+  );
+});
+
+test("does not treat command-like words inside a service label as ambiguous", () => {
+  assert.deepEqual(
+    compileQaDescription("B1. Vào dịch vụ Vào home"),
+    [{ action: "open_service", service: "Vào home" }]
+  );
 });
 
 test("rejects a line that matches multiple supported patterns", () => {
