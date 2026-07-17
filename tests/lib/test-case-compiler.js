@@ -117,7 +117,7 @@ const STEP_COMPILERS = [
 ];
 
 function hasTrailingCommand(normalizedLine) {
-  return /(?:\b(?:va|roi|sau do)\s+|[,;]\s*)(?:dang nhap\b|vao trang chu(?: app)?\b|vao home\b|vao dich vu\b|quay lai\b|quay ve\b|nhan back\b|cho (?:app|home|content|player)\b)/u.test(
+  return /(?:\b(?:va|roi|sau do)\s+|[,;.!?…]+\s*)(?:dang nhap\b|vao trang chu(?: app)?\b|vao home\b|vao dich vu\b|quay lai\b|quay ve\b|nhan back\b|cho (?:app|home|content|player)\b)/u.test(
     normalizedLine
   );
 }

@@ -144,12 +144,14 @@ test("rejects a service step followed by another command", () => {
   );
 });
 
-test("rejects service steps followed by roi, sau do, comma, or semicolon commands", () => {
+test("rejects service steps followed by connectors or sentence punctuation", () => {
   for (const line of [
     "B1. Vào dịch vụ Phim truyện rồi quay lại",
     "B1. Vào dịch vụ Phim truyện sau đó vào home",
     "B1. Vào dịch vụ Phim truyện, vào home",
     "B1. Vào dịch vụ Phim truyện; vào home",
+    "B1. Vào dịch vụ Phim truyện. Quay lại",
+    "B1. Vào dịch vụ Phim truyện! Chờ home",
   ]) {
     assert.throws(() => compileQaDescription(line), /ambiguous/i, line);
   }

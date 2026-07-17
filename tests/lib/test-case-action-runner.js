@@ -22,36 +22,72 @@ function errorMessage(error) {
 
 function visibleScreenTextPredicate(page, expected) {
   return page.evaluate((needle) => {
-    const normalize = (value) => value
+    const normalizeChar = (value) => value
       .normalize("NFD")
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/đ/gi, "d")
-      .replace(/\s+/g, " ")
-      .trim()
       .toLowerCase();
     const viewportWidth = window.innerWidth || 1920;
     const viewportHeight = window.innerHeight || 1080;
-    return Array.from(document.querySelectorAll("body *")).some((element) => {
-      if (!normalize(element.innerText || "").includes(needle)) return false;
-      let visible = true;
+    const isVisibleChain = (element) => {
       for (let ancestor = element; ancestor && ancestor !== document.body; ancestor = ancestor.parentElement) {
         const style = getComputedStyle(ancestor);
-        if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) {
-          visible = false;
-          break;
+        if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) return false;
+      }
+      return true;
+    };
+
+    const textNodes = (root) => {
+      const walker = document.createTreeWalker(root, NodeFilter.SHOW_TEXT);
+      const nodes = [];
+      while (walker.nextNode()) {
+        const node = walker.currentNode;
+        if (node.nodeValue && isVisibleChain(node.parentElement)) nodes.push(node);
+      }
+      return nodes;
+    };
+
+    const normalizeWithMap = (nodes) => {
+      const chars = [];
+      for (const node of nodes) {
+        for (let index = 0; index < node.nodeValue.length; index += 1) {
+          const normalized = normalizeChar(node.nodeValue[index]);
+          if (!normalized) continue;
+          chars.push({value: /\s/u.test(normalized) ? " " : normalized, node, index});
         }
       }
-      if (!visible) return false;
 
+      const compact = [];
+      for (const char of chars) {
+        if (char.value === " " && compact.at(-1)?.value === " ") {
+          compact.at(-1).end = char.index + 1;
+          continue;
+        }
+        compact.push({...char, end: char.index + 1});
+      }
+      while (compact[0]?.value === " ") compact.shift();
+      while (compact.at(-1)?.value === " ") compact.pop();
+      return compact;
+    };
+
+    const elements = [document.body, ...document.querySelectorAll("body *")];
+    for (const element of elements) {
+      if (!isVisibleChain(element)) continue;
+      const mapped = normalizeWithMap(textNodes(element));
+      const text = mapped.map((item) => item.value).join("");
+      const startIndex = text.indexOf(needle);
+      if (startIndex < 0) continue;
+      const start = mapped[startIndex];
+      const end = mapped[startIndex + needle.length - 1];
+      if (!start || !end) continue;
       const range = document.createRange();
-      range.selectNodeContents(element);
-      return Array.from(range.getClientRects()).some((rect) =>
-        rect.right > 0 &&
-        rect.bottom > 0 &&
-        rect.left < viewportWidth &&
-        rect.top < viewportHeight
-      );
-    });
+      range.setStart(start.node, start.index);
+      range.setEnd(end.node, end.end);
+      if (Array.from(range.getClientRects()).some((rect) =>
+        rect.right > 0 && rect.bottom > 0 && rect.left < viewportWidth && rect.top < viewportHeight
+      )) return true;
+    }
+    return false;
   }, expected).catch(() => false);
 }
 
