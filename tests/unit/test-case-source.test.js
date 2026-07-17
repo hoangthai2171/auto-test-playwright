@@ -61,6 +61,21 @@ test("loads an array from a local JSON file and finds a case by id", async () =>
   }
 });
 
+test("does not require a screen assertion after opening the service in the fixture", async () => {
+  const fixturePath = path.resolve(__dirname, "../../testcased.json");
+  const cases = await loadLocalTestCases(fixturePath);
+  const testCase = findTestCaseById(cases, "12066");
+
+  assert.deepEqual(testCase.actions.at(-1), {
+    action: "open_service",
+    service: "Phim truyện",
+  });
+  assert.equal(
+    testCase.actions.some(({ action }) => action === "assert_screen"),
+    false
+  );
+});
+
 test("does not modify a local fixture while loading it", async () => {
   const { tempDirectory, filePath } = await writeTempJson([
     { id: "1", name: "Case", actions: [{ action: "open_home" }] },

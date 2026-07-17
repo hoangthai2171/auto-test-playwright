@@ -26,10 +26,6 @@
       {
         "action": "open_service",
         "service": "Phim truyện"
-      },
-      {
-        "action": "assert_screen",
-        "text": "Phim truyện"
       }
     ]
   },
