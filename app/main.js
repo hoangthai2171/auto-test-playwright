@@ -63,6 +63,10 @@ function cloneForUi(value) {
         return value.map(cloneForUi);
     }
 
+    if (typeof value === "string") {
+        return redactSensitiveText(value);
+    }
+
     if (!value || typeof value !== "object") {
         return value;
     }

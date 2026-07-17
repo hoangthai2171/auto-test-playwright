@@ -122,18 +122,16 @@ The fixture applies viewport scaling for Electron:
 - Uses CDP `Emulation.setDeviceMetricsOverride` for pixel-perfect scaling
 - Electron app can connect via CDP (`MYTV_INTERACTIVE_CDP_URL`) for live preview mode
 
-### AI Test Planning Mode
+### Server-Driven Test Case Runner
 
-The app includes an AI mode that:
-1. Takes a natural-language test description
-2. Generates a JSON plan with actions (`open_service`, `play_all_items_in_first_row`)
-3. Executes the plan with `tests/lib/ai-plan-runner.js`
-4. Attaches the plan JSON to the Playwright report
+The Electron app loads validated server-shaped cases from the read-only
+`testcased.json` fixture, displays them in a case browser, and runs one
+selected ID through `tests/run-test-case-mytv.spec.js`. Explicit `actions` are
+preferred; the deterministic compiler in `tests/lib/test-case-compiler.js` is
+only a fallback for supported `qaDescription` patterns.
 
-The local planner (without API key) understands requests like:
-```
-Mở dịch vụ phim truyện và play 3 phim đầu tiên của cate "Phim song song"
-```
+Future API retrieval and user-data caching are intentionally separate from this
+local runner and must feed the same validated source/executor boundary.
 
 ### Test Helper Library Structure
 
@@ -166,7 +164,8 @@ All test specs support these environment variables:
 - `CHANNEL_NAME` - channel name for channel playback test
 - `MOVIE_NAME` - movie name for movie playback (requires `MOVIE_PLAY_MODE=by_name`)
 - `SEARCH_KEYWORD` - search keyword for search test
-- `AI_PLAN_PATH` - path to JSON plan file for AI test mode
+- `TEST_CASE_PATH` - optional local case fixture path for the generic runner
+- `TEST_CASE_ID` - selected local case ID for the generic runner
 
 Electron app mode also uses:
 - `MYTV_INTERACTIVE_CDP_URL` - CDP endpoint for connecting to Electron browser

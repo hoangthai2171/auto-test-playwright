@@ -9,8 +9,8 @@ application, with an Electron desktop runner for local server-shaped test
 cases. The target application behaves like a TV interface: navigation uses a
 remote-control focus model and text entry uses the app's virtual keyboard.
 
-Project type: quality assurance / test automation  
-Primary language: JavaScript (CommonJS)  
+Project type: quality assurance / test automation
+Primary language: JavaScript (CommonJS)
 Key technologies: Playwright, Electron, Node.js
 
 When text input is required in the TV app, always use the virtual keyboard

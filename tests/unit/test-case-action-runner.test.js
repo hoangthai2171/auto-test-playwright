@@ -434,6 +434,20 @@ test("retries screen assertions while the page becomes ready", async () => {
   assert.ok(evaluations > 1);
 });
 
+test("retries screen assertions after a transient navigation evaluation error", async () => {
+  let evaluations = 0;
+  const page = {
+    async evaluate() {
+      evaluations += 1;
+      if (evaluations === 1) throw new Error("Execution context was destroyed");
+      return true;
+    },
+  };
+
+  await assertVisibleScreenText(page, "Trang chủ", {timeoutMs: 1000, pollIntervalMs: 1});
+  assert.ok(evaluations > 1);
+});
+
 test("waits for app readiness through the workflow helper", async () => {
   const calls = [];
   const page = { id: "page" };

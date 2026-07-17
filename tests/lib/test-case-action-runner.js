@@ -31,35 +31,28 @@ function visibleScreenTextPredicate(page, expected) {
       .toLowerCase();
     const viewportWidth = window.innerWidth || 1920;
     const viewportHeight = window.innerHeight || 1080;
-    const walker = document.createTreeWalker(document.body, NodeFilter.SHOW_TEXT);
-
-    while (walker.nextNode()) {
-      const node = walker.currentNode;
-      if (!normalize(node.nodeValue || "").includes(needle)) continue;
-      let element = node.parentElement;
+    return Array.from(document.querySelectorAll("body *")).some((element) => {
+      if (!normalize(element.innerText || "").includes(needle)) return false;
       let visible = true;
-      while (element && element !== document.body) {
-        const style = getComputedStyle(element);
-        const rect = element.getBoundingClientRect();
-        if (
-          style.display === "none" ||
-          style.visibility === "hidden" ||
-          Number(style.opacity) === 0 ||
-          rect.right <= 0 ||
-          rect.bottom <= 0 ||
-          rect.left >= viewportWidth ||
-          rect.top >= viewportHeight
-        ) {
+      for (let ancestor = element; ancestor && ancestor !== document.body; ancestor = ancestor.parentElement) {
+        const style = getComputedStyle(ancestor);
+        if (style.display === "none" || style.visibility === "hidden" || Number(style.opacity) === 0) {
           visible = false;
           break;
         }
-        element = element.parentElement;
       }
-      if (visible) return true;
-    }
+      if (!visible) return false;
 
-    return false;
-  }, expected);
+      const range = document.createRange();
+      range.selectNodeContents(element);
+      return Array.from(range.getClientRects()).some((rect) =>
+        rect.right > 0 &&
+        rect.bottom > 0 &&
+        rect.left < viewportWidth &&
+        rect.top < viewportHeight
+      );
+    });
+  }, expected).catch(() => false);
 }
 
 async function assertVisibleScreenText(page, text, {timeoutMs = 30000, pollIntervalMs = 100} = {}) {
