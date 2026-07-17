@@ -1,5 +1,6 @@
 const { compileTestCase } = require("./test-case-compiler");
 const { expect } = require("playwright/test");
+const workflows = require("./workflows");
 
 function attachJson(testInfo, name, value) {
   if (!testInfo || typeof testInfo.attach !== "function") return Promise.resolve();
@@ -83,7 +84,32 @@ function createActionRunner({ handlers = {}, stepRunner }) {
   };
 }
 
-function createDefaultActionHandlers({ helpers: actionHelpers }) {
+async function resolveReadyWait(helpers, page, testInfo, name) {
+  switch (name) {
+    case "app":
+      return workflows.__internal.waitForAppReady(page, testInfo);
+    case "home":
+      return workflows.__internal.waitForHomeReady(page, testInfo);
+    case "content":
+      return helpers.waitForContentVisible(page, {
+        name: "action-content-ready",
+        testInfo,
+        getContentState: workflows.__internal.observeVisibleContentRows,
+        getFocusedState: helpers.getFocusedState,
+      });
+    case "player":
+      return helpers.waitForPlayerReady(page, {
+        name: "action-player-ready",
+        testInfo,
+        getVisiblePopup: helpers.__internal.getVisiblePopup,
+        getPlayerState: helpers.getPlayerState,
+      });
+    default:
+      throw new Error(`Unsupported readiness target: ${name}`);
+  }
+}
+
+function createDefaultActionHandlers({ helpers }) {
   return {
     login: async ({ page, testInfo, action, options }) => {
       const account = {
@@ -91,13 +117,15 @@ function createDefaultActionHandlers({ helpers: actionHelpers }) {
         USERNAME: action.username,
         PASSWORD: action.password,
       };
-      await actionHelpers.openAppAndEnterLoginPage(page, account, testInfo);
-      await actionHelpers.loginWithAccount(page, account, testInfo);
-      await actionHelpers.chooseFirstProfileAndEnterHome(page, testInfo);
-      await actionHelpers.closeHomePopupsAndVerifyHome(page, testInfo);
+      await helpers.openAppAndEnterLoginPage(page, account, testInfo);
+      await helpers.loginWithAccount(page, account, testInfo);
+      await helpers.chooseFirstProfileAndEnterHome(page, testInfo);
+      await helpers.closeHomePopupsAndVerifyHome(page, testInfo);
     },
+    open_home: ({ page, testInfo }) =>
+      workflows.__internal.waitForHomeReady(page, testInfo),
     open_service: ({ page, testInfo, action }) =>
-      actionHelpers.openServiceFromLeftMenuOrAllServices(
+      helpers.openServiceFromLeftMenuOrAllServices(
         page,
         action.service,
         testInfo
@@ -110,16 +138,15 @@ function createDefaultActionHandlers({ helpers: actionHelpers }) {
     assert_screen: async ({ page, action }) => {
       await expect(page.locator("body")).toContainText(action.text);
     },
+    wait_for_ready: ({ page, testInfo, action }) =>
+      resolveReadyWait(helpers, page, testInfo, action.name),
   };
 }
 
 async function runTestCase(page, testInfo, testCase, options = {}) {
-  const handlers = options.handlers || createDefaultActionHandlers({
-    helpers: options.helpers,
-  });
-  const stepRunner =
-    options.stepRunner ||
-    (async (_page, _testInfo, _label, callback) => callback());
+  const helpers = options.helpers || require("./mytv-helpers");
+  const handlers = options.handlers || createDefaultActionHandlers({ helpers });
+  const stepRunner = options.stepRunner || helpers.runStep;
 
   return createActionRunner({ handlers, stepRunner })(
     page,

@@ -29,6 +29,7 @@ function createHandlerHelpers(overrides = {}) {
     openServiceFromLeftMenuOrAllServices: async () => {},
     waitForContentVisible: async () => {},
     waitForPlayerReady: async () => {},
+    getFocusedState: async () => ({ id: "focused" }),
     getPlayerState: async () => ({
       hasVideo: true,
       isProbablyPlaying: true,
@@ -269,8 +270,10 @@ test("creates exactly the default handlers and logs in with action credentials i
   assert.deepEqual(Object.keys(handlers).sort(), [
     "assert_screen",
     "login",
+    "open_home",
     "open_service",
     "press_back",
+    "wait_for_ready",
   ]);
 
   await handlers.login({ page, testInfo, action, options });
@@ -465,7 +468,12 @@ test("waits for content readiness with the visible-content observer", async () =
     restore();
   }
 
-  assert.deepEqual(calls, [[page, { testInfo, getContentState }]]);
+  assert.deepEqual(calls, [[page, {
+    name: "action-content-ready",
+    testInfo,
+    getContentState,
+    getFocusedState: helpers.getFocusedState,
+  }]]);
 });
 
 test("waits for player readiness with MyTV popup and player observers", async () => {
@@ -492,7 +500,12 @@ test("waits for player readiness with MyTV popup and player observers", async ()
     action: { action: "wait_for_ready", name: "player" },
   });
 
-  assert.deepEqual(calls, [[page, { testInfo, getVisiblePopup, getPlayerState }]]);
+  assert.deepEqual(calls, [[page, {
+    name: "action-player-ready",
+    testInfo,
+    getVisiblePopup,
+    getPlayerState,
+  }]]);
 });
 
 test("rejects unsupported readiness targets", async () => {
@@ -505,7 +518,7 @@ test("rejects unsupported readiness targets", async () => {
       handlers.wait_for_ready({
         action: { action: "wait_for_ready", name: "unknown" },
       }),
-    /Unsupported readiness target "unknown"/
+    /Unsupported readiness target: unknown/
   );
 });
 
