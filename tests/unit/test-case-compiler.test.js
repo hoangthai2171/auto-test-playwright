@@ -1,7 +1,10 @@
 const test = require("node:test");
 const assert = require("node:assert/strict");
 
-const { compileTestCase } = require("../lib/test-case-compiler");
+const {
+  compileTestCase,
+  compileQaDescription,
+} = require("../lib/test-case-compiler");
 
 test("compiles a test case while preserving server metadata and actions", () => {
   const testCase = {
@@ -19,3 +22,87 @@ test("compiles a test case while preserving server metadata and actions", () => 
   assert.deepEqual(compiled.actions, testCase.actions);
 });
 
+test("compiles login, home, and service Vietnamese steps", () => {
+  const result = compileQaDescription(
+    "B1. Đăng nhập vào app với tài khoản ts1/111222\nB2. Vào trang chủ app\nB3. Vào dịch vụ phim truyện"
+  );
+
+  assert.deepEqual(result, [
+    { action: "login", username: "ts1", password: "111222" },
+    { action: "open_home" },
+    { action: "open_service", service: "phim truyện" },
+  ]);
+});
+
+test("compiles the description when actions is an empty array", () => {
+  const result = compileTestCase({
+    id: "2",
+    name: "Description fallback",
+    qaDescription: "B1. Vào trang chủ",
+    actions: [],
+  });
+
+  assert.deepEqual(result.actions, [{ action: "open_home" }]);
+});
+
+test("does not parse a description when explicit actions are present", () => {
+  const result = compileTestCase({
+    id: "1",
+    name: "Explicit",
+    qaDescription: "B1. unsupported text",
+    actions: [{ action: "open_home" }],
+  });
+
+  assert.deepEqual(result.actions, [{ action: "open_home" }]);
+});
+
+test("reports the original unsupported line and case id", () => {
+  assert.throws(
+    () =>
+      compileTestCase({
+        id: "12066",
+        name: "Unsupported",
+        qaDescription: "B1. Xóa toàn bộ dữ liệu",
+      }),
+    /12066.*Xóa toàn bộ dữ liệu/i
+  );
+});
+
+test("compiles every supported back and readiness form", () => {
+  const result = compileQaDescription(
+    "B1. Quay lại\nB2. Quay về\nB3. Nhấn back\nB4. Chờ app\nB5. Chờ home\nB6. Chờ content\nB7. Chờ player"
+  );
+
+  assert.deepEqual(result, [
+    { action: "press_back" },
+    { action: "press_back" },
+    { action: "press_back" },
+    { action: "wait_for_ready", name: "app" },
+    { action: "wait_for_ready", name: "home" },
+    { action: "wait_for_ready", name: "content" },
+    { action: "wait_for_ready", name: "player" },
+  ]);
+});
+
+test("strips step punctuation while preserving credential and service text", () => {
+  const result = compileQaDescription(
+    '- B1. "Đăng nhập app với tài khoản User_Đ/PaSS123."\nB2. (Vào dịch vụ VTVcab ON).'
+  );
+
+  assert.deepEqual(result, [
+    { action: "login", username: "User_Đ", password: "PaSS123" },
+    { action: "open_service", service: "VTVcab ON" },
+  ]);
+});
+
+test("rejects a line that matches multiple supported patterns", () => {
+  const originalLine = "B1. Vào home và vào dịch vụ phim truyện";
+
+  assert.throws(
+    () =>
+      compileQaDescription(originalLine, {
+        caseId: "ambiguous-case",
+      }),
+    /ambiguous-case.*ambiguous.*Vào home.*vào dịch vụ phim truyện/i
+  );
+});
