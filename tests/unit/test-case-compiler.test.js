@@ -124,6 +124,18 @@ test("does not treat command-like words inside a service label as ambiguous", ()
   );
 });
 
+test("rejects a service step followed by another command", () => {
+  const originalLine = "B1. Vào dịch vụ Phim truyện và vào home";
+
+  assert.throws(
+    () =>
+      compileQaDescription(originalLine, {
+        caseId: "trailing-command-case",
+      }),
+    /trailing-command-case.*ambiguous.*Vào dịch vụ Phim truyện và vào home/i
+  );
+});
+
 test("rejects a line that matches multiple supported patterns", () => {
   const originalLine = "B1. Vào home và vào dịch vụ phim truyện";
 

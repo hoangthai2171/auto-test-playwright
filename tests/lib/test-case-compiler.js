@@ -116,11 +116,23 @@ const STEP_COMPILERS = [
   },
 ];
 
+function hasTrailingCommand(normalizedLine) {
+  return /\bva\s+(?:dang nhap\b|vao trang chu\b|vao home\b|vao dich vu\b|quay lai\b|quay ve\b|nhan back\b|cho (?:app|home|content|player)\b)/u.test(
+    normalizedLine
+  );
+}
+
 function compileLine(originalLine, context, actionIndex) {
   const preparedLine = prepareStepLine(originalLine);
   const normalizedLine = normalizeVietnameseText(preparedLine);
   const serviceCompiler = STEP_COMPILERS.find((compiler) => compiler.isService);
-  const matchingCompilers = serviceCompiler.startsLine(normalizedLine)
+  const startsWithService = serviceCompiler.startsLine(normalizedLine);
+
+  if (startsWithService && hasTrailingCommand(normalizedLine)) {
+    throw ambiguousStepError(context, originalLine);
+  }
+
+  const matchingCompilers = startsWithService
     ? [serviceCompiler]
     : STEP_COMPILERS.filter((compiler) => compiler.matches(normalizedLine));
 
