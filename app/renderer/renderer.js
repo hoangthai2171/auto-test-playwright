@@ -8,8 +8,8 @@ function maskActionForDisplay(action) {
 
 function redactSensitiveText(value) {
     return String(value ?? "")
-        .replace(/((?:tài khoản|tai khoan|username|user)\s*[=:]?\s*[^\/\s,;:]+)\s*\/\s*([^\s,.;)\]}]+)/gi, "$1/••••••")
-        .replace(/((?:mật khẩu|mat khau|password)\s*[=:]?\s*)([^\s,.;)\]}]+)/gi, "$1••••••")
+        .replace(/((?:tài khoản|tai khoan|username|user)\s*[=:]?\s*[^\/\s,;:]+)\s*\/\s*([^\s\]}]+)/gi, "$1/••••••")
+        .replace(/((?:mật khẩu|mat khau|password)\s*[=:]?\s*)([^\s\]}]+)/gi, "$1••••••")
         .replace(/("password"\s*:\s*")[^"]*(")/gi, "$1••••••$2");
 }
 

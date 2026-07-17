@@ -358,11 +358,14 @@ test("redacts credential-shaped descriptions and log text", () => {
   const text = "Đăng nhập với tài khoản ts1/111222, password=secret";
   const redacted = renderer.redactSensitiveText(text);
 
-  assert.equal(redacted, "Đăng nhập với tài khoản ts1/••••••, password=••••••");
+  assert.equal(redacted, "Đăng nhập với tài khoản ts1/•••••• password=••••••");
   assert.doesNotMatch(redacted, /111222|secret/);
 
   const unicodeRedacted = renderer.redactSensitiveText("username=User_Đ/PaSS123.");
-  assert.equal(unicodeRedacted, "username=User_Đ/••••••.");
+  assert.equal(unicodeRedacted, "username=User_Đ/••••••");
+
+  const punctuationRedacted = renderer.redactSensitiveText("password=p.a$$-word");
+  assert.equal(punctuationRedacted, "password=••••••");
 });
 
 test("refuses to run until a test case id is selected", () => {
