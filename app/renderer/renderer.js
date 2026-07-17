@@ -45,6 +45,21 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     let activePreviewType = "live";
     let browserMuted = true;
 
+    function loadPreviewSettings() {
+        let saved = {};
+        try {
+            saved = JSON.parse(store?.getItem?.("mytv-auto-test-settings") || "{}");
+        } catch {
+            saved = {};
+        }
+        if (["none", "live", "interactive"].includes(saved.PREVIEW_TYPE)) {
+            activePreviewType = saved.PREVIEW_TYPE;
+        }
+        doc?.querySelectorAll?.('[name="preview-type"]').forEach((input) => {
+            input.checked = input.value === activePreviewType;
+        });
+    }
+
     function setFormMessage(message, type = "") {
         if (!formMessage) return;
         formMessage.textContent = message;
@@ -202,6 +217,18 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (settingsMessage) settingsMessage.textContent = "Saved";
     }
 
+    async function suspendInteractiveBrowserForModal() {
+        if (activePreviewType === "interactive") {
+            await api.suspendInteractiveBrowser?.();
+        }
+    }
+
+    async function resumeInteractiveBrowserAfterModal() {
+        if (activePreviewType !== "interactive") return;
+        if (!settingsModal?.classList.contains("hidden") || !logsModal?.classList.contains("hidden")) return;
+        await showInteractiveBrowserBounds();
+    }
+
     async function handleSubmit(event) {
         event.preventDefault();
         clearLog();
@@ -299,12 +326,31 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     });
     get("open-report-button")?.addEventListener?.("click", () => api.openReport());
     get("show-report-button")?.addEventListener?.("click", () => api.showReportFolder());
-    get("settings-button")?.addEventListener?.("click", () => openModal(settingsModal));
-    get("logs-button")?.addEventListener?.("click", () => openModal(logsModal));
-    get("settings-close-button")?.addEventListener?.("click", () => closeModal(settingsModal));
-    get("logs-close-button")?.addEventListener?.("click", () => closeModal(logsModal));
-    settingsModal?.querySelector?.("[data-close-settings]")?.addEventListener?.("click", () => closeModal(settingsModal));
-    logsModal?.querySelector?.("[data-close-logs]")?.addEventListener?.("click", () => closeModal(logsModal));
+    get("settings-button")?.addEventListener?.("click", async () => {
+        await suspendInteractiveBrowserForModal();
+        selectSettingsPanel("gui");
+        openModal(settingsModal);
+    });
+    get("logs-button")?.addEventListener?.("click", async () => {
+        await suspendInteractiveBrowserForModal();
+        openModal(logsModal);
+    });
+    get("settings-close-button")?.addEventListener?.("click", async () => {
+        closeModal(settingsModal);
+        await resumeInteractiveBrowserAfterModal();
+    });
+    get("logs-close-button")?.addEventListener?.("click", async () => {
+        closeModal(logsModal);
+        await resumeInteractiveBrowserAfterModal();
+    });
+    settingsModal?.querySelector?.("[data-close-settings]")?.addEventListener?.("click", async () => {
+        closeModal(settingsModal);
+        await resumeInteractiveBrowserAfterModal();
+    });
+    logsModal?.querySelector?.("[data-close-logs]")?.addEventListener?.("click", async () => {
+        closeModal(logsModal);
+        await resumeInteractiveBrowserAfterModal();
+    });
     get("gui-settings-save-button")?.addEventListener?.("click", savePreviewSettings);
     browserMuteButton?.addEventListener?.("click", () => setBrowserMuted(!browserMuted));
     settingsNavItems.forEach((item) => item.addEventListener("click", () => selectSettingsPanel(item.dataset.settingsPanel)));
@@ -329,6 +375,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         setStatus(result.code === 0 ? "passed" : "failed", result.code === 0 ? "Passed" : "Failed");
         appendLog(`\nFinished with code ${result.code}\n`);
     });
+
+    loadPreviewSettings();
 
     return {
         loadCases,
