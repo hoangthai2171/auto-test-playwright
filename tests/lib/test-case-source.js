@@ -14,6 +14,25 @@ async function loadLocalTestCases(filePath) {
   }
 }
 
+async function loadCachedTestCases(cachePath, folderId) {
+  let cache;
+  try {
+    cache = JSON.parse(await fs.readFile(cachePath, "utf8"));
+  } catch (error) {
+    throw new Error(
+      `Could not load test-case cache from ${cachePath}: ${error.message}`,
+      {cause: error}
+    );
+  }
+
+  const entry = cache?.[String(folderId)];
+  if (!entry || !Array.isArray(entry.cases)) {
+    throw new Error(`Test case cache entry for folder "${String(folderId)}" not found`);
+  }
+
+  return validateTestCaseList(entry.cases, `${cachePath}#${String(folderId)}`);
+}
+
 function findTestCaseById(testCases, id) {
   const requestedId = String(id);
   const testCase = testCases.find(
@@ -27,4 +46,4 @@ function findTestCaseById(testCases, id) {
   return testCase;
 }
 
-module.exports = { loadLocalTestCases, findTestCaseById };
+module.exports = {loadLocalTestCases, loadCachedTestCases, findTestCaseById};

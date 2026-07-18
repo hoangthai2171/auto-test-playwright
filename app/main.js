@@ -2,8 +2,19 @@ const path = require("node:path");
 const fs = require("node:fs/promises");
 const {spawn} = require("node:child_process");
 const {app, BrowserView, BrowserWindow, ipcMain, shell} = require("electron");
-const {loadLocalTestCases, findTestCaseById} = require("../tests/lib/test-case-source");
+const {
+    loadLocalTestCases,
+    loadCachedTestCases,
+    findTestCaseById,
+} = require("../tests/lib/test-case-source");
+const {validateTestCaseList} = require("../tests/lib/test-case-schema");
 const {redactSensitiveText, createLogRedactor} = require("./credential-redaction");
+const {
+    fetchFlowCaseFolders,
+    fetchFlowCases,
+    normalizeTimeoutMs,
+} = require("./flow-case-api");
+const {replaceFolderCacheEntry} = require("./test-case-cache");
 
 const INTERACTIVE_BROWSER_DEBUG_PORT =
     Number(process.env.MYTV_INTERACTIVE_BROWSER_DEBUG_PORT) ||
@@ -36,6 +47,10 @@ function createWindow() {
     mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
 }
 
+function testCasesCachePath() {
+    return path.join(app.getPath("userData"), "testcases-cache.json");
+}
+
 app.whenReady().then(() => {
     createWindow();
 
@@ -52,6 +67,38 @@ ipcMain.handle("load-test-cases", async () => {
     const fixturePath = path.join(app.getAppPath(), "testcased.json");
     const cases = await loadLocalTestCases(fixturePath);
     return {ok: true, source: "local", cases: cases.map(sanitizeCaseForUi)};
+});
+
+ipcMain.handle("load-flow-case-folders", async (_event, settings = {}) => {
+    return fetchFlowCaseFolders({
+        apiDomain: settings.API_DOMAIN,
+        projectId: settings.PROJECT_ID,
+        timeoutMs: normalizeTimeoutMs(settings.API_TIMEOUT_SECONDS),
+    });
+});
+
+ipcMain.handle("load-flow-cases", async (_event, settings = {}) => {
+    const result = await fetchFlowCases({
+        apiDomain: settings.API_DOMAIN,
+        projectId: settings.PROJECT_ID,
+        folderName: settings.FOLDER_NAME,
+        environment: settings.ENVIRONMENT,
+        timeoutMs: normalizeTimeoutMs(settings.API_TIMEOUT_SECONDS),
+    });
+    if (!result.ok) return result;
+
+    try {
+        const folder = {
+            id: settings.FOLDER_ID,
+            name: settings.FOLDER_NAME_LABEL,
+            fullPath: settings.FOLDER_NAME,
+        };
+        const cases = validateTestCaseList(result.cases, "flow-case API");
+        await replaceFolderCacheEntry({cachePath: testCasesCachePath(), folder, cases});
+        return {ok: true, folder, cases: cases.map(sanitizeCaseForUi), source: "api"};
+    } catch (error) {
+        return {ok: false, message: error.message, timeout: false};
+    }
 });
 
 function sanitizeCaseForUi(testCase) {
@@ -92,7 +139,9 @@ ipcMain.handle("run-test", async (event, values = {}) => {
     let testCase;
 
     try {
-        const cases = await loadLocalTestCases(fixturePath);
+        const cases = values.TEST_CASE_FOLDER_ID
+            ? await loadCachedTestCases(testCasesCachePath(), values.TEST_CASE_FOLDER_ID)
+            : await loadLocalTestCases(fixturePath);
         testCase = findTestCaseById(cases, values.TEST_CASE_ID);
     } catch (error) {
         return {ok: false, message: error.message};
@@ -120,6 +169,8 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         ...process.env,
         TEST_CASE_PATH: fixturePath,
         TEST_CASE_ID: String(testCase.id),
+        TEST_CASE_CACHE_PATH: values.TEST_CASE_FOLDER_ID ? testCasesCachePath() : "",
+        TEST_CASE_FOLDER_ID: values.TEST_CASE_FOLDER_ID ? String(values.TEST_CASE_FOLDER_ID) : "",
         APP_URL: values.APP_URL,
         PLAYWRIGHT_BROWSERS_PATH: playwrightBrowsersPath(projectRoot),
         PLAYWRIGHT_HTML_REPORT: reportDir,

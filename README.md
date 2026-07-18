@@ -29,6 +29,8 @@ testcased.json                  Read-only local server-shaped fixture
 app/
   main.js                       Electron main process and test-case runner IPC
   preload.js                    Safe IPC bridge
+  flow-case-api.js              Flow-case API calls and timeout handling
+  test-case-cache.js            Folder-keyed user-data cache
   renderer/                     Case browser, preview, logs, and settings UI
 tests/
   run-test-case-mytv.spec.js    Generic Playwright entry point
@@ -55,8 +57,10 @@ playwright.config.js
 
 ## Run With the Electron Case Browser
 
-The first local source is `testcased.json`. It is a development fixture and is
-read at runtime; the app does not rewrite it.
+The app starts with `testcased.json` as a local fallback. API-loaded cases are
+downloaded from the configured flow-case folder, validated, and stored in the
+Electron user-data cache at `<userData>/testcases-cache.json`, keyed by folder
+ID. Downloading the same folder again replaces only that folder's cache entry.
 
 1. Add or update server-shaped cases in `testcased.json`.
 2. Start the desktop runner:
@@ -65,16 +69,22 @@ read at runtime; the app does not rewrite it.
    npm run app:dev
    ```
 
-3. Search by case ID substring or name with the instant filter, then check one or more visible cases in the table.
-4. Use `Detail` to review metadata, expected result, and normalized actions.
-5. Click `Run Selected (N)` and watch the cases execute sequentially in the logs and optional browser preview.
-6. Open the Playwright report after the batch finishes.
+3. Open Settings and configure `APP_URL`, API domain, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save.
+4. Select a folder in the sidebar and click `Get test cases`; use the refresh icon to reload the folder tree.
+5. Search by case ID substring or name with the instant filter, then check one or more visible cases in the table.
+6. Use `Detail` to review metadata, expected result, and normalized actions.
+7. Click `Run Selected (N)` and watch the cases execute sequentially in the logs and optional browser preview.
+8. Open the Playwright report after the batch finishes.
 
-The renderer captures checked case IDs in table order and sends one unchanged
-`TEST_CASE_ID`, `APP_URL`, and preview-settings payload at a time to the main
-process. `app/main.js` validates each ID, then starts the single generic spec
-`tests/run-test-case-mytv.spec.js`. The renderer waits for each process to
-finish, records its row status, and continues after a pass or failure.
+The renderer captures checked case IDs in table order and sends one
+`TEST_CASE_ID`, `APP_URL`, preview-settings, and active folder ID at a time to
+the main process. Folder and case API calls run through main-process IPC. A
+full-screen spinner blocks interaction while an API call is active; timeout
+failures show an alert and leave the existing list/cache untouched. The main
+process validates each ID from the selected folder cache, then starts the
+generic spec `tests/run-test-case-mytv.spec.js`. The renderer waits for each
+process to finish, records its row status, and continues after a pass or
+failure.
 
 ### Case execution contract
 
@@ -103,11 +113,10 @@ case metadata rather than action credentials. Playwright case attachments are
 generated from the source case, so report folders also require appropriate
 access control.
 
-The local runner currently has one source: `testcased.json`. API retrieval and
-an Electron user-data cache are intentionally separate follow-up work. A future
-source/cache layer should validate downloaded cases, atomically replace a
-user-data cache only after a successful refresh, and feed the same generic
-executor without changing action handlers.
+The local fixture remains available when no API folder has been downloaded.
+Successful API responses are validated before an atomic cache replacement, and
+the generic executor uses the same action handlers for either local or cached
+cases.
 
 Reports created by the packaged app are written to the Electron user-data
 folder, not inside the application bundle.

@@ -44,6 +44,15 @@ function validateRunValues(values) {
     return "";
 }
 
+const DEFAULT_SETTINGS = {
+    APP_URL: "https://html5stage.mytv.vn/",
+    API_DOMAIN: "http://172.16.240.254:30100",
+    PROJECT_ID: "1",
+    ENVIRONMENT: "UI",
+    API_TIMEOUT_SECONDS: "30",
+    PREVIEW_TYPE: "live",
+};
+
 function createRendererController({document, windowRef, runner, storage} = {}) {
     const doc = document || globalThis.document;
     const win = windowRef || globalThis.window;
@@ -51,7 +60,15 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const store = storage || win?.localStorage;
     const get = (id) => doc?.querySelector(`#${id}`);
     const form = get("test-form");
-    const appUrlInput = get("app-url-input");
+    const folderSelect = get("folder-select");
+    const refreshFoldersButton = get("refresh-folders-button");
+    const getTestCasesButton = get("get-test-cases-button");
+    const apiLoadingOverlay = get("api-loading-overlay");
+    const settingsAppUrlInput = get("settings-app-url-input");
+    const apiDomainInput = get("api-domain-input");
+    const projectIdInput = get("project-id-input");
+    const environmentSelect = get("environment-select");
+    const apiTimeoutInput = get("api-timeout-input");
     const testCaseList = get("test-case-list");
     const testCaseListBody = get("test-case-list-body") || testCaseList;
     const testCaseSearchInput = get("test-case-search-input");
@@ -84,20 +101,84 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     let activeCompletion = null;
     let activePreviewType = "live";
     let browserMuted = true;
+    let settings = {...DEFAULT_SETTINGS};
+    let activeFolderId = "";
+    const foldersByPath = new Map();
+    let apiRequestDepth = 0;
+    const blockApiInteraction = (event) => {
+        event.preventDefault?.();
+        event.stopPropagation?.();
+    };
 
-    function loadPreviewSettings() {
+    function loadSettings() {
         let saved = {};
         try {
             saved = JSON.parse(store?.getItem?.("mytv-auto-test-settings") || "{}");
         } catch {
             saved = {};
         }
-        if (["none", "live", "interactive"].includes(saved.PREVIEW_TYPE)) {
-            activePreviewType = saved.PREVIEW_TYPE;
-        }
+        settings = {
+            ...DEFAULT_SETTINGS,
+            ...saved,
+            ENVIRONMENT: ["API", "UI"].includes(saved.ENVIRONMENT) ? saved.ENVIRONMENT : DEFAULT_SETTINGS.ENVIRONMENT,
+            API_TIMEOUT_SECONDS: Number(saved.API_TIMEOUT_SECONDS) > 0
+                ? String(saved.API_TIMEOUT_SECONDS)
+                : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
+            PREVIEW_TYPE: ["none", "live", "interactive"].includes(saved.PREVIEW_TYPE)
+                ? saved.PREVIEW_TYPE
+                : DEFAULT_SETTINGS.PREVIEW_TYPE,
+        };
+        activePreviewType = settings.PREVIEW_TYPE;
+        if (settingsAppUrlInput) settingsAppUrlInput.value = settings.APP_URL;
+        if (apiDomainInput) apiDomainInput.value = settings.API_DOMAIN;
+        if (projectIdInput) projectIdInput.value = settings.PROJECT_ID;
+        if (environmentSelect) environmentSelect.value = settings.ENVIRONMENT;
+        if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
         doc?.querySelectorAll?.('[name="preview-type"]').forEach((input) => {
             input.checked = input.value === activePreviewType;
         });
+    }
+
+    function currentSettings() {
+        const timeoutSeconds = Number(apiTimeoutInput?.value);
+        return {
+            ...settings,
+            APP_URL: settingsAppUrlInput?.value?.trim() || settings.APP_URL,
+            API_DOMAIN: apiDomainInput?.value?.trim() || settings.API_DOMAIN,
+            PROJECT_ID: projectIdInput?.value?.trim() || settings.PROJECT_ID,
+            ENVIRONMENT: ["API", "UI"].includes(environmentSelect?.value)
+                ? environmentSelect.value
+                : settings.ENVIRONMENT,
+            API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
+                ? String(timeoutSeconds)
+                : settings.API_TIMEOUT_SECONDS,
+        };
+    }
+
+    function showApiError(response) {
+        if (response?.timeout) {
+            win?.alert?.("API request timed out. Please check the Network config timeout.");
+        }
+        setFormMessage(response?.message || "API request failed.", "error");
+    }
+
+    function beginApiRequest() {
+        apiRequestDepth += 1;
+        if (apiRequestDepth !== 1) return;
+        apiLoadingOverlay?.classList.remove("hidden");
+        apiLoadingOverlay?.setAttribute("aria-busy", "true");
+        doc?.activeElement?.blur?.();
+        doc?.addEventListener?.("keydown", blockApiInteraction, true);
+        updateFolderControls();
+    }
+
+    function endApiRequest() {
+        apiRequestDepth = Math.max(apiRequestDepth - 1, 0);
+        if (apiRequestDepth !== 0) return;
+        apiLoadingOverlay?.classList.add("hidden");
+        apiLoadingOverlay?.setAttribute("aria-busy", "false");
+        doc?.removeEventListener?.("keydown", blockApiInteraction, true);
+        updateFolderControls();
     }
 
     function setFormMessage(message, type = "") {
@@ -330,6 +411,93 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         }
     }
 
+    function updateFolderControls() {
+        if (getTestCasesButton) {
+            getTestCasesButton.disabled = !folderSelect?.value || apiRequestDepth > 0;
+        }
+        if (refreshFoldersButton) refreshFoldersButton.disabled = apiRequestDepth > 0;
+        if (folderSelect) folderSelect.disabled = apiRequestDepth > 0;
+    }
+
+    function renderFolders(nextFolders = []) {
+        foldersByPath.clear();
+        const selectedPath = folderSelect?.value || "";
+        if (!folderSelect) return;
+        folderSelect.replaceChildren();
+        const placeholder = doc.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Select a folder...";
+        folderSelect.append(placeholder);
+        nextFolders.forEach((folder) => {
+            const normalizedFolder = {
+                id: folder.id,
+                name: String(folder.name ?? ""),
+                fullPath: String(folder.fullPath ?? ""),
+            };
+            foldersByPath.set(normalizedFolder.fullPath, normalizedFolder);
+            const option = doc.createElement("option");
+            option.value = normalizedFolder.fullPath;
+            option.textContent = normalizedFolder.name;
+            option.dataset.folderId = String(normalizedFolder.id);
+            folderSelect.append(option);
+        });
+        folderSelect.value = foldersByPath.has(selectedPath) ? selectedPath : "";
+        updateFolderControls();
+    }
+
+    async function loadFolders() {
+        beginApiRequest();
+        try {
+            const response = await api.loadFlowCaseFolders(currentSettings());
+            if (!response?.ok) {
+                showApiError(response);
+                return response;
+            }
+            renderFolders(response.folders || []);
+            return response;
+        } catch (error) {
+            const response = {ok: false, message: error.message, timeout: Boolean(error.timeout)};
+            showApiError(response);
+            return response;
+        } finally {
+            endApiRequest();
+            updateFolderControls();
+        }
+    }
+
+    async function loadCasesFromFolder() {
+        const selectedFolder = foldersByPath.get(folderSelect?.value || "");
+        if (!selectedFolder) {
+            setFormMessage("Please select a folder first.", "error");
+            return {ok: false, message: "Please select a folder first."};
+        }
+
+        beginApiRequest();
+        try {
+            const response = await api.loadFlowCases({
+                ...currentSettings(),
+                FOLDER_ID: String(selectedFolder.id),
+                FOLDER_NAME: selectedFolder.fullPath,
+                FOLDER_NAME_LABEL: selectedFolder.name,
+            });
+            if (!response?.ok) {
+                showApiError(response);
+                return response;
+            }
+            activeFolderId = String(response.folder?.id ?? selectedFolder.id);
+            renderCaseList(response.cases || []);
+            setFormMessage(`Loaded ${response.cases?.length || 0} test cases.`, "ok");
+            return response;
+        } catch (error) {
+            const response = {ok: false, message: error.message, timeout: Boolean(error.timeout)};
+            showApiError(response);
+            return response;
+        } finally {
+            endApiRequest();
+            updateFolderControls();
+        }
+    }
+
     function formatAction(action) {
         const values = Object.entries(action)
             .filter(([key]) => key !== "action")
@@ -376,10 +544,27 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     testCaseSearchInput?.addEventListener?.("input", (event) => {
         applyCaseFilter(event.target?.value ?? testCaseSearchInput.value);
     });
+    folderSelect?.addEventListener?.("change", () => {
+        updateFolderControls();
+    });
+    refreshFoldersButton?.addEventListener?.("click", () => loadFolders());
+    getTestCasesButton?.addEventListener?.("click", () => loadCasesFromFolder());
 
     function savePreviewSettings() {
         activePreviewType = readPreviewType();
-        store?.setItem?.("mytv-auto-test-settings", JSON.stringify({PREVIEW_TYPE: activePreviewType}));
+        const timeoutSeconds = Number(apiTimeoutInput?.value);
+        settings = {
+            APP_URL: settingsAppUrlInput?.value?.trim() || DEFAULT_SETTINGS.APP_URL,
+            API_DOMAIN: apiDomainInput?.value?.trim() || DEFAULT_SETTINGS.API_DOMAIN,
+            PROJECT_ID: projectIdInput?.value?.trim() || DEFAULT_SETTINGS.PROJECT_ID,
+            ENVIRONMENT: ["API", "UI"].includes(environmentSelect?.value) ? environmentSelect.value : DEFAULT_SETTINGS.ENVIRONMENT,
+            API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
+                ? String(timeoutSeconds)
+                : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
+            PREVIEW_TYPE: activePreviewType,
+        };
+        if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
+        store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
         if (settingsMessage) settingsMessage.textContent = "Saved";
     }
 
@@ -409,6 +594,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             TEST_CASE_ID: String(testCaseId),
             PREVIEW_TYPE: values.PREVIEW_TYPE,
         };
+        if (values.TEST_CASE_FOLDER_ID) payload.TEST_CASE_FOLDER_ID = String(values.TEST_CASE_FOLDER_ID);
         currentBatch.activeCaseId = String(testCaseId);
         renderCaseStatus(testCaseId, "running");
         const completion = new Promise((resolve) => {
@@ -493,10 +679,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         event.preventDefault();
         clearLog();
         setFormMessage("");
+        const runSettings = currentSettings();
         const values = {
-            APP_URL: appUrlInput?.value?.trim() || "",
+            APP_URL: runSettings.APP_URL,
             PREVIEW_TYPE: activePreviewType,
         };
+        if (activeFolderId) values.TEST_CASE_FOLDER_ID = activeFolderId;
         await runSelectedCases(values);
     }
 
@@ -630,15 +818,20 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         appendLog(`\nFinished with code ${result.code}\n`);
     });
 
-    loadPreviewSettings();
+    loadSettings();
+    updateFolderControls();
 
     return {
         loadCases,
+        loadFolders,
+        renderFolders,
+        loadCasesFromFolder,
         renderCaseList,
         renderCaseDetails,
         openCaseDetails,
         selectCase,
         getSelectedCaseIds,
+        getActiveFolderId: () => activeFolderId,
         runSelectedCases,
         maskActionForDisplay,
         redactSensitiveText,
@@ -649,6 +842,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 function bootstrapRenderer() {
     const controller = createRendererController();
     controller.loadCases();
+    controller.loadFolders();
     return controller;
 }
 

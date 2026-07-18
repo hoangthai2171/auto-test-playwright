@@ -173,7 +173,15 @@ function createRendererFixture() {
 
   const ids = [
     "test-form",
-    "app-url-input",
+    "folder-select",
+    "refresh-folders-button",
+    "get-test-cases-button",
+    "api-loading-overlay",
+    "settings-app-url-input",
+    "api-domain-input",
+    "project-id-input",
+    "environment-select",
+    "api-timeout-input",
     "selected-test-case-id",
     "test-case-list",
     "test-case-list-body",
@@ -218,6 +226,7 @@ function createRendererFixture() {
   elements["test-case-list"].append(elements["test-case-list-body"]);
 
   elements["test-case-details-modal"].className = "modal hidden";
+  elements["api-loading-overlay"].className = "api-loading-overlay hidden";
 
   const stage = new FakeElement("div");
   stage.className = "browser-preview-stage";
@@ -248,6 +257,8 @@ function createRendererFixture() {
 
   const runner = {
     loadTestCases: async () => ({ ok: true, cases: [] }),
+    loadFlowCaseFolders: async () => ({ok: true, folders: []}),
+    loadFlowCases: async () => ({ok: true, folder: null, cases: []}),
     runTest: async () => ({ ok: true }),
     stopTest: async () => ({ ok: true }),
     openReport: () => {},
@@ -274,7 +285,7 @@ function createRendererFixture() {
       getItem: () => null,
       setItem: () => {},
     },
-    windowRef: { addEventListener: () => {} },
+    windowRef: { addEventListener: () => {}, alert: () => {} },
   };
 }
 
@@ -487,6 +498,101 @@ test("loads cases through IPC and renders the returned list", async () => {
   assert.match(fixture.elements["test-case-list"].textContent, /Local case/);
 });
 
+test("loads and renders folders by name with fullPath values", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  fixture.runner.loadFlowCaseFolders = async () => ({ok: true, folders: [
+    {id: "12", name: "Play kênh", fullPath: "/Root/Play kênh"},
+  ]});
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.loadFolders();
+
+  const option = fixture.elements["folder-select"].querySelectorAll("option")[1];
+  assert.equal(option.textContent, "Play kênh");
+  assert.equal(option.value, "/Root/Play kênh");
+  assert.equal(option.dataset.folderId, "12");
+});
+
+test("downloads selected-folder cases and tracks the folder ID", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  fixture.runner.loadFlowCases = async (values) => ({ok: true, folder: {
+    id: values.FOLDER_ID, name: "Play kênh", fullPath: values.FOLDER_NAME,
+  }, cases: [{id: "case-1", name: "Remote case", actions: []}]});
+  const controller = renderer.createRendererController(fixture);
+
+  controller.renderFolders([{id: "12", name: "Play kênh", fullPath: "/Root/Play kênh"}]);
+  fixture.elements["folder-select"].value = "/Root/Play kênh";
+  await controller.loadCasesFromFolder();
+
+  assert.match(fixture.elements["test-case-list"].textContent, /Remote case/);
+  assert.equal(controller.getActiveFolderId(), "12");
+});
+
+test("shows timeout alerts and always removes the loading overlay", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  fixture.runner.loadFlowCaseFolders = async () => ({ok: false, timeout: true, message: "timed out"});
+  const alerts = [];
+  fixture.windowRef.alert = (message) => alerts.push(message);
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.loadFolders();
+
+  assert.equal(fixture.elements["api-loading-overlay"].classList.contains("hidden"), true);
+  assert.match(alerts[0], /timed out/i);
+});
+
+test("loads and saves connection and network settings", () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let stored;
+  fixture.storage.getItem = () => JSON.stringify({
+    APP_URL: "https://saved.test/",
+    API_DOMAIN: "http://saved-api.test",
+    PROJECT_ID: "7",
+    ENVIRONMENT: "API",
+    API_TIMEOUT_SECONDS: "45",
+    PREVIEW_TYPE: "none",
+  });
+  fixture.storage.setItem = (_key, value) => {
+    stored = JSON.parse(value);
+  };
+  renderer.createRendererController(fixture);
+
+  assert.equal(fixture.elements["settings-app-url-input"].value, "https://saved.test/");
+  assert.equal(fixture.elements["api-domain-input"].value, "http://saved-api.test");
+  assert.equal(fixture.elements["project-id-input"].value, "7");
+  assert.equal(fixture.elements["environment-select"].value, "API");
+  assert.equal(fixture.elements["api-timeout-input"].value, "45");
+  fixture.elements["gui-settings-save-button"].dispatchEvent("click");
+  assert.equal(stored.API_TIMEOUT_SECONDS, "45");
+  assert.equal(stored.ENVIRONMENT, "API");
+});
+
+test("includes the active folder ID when running downloaded cases", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let submittedValues;
+  fixture.runner.loadFlowCases = async () => ({ok: true, folder: {
+    id: "12", name: "Play kênh", fullPath: "/Root/Play kênh",
+  }, cases: [{id: "case-1", name: "Remote case", actions: []}]});
+  fixture.runner.runTest = async (values) => {
+    submittedValues = values;
+    queueMicrotask(() => fixture.runner.finishedCallback({code: 0}));
+    return {ok: true};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderFolders([{id: "12", name: "Play kênh", fullPath: "/Root/Play kênh"}]);
+  fixture.elements["folder-select"].value = "/Root/Play kênh";
+  await controller.loadCasesFromFolder();
+  controller.selectCase("case-1");
+  await fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+
+  assert.equal(submittedValues.TEST_CASE_FOLDER_ID, "12");
+});
+
 test("submits only the generic test-run payload", async () => {
   assert.equal(loadError, undefined, loadError?.message);
   const fixture = createRendererFixture();
@@ -497,7 +603,7 @@ test("submits only the generic test-run payload", async () => {
     return { ok: true };
   };
   const controller = renderer.createRendererController(fixture);
-  fixture.elements["app-url-input"].value = "  https://example.test/  ";
+  fixture.elements["settings-app-url-input"].value = "  https://example.test/  ";
   controller.renderCaseList([{ id: "case-1", name: "Case", actions: [] }]);
   controller.selectCase("case-1");
 
@@ -520,7 +626,7 @@ test("runs selected cases sequentially and preserves the generic IPC payload", a
     return {ok: true};
   };
   const controller = renderer.createRendererController(fixture);
-  fixture.elements["app-url-input"].value = "  https://example.test/  ";
+  fixture.elements["settings-app-url-input"].value = "  https://example.test/  ";
   controller.renderCaseList([
     {id: "case-1", name: "First case", actions: []},
     {id: "case-2", name: "Second case", actions: []},
@@ -682,6 +788,12 @@ test("index markup contains the case browser and no API-key or mode controls", (
   assert.match(html, /id="test-case-details"/);
   assert.match(html, /id="selected-test-case-id"/);
   assert.match(html, /id="settings-message"/);
+  [
+    "folder-select", "refresh-folders-button", "get-test-cases-button",
+    "settings-app-url-input", "api-domain-input", "project-id-input",
+    "environment-select", "api-timeout-input", "api-loading-overlay",
+  ].forEach((id) => assert.match(html, new RegExp(`id="${id}"`)));
+  assert.doesNotMatch(html, /id="app-url-input"/);
   const retiredAiControls = new RegExp(
     [
       ["ai", "api-key-input"].join("-"),

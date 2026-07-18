@@ -6,6 +6,7 @@ const path = require("node:path");
 
 const {
   loadLocalTestCases,
+  loadCachedTestCases,
   findTestCaseById,
 } = require("../lib/test-case-source");
 
@@ -108,4 +109,24 @@ test("wraps local file errors with the requested path", async () => {
     () => loadLocalTestCases(missingFile),
     new RegExp(`Could not load test cases from ${missingFile.replace(/[.*+?^${}()|[\\]\\]/g, "\\$&")}`)
   );
+});
+
+test("loads and validates cases from a folder-keyed cache", async () => {
+  const {tempDirectory, filePath} = await writeTempJson({
+    "12": {
+      folder: {id: "12", name: "Root", fullPath: "/Root"},
+      cases: [{id: "cached-1", name: "Cached case", actions: [{action: "open_home"}]}],
+    },
+  });
+
+  try {
+    const cases = await loadCachedTestCases(filePath, "12");
+    assert.equal(cases[0].name, "Cached case");
+    await assert.rejects(
+      () => loadCachedTestCases(filePath, "missing"),
+      /Test case cache entry for folder "missing" not found/
+    );
+  } finally {
+    await fs.rm(tempDirectory, {recursive: true, force: true});
+  }
 });
