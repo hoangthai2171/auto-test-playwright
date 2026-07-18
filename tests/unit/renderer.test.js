@@ -855,3 +855,12 @@ test("styles each test-case detail value as a readable block", () => {
 
   assert.match(css, /\.test-case-detail-row span\s*\{[^}]*display:\s*block;[^}]*padding:\s*8px 10px;[^}]*border:\s*1px solid #2b313d;[^}]*border-radius:\s*6px;[^}]*background:\s*#1a1e27;[^}]*white-space:\s*pre-wrap;[^}]*word-break:\s*break-word;/s);
 });
+
+test("styles the action preview as a grouped readable block", () => {
+  const css = fs.readFileSync(
+    path.join(__dirname, "../../app/renderer/styles.css"),
+    "utf8"
+  );
+
+  assert.match(css, /\.action-preview\s*\{[^}]*display:\s*grid;[^}]*padding:\s*8px 10px 8px 32px;[^}]*border:\s*1px solid #2b313d;[^}]*border-radius:\s*6px;[^}]*background:\s*#1a1e27;/s);
+});

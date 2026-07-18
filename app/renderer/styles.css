@@ -328,7 +328,10 @@ h1 {
   display: grid;
   gap: 6px;
   margin: 0;
-  padding-left: 22px;
+  padding: 8px 10px 8px 32px;
+  border: 1px solid #2b313d;
+  border-radius: 6px;
+  background: #1a1e27;
 }
 
 .action-preview li {
