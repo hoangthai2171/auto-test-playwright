@@ -32,9 +32,9 @@ let interactiveAudioMuted = true;
 function createWindow() {
     mainWindow = new BrowserWindow({
         width: 1040,
-        height: 760,
+        height: 900,
         minWidth: 920,
-        minHeight: 680,
+        minHeight: 760,
         title: "MyTV Auto Test",
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),

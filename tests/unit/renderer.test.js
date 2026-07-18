@@ -809,6 +809,35 @@ test("index markup contains the case browser and no API-key or mode controls", (
   assert.doesNotMatch(html, /username-input|password-input|mode-select|test-description-input/);
 });
 
+test("keeps the app brand in the header and settings controls on the right", () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, "../../app/renderer/index.html"),
+    "utf8"
+  );
+
+  const header = html.match(/<header class="toolbar">([\s\S]*?)<\/header>/)?.[1] || "";
+  const sidebar = html.match(/<aside class="sidebar">([\s\S]*?)<\/aside>/)?.[1] || "";
+
+  assert.match(header, /class="app-brand"/);
+  assert.match(header, /MyTV Auto Test/);
+  assert.match(header, /Chạy Playwright test bằng giao diện desktop\./);
+  assert.match(header, /id="settings-button"/);
+  assert.match(header, /id="logs-button"/);
+  assert.doesNotMatch(sidebar, /MyTV Auto Test|Chạy Playwright test bằng giao diện desktop\.|app-brand/);
+});
+
+test("uses the taller default Electron window size", () => {
+  const mainSource = fs.readFileSync(
+    path.join(__dirname, "../../app/main.js"),
+    "utf8"
+  );
+
+  assert.match(
+    mainSource,
+    /new BrowserWindow\(\{[\s\S]*?width:\s*1040,[\s\S]*?height:\s*900,[\s\S]*?minWidth:\s*920,[\s\S]*?minHeight:\s*760,/
+  );
+});
+
 test("keeps the test-case table at 35vh and scrolls overflowing rows", () => {
   const css = fs.readFileSync(
     path.join(__dirname, "../../app/renderer/styles.css"),
