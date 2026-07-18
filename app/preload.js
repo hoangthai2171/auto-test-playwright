@@ -2,6 +2,8 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("mytvRunner", {
   loadTestCases: () => ipcRenderer.invoke("load-test-cases"),
+  loadFlowCaseFolders: (settings) => ipcRenderer.invoke("load-flow-case-folders", settings),
+  loadFlowCases: (settings) => ipcRenderer.invoke("load-flow-cases", settings),
   runTest: (values) => ipcRenderer.invoke("run-test", values),
   showInteractiveBrowser: (values) => ipcRenderer.invoke("show-interactive-browser", values),
   hideInteractiveBrowser: () => ipcRenderer.invoke("hide-interactive-browser"),

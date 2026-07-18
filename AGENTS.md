@@ -42,11 +42,11 @@ test-case-schema.js
                                       MyTV helpers
 ```
 
-`testcased.json` is the read-only local development fixture. `app/main.js`
-loads it, sanitizes passwords for the renderer, validates the selected case
-ID, and starts the generic `tests/run-test-case-mytv.spec.js` entry point.
-The renderer sends only the selected case ID, `APP_URL`, and preview settings
-for a run.
+`testcased.json` is the read-only local fallback fixture. `app/main.js` also
+owns flow-case API IPC, sanitizes passwords for the renderer, validates the
+selected case ID from either the fixture or the user-data cache, and starts the
+generic `tests/run-test-case-mytv.spec.js` entry point. The renderer sends the
+selected case ID, `APP_URL`, preview settings, and active folder ID for a run.
 
 Explicit structured `actions` are authoritative. The deterministic compiler
 is a migration fallback for a limited set of `qaDescription` lines: login with
@@ -55,11 +55,11 @@ the known app/home/content/player readiness states. Unsupported or ambiguous
 lines must fail with the case ID and original line; never guess arbitrary
 behavior or evaluate server-provided code.
 
-The current source is local only. API retrieval and a user-data cache are a
-separate follow-up boundary. A future source may validate an API response and
-atomically replace a cache such as
-`<userData>/testcases-cache.json`; the generic action executor should not need
-to know whether a case came from a fixture, API, or cache.
+API folder and case retrieval runs in the main process through the preload IPC
+bridge. Successful case responses are validated and atomically replace the
+matching folder-ID entry in `<userData>/testcases-cache.json`. The generic
+action executor receives either the local fixture source or a validated cache
+source and does not contain API or cache logic.
 
 ### Terminal regression runner
 
@@ -82,6 +82,8 @@ testcased.json
 app/
   main.js                         Electron process, case loading, run IPC
   preload.js                      Context-isolated IPC bridge
+  flow-case-api.js                Flow-case API URLs, fetch, normalization, timeout
+  test-case-cache.js              Atomic folder-keyed user-data cache
   renderer/index.html             Case browser and preview markup
   renderer/renderer.js            Case selection, masking, logs, preview UI
   renderer/styles.css             Desktop runner styles
@@ -133,10 +135,12 @@ The supported action allowlist is:
 Every action is validated before browser interaction. Server data must not
 provide JavaScript, module paths, selectors, or function names.
 
-`run-test-case-mytv.spec.js` reads `TEST_CASE_PATH` (defaulting to the project
-fixture), selects `TEST_CASE_ID`, and calls `runTestCase`. The runner compiles
-or validates the case, dispatches actions in order, wraps each step with the
-existing artifact mechanism, and returns structured per-step results.
+`run-test-case-mytv.spec.js` reads the folder-keyed cache when
+`TEST_CASE_FOLDER_ID` and `TEST_CASE_CACHE_PATH` are present; otherwise it
+reads `TEST_CASE_PATH` (defaulting to the project fixture). It selects
+`TEST_CASE_ID` and calls `runTestCase`. The runner compiles or validates the
+case, dispatches actions in order, wraps each step with the existing artifact
+mechanism, and returns structured per-step results.
 
 ## Credentials and Sensitive Data
 
@@ -158,6 +162,8 @@ private fixture data.
 - `APP_URL` — target MyTV URL passed to the selected case.
 - `TEST_CASE_PATH` — fixture path used by the child Playwright process.
 - `TEST_CASE_ID` — selected case ID.
+- `TEST_CASE_CACHE_PATH` — user-data cache path for API-downloaded cases.
+- `TEST_CASE_FOLDER_ID` — folder cache key for the selected API case.
 - `MYTV_PREVIEW_PATH` — live screenshot output path.
 - `MYTV_INTERACTIVE_CDP_URL` — CDP endpoint for interactive preview.
 - `MYTV_INTERACTIVE_VIEW_SCALE` — interactive preview scale.
@@ -261,5 +267,5 @@ run, record that separately from local unit and syntax results.
 
 When the architecture changes, update this file and `README.md` for new case
 actions, entry points, environment variables, credential-handling behavior,
-source/cache boundaries, and packaging changes. Keep future API/cache work
-separate from the local fixture runner until it has its own validated plan.
+source/cache boundaries, and packaging changes. Keep API and cache behavior
+behind the main-process boundary and preserve the local fixture fallback.
