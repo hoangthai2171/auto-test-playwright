@@ -8,17 +8,18 @@
     </head>
     <body>
         <header class="toolbar">
-            <button type="button" id="settings-button" class="toolbar-button">Settings</button>
-            <button type="button" id="logs-button" class="toolbar-button">Logs</button>
+            <div class="app-brand">
+                <strong>MyTV Auto Test</strong>
+                <span>Chạy Playwright test bằng giao diện desktop.</span>
+            </div>
+            <div class="toolbar-actions">
+                <button type="button" id="settings-button" class="toolbar-button">Settings</button>
+                <button type="button" id="logs-button" class="toolbar-button">Logs</button>
+            </div>
         </header>
 
         <main class="app-shell">
             <section class="sidebar">
-                <div>
-                    <h1>MyTV Auto Test</h1>
-                    <p class="muted">Chạy Playwright test bằng giao diện desktop.</p>
-                </div>
-
                 <form id="test-form" class="form-grid">
                     <section class="folder-browser">
                         <div class="folder-browser-header">
