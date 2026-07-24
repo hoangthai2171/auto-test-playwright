@@ -2,6 +2,7 @@ const {expect}=require("playwright/test");
 const {getSelectorContract}=require("./selectors");
 const {createScopedDomScanner}=require("./dom-scan");
 const {createDomSnapshotCache,getDomSnapshotIdentity}=require("./dom-snapshots");
+const {normalizeVietnameseText}=require("./text-utils");
 
 const dependencies={
   remotePress:async(page,key,delay=250)=>{await page.keyboard.press(key);await page.waitForTimeout(delay);},
@@ -15,9 +16,11 @@ const dependencies={
 };
 
 const CONTENT_ITEM_CONTRACT = getSelectorContract("contentItem");
+const NAMED_ROW_MAX_ATTEMPTS = 45;
+const NAMED_ROW_SCROLL_DELAY = 1500;
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
-function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
+function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
 function remotePress(...args){return dependencies.remotePress(...args);}
 function remoteFocusById(...args){return dependencies.remoteFocusById(...args);}
 function remoteFocusByText(...args){return dependencies.remoteFocusByText(...args);}
@@ -26,7 +29,6 @@ function getPlayerState(...args){return dependencies.getPlayerState(...args);}
 function hasVisibleText(...args){return dependencies.hasVisibleText(...args);}
 function expectFocusedText(...args){return dependencies.expectFocusedText(...args);}
 function activateVerifiedTarget(...args){return dependencies.activateVerifiedTarget(...args);}
-function normalizeVietnameseText(value){return String(value??"").normalize("NFD").replace(/[\u0300-\u036f]/g,"").replace(/đ/g,"d").replace(/Đ/g,"D").replace(/\s+/g," ").trim().toLowerCase();}
 async function collectFirstRowPlayableItems(page, options = {}) {
   const rows = await collectVisibleContentRows(page, options);
   return rows[0]?.items || [];
@@ -38,18 +40,19 @@ async function focusRequestedContentRow(page, rowSelector = {}) {
     : createDomSnapshotCache();
   const selector =
     typeof rowSelector === "string"
-      ? { rowName: rowSelector }
+      ? { rowName: rowSelector, itemIndex: 1 }
       : {
           rowName: rowSelector.rowName || "",
           rowIndex: Number.isInteger(rowSelector.rowIndex) ? rowSelector.rowIndex : undefined,
           rowPosition: rowSelector.rowPosition || "",
+          itemIndex: Number.isInteger(rowSelector.itemIndex) ? rowSelector.itemIndex : 1,
         };
 
-  const { rowName, rowIndex, rowPosition } = selector;
+  const { rowName, rowIndex, rowPosition, itemIndex } = selector;
   if (!rowName) {
     const row = await findContentRowByPosition(page, { rowIndex, rowPosition, snapshotCache });
     const items = row.items;
-    await focusFirstRowStart(page, items[0], {snapshotCache});
+    await focusFirstRowStart(page, focusRowItem(row, itemIndex), {snapshotCache});
     return {
       title: row.title || "",
       rowY: row.rowY || items[0]?.rect.y || 0,
@@ -58,24 +61,221 @@ async function focusRequestedContentRow(page, rowSelector = {}) {
   }
 
   const targetPattern = normalizeVietnameseText(rowName);
-  for (let attempt = 0; attempt < 18; attempt++) {
+  const visitedRowTitles = new Set();
+  // Home rows can be lazy-loaded below the initial promotional rows. Keep
+  // scanning while remote Down navigation reveals additional rows instead of
+  // failing before the requested category enters the DOM.
+  for (let attempt = 0; attempt < NAMED_ROW_MAX_ATTEMPTS; attempt++) {
     const rows = await collectVisibleContentRows(page, {snapshotCache});
+    rows.forEach((row) => {
+      const title = String(row.title || "").trim();
+      if (title) visitedRowTitles.add(title);
+    });
+    const serviceCategoryRow = await findServiceCategoryRow(page, targetPattern);
+    if (serviceCategoryRow) {
+      await focusFirstRowStart(page, focusRowItem(serviceCategoryRow, itemIndex), {snapshotCache, allowServiceFocus: true});
+      await expect.poll(() => isFocusedOnRowItems(page, serviceCategoryRow.items), { timeout: 6000 }).toBe(true);
+      return serviceCategoryRow;
+    }
     const matchedRow = findBestContentRowMatch(rows, targetPattern);
     if (matchedRow) {
-      await focusFirstRowStart(page, matchedRow.items[0], {snapshotCache});
+      await focusFirstRowStart(page, focusRowItem(matchedRow, itemIndex), {snapshotCache});
       await expect.poll(() => isFocusedOnRowItems(page, matchedRow.items), { timeout: 6000 }).toBe(true);
       return matchedRow;
     }
 
-    await remotePress(page, "ArrowDown", 700, {snapshotCache});
+    await remotePress(page, "ArrowDown", NAMED_ROW_SCROLL_DELAY, {snapshotCache});
   }
 
   const visibleRows = await collectVisibleContentRows(page, {snapshotCache});
   throw new Error(
-    `Không tìm thấy hàng/cate "${rowName}". Các hàng đang thấy: ${visibleRows
+    `Không tìm thấy hàng/cate "${rowName}". Các hàng đã quét: ${[...visitedRowTitles].join(", ")}. ` +
+    `Các hàng đang thấy: ${visibleRows
       .map((row) => row.title || `y=${row.rowY}`)
       .join(", ")}`
   );
+
+  function focusRowItem(row, requestedItemIndex) {
+    const item = row.items[requestedItemIndex - 1];
+    if (item) return item;
+
+    throw new Error(
+      `Hàng/cate "${row.title || rowName || "hiện tại"}" chỉ có ${row.items.length} nội dung đang hiển thị; ` +
+      `không thể focus nội dung thứ ${requestedItemIndex}`
+    );
+  }
+}
+
+async function findServiceCategoryRow(page, targetPattern) {
+  if (targetPattern !== "the loai") return null;
+
+  return page.evaluate(() => {
+    const headings = Array.from(document.querySelectorAll("body *"))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          text: normalize(element.textContent || ""),
+          rect: {x: rect.x, y: rect.y, width: rect.width, height: rect.height},
+          visible: isVisible(rect, style),
+        };
+      })
+      .filter((item) => item.visible && item.text === "the loai" && item.rect.width >= 30)
+      .sort((a, b) => a.rect.y - b.rect.y || a.rect.width - b.rect.width);
+
+    const items = Array.from(document.querySelectorAll("[id]"))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        const title = [
+          element.getAttribute("service_title") || "",
+          element.getAttribute("service_name") || "",
+          element.getAttribute("title") || "",
+          element.textContent || "",
+        ].join(" ").replace(/\s+/g, " ").trim();
+        return {
+          id: element.id || "",
+          title,
+          rect: {x: rect.x, y: rect.y, width: rect.width, height: rect.height},
+          visible: isVisible(rect, style) && rect.width >= 100 && rect.height >= 80 &&
+            rect.width <= 700 && rect.height <= 500 && rect.x >= 80,
+        };
+      })
+      .filter((item) => item.id && item.visible);
+
+    for (const heading of headings) {
+      const nearbyItems = items
+        .filter((item) => item.rect.y >= heading.rect.y + heading.rect.height - 20 &&
+          item.rect.y - (heading.rect.y + heading.rect.height) <= 180)
+        .sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x);
+
+      const rowBuckets = [];
+      for (const item of nearbyItems) {
+        let row = rowBuckets.find((candidate) => Math.abs(candidate.rowY - item.rect.y) <= 40);
+        if (!row) {
+          row = {rowY: item.rect.y, items: []};
+          rowBuckets.push(row);
+        }
+        row.items.push(item);
+      }
+
+      const row = rowBuckets
+        .map((candidate) => ({
+          ...candidate,
+          items: dedupeByPosition(candidate.items).sort((a, b) => a.rect.x - b.rect.x),
+        }))
+        .filter((candidate) => candidate.items.length > 0)
+        .sort((a, b) => b.items.length - a.items.length || a.rowY - b.rowY)[0];
+
+      if (row) return {title: "Thể loại", rowY: row.rowY, items: row.items};
+    }
+
+    return null;
+
+    function normalize(value) {
+      return value.normalize("NFD").replace(/[\u0300-\u036f]/g, "").replace(/đ/g, "d").replace(/\s+/g, " ").trim().toLowerCase();
+    }
+
+    function isVisible(rect, style) {
+      return rect.width > 0 && rect.height > 0 && rect.x + rect.width > 0 && rect.y + rect.height > 0 &&
+        rect.x < (window.innerWidth || Number.MAX_SAFE_INTEGER) &&
+        rect.y < (window.innerHeight || Number.MAX_SAFE_INTEGER) &&
+        style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    }
+
+    function dedupeByPosition(values) {
+      const output = [];
+      for (const value of values) {
+        if (!output.some((existing) => Math.abs(existing.rect.x - value.rect.x) <= 24 && Math.abs(existing.rect.y - value.rect.y) <= 24)) {
+          output.push(value);
+        }
+      }
+      return output;
+    }
+  });
+}
+
+async function focusFirstItemInCurrentContentRow(page, options = {}) {
+  const snapshotCache = options.snapshotCache || createDomSnapshotCache();
+  const rows = await collectVisibleContentRows(page, {snapshotCache});
+  const focusedRow = await findFocusedRow(rows);
+
+  if (!focusedRow) {
+    throw new Error("Không xác định được hàng/cate hiện tại để focus nội dung đầu tiên");
+  }
+
+  await focusFirstRowStart(page, focusedRow.items[0], {snapshotCache});
+  return focusedRow;
+
+  async function findFocusedRow(candidates) {
+    for (const row of candidates) {
+      if (await isFocusedOnRowItems(page, row.items)) return row;
+    }
+
+    const focused = await getFocusedState(page).catch(() => null);
+    if (!focused?.rect) return null;
+
+    return candidates
+      .map((row) => ({
+        row,
+        distance: Math.abs((row.rowY || row.items[0]?.rect.y || 0) - focused.rect.y),
+      }))
+      .sort((a, b) => a.distance - b.distance)[0]?.row || null;
+  }
+}
+
+async function findVisibleContentItemByName(page, name, {type = "content", snapshotCache} = {}) {
+  const normalizedTarget = normalizeVietnameseText(name);
+  const rows = await collectVisibleContentRows(page, {snapshotCache});
+  const candidates = rows.flatMap((row, rowIndex) =>
+    row.items
+      .filter((item) => supportsContentType(item, type))
+      .map((item, itemIndex) => ({item, row, rowIndex, itemIndex}))
+  );
+
+  const match = candidates
+    .map((candidate) => ({
+      ...candidate,
+      score: scoreContentItemMatch(candidate.item.title, normalizedTarget),
+    }))
+    .filter((candidate) => candidate.score > 0)
+    .sort((a, b) => b.score - a.score || a.row.rowY - b.row.rowY || a.itemIndex - b.itemIndex)[0];
+
+  if (!match) {
+    throw new Error(
+      `Không tìm thấy ${type} "${name}" trong các hàng đang hiển thị. ` +
+        `Nội dung đang thấy: ${candidates.map(({item}) => item.title).join(", ")}`
+    );
+  }
+
+  await focusFirstRowStart(page, match.item, {snapshotCache});
+  return match;
+
+  function supportsContentType(item, requestedType) {
+    if (requestedType === "content") return true;
+    const attributes = item.attributes || {};
+    if (requestedType === "channel") return Boolean(attributes.channel_name);
+    return Boolean(attributes.movie_name || attributes.vod_name);
+  }
+
+  function scoreContentItemMatch(label, target) {
+    const normalizedLabel = normalizeVietnameseText(label);
+    if (!normalizedLabel || !target) return 0;
+    if (normalizedLabel === target) return 100;
+    if (normalizedLabel.includes(target)) return 90;
+
+    const labelTokens = normalizedLabel.split(/[^a-z0-9]+/u).filter((token) => token.length >= 2);
+    const targetTokens = target.split(/[^a-z0-9]+/u).filter((token) => token.length >= 2);
+    if (!labelTokens.length || !targetTokens.length) return 0;
+
+    const matchedTokens = targetTokens.filter((token) =>
+      labelTokens.some((labelToken) => labelToken === token || labelToken.includes(token) || token.includes(labelToken))
+    );
+    const coverage = matchedTokens.length / targetTokens.length;
+    if (coverage === 1) return 80;
+    if (targetTokens.length >= 2 && coverage >= 0.6) return Math.round(50 + coverage * 20);
+    return 0;
+  }
 }
 
 async function findContentRowByPosition(page, { rowIndex, rowPosition, snapshotCache = createDomSnapshotCache() } = {}) {
@@ -150,12 +350,12 @@ function scoreNormalizedTextMatch(label, target) {
   const targetTokens = target.split(/[^a-z0-9]+/).filter((token) => token.length >= 2);
   if (!labelTokens.length || !targetTokens.length) return 0;
 
-  const matchedTokens = targetTokens.filter((token) =>
-    labelTokens.some((labelToken) => labelToken === token || labelToken.includes(token) || token.includes(labelToken))
-  );
+  // Row/category names are labels, not content titles. Do not let a generic
+  // fuzzy partial-token match select “Drama Trung không thể bỏ lỡ” for the
+  // requested row “Thể loại”.
+  const matchedTokens = targetTokens.filter((token) => labelTokens.includes(token));
   const coverage = matchedTokens.length / targetTokens.length;
   if (coverage === 1) return 80;
-  if (targetTokens.length >= 2 && coverage >= 0.6) return Math.round(50 + coverage * 20);
   return 0;
 }
 
@@ -180,6 +380,24 @@ async function collectVisibleContentRows(page, options = {}) {
     headingGeometry: {minWidth: 30, minHeight: 12, maxHeight: 70, minX: 80, minY: 40},
     excludeIdPrefixes: CONTENT_ITEM_CONTRACT.excludeIdPrefixes || [],
   });
+  const serviceRowHeadings = await page.evaluate(() => {
+    const elements = Array.from(document.querySelectorAll(".row_service"));
+    return elements
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          id: element.id || "",
+          text: (element.textContent || "").replace(/\s+/g, " ").trim(),
+          rect: {x: rect.x, y: rect.y, width: rect.width, height: rect.height},
+          visible: rect.width > 0 && rect.height > 0 && rect.right > 0 && rect.bottom > 0 &&
+            rect.left < (window.innerWidth || Number.MAX_SAFE_INTEGER) &&
+            rect.top < (window.innerHeight || Number.MAX_SAFE_INTEGER) &&
+            style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0,
+        };
+      })
+      .filter((item) => item.visible && item.text);
+  });
 
   const menuText = /^(Tìm kiếm|Trang chủ|Truyền hình|Phim truyện|Thiếu nhi|Thể thao|Cá nhân|Tất cả dịch vụ)$/i;
   const candidates = scan.records
@@ -195,6 +413,7 @@ async function collectVisibleContentRows(page, options = {}) {
       return {
         id: record.id,
         title,
+        attributes: record.attrs || {},
         poster: record.poster || extractCssUrl(record.backgroundImage),
         rect: record.rect,
         visible: record.visible && !menuText.test(title),
@@ -206,7 +425,10 @@ async function collectVisibleContentRows(page, options = {}) {
       return a.rect.x - b.rect.x;
     });
 
-  const headings = scan.headings
+  const headings = [
+    ...scan.headings,
+    ...serviceRowHeadings,
+  ]
     .filter((item) => item.visible && item.text && !item.id.startsWith("menu_") && !item.id.startsWith("key-"))
     .map((item) => ({text: item.text, rect: item.rect}))
     .sort((a, b) => a.rect.y - b.rect.y);
@@ -267,6 +489,11 @@ async function focusFirstRowStart(page, firstItem, options = {}) {
     options.snapshotCache?.invalidate();
   }
 
+  if (options.allowServiceFocus) {
+    await expect.poll(() => isFocusedOnContentItem(page, firstItem), { timeout: 10000 }).toBe(true);
+    return;
+  }
+
   await expectFocusedContent(page);
   await expect.poll(() => isFocusedOnContentItem(page, firstItem), { timeout: 6000 }).toBe(true);
 }
@@ -284,6 +511,7 @@ async function isFocusedContentItem(page) {
     const style = getComputedStyle(focused);
     const label = contentLabel(focused);
     const menuText = /^(Tìm kiếm|Trang chủ|Truyền hình|Phim truyện|Thiếu nhi|Thể thao|Cá nhân|Tất cả dịch vụ)$/i;
+    const isMenuItem = focused.id.startsWith("menu_") || rect.x < 100;
 
     return (
       rect.width >= 100 &&
@@ -295,10 +523,10 @@ async function isFocusedContentItem(page) {
       style.display !== "none" &&
       style.visibility !== "hidden" &&
       Number(style.opacity) !== 0 &&
-      !focused.id.startsWith("menu_") &&
+      !isMenuItem &&
       !focused.id.startsWith("key-") &&
       label &&
-      !menuText.test(label)
+      (!menuText.test(label) || !isMenuItem)
     );
 
     function contentLabel(element) {
@@ -550,4 +778,4 @@ function contentItemSignature(item) {
 }
 
 
-module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,focusRequestedContentRow,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};
+module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,focusRequestedContentRow,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};

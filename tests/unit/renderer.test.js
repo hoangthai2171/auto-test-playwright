@@ -94,6 +94,13 @@ class FakeElement {
     });
   }
 
+  prepend(...elements) {
+    elements.reverse().forEach((element) => {
+      element.parentElement = this;
+      this.children.unshift(element);
+    });
+  }
+
   replaceChildren(...elements) {
     this.children = [];
     this.append(...elements);
@@ -179,6 +186,7 @@ function createRendererFixture() {
     "api-loading-overlay",
     "settings-app-url-input",
     "api-domain-input",
+    "api-authorization-input",
     "project-id-input",
     "environment-select",
     "api-timeout-input",
@@ -259,6 +267,7 @@ function createRendererFixture() {
     loadTestCases: async () => ({ ok: true, cases: [] }),
     loadFlowCaseFolders: async () => ({ok: true, folders: []}),
     loadFlowCases: async () => ({ok: true, folder: null, cases: []}),
+    submitFlowCaseResults: async () => ({ok: true}),
     runTest: async () => ({ ok: true }),
     stopTest: async () => ({ ok: true }),
     openReport: () => {},
@@ -269,7 +278,10 @@ function createRendererFixture() {
     resumeInteractiveBrowser: async () => {},
     setInteractiveBrowserMuted: async () => {},
     onStarted: () => {},
-    onLog: () => {},
+    logCallback: null,
+    onLog(callback) {
+      this.logCallback = callback;
+    },
     onPreview: () => {},
     finishedCallback: null,
     onFinished(callback) {
@@ -292,6 +304,24 @@ function createRendererFixture() {
 test("renderer entry is available to lightweight UI tests", () => {
   assert.equal(loadError, undefined, loadError?.message);
   assert.equal(typeof renderer.createRendererController, "function");
+});
+
+test("groups runner log chunks into one complete expandable entry", () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+
+  fixture.runner.logCallback("first output chunk\n");
+  fixture.runner.logCallback("final output chunk\n");
+
+  const entries = fixture.elements["log-output"].children;
+  assert.equal(entries.length, 1);
+  assert.match(entries[0].querySelector(".log-entry-label").textContent, /Playwright runner output/);
+  assert.equal(
+    entries[0].querySelector(".log-entry-content").textContent,
+    "first output chunk\nfinal output chunk\n"
+  );
+  assert.equal(typeof controller.loadCases, "function");
 });
 
 test("renders test cases as selectable table rows with a disabled empty batch action", () => {
@@ -498,6 +528,23 @@ test("loads cases through IPC and renders the returned list", async () => {
   assert.match(fixture.elements["test-case-list"].textContent, /Local case/);
 });
 
+test("restores the active folder when startup loads cached API cases", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  fixture.runner.loadTestCases = async () => ({
+    ok: true,
+    source: "cache",
+    folder: {id: "12", name: "Play kênh", fullPath: "/Root/Play kênh"},
+    cases: [{id: "cached-1", name: "Cached case", actions: []}],
+  });
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.loadCases();
+
+  assert.equal(controller.getActiveFolderId(), "12");
+  assert.match(fixture.elements["test-case-list"].textContent, /Cached case/);
+});
+
 test("loads and renders folders by name with fullPath values", async () => {
   assert.equal(loadError, undefined, loadError?.message);
   const fixture = createRendererFixture();
@@ -512,6 +559,50 @@ test("loads and renders folders by name with fullPath values", async () => {
   assert.equal(option.textContent, "Play kênh");
   assert.equal(option.value, "/Root/Play kênh");
   assert.equal(option.dataset.folderId, "12");
+});
+
+test("logs API request and redacted response details while loading folders", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const createElement = fixture.document.createElement;
+  fixture.document.createElement = (tagName) => {
+    const element = createElement(tagName);
+    if (tagName === "pre") {
+      element.scrollHeight = 0;
+      element.clientHeight = 0;
+    }
+    return element;
+  };
+  fixture.runner.loadFlowCaseFolders = async () => ({
+    ok: true,
+    folders: [],
+    apiLog: {
+      request: {method: "GET", url: "http://api.test/folders"},
+      response: {status: 200, body: {password: "private", folders: []}},
+    },
+  });
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.loadFolders();
+
+  assert.match(fixture.elements["log-output"].textContent, /Load flow-case folders request/);
+  assert.match(fixture.elements["log-output"].textContent, /http:\/\/api\.test\/folders/);
+  assert.match(fixture.elements["log-output"].textContent, /••••••/);
+  assert.doesNotMatch(fixture.elements["log-output"].textContent, /private/);
+  const [responseEntry, requestEntry] = fixture.elements["log-output"].children;
+  fixture.elements["log-output"].querySelectorAll(".log-entry-content").forEach((content) => {
+    content.scrollHeight = 300;
+    content.clientHeight = 220;
+  });
+  fixture.elements["logs-button"].dispatchEvent("click");
+  await Promise.resolve();
+  assert.match(requestEntry.querySelector("time").textContent, /^\d{4}-\d{2}-\d{2} \d{2}:\d{2}:\d{2}$/);
+  assert.match(requestEntry.querySelector(".log-entry-label").textContent, /Load flow-case folders request/);
+  assert.equal(requestEntry.classList.contains("is-collapsible"), true);
+  requestEntry.dispatchEvent("click");
+  assert.equal(requestEntry.classList.contains("is-expanded"), true);
+  assert.equal(requestEntry.getAttribute("aria-expanded"), "true");
+  assert.match(responseEntry.querySelector(".log-entry-label").textContent, /Load flow-case folders response/);
 });
 
 test("downloads selected-folder cases and tracks the folder ID", async () => {
@@ -551,6 +642,7 @@ test("loads and saves connection and network settings", () => {
   fixture.storage.getItem = () => JSON.stringify({
     APP_URL: "https://saved.test/",
     API_DOMAIN: "http://saved-api.test",
+    API_AUTHORIZATION: "Bearer saved-token",
     PROJECT_ID: "7",
     ENVIRONMENT: "API",
     API_TIMEOUT_SECONDS: "45",
@@ -563,11 +655,13 @@ test("loads and saves connection and network settings", () => {
 
   assert.equal(fixture.elements["settings-app-url-input"].value, "https://saved.test/");
   assert.equal(fixture.elements["api-domain-input"].value, "http://saved-api.test");
+  assert.equal(fixture.elements["api-authorization-input"].value, "Bearer saved-token");
   assert.equal(fixture.elements["project-id-input"].value, "7");
   assert.equal(fixture.elements["environment-select"].value, "API");
   assert.equal(fixture.elements["api-timeout-input"].value, "45");
   fixture.elements["gui-settings-save-button"].dispatchEvent("click");
   assert.equal(stored.API_TIMEOUT_SECONDS, "45");
+  assert.equal(stored.API_AUTHORIZATION, "Bearer saved-token");
   assert.equal(stored.ENVIRONMENT, "API");
 });
 
@@ -591,6 +685,89 @@ test("includes the active folder ID when running downloaded cases", async () => 
   await fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
 
   assert.equal(submittedValues.TEST_CASE_FOLDER_ID, "12");
+});
+
+test("submits all downloaded test results only after the selected batch finishes", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const submittedResults = [];
+  fixture.runner.loadFlowCases = async () => ({ok: true, folder: {
+    id: "12", name: "Play kênh", fullPath: "/Root/Play kênh",
+  }, cases: [
+    {id: "case-1", name: "First remote case", actions: []},
+    {id: "case-2", name: "Second remote case", actions: []},
+  ]});
+  fixture.runner.runTest = async () => ({ok: true});
+  fixture.runner.submitFlowCaseResults = async (payload) => {
+    submittedResults.push(payload);
+    return {ok: true};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderFolders([{id: "12", name: "Play kênh", fullPath: "/Root/Play kênh"}]);
+  fixture.elements["folder-select"].value = "/Root/Play kênh";
+  await controller.loadCasesFromFolder();
+  fixture.elements["select-all-test-cases"].checked = true;
+  fixture.elements["select-all-test-cases"].dispatchEvent("change", {target: fixture.elements["select-all-test-cases"]});
+
+  const runPromise = fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+  await Promise.resolve();
+  fixture.runner.finishedCallback({
+    code: 1,
+    caseResult: {steps: [{status: "failed", message: "Playback did not start"}]},
+  });
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(submittedResults.length, 0);
+
+  fixture.runner.finishedCallback({code: 0});
+  await runPromise;
+
+  assert.equal(submittedResults.length, 1);
+  assert.equal(submittedResults[0].FOLDER_PATH, "/Root/Play kênh");
+  assert.deepEqual(
+    submittedResults[0].testcases.map(({id, status, testResult}) => ({
+      id,
+      status,
+      testStatus: testResult.status,
+      message: testResult.message,
+      passed: testResult.passed,
+      failed: testResult.failed,
+    })),
+    [
+      {id: "case-1", status: "tested", testStatus: "failed", message: "Playback did not start", passed: 0, failed: 1},
+      {id: "case-2", status: "tested", testStatus: "success", message: "Testcase chạy thành công.", passed: 1, failed: 0},
+    ]
+  );
+  assert.match(submittedResults[0].testcases[0].testResult.finishedAt, /^\d{4}-\d{2}-\d{2}T/);
+});
+
+test("does not submit partial downloaded results after a batch is stopped", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let submissionCount = 0;
+  fixture.runner.loadFlowCases = async () => ({ok: true, folder: {
+    id: "12", name: "Play kênh", fullPath: "/Root/Play kênh",
+  }, cases: [
+    {id: "case-1", name: "First remote case", actions: []},
+    {id: "case-2", name: "Second remote case", actions: []},
+  ]});
+  fixture.runner.runTest = async () => ({ok: true});
+  fixture.runner.submitFlowCaseResults = async () => {
+    submissionCount += 1;
+    return {ok: true};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderFolders([{id: "12", name: "Play kênh", fullPath: "/Root/Play kênh"}]);
+  fixture.elements["folder-select"].value = "/Root/Play kênh";
+  await controller.loadCasesFromFolder();
+  fixture.elements["select-all-test-cases"].checked = true;
+  fixture.elements["select-all-test-cases"].dispatchEvent("change", {target: fixture.elements["select-all-test-cases"]});
+
+  const runPromise = fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+  await Promise.resolve();
+  await fixture.elements["stop-button"].listeners.get("click")();
+  await runPromise;
+
+  assert.equal(submissionCount, 0);
 });
 
 test("submits only the generic test-run payload", async () => {
@@ -790,7 +967,7 @@ test("index markup contains the case browser and no API-key or mode controls", (
   assert.match(html, /id="settings-message"/);
   [
     "folder-select", "refresh-folders-button", "get-test-cases-button",
-    "settings-app-url-input", "api-domain-input", "project-id-input",
+    "settings-app-url-input", "api-domain-input", "api-authorization-input", "project-id-input",
     "environment-select", "api-timeout-input", "api-loading-overlay",
   ].forEach((id) => assert.match(html, new RegExp(`id="${id}"`)));
   assert.doesNotMatch(html, /id="app-url-input"/);
@@ -834,7 +1011,7 @@ test("uses the taller default Electron window size", () => {
 
   assert.match(
     mainSource,
-    /new BrowserWindow\(\{[\s\S]*?width:\s*1040,[\s\S]*?height:\s*900,[\s\S]*?minWidth:\s*920,[\s\S]*?minHeight:\s*760,/
+    /new BrowserWindow\(\{[\s\S]*?width:\s*1240,[\s\S]*?height:\s*900,[\s\S]*?minWidth:\s*920,[\s\S]*?minHeight:\s*760,/
   );
 });
 
@@ -845,6 +1022,15 @@ test("keeps the test-case table at 35vh and scrolls overflowing rows", () => {
   );
 
   assert.match(css, /\.test-case-table-wrap\s*\{[^}]*height:\s*35vh;[^}]*overflow:\s*auto;/s);
+});
+
+test("makes the sidebar 100px wider", () => {
+  const css = fs.readFileSync(
+    path.join(__dirname, "../../app/renderer/styles.css"),
+    "utf8"
+  );
+
+  assert.match(css, /\.app-shell\s*\{[^}]*grid-template-columns:\s*460px 1fr;/s);
 });
 
 test("styles each test-case detail value as a readable block", () => {
@@ -863,4 +1049,31 @@ test("styles the action preview as a grouped readable block", () => {
   );
 
   assert.match(css, /\.action-preview\s*\{[^}]*display:\s*grid;[^}]*padding:\s*8px 10px 8px 32px;[^}]*border:\s*1px solid #2b313d;[^}]*border-radius:\s*6px;[^}]*background:\s*#1a1e27;/s);
+});
+
+test("keeps expanded log bodies scrollable within the Logs modal", () => {
+  const css = fs.readFileSync(
+    path.join(__dirname, "../../app/renderer/styles.css"),
+    "utf8"
+  );
+
+  assert.match(
+    css,
+    /\.log-entry\.is-expanded\s*\{[^}]*display:\s*grid;[^}]*grid-template-rows:\s*34px minmax\(0, 1fr\);[^}]*height:\s*min\(520px, calc\(100vh - 190px\)\);/s
+  );
+  assert.match(
+    css,
+    /\.log-entry\.is-expanded \.log-entry-content\s*\{[^}]*height:\s*auto;[^}]*max-height:\s*none;[^}]*overflow-y:\s*auto;[^}]*overscroll-behavior:\s*contain;/s
+  );
+});
+
+test("keeps normal log cards in document flow when another card expands", () => {
+  const css = fs.readFileSync(
+    path.join(__dirname, "../../app/renderer/styles.css"),
+    "utf8"
+  );
+
+  assert.match(css, /\.log-output\s*\{[^}]*overflow:\s*auto;[^}]*background:\s*#0c0e13;/s);
+  assert.doesNotMatch(css, /\.log-output\s*\{[^}]*display:\s*grid;/s);
+  assert.match(css, /\.log-entry\s*\{[^}]*margin-bottom:\s*12px;[^}]*overflow:\s*hidden;/s);
 });

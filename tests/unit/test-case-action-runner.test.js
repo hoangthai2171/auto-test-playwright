@@ -27,7 +27,16 @@ function createHandlerHelpers(overrides = {}) {
     loginWithAccount: async () => {},
     chooseFirstProfileAndEnterHome: async () => {},
     closeHomePopupsAndVerifyHome: async () => {},
+    focusRequestedContentRow: async () => {},
+    focusFirstItemInCurrentContentRow: async () => {},
+    remoteFocusByText: async () => {},
+    remotePress: async () => {},
     openServiceFromLeftMenuOrAllServices: async () => {},
+    openSearchFromLeftMenu: async () => {},
+    searchContentByName: async () => {},
+    playVisibleContentByName: async () => {},
+    playFocusedSearchResult: async () => {},
+    playItemsInRow: async () => {},
     waitForContentVisible: async () => {},
     waitForPlayerReady: async () => {},
     getFocusedState: async () => ({ id: "focused" }),
@@ -289,10 +298,19 @@ test("creates exactly the default handlers and logs in with action credentials i
 
   assert.deepEqual(Object.keys(handlers).sort(), [
     "assert_screen",
+    "focus_row",
+    "focus_row_first_item",
+    "focus_text",
     "login",
     "open_home",
+    "open_search",
     "open_service",
+    "play_content",
+    "play_row",
+    "play_search_result",
     "press_back",
+    "press_ok",
+    "search_content",
     "wait_for_ready",
   ]);
 
@@ -304,6 +322,341 @@ test("creates exactly the default handlers and logs in with action credentials i
     ["chooseFirstProfileAndEnterHome", page, testInfo],
     ["closeHomePopupsAndVerifyHome", page, testInfo],
   ]);
+});
+
+test("verifies a playback expectedResult after all actions complete", async () => {
+  const waits = [];
+  let playerReadyCalls = 0;
+  const page = {
+    id: "page",
+    waitForTimeout: async (durationMs) => waits.push(durationMs),
+  };
+  const testInfo = createTestInfo();
+  const helpers = createHandlerHelpers({
+    waitForPlayerReady: async () => {
+      playerReadyCalls += 1;
+    },
+  });
+
+  const result = await runTestCase(page, testInfo, {
+    id: "expected-player",
+    name: "Expected player",
+    expectedResult: "Phát phim thành công",
+    actions: [{action: "open_home"}],
+  }, {
+    helpers,
+    handlers: {open_home: async () => {}},
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  assert.equal(playerReadyCalls, 0);
+  assert.deepEqual(waits, [6000, 2000]);
+  assert.equal(result.steps.at(-1).action, "expected_result");
+  assert.deepEqual(result.steps.at(-1).result, {
+    type: "player",
+    verified: "Player is open and playing normally",
+  });
+});
+
+test("captures the player before returning after a player expected-result check", async () => {
+  const events = [];
+  const page = {
+    waitForTimeout: async (durationMs) => events.push(`wait:${durationMs}`),
+    screenshot: async () => Buffer.from("player-screen"),
+  };
+  const testInfo = createTestInfo();
+  const helpers = createHandlerHelpers({
+    remotePress: async (_page, key) => events.push(`press:${key}`),
+  });
+
+  const result = await runTestCase(page, testInfo, {
+    id: "player-screenshot",
+    name: "Player screenshot",
+    expectedResult: "Phát phim thành công",
+    actions: [{action: "open_home"}],
+  }, {
+    helpers,
+    handlers: {open_home: async () => {}},
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  assert.deepEqual(events, ["wait:6000", "press:Backspace", "wait:2000"]);
+  assert.equal(result.completionScreenshotDataUrl, "data:image/png;base64,cGxheWVyLXNjcmVlbg==");
+  assert.ok(testInfo.attachments.some((attachment) => attachment.name === "expected-player-check.png"));
+});
+
+test("returns from a completed player action before a non-player next step", async () => {
+  const events = [];
+  const page = {
+    waitForTimeout: async (durationMs) => events.push(`wait:${durationMs}`),
+  };
+  const helpers = createHandlerHelpers({
+    remotePress: async (_page, key) => events.push(`press:${key}`),
+  });
+
+  await runTestCase(page, createTestInfo(), {
+    id: "player-action-return",
+    name: "Player action returns",
+    actions: [
+      {action: "play_content", name: "VTV1 HD", type: "channel"},
+      {action: "open_home"},
+    ],
+  }, {
+    helpers,
+    handlers: {
+      play_content: async () => events.push("play"),
+      open_home: async () => events.push("home"),
+    },
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  assert.deepEqual(events, ["play", "press:Backspace", "home"]);
+});
+
+test("returns from a final player action before waiting for the player session cleanup", async () => {
+  const events = [];
+  const page = {
+    waitForTimeout: async (durationMs) => events.push(`wait:${durationMs}`),
+  };
+  const helpers = createHandlerHelpers({
+    remotePress: async (_page, key) => events.push(`press:${key}`),
+  });
+
+  await runTestCase(page, createTestInfo(), {
+    id: "final-player-action-return",
+    name: "Final player action returns",
+    actions: [{action: "play_content", name: "VTV1 HD", type: "channel"}],
+  }, {
+    helpers,
+    handlers: {play_content: async () => events.push("play")},
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  assert.deepEqual(events, ["play", "press:Backspace", "wait:2000"]);
+});
+
+test("accepts a service expectedResult after a successful service action without screen text assertion", async () => {
+  const result = await runTestCase({id: "page"}, createTestInfo(), {
+    id: "expected-service",
+    name: "Expected service",
+    expectedResult: "Vào màn hình dịch vụ phim truyện thành công",
+    actions: [{action: "open_service", service: "Phim truyện"}],
+  }, {
+    helpers: createHandlerHelpers(),
+    handlers: {open_service: async () => {}},
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  assert.equal(result.steps.at(-1).action, "expected_result");
+  assert.deepEqual(result.steps.at(-1).result, {
+    type: "service",
+    verified: "Service navigation action completed; destination label was not asserted",
+  });
+});
+
+test("accepts a service expectedResult after entering through the home Thể loại row", async () => {
+  const result = await runTestCase({id: "page"}, createTestInfo(), {
+    id: "expected-home-row-service",
+    name: "Expected home-row service",
+    expectedResult: "Vào màn hình dịch vụ Truyền hình thành công",
+    actions: [
+      {action: "focus_row", rowName: "Thể loại"},
+      {action: "focus_text", text: "Truyền hình"},
+      {action: "press_ok"},
+    ],
+  }, {
+    helpers: createHandlerHelpers(),
+    handlers: {
+      focus_row: async () => {},
+      focus_text: async () => {},
+      press_ok: async () => {},
+    },
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  assert.equal(result.steps.at(-1).action, "expected_result");
+  assert.deepEqual(result.steps.at(-1).result, {
+    type: "service",
+    verified: "Service navigation action completed; destination label was not asserted",
+  });
+});
+
+test("records a failed expectedResult when the player is not ready", async () => {
+  let error;
+  try {
+    await runTestCase({id: "page", waitForTimeout: async () => {}}, createTestInfo(), {
+      id: "expected-player-failure",
+      name: "Expected player failure",
+      expectedResult: "Play bình thường",
+      actions: [{action: "open_home"}],
+    }, {
+      helpers: createHandlerHelpers({
+        getPlayerState: async () => ({
+          hasVideo: true,
+          isProbablyPlaying: false,
+          reason: "player did not start",
+        }),
+      }),
+      handlers: {open_home: async () => {}},
+      stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+    });
+  } catch (caughtError) {
+    error = caughtError;
+  }
+
+  assert.match(error.message, /Player check failed after 6 seconds: player state was not healthy: player did not start/);
+  assert.equal(error.testCaseResult.status, "failed");
+  assert.equal(error.testCaseResult.steps.at(-1).action, "expected_result");
+  assert.equal(error.testCaseResult.steps.at(-1).message, error.message);
+});
+
+test("captures the failed player screen before returning to the previous screen", async () => {
+  const events = [];
+  const page = {
+    waitForTimeout: async (durationMs) => events.push(`wait:${durationMs}`),
+    screenshot: async () => Buffer.from("failed-player-screen"),
+  };
+  const testInfo = createTestInfo();
+  const helpers = createHandlerHelpers({
+    getPlayerState: async () => ({
+      hasVideo: true,
+      isProbablyPlaying: false,
+      reason: "player popup remained visible",
+    }),
+    remotePress: async (_page, key) => events.push(`press:${key}`),
+  });
+  let error;
+
+  try {
+    await runTestCase(page, testInfo, {
+      id: "expected-player-failure-screenshot",
+      name: "Expected player failure screenshot",
+      expectedResult: "Play bình thường",
+      actions: [{action: "open_home"}],
+    }, {
+      helpers,
+      handlers: {open_home: async () => {}},
+      stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+    });
+  } catch (caughtError) {
+    error = caughtError;
+  }
+
+  assert.match(error.message, /Player check failed after 6 seconds: player state was not healthy: player popup remained visible/);
+  assert.deepEqual(events, ["wait:6000", "press:Backspace", "wait:2000"]);
+  assert.equal(
+    error.testCaseResult.completionScreenshotDataUrl,
+    "data:image/png;base64,ZmFpbGVkLXBsYXllci1zY3JlZW4="
+  );
+  assert.ok(testInfo.attachments.some((attachment) => attachment.name === "expected-player-check.png"));
+});
+
+test("attaches the requested parser failure reason to the failed case result", async () => {
+  let error;
+  try {
+    await runTestCase({}, createTestInfo(), {
+      id: "unknown-step",
+      name: "Unknown step",
+      qaDescription: "B1. Làm một thao tác không được hỗ trợ",
+    }, {
+      helpers: createHandlerHelpers(),
+      stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+    });
+  } catch (caughtError) {
+    error = caughtError;
+  }
+
+  assert.match(error.message, /Không thể parse được bước: B1\. Làm một thao tác không được hỗ trợ/);
+  assert.equal(error.testCaseResult.steps[0].action, "compile");
+  assert.equal(
+    error.testCaseResult.steps[0].message,
+    "Không thể parse được bước: B1. Làm một thao tác không được hỗ trợ"
+  );
+});
+
+test("focuses a requested visible text target through remote navigation", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      remoteFocusByText: async (...args) => calls.push(args),
+    }),
+  });
+  const page = {id: "page"};
+
+  await handlers.focus_text({
+    page,
+    action: {action: "focus_text", text: "Xem ngay"},
+  });
+
+  assert.equal(calls.length, 1);
+  assert.equal(calls[0][0], page);
+  assert.equal(calls[0][1].test("Xem ngay"), true);
+  assert.equal(calls[0][1].test("Xem ngay now"), false);
+});
+
+test("focuses the first poster in the requested content row", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      focusRequestedContentRow: async (...args) => calls.push(args),
+    }),
+  });
+  const page = {id: "page"};
+
+  await handlers.focus_row({
+    page,
+    action: {action: "focus_row", rowName: "Thịnh hành"},
+  });
+
+  assert.deepEqual(calls, [[page, {rowName: "Thịnh hành"}]]);
+});
+
+test("focuses a requested numbered poster in the named content row", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      focusRequestedContentRow: async (...args) => calls.push(args),
+    }),
+  });
+  const page = {id: "page"};
+
+  await handlers.focus_row({
+    page,
+    action: {action: "focus_row", rowName: "HTV", itemIndex: 4},
+  });
+
+  assert.deepEqual(calls, [[page, {rowName: "HTV", itemIndex: 4}]]);
+});
+
+test("focuses the first item in the currently active row", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      focusFirstItemInCurrentContentRow: async (...args) => calls.push(args),
+    }),
+  });
+  const page = {id: "page"};
+
+  await handlers.focus_row_first_item({
+    page,
+    action: {action: "focus_row_first_item"},
+  });
+
+  assert.deepEqual(calls, [[page]]);
+});
+
+test("presses remote OK through the shared remote key primitive", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      remotePress: async (...args) => calls.push(args),
+    }),
+  });
+  const page = {id: "page"};
+
+  await handlers.press_ok({page, action: {action: "press_ok"}});
+
+  assert.deepEqual(calls, [[page, "Enter"]]);
 });
 
 test("opens a service with the action service and test context", async () => {
@@ -324,6 +677,124 @@ test("opens a service with the action service and test context", async () => {
   });
 
   assert.deepEqual(calls, [[page, "Phim truyện", testInfo]]);
+});
+
+test("reports the requested service name when service navigation fails", async () => {
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      openServiceFromLeftMenuOrAllServices: async () => {
+        throw new Error("Could not focus target with remote keys");
+      },
+    }),
+  });
+
+  await assert.rejects(
+    handlers.open_service({
+      page: {id: "page"},
+      testInfo: {id: "test-info"},
+      action: {action: "open_service", service: "kênh"},
+    }),
+    /Không thể tìm thấy dịch vụ kênh/u
+  );
+});
+
+test("maps kênh service requests to the Truyền hình service alias", () => {
+  assert.deepEqual(workflows.__internal.getServiceSearchNames("kênh"), [
+    "Truyền hình",
+    "kênh",
+  ]);
+  assert.deepEqual(workflows.__internal.getServiceSearchNames("Phim truyện"), [
+    "Phim truyện",
+  ]);
+});
+
+test("opens search and searches content through the default handlers", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      openSearchFromLeftMenu: async (...args) => calls.push(["open", ...args]),
+      searchContentByName: async (...args) => calls.push(["search", ...args]),
+    }),
+  });
+  const page = {id: "page"};
+  const testInfo = {id: "test-info"};
+
+  await handlers.open_search({page, testInfo, action: {action: "open_search"}});
+  await handlers.search_content({
+    page,
+    testInfo,
+    action: {action: "search_content", name: "Căn phòng tử thần", type: "movie"},
+  });
+
+  assert.deepEqual(calls, [
+    ["open", page, testInfo],
+    ["search", page, {name: "Căn phòng tử thần", type: "movie"}, testInfo],
+  ]);
+});
+
+test("plays the focused search result through the default handler", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      playFocusedSearchResult: async (...args) => calls.push(args),
+    }),
+  });
+  const page = {id: "page"};
+  const testInfo = {id: "test-info"};
+
+  await handlers.play_search_result({
+    page,
+    testInfo,
+    action: {action: "play_search_result", type: "movie"},
+  });
+
+  assert.deepEqual(calls, [[page, testInfo, {type: "movie"}]]);
+});
+
+test("plays a named visible content item with its type", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      playVisibleContentByName: async (...args) => calls.push(args),
+    }),
+  });
+  const page = {id: "page"};
+  const testInfo = {id: "test-info"};
+
+  await handlers.play_content({
+    page,
+    testInfo,
+    action: {action: "play_content", name: "VTV1 HD", type: "channel"},
+  });
+
+  assert.deepEqual(calls, [[page, testInfo, {name: "VTV1 HD", type: "channel"}]]);
+});
+
+test("plays a requested row using either its 1-based index or name", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      playItemsInRow: async (...args) => calls.push(args),
+    }),
+  });
+  const page = {id: "page"};
+  const testInfo = {id: "test-info"};
+
+  await handlers.play_row({
+    page,
+    testInfo,
+    action: {action: "play_row", rowIndex: 2, count: 3},
+  });
+  await handlers.play_row({
+    page,
+    testInfo,
+    action: {action: "play_row", rowName: "VTV"},
+  });
+
+  assert.deepEqual(calls, [
+    [page, testInfo, {rowIndex: 2, rowName: undefined, count: 3}],
+    [page, testInfo, {rowIndex: undefined, rowName: "VTV", count: undefined}],
+  ]);
 });
 
 test("presses Backspace sequentially for every requested back press", async () => {

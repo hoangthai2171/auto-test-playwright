@@ -71,7 +71,7 @@
                     </div>
 
                     <div class="actions secondary">
-                        <button type="button" id="open-report-button">Open Report</button>
+                        <button type="button" id="open-report-button">Open Test Report</button>
                         <button type="button" id="show-report-button">Show Folder</button>
                     </div>
                 </form>
@@ -115,7 +115,7 @@
                     <h2>Logs</h2>
                     <button type="button" id="logs-close-button" class="icon-button">×</button>
                 </header>
-                <pre id="log-output" class="log-output"></pre>
+                <div id="log-output" class="log-output" role="log" aria-label="Application logs"></div>
             </section>
         </div>
 
@@ -145,6 +145,10 @@
                                 <label>
                                     API domain
                                     <input id="api-domain-input" name="API_DOMAIN" value="http://172.16.240.254:30100" />
+                                </label>
+                                <label>
+                                    API Authorize
+                                    <input id="api-authorization-input" name="API_AUTHORIZATION" type="password" autocomplete="off" />
                                 </label>
                                 <div class="two-col">
                                     <label>

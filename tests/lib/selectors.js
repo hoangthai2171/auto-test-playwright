@@ -1,10 +1,32 @@
+const FOCUSED_CLASS = "focused";
+const POPUP_FOCUS_DIALOG_IDS = Object.freeze([
+  "dialog_confirm_v2",
+  "dialog_alert_v2",
+  "dialog_alert_full",
+  "dialog_confirm_full",
+]);
+const POPUP_ACTIVE_FOCUS_SELECTORS = Object.freeze(
+  POPUP_FOCUS_DIALOG_IDS.map((id) => `#${id} .active`)
+);
+// Dialog focus is intentionally listed first. The underlying screen can keep
+// its old `.focused` element while a modal dialog is open.
+const FOCUS_SELECTORS = Object.freeze([
+  ...POPUP_ACTIVE_FOCUS_SELECTORS,
+  `.${FOCUSED_CLASS}`,
+]);
+const FOCUS_SELECTOR = FOCUS_SELECTORS.join(", ");
+
 const SELECTOR_CONTRACTS = Object.freeze({
   focus: {
     severity: "required",
     alternatives: [
       {
         name: "focused-class",
-        classPatterns: ["focused"],
+        classPatterns: [FOCUSED_CLASS],
+      },
+      {
+        name: "popup-active-class",
+        selectors: POPUP_ACTIVE_FOCUS_SELECTORS,
       },
     ],
   },
@@ -150,6 +172,11 @@ function getSelectorAlternatives(name) {
 }
 
 module.exports = {
+  FOCUSED_CLASS,
+  POPUP_FOCUS_DIALOG_IDS,
+  POPUP_ACTIVE_FOCUS_SELECTORS,
+  FOCUS_SELECTORS,
+  FOCUS_SELECTOR,
   SELECTOR_CONTRACTS,
   getSelectorContract,
   getSelectorAlternatives,

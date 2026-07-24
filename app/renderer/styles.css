@@ -73,7 +73,7 @@ textarea {
 
 .app-shell {
   display: grid;
-  grid-template-columns: 360px 1fr;
+  grid-template-columns: 460px 1fr;
   height: calc(100vh - 48px);
   min-height: 0;
   overflow: hidden;
@@ -493,13 +493,111 @@ button:disabled {
   padding: 20px 22px;
   min-height: 0;
   overflow: auto;
-  white-space: pre-wrap;
-  word-break: break-word;
-  color: #d9dee8;
   background: #0c0e13;
+}
+
+.log-entry {
+  margin-bottom: 12px;
+  overflow: hidden;
+  border: 1px solid #2b313d;
+  border-radius: 8px;
+  background: #151922;
+}
+
+.log-entry:last-child {
+  margin-bottom: 0;
+}
+
+.log-entry-header {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 34px;
+  padding: 0 12px;
+  border-bottom: 1px solid #2b313d;
+  background: #1c212c;
+}
+
+.log-entry-timestamp {
+  flex: 0 0 auto;
+  color: #8eb6ff;
+  font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
+  font-size: 12px;
+  font-variant-numeric: tabular-nums;
+}
+
+.log-entry-label {
+  min-width: 0;
+  overflow: hidden;
+  color: #edf2fb;
+  font-size: 12px;
+  font-weight: 650;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.log-entry-expand-hint {
+  display: none;
+  margin-left: auto;
+  color: #9aa5b7;
+  font-size: 11px;
+}
+
+.log-entry-content {
+  box-sizing: border-box;
+  min-height: 0;
+  max-height: 220px;
+  margin: 0;
+  padding: 12px;
+  overflow: hidden;
+  color: #d9dee8;
   font-family: "SFMono-Regular", Consolas, "Liberation Mono", monospace;
   font-size: 12px;
   line-height: 1.55;
+  white-space: pre-wrap;
+  word-break: break-word;
+}
+
+.log-entry.is-collapsible {
+  cursor: pointer;
+}
+
+.log-entry.is-collapsible:hover,
+.log-entry.is-collapsible:focus-visible {
+  border-color: #4a6597;
+  outline: none;
+}
+
+.log-entry.is-collapsible .log-entry-expand-hint {
+  display: inline;
+}
+
+.log-entry.is-expanded .log-entry-content {
+  height: auto;
+  max-height: none;
+  overflow-x: auto;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+  cursor: text;
+}
+
+.log-entry.is-expanded {
+  display: grid;
+  grid-template-rows: 34px minmax(0, 1fr);
+  height: min(520px, calc(100vh - 190px));
+}
+
+.log-entry.is-expanded .log-entry-header {
+  min-height: 0;
+}
+
+.log-entry.is-expanded .log-entry-expand-hint {
+  font-size: 0;
+}
+
+.log-entry.is-expanded .log-entry-expand-hint::after {
+  content: "Collapse";
+  font-size: 11px;
 }
 
 .browser-preview {

@@ -8,10 +8,11 @@ const selectorValidation=require("./selector-validation");
 const waits=require("./waits");
 const {createScopedDomScanner}=require("./dom-scan");
 const {createBatchBudget}=require("./batch-budget");
+const {acceptDeviceLimitPopupIfVisible}=require("./login-popups");
 
 const {remotePress,remoteFocusById,remoteFocusByText,enterWithVirtualKeyboard,searchKeyboardInput,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange}=navigation;
-const {collectVisibleContentRows,focusRequestedContentRow,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback}=contentRows;
-const {getPlayerState,inspectPlaybackAfterWait}=playback;
+const {collectVisibleContentRows,focusRequestedContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback}=contentRows;
+const {getPlayerState,inspectPlaybackAfterWait,PLAYER_PLAYBACK_WAIT_SECONDS}=playback;
 const {runStep,attachCurrentAppScreenshot,attachMovieSearchFailureArtifacts,attachSearchNoResultArtifacts,attachFailureArtifacts,attachFirstRowPlaybackReport,renderPlaybackResultsHtml,renderPlaybackErrorCell,imageDataUrl,safeArtifactName}=artifacts;
 const {activateVerifiedTarget,assertSelectorHealth,getContractLocator,resolveContractLocatorId}=selectorValidation;
 const {waitForFocusState,waitForContentVisible}=waits;
@@ -110,6 +111,8 @@ async function loginWithAccount(page, options, testInfo) {
   await remoteFocusById(page, "new_ui_login_btn_ok");
   await activateVerifiedTarget(page, {testInfo, name: "login-password-submit", contractName: "menuItem", expectedId: "new_ui_login_btn_ok", delay: 5000});
 
+  await acceptDeviceLimitPopupIfVisible(page, testInfo);
+
   await expect(page.locator("body")).not.toContainText("Nhập mật khẩu", {
     timeout: 30000,
   });
@@ -155,13 +158,48 @@ async function openSearchFromLeftMenu(page, testInfo) {
   await expect(page.locator("body")).toContainText(/Tìm kiếm/i, { timeout: 10000 });
 }
 
+async function searchContentByName(page, options, testInfo) {
+  const keyword = String(options?.name || "").trim();
+  const type = options?.type || "content";
+  expect(keyword, "Content name is required for search_content").toBeTruthy();
+
+  await enterWithVirtualKeyboard(page, searchKeyboardInput(keyword));
+  await submitSearchFromVirtualKeyboard(page, testInfo, {afterSubmitWaitMs: 3000});
+
+  const result = await findBestSearchResult(page, keyword, type);
+  if (!result) {
+    await attachSearchNoResultArtifacts(page, testInfo, keyword);
+    throw new Error(`Không tìm thấy nội dung "${keyword}"`);
+  }
+
+  if (testInfo?.attach) {
+    await testInfo.attach(`${safeArtifactName(`search-${keyword}-selected-result`)}.json`, {
+      body: JSON.stringify(result, null, 2),
+      contentType: "application/json",
+    });
+  }
+
+  await focusStableSearchResult(page, result);
+  return result;
+}
+
 async function openServiceFromLeftMenuOrAllServices(page, serviceName, testInfo) {
+  const serviceNames = getServiceSearchNames(serviceName);
   await openLeftMenuFromHome(page);
 
-  const leftMenuItemId = await findLeftMenuItemIdByFuzzyText(page, serviceName).catch(() => "");
+  let leftMenuItemId = "";
+  let matchedServiceName = serviceNames[0] || serviceName;
+  for (const candidate of serviceNames) {
+    leftMenuItemId = await findLeftMenuItemIdByFuzzyText(page, candidate).catch(() => "");
+    if (leftMenuItemId) {
+      matchedServiceName = candidate;
+      break;
+    }
+  }
+
   if (leftMenuItemId) {
     await remoteFocusById(page, leftMenuItemId, 100);
-    await activateVerifiedTarget(page, {testInfo, name: `open-service-${serviceName}`, contractName: "menuItem", expectedId: leftMenuItemId, expectedLabel: serviceName, delay: 3000});
+    await activateVerifiedTarget(page, {testInfo, name: `open-service-${serviceName}`, contractName: "menuItem", expectedId: leftMenuItemId, expectedLabel: matchedServiceName, delay: 3000});
     return;
   }
 
@@ -171,9 +209,15 @@ async function openServiceFromLeftMenuOrAllServices(page, serviceName, testInfo)
   await remoteFocusById(page, allServicesId, 100);
   await activateVerifiedTarget(page, {testInfo, name: "open-all-services", contractName: "menuItem", expectedId: allServicesId, expectedLabel: "Tất cả dịch vụ", delay: 2500});
 
-  const serviceId = await findServiceIdInAllServices(page, serviceName);
+  const serviceId = await findServiceIdInAllServices(page, serviceNames);
   await remoteFocusById(page, serviceId, 120);
-  await activateVerifiedTarget(page, {testInfo, name: `open-service-${serviceName}-fallback`, contractName: "menuItem", expectedId: serviceId, expectedLabel: serviceName, delay: 3000});
+  await activateVerifiedTarget(page, {testInfo, name: `open-service-${serviceName}-fallback`, contractName: "menuItem", expectedId: serviceId, expectedLabel: matchedServiceName, delay: 3000});
+}
+
+function getServiceSearchNames(serviceName) {
+  const requestedName = String(serviceName || "").trim();
+  if (normalizeVietnameseText(requestedName) !== "kenh") return [requestedName];
+  return ["Truyền hình", requestedName];
 }
 
 async function openChannel(page, options, testInfo) {
@@ -199,7 +243,7 @@ async function openFirstMovieContent(page, testInfo) {
 }
 
 async function playAllItemsInFirstRow(page, testInfo, options = {}) {
-  const waitSeconds = Number(options.waitSeconds || 6);
+  const waitSeconds = Number(options.waitSeconds || PLAYER_PLAYBACK_WAIT_SECONDS);
   const backPresses = Number(options.backPresses || 2);
   const rowName = options.rowName || "";
   const rowIndex = Number.isInteger(options.rowIndex) ? options.rowIndex : undefined;
@@ -261,6 +305,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
       const result = {
         index: index + 1,
         id: item.id,
+        name: label,
         title: label,
         poster: item.poster,
         status: "unknown",
@@ -337,8 +382,104 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
   await attachFirstRowPlaybackReport(testInfo, results);
 
   const playableCount = results.filter((item) => item.status === "playable").length;
-  expect(playableCount, "At least one first-row content item should play successfully").toBeGreaterThan(0);
+  const failedCount = results.filter((item) => item.status === "failed").length;
+  if (failedCount > 0 || playableCount === 0) {
+    const error = new Error(
+      failedCount > 0
+        ? failedCount + " row content item(s) failed to play"
+        : "At least one row content item should play successfully"
+    );
+    error.details = {results, budget: budgetReport};
+    throw error;
+  }
   return {results, budget: budgetReport};
+}
+
+async function playItemsInRow(page, testInfo, options = {}) {
+  const rowIndex = Number.isInteger(options.rowIndex)
+    ? options.rowIndex - 1
+    : undefined;
+  const count = options.count === undefined ? 0 : options.count;
+
+  return playAllItemsInFirstRow(page, testInfo, {
+    ...options,
+    rowIndex,
+    itemLimit: count,
+  });
+}
+
+async function playVisibleContentByName(page, testInfo, options = {}) {
+  const name = String(options.name || "").trim();
+  const type = options.type || "content";
+  expect(name, "Content name is required for play_content").toBeTruthy();
+
+  await waitForContentVisible(page, {
+    name: "named-content",
+    testInfo,
+    getContentState: observeVisibleContentRows,
+    getFocusedState,
+    reason: "no visible content row was ready before named-content playback",
+  });
+
+  const match = await findVisibleContentItemByName(page, name, {type});
+  return playFocusedContent(page, testInfo, {
+    name: match.item.title || name,
+    type,
+    poster: match.item.poster || "",
+  });
+}
+
+async function playFocusedSearchResult(page, testInfo, options = {}) {
+  const focused = await getFocusedContentMetadata(page).catch(() => ({title: "", poster: ""}));
+  return playFocusedContent(page, testInfo, {
+    name: focused.title || "search result",
+    type: options.type || "content",
+    poster: focused.poster || "",
+    artifactPrefix: "search-content",
+  });
+}
+
+async function playFocusedContent(page, testInfo, {name, type = "content", poster = "", artifactPrefix = "content"} = {}) {
+  const itemName = String(name || "focused content").trim();
+  await openFocusedContentForPlayback(page, testInfo);
+
+  const playback = await inspectPlaybackAfterWait(page, PLAYER_PLAYBACK_WAIT_SECONDS);
+  const result = {
+    name: itemName,
+    title: itemName,
+    poster,
+    status: playback.ok ? "playable" : "failed",
+    errorPopup: playback.popup?.text || playback.playerState?.reason || "",
+    playerState: playback.playerState,
+  };
+
+  if (testInfo?.attach) {
+    await testInfo.attach(`${artifactPrefix}-playback-result.json`, {
+      body: JSON.stringify(result, null, 2),
+      contentType: "application/json",
+    });
+  }
+
+  if (!playback.ok) {
+    if (testInfo?.attach) {
+      const screenshot = await page.screenshot({fullPage: false});
+      result.screenshotDataUrl = imageDataUrl(screenshot);
+      await testInfo.attach(`${artifactPrefix}-playback-failure.png`, {
+        body: screenshot,
+        contentType: "image/png",
+      });
+    }
+
+    const error = new Error(
+      `Không phát được ${type} "${name}". ` +
+        `Tên nội dung: "${itemName}"; poster: "${poster}"; ` +
+        `lỗi: ${result.errorPopup || "trạng thái phát không hợp lệ"}`
+    );
+    error.details = result;
+    throw error;
+  }
+
+  return result;
 }
 
 async function openMovieContent(page, options, testInfo) {
@@ -476,7 +617,7 @@ function parseSearchRowId(id) {
   };
 }
 
-async function submitSearchFromVirtualKeyboard(page, testInfo) {
+async function submitSearchFromVirtualKeyboard(page, testInfo, {afterSubmitWaitMs = 2000} = {}) {
   const resolved = await resolveContractLocatorId(page, {
     contractName: "searchAction",
     fallback: () => page.evaluate(() => {
@@ -493,7 +634,7 @@ async function submitSearchFromVirtualKeyboard(page, testInfo) {
 
   await remoteFocusById(page, searchButtonId, 80);
   await activateVerifiedTarget(page, {testInfo, name: "submit-search", contractName: "searchAction", expectedId: searchButtonId, delay: 2500});
-  await page.waitForTimeout(2000);
+  await page.waitForTimeout(afterSubmitWaitMs);
 }
 
 async function waitForAppReady(page, testInfo, waitOptions = {}) {
@@ -829,19 +970,24 @@ async function findLeftMenuItemIdByFuzzyText(page, text) {
 }
 
 async function findServiceIdInAllServices(page, serviceName) {
+  const serviceNames = Array.isArray(serviceName) ? serviceName : getServiceSearchNames(serviceName);
   await page.waitForTimeout(800);
 
   for (let attempt = 0; attempt < 18; attempt++) {
-    const serviceId =
-      (await findVisibleServiceIdByTitleAttributeScoped(page, serviceName).catch(() => "")) ||
-      (await findVisibleElementIdByFuzzyLabelScoped(page, serviceName, {
-        minWidth: 60,
-        minHeight: 30,
-        maxWidth: 460,
-        maxHeight: 280,
-        excludeIdPrefixes: ["menu_"],
-        timeout: 1200,
-      }).catch(() => ""));
+    let serviceId = "";
+    for (const candidate of serviceNames) {
+      serviceId =
+        (await findVisibleServiceIdByTitleAttributeScoped(page, candidate).catch(() => "")) ||
+        (await findVisibleElementIdByFuzzyLabelScoped(page, candidate, {
+          minWidth: 60,
+          minHeight: 30,
+          maxWidth: 460,
+          maxHeight: 280,
+          excludeIdPrefixes: ["menu_"],
+          timeout: 1200,
+        }).catch(() => ""));
+      if (serviceId) break;
+    }
 
     if (serviceId) {
       return serviceId;
@@ -852,7 +998,7 @@ async function findServiceIdInAllServices(page, serviceName) {
 
   const visibleServices = await collectVisibleAllServiceLabelsScoped(page);
   throw new Error(
-    `Không tìm thấy dịch vụ "${serviceName}" trong Tất cả dịch vụ. Các mục đang thấy: ${visibleServices.join(", ")}`
+    `Không tìm thấy dịch vụ "${serviceNames[0] || serviceName}" trong Tất cả dịch vụ. Các mục đang thấy: ${visibleServices.join(", ")}`
   );
 }
 
@@ -1365,50 +1511,74 @@ async function findMovieContentIdByName(page, movieName, movieNamePattern) {
   return id;
 }
 
-async function findBestSearchResult(page, keyword) {
+async function findBestSearchResult(page, keyword, type = "content") {
   await page.waitForFunction(
     () => {
       const bodyText = document.body?.innerText || "";
       if (/không tìm thấy|không có kết quả|không có nội dung/i.test(bodyText)) return true;
 
-      return Array.from(document.querySelectorAll("[id]")).some((element) => {
+      const resultRoot = Array.from(
+        document.querySelectorAll(
+          "#clip_search_content #clip_item_row #clip_item_row_move_grid_ver_container"
+        )
+      ).find((candidate) => isVisibleSearchResultRoot(candidate));
+      if (!resultRoot) return false;
+
+      return (resultRoot.textContent || "").trim().length > 0;
+
+      function isVisibleSearchResultRoot(element) {
+        if (!(element.textContent || "").trim()) return false;
+
+        let current = element;
+        while (current) {
+          const style = getComputedStyle(current);
+          if (
+            style.display === "none" ||
+            style.visibility === "hidden" ||
+            Number(style.opacity) === 0
+          ) return false;
+          current = current.parentElement;
+        }
+
         const rect = element.getBoundingClientRect();
-        const style = getComputedStyle(element);
-        return (
-          rect.width >= 120 &&
-          rect.height >= 80 &&
-          rect.x >= 80 &&
-          rect.y >= 80 &&
-          style.display !== "none" &&
-          style.visibility !== "hidden" &&
-          Number(style.opacity) !== 0 &&
-          !element.id.startsWith("key-") &&
-          !element.id.startsWith("menu_")
-        );
-      });
+        if (rect.width >= 1 && rect.height >= 1) return true;
+
+        return Array.from(element.querySelectorAll("*"))
+          .some((child) => {
+            const childRect = child.getBoundingClientRect();
+            return childRect.width >= 120 && childRect.height >= 80;
+          });
+      }
     },
     null,
     { timeout: 20000 }
   );
 
-  const results = await collectSearchResultCandidates(page, keyword);
+  const results = await collectSearchResultCandidates(page, keyword, type);
   const normalizedKeyword = normalizeVietnameseText(keyword);
-  return (
+  const bestResult =
     results.find((item) => item.id === "searchRow_0_0" && item.normalizedLabel === normalizedKeyword) ||
     results.find((item) => item.row === 0 && item.normalizedLabel === normalizedKeyword) ||
     results.find((item) => item.normalizedLabel === normalizedKeyword) ||
     results.find((item) => item.row === 0 && item.score >= 90) ||
     results[0] ||
-    null
-  );
+    null;
+
+  return bestResult && bestResult.score >= 70 ? bestResult : null;
 }
 
-async function collectSearchResultCandidates(page, keyword) {
-  return page.evaluate((searchKeyword) => {
+async function collectSearchResultCandidates(page, keyword, type = "content") {
+  return page.evaluate(({searchKeyword, requestedType}) => {
     const normalizedKeyword = normalizeText(searchKeyword);
     const searchTokens = tokenize(normalizedKeyword);
+    const resultRoot = Array.from(
+      document.querySelectorAll(
+        "#clip_search_content #clip_item_row #clip_item_row_move_grid_ver_container"
+      )
+    ).find((candidate) => isVisibleSearchResultRoot(candidate));
+    if (!resultRoot) return [];
 
-    return Array.from(document.querySelectorAll("[id]"))
+    return Array.from(resultRoot.querySelectorAll("[id]"))
       .map((element) => {
         const rect = element.getBoundingClientRect();
         const style = getComputedStyle(element);
@@ -1424,6 +1594,11 @@ async function collectSearchResultCandidates(page, keyword) {
         };
         const label = Object.values(labelParts).join(" ").replace(/\s+/g, " ").trim();
         const normalizedLabel = normalizeText(label);
+        const detectedType = labelParts.channelName
+          ? "channel"
+          : labelParts.movieName || labelParts.vodName
+            ? "movie"
+            : "";
 
         return {
           id: element.id,
@@ -1431,6 +1606,7 @@ async function collectSearchResultCandidates(page, keyword) {
           label,
           labelParts,
           normalizedLabel,
+          type: detectedType,
           score: scoreMatch(label, normalizedLabel),
           rect: {
             x: Math.round(rect.x),
@@ -1441,7 +1617,7 @@ async function collectSearchResultCandidates(page, keyword) {
           visible:
             rect.width >= 120 &&
             rect.height >= 80 &&
-            rect.x >= 80 &&
+            rect.x >= 0 &&
             rect.y >= 80 &&
             style.display !== "none" &&
             style.visibility !== "hidden" &&
@@ -1451,7 +1627,17 @@ async function collectSearchResultCandidates(page, keyword) {
             !element.id.includes("keyboard"),
         };
       })
-      .filter((item) => item.visible && item.label && item.score > 0 && item.isSearchRow)
+      .filter((item) =>
+        item.visible &&
+        item.label &&
+        item.score > 0 &&
+        (item.isSearchRow || item.score >= 80) &&
+        (
+          requestedType === "content" ||
+          item.type === requestedType ||
+          (!item.type && item.score >= 80)
+        )
+      )
       .sort((a, b) => {
         if (a.row !== b.row) return a.row - b.row;
         if (a.score !== b.score) return b.score - a.score;
@@ -1507,7 +1693,31 @@ async function collectSearchResultCandidates(page, keyword) {
         .map((token) => token.trim())
         .filter((token) => token.length >= 2);
     }
-  }, keyword);
+
+    function isVisibleSearchResultRoot(element) {
+      if (!(element.textContent || "").trim()) return false;
+
+      let current = element;
+      while (current) {
+        const style = getComputedStyle(current);
+        if (
+          style.display === "none" ||
+          style.visibility === "hidden" ||
+          Number(style.opacity) === 0
+        ) return false;
+        current = current.parentElement;
+      }
+
+      const rect = element.getBoundingClientRect();
+      if (rect.width >= 1 && rect.height >= 1) return true;
+
+      return Array.from(element.querySelectorAll("*"))
+        .some((child) => {
+          const childRect = child.getBoundingClientRect();
+          return childRect.width >= 120 && childRect.height >= 80;
+        });
+    }
+  }, {searchKeyword: keyword, requestedType: type});
 }
 
 async function collectMovieSearchCandidates(page) {
@@ -1665,4 +1875,4 @@ function scoreWorkflowText(label, target) {
   return 0;
 }
 
-module.exports={getTestOptions,runStep,openAppAndEnterLoginPage,loginWithAccount,chooseFirstProfileAndEnterHome,closeHomePopupsAndVerifyHome,openSearchFromLeftMenu,openTelevisionFromLeftMenu,openMovieFromLeftMenu,openSettingFromLeftMenu,openServiceFromLeftMenuOrAllServices,openChannel,searchAndOpenBestContent,openMovieContent,openFirstMovieContent,playAllItemsInFirstRow,assertChannelPlayback:playback.assertChannelPlayback,assertMoviePlayback:playback.assertMoviePlayback,assertSearchContentPlayback:playback.assertSearchContentPlayback,attachCurrentAppScreenshot,__internal:{focusFirstRowStart,findServiceIdInAllServices,closeAdvertisePopupIfVisible,getVisiblePopup:playback.getVisiblePopup,chooseDirection:navigation.__internal.chooseDirection,waitForAppReady,waitForHomeReady,observeAppReadyState,observeHomeReadyState,observeVisibleContentRows,isValidFocusedState}};
+module.exports={getTestOptions,runStep,openAppAndEnterLoginPage,loginWithAccount,chooseFirstProfileAndEnterHome,closeHomePopupsAndVerifyHome,openSearchFromLeftMenu,searchContentByName,openTelevisionFromLeftMenu,openMovieFromLeftMenu,openSettingFromLeftMenu,openServiceFromLeftMenuOrAllServices,openChannel,searchAndOpenBestContent,openMovieContent,openFirstMovieContent,playAllItemsInFirstRow,playItemsInRow,playVisibleContentByName,playFocusedSearchResult,assertChannelPlayback:playback.assertChannelPlayback,assertMoviePlayback:playback.assertMoviePlayback,assertSearchContentPlayback:playback.assertSearchContentPlayback,attachCurrentAppScreenshot,__internal:{focusFirstRowStart,findServiceIdInAllServices,getServiceSearchNames,closeAdvertisePopupIfVisible,getVisiblePopup:playback.getVisiblePopup,chooseDirection:navigation.__internal.chooseDirection,waitForAppReady,waitForHomeReady,observeAppReadyState,observeHomeReadyState,observeVisibleContentRows,isValidFocusedState}};

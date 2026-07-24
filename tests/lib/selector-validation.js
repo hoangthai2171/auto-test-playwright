@@ -1,4 +1,4 @@
-const {getSelectorContract} = require("./selectors");
+const {getSelectorContract, FOCUS_SELECTORS} = require("./selectors");
 const {normalizeVietnameseText} = require("./text-utils");
 const {safeArtifactName} = require("./artifacts");
 
@@ -7,7 +7,6 @@ const DEFAULT_MATCH_OPTIONS = Object.freeze({
   margin: 10,
   maxAttempts: 2,
 });
-const FOCUS_SELECTOR = `.${getSelectorContract("focus").alternatives[0].classPatterns[0]}`;
 
 async function collectSelectorDiagnostics(page, {contractName, expectedId = "", expectedLabel = ""} = {}) {
   const contract = getSelectorContract(contractName);
@@ -151,9 +150,9 @@ async function verifyFocusedTarget(page, options = {}) {
   const focusedLabel = normalizeVietnameseText([focused.text, focused.label].filter(Boolean).join(" "));
   const targetLabel = normalizeVietnameseText(expectedLabel);
   const hasTargetIdentity = Boolean(expectedId || expectedLabel);
-  const focusedContainsCandidate = Boolean(candidate?.id) && await page.evaluate(({targetId, focusSelector}) => {
+  const focusedContainsCandidate = Boolean(candidate?.id) && await page.evaluate(({targetId, focusSelectors}) => {
     const target = document.getElementById(targetId);
-    const focused = document.querySelector(focusSelector);
+    const focused = findFocusedElement(focusSelectors);
     if (!target || !focused) return false;
     if (target === focused || target.contains(focused) || focused.contains(target)) return true;
 
@@ -168,7 +167,21 @@ async function verifyFocusedTarget(page, options = {}) {
       }
     }
     return false;
-  }, {targetId: candidate?.id, focusSelector: FOCUS_SELECTOR});
+
+    function findFocusedElement(selectors) {
+      for (const selector of selectors) {
+        const candidate = Array.from(document.querySelectorAll(selector)).find(isVisible);
+        if (candidate) return candidate;
+      }
+      return null;
+    }
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+    }
+  }, {targetId: candidate?.id, focusSelectors: FOCUS_SELECTORS});
   const idMatches = !expectedId || focused.id === expectedId || focused.id.includes(expectedId) || focusedContainsCandidate;
   const labelMatches = !targetLabel || fuzzyLabelMatch(focusedLabel, targetLabel) ||
     (focusedContainsCandidate && fuzzyLabelMatch(candidate?.normalizedLabel || "", targetLabel));
@@ -312,12 +325,8 @@ async function assertSelectorHealth(page, options = {}) {
 }
 
 async function getFocusedState(page) {
-  return page.evaluate((focusSelector) => {
-    const focused = Array.from(document.querySelectorAll(focusSelector)).find((element) => {
-      const rect = element.getBoundingClientRect();
-      const style = getComputedStyle(element);
-      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
-    });
+  return page.evaluate((focusSelectors) => {
+    const focused = findFocusedElement(focusSelectors);
     if (!focused) return {id: "", text: "", label: "", rect: {x: 0, y: 0, width: 0, height: 0}};
     const rect = focused.getBoundingClientRect();
     const text = (focused.textContent || "").replace(/\s+/g, " ").trim();
@@ -328,7 +337,20 @@ async function getFocusedState(page) {
       label: [text, parentText].filter(Boolean).join(" "),
       rect: {x: rect.x, y: rect.y, width: rect.width, height: rect.height},
     };
-  }, FOCUS_SELECTOR);
+    function findFocusedElement(selectors) {
+      for (const selector of selectors) {
+        const candidate = Array.from(document.querySelectorAll(selector)).find(isVisible);
+        if (candidate) return candidate;
+      }
+      return null;
+    }
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+    }
+  }, FOCUS_SELECTORS);
 }
 
 function fuzzyLabelMatch(value, target) {

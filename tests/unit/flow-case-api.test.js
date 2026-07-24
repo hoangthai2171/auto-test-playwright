@@ -40,6 +40,13 @@ test("builds encoded folder-case URL and uses the configured environment", () =>
   );
 });
 
+test("builds the flow-case result submission URL", () => {
+  assert.equal(
+    api.buildFlowCaseResultsUrl({apiDomain: "http://api.test/", projectId: "1"}),
+    "http://api.test/api/v1/projects/1/flow-cases/by-folder"
+  );
+});
+
 test("flattens nested folders while retaining each folder identity", () => {
   assert.deepEqual(api.flattenFlowCaseFolders([
     {id: "1", name: "Root", fullPath: "/Root", children: [
@@ -67,7 +74,34 @@ test("loads data-envelope folder responses", async () => {
   assert.deepEqual(result, {
     ok: true,
     folders: [{id: "1", name: "Root", fullPath: "/Root"}],
+    request: {
+      method: "GET",
+      url: "http://api.test/api/v1/projects/1/flow-case-folders",
+      headers: {Accept: "application/json"},
+      timeoutMs: 30000,
+    },
+    response: {
+      status: 200,
+      statusText: "",
+      body: {data: [{id: "1", name: "Root", fullPath: "/Root", children: []}]},
+    },
   });
+});
+
+test("sends the configured API authorization value as the Authorization header", async () => {
+  let receivedHeaders;
+  const result = await api.fetchFlowCaseFolders({
+    apiDomain: "http://api.test",
+    projectId: "1",
+    authorization: "  Bearer private-token  ",
+    fetchImpl: async (_url, {headers}) => {
+      receivedHeaders = headers;
+      return {ok: true, status: 200, json: async () => ({data: []})};
+    },
+  });
+
+  assert.equal(receivedHeaders.Authorization, "Bearer private-token");
+  assert.equal(result.request.headers.Authorization, "Bearer private-token");
 });
 
 test("reports an HTTP error without treating it as a timeout", async () => {
@@ -88,6 +122,13 @@ test("reports an HTTP error without treating it as a timeout", async () => {
     ok: false,
     message: "API request failed with HTTP 503: offline",
     timeout: false,
+    request: {
+      method: "GET",
+      url: "http://api.test/api/v1/projects/1/flow-cases/by-folder?folderName=%2FRoot&environment=UI",
+      headers: {Accept: "application/json"},
+      timeoutMs: 30000,
+    },
+    response: {status: 503, statusText: "Service Unavailable", body: {message: "offline"}},
   });
 });
 
@@ -105,5 +146,38 @@ test("reports an API timeout distinctly", async () => {
     ok: false,
     message: "API request timed out after 5 ms.",
     timeout: true,
+    request: {
+      method: "GET",
+      url: "http://api.test/api/v1/projects/1/flow-case-folders",
+      headers: {Accept: "application/json"},
+      timeoutMs: 5,
+    },
+    response: null,
   });
+});
+
+test("submits tested results with the required PATCH payload", async () => {
+  let request;
+  const testcases = [{
+    id: "12074",
+    status: "tested",
+    testResult: {status: "success", message: "Testcase chạy thành công.", passed: 1, failed: 0},
+  }];
+  const result = await api.submitFlowCaseResults({
+    apiDomain: "http://api.test",
+    projectId: "1",
+    folderPath: "/Boundary",
+    testcases,
+    fetchImpl: async (url, options) => {
+      request = {url, options};
+      return {ok: true, status: 200, statusText: "OK", json: async () => ({data: []})};
+    },
+  });
+
+  assert.equal(request.url, "http://api.test/api/v1/projects/1/flow-cases/by-folder");
+  assert.equal(request.options.method, "PATCH");
+  assert.equal(request.options.headers["Content-Type"], "application/json");
+  assert.deepEqual(JSON.parse(request.options.body), {folderPath: "/Boundary", testcases});
+  assert.deepEqual(result.request.body, {folderPath: "/Boundary", testcases});
+  assert.equal(result.response.status, 200);
 });

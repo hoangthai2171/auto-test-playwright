@@ -2,6 +2,7 @@ const {expect}=require("playwright/test");
 const {waitForPlayerReady}=require("./waits");
 
 const CLOSE_POPUP_TEXT=/^(Đóng|Huỷ|Hủy|Quay về|Quay về trang chủ)$/i;
+const PLAYER_PLAYBACK_WAIT_SECONDS=6;
 function safeArtifactName(value){return String(value).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"artifact";}
 async function assertChannelPlayback(page, testInfo, options) {
   await assertPlayback(page, testInfo, {
@@ -337,4 +338,4 @@ async function getPlayerState(page) {
 }
 
 
-module.exports={assertPlayback,assertChannelPlayback,assertMoviePlayback,assertSearchContentPlayback,getVisiblePopup,getPlayerState,inspectPlaybackAfterWait,waitForPlayerReady,safeArtifactName};
+module.exports={assertPlayback,assertChannelPlayback,assertMoviePlayback,assertSearchContentPlayback,getVisiblePopup,getPlayerState,inspectPlaybackAfterWait,waitForPlayerReady,safeArtifactName,PLAYER_PLAYBACK_WAIT_SECONDS};

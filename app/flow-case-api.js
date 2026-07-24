@@ -28,6 +28,10 @@ function buildFlowCasesUrl({apiDomain, projectId, folderName, environment}) {
   return url.toString();
 }
 
+function buildFlowCaseResultsUrl({apiDomain, projectId}) {
+  return `${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/flow-cases/by-folder`;
+}
+
 function flattenFlowCaseFolders(nodes, result = []) {
   if (!Array.isArray(nodes)) return result;
   nodes.forEach((node) => {
@@ -66,9 +70,28 @@ function responseMessage(response, body) {
   return detail || response.statusText || "Unknown error";
 }
 
-async function requestJson(url, {fetchImpl = globalThis.fetch, timeoutMs = DEFAULT_TIMEOUT_MS} = {}) {
+async function requestJson(url, {
+  method = "GET",
+  body,
+  authorization,
+  fetchImpl = globalThis.fetch,
+  timeoutMs = DEFAULT_TIMEOUT_MS,
+} = {}) {
   const controller = new AbortController();
   const duration = Number(timeoutMs) > 0 ? Number(timeoutMs) : DEFAULT_TIMEOUT_MS;
+  const hasBody = body !== undefined;
+  const authorizationValue = String(authorization ?? "").trim();
+  const request = {
+    method: String(method).toUpperCase(),
+    url,
+    headers: {
+      Accept: "application/json",
+      ...(hasBody ? {"Content-Type": "application/json"} : {}),
+      ...(authorizationValue ? {Authorization: authorizationValue} : {}),
+    },
+    timeoutMs: duration,
+    ...(hasBody ? {body} : {}),
+  };
   let timedOut = false;
   const timer = setTimeout(() => {
     timedOut = true;
@@ -77,59 +100,122 @@ async function requestJson(url, {fetchImpl = globalThis.fetch, timeoutMs = DEFAU
 
   try {
     const response = await fetchImpl(url, {
-      method: "GET",
-      headers: {Accept: "application/json"},
+      method: request.method,
+      headers: request.headers,
+      ...(hasBody ? {body: JSON.stringify(body)} : {}),
       signal: controller.signal,
     });
-    let body;
+    let responseBody;
     try {
-      body = await response.json();
+      responseBody = await response.json();
     } catch {
-      body = null;
+      responseBody = null;
     }
+
+    const responseDetails = {
+      status: response.status,
+      statusText: response.statusText || "",
+      body: responseBody,
+    };
 
     if (!response.ok) {
       return {
         ok: false,
-        message: `API request failed with HTTP ${response.status}: ${responseMessage(response, body)}`,
+        message: `API request failed with HTTP ${response.status}: ${responseMessage(response, responseBody)}`,
         timeout: false,
+        request,
+        response: responseDetails,
       };
     }
 
-    return {ok: true, body};
+    return {ok: true, body: responseBody, request, response: responseDetails};
   } catch (error) {
     if (timedOut) {
-      return {ok: false, message: `API request timed out after ${duration} ms.`, timeout: true};
+      return {
+        ok: false,
+        message: `API request timed out after ${duration} ms.`,
+        timeout: true,
+        request,
+        response: null,
+      };
     }
-    return {ok: false, message: `API request failed: ${error.message}`, timeout: false};
+    return {
+      ok: false,
+      message: `API request failed: ${error.message}`,
+      timeout: false,
+      request,
+      response: null,
+    };
   } finally {
     clearTimeout(timer);
   }
 }
 
-async function fetchFlowCaseFolders({apiDomain, projectId, timeoutMs, fetchImpl} = {}) {
-  const result = await requestJson(buildFlowCaseFoldersUrl({apiDomain, projectId}), {timeoutMs, fetchImpl});
+async function fetchFlowCaseFolders({apiDomain, projectId, authorization, timeoutMs, fetchImpl} = {}) {
+  const result = await requestJson(buildFlowCaseFoldersUrl({apiDomain, projectId}), {authorization, timeoutMs, fetchImpl});
   if (!result.ok) return result;
 
   try {
-    return {ok: true, folders: flattenFlowCaseFolders(extractList(result.body, ["folders", "data"]))};
+    return {
+      ok: true,
+      folders: flattenFlowCaseFolders(extractList(result.body, ["folders", "data"])),
+      request: result.request,
+      response: result.response,
+    };
   } catch (error) {
-    return {ok: false, message: error.message, timeout: false};
+    return {
+      ok: false,
+      message: error.message,
+      timeout: false,
+      request: result.request,
+      response: result.response,
+    };
   }
 }
 
-async function fetchFlowCases({apiDomain, projectId, folderName, environment, timeoutMs, fetchImpl} = {}) {
+async function fetchFlowCases({apiDomain, projectId, folderName, environment, authorization, timeoutMs, fetchImpl} = {}) {
   const result = await requestJson(
     buildFlowCasesUrl({apiDomain, projectId, folderName, environment}),
-    {timeoutMs, fetchImpl}
+    {authorization, timeoutMs, fetchImpl}
   );
   if (!result.ok) return result;
 
   try {
-    return {ok: true, cases: extractList(result.body, ["cases", "data"])};
+    return {
+      ok: true,
+      cases: extractList(result.body, ["cases", "data"]),
+      request: result.request,
+      response: result.response,
+    };
   } catch (error) {
-    return {ok: false, message: error.message, timeout: false};
+    return {
+      ok: false,
+      message: error.message,
+      timeout: false,
+      request: result.request,
+      response: result.response,
+    };
   }
+}
+
+async function submitFlowCaseResults({apiDomain, projectId, folderPath, testcases, authorization, timeoutMs, fetchImpl} = {}) {
+  const result = await requestJson(
+    buildFlowCaseResultsUrl({apiDomain, projectId}),
+    {
+      method: "PATCH",
+      body: {folderPath, testcases},
+      authorization,
+      timeoutMs,
+      fetchImpl,
+    }
+  );
+  if (!result.ok) return result;
+
+  return {
+    ok: true,
+    request: result.request,
+    response: result.response,
+  };
 }
 
 module.exports = {
@@ -140,7 +226,9 @@ module.exports = {
   normalizeTimeoutMs,
   buildFlowCaseFoldersUrl,
   buildFlowCasesUrl,
+  buildFlowCaseResultsUrl,
   flattenFlowCaseFolders,
   fetchFlowCaseFolders,
   fetchFlowCases,
+  submitFlowCaseResults,
 };

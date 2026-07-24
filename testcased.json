@@ -30,21 +30,20 @@
     ]
   },
   {
-    "id": "12065",
-    "name": "Vào trang chủ app",
-    "actions": [
-      {
-        "action": "login",
-        "username": "ts1",
-        "password": "111222"
-      },
-      {
-        "action": "open_home"
-      },
-      {
-        "action": "assert_screen",
-        "text": "Xem ngay"
-      }
-    ]
+    "id": "12067",
+    "projectId": "1",
+    "folderId": "24",
+    "slug": "case_mrol8f13",
+    "name": "Kiểm tra vào dịch vụ phim truyện",
+    "qaDescription": "B1. Đăng nhập tài khoản OPEN MAX 0913476477 pass 0913476477\nB2. Di chuyển đến dòng cate \"Thể loại\"\nB3. Focus vào mục \"Truyền hình\"\nB4. Bấm chọn OK\nB5. Di chuyển đến subcate \"HTV\"\nB6. Di chuyển focus vào poster kênh thứ 4 của dòng subcate \"HTV\"\nB7. Bấm chọn OK",
+
+    "platform": "tv",
+    "environment": "UI",
+    "preCondition": "Chưa đăng nhập tài khoản",
+    "expectedResult": "Play kênh thành công",
+    "category": "Auto test demo",
+    "status": "created",
+    "mode": "script",
+    "scriptVersion": 1
   }
 ]

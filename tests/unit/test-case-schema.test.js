@@ -57,9 +57,20 @@ test("requires id and name", () => {
 
 test("rejects malformed actions values", () => {
   assert.throws(
-    () => validateTestCaseList([{id: "null-actions", name: "Malformed", actions: null}]),
+    () => validateTestCaseList([{id: "malformed-actions", name: "Malformed", actions: {}}]),
     /actions must be an array/i
   );
+});
+
+test("normalizes null actions to the description fallback", () => {
+  const [testCase] = validateTestCaseList([{
+    id: "null-actions",
+    name: "Description fallback",
+    actions: null,
+    qaDescription: "B1. Vào trang chủ",
+  }]);
+
+  assert.deepEqual(testCase.actions, []);
 });
 
 test("requires actions or qaDescription", () => {
@@ -69,6 +80,10 @@ test("requires actions or qaDescription", () => {
   );
   assert.throws(
     () => validateTestCaseList([{id: "2", name: "empty actions", actions: []}]),
+    /actions.*qaDescription|qaDescription.*actions/i
+  );
+  assert.throws(
+    () => validateTestCaseList([{id: "3", name: "null actions", actions: null}]),
     /actions.*qaDescription|qaDescription.*actions/i
   );
 });
@@ -127,10 +142,88 @@ test("requires a service for open_service", () => {
   );
 });
 
+test("validates named playback actions", () => {
+  assert.deepEqual(
+    validateAction({action: "play_content", name: "VTV1 HD", type: "channel"}),
+    {action: "play_content", name: "VTV1 HD", type: "channel"}
+  );
+  assert.deepEqual(
+    validateAction({action: "play_row", rowIndex: 2, count: 3}),
+    {action: "play_row", rowIndex: 2, count: 3}
+  );
+  assert.deepEqual(
+    validateAction({action: "play_row", rowName: "Phim song song"}),
+    {action: "play_row", rowName: "Phim song song"}
+  );
+});
+
+test("validates global search actions", () => {
+  assert.deepEqual(validateAction({action: "open_search"}), {action: "open_search"});
+  assert.deepEqual(
+    validateAction({action: "search_content", name: "Căn phòng tử thần", type: "movie"}),
+    {action: "search_content", name: "Căn phòng tử thần", type: "movie"}
+  );
+  assert.deepEqual(
+    validateAction({action: "play_search_result", type: "movie"}),
+    {action: "play_search_result", type: "movie"}
+  );
+  assert.deepEqual(
+    validateAction({action: "play_search_result"}),
+    {action: "play_search_result"}
+  );
+});
+
+test("rejects malformed playback action targets", () => {
+  assert.throws(
+    () => validateAction({action: "play_content", name: "VTV1 HD", type: "series"}),
+    /type.*channel.*movie.*content/i
+  );
+  assert.throws(
+    () => validateAction({action: "play_row", rowIndex: 0}),
+    /rowIndex.*positive.*1-based/i
+  );
+  assert.throws(
+    () => validateAction({action: "play_row", rowIndex: 1, rowName: "VTV"}),
+    /exactly one.*rowIndex.*rowName/i
+  );
+  assert.throws(
+    () => validateAction({action: "play_row", rowName: "VTV", count: 0}),
+    /count.*positive/i
+  );
+});
+
 test("requires text for assert_screen", () => {
   assert.throws(
     () => validateAction({ action: "assert_screen", text: "" }),
     /text/i
+  );
+});
+
+test("validates the named focus and remote OK actions", () => {
+  assert.deepEqual(
+    validateAction({action: "focus_row", rowName: "Thịnh hành"}),
+    {action: "focus_row", rowName: "Thịnh hành"}
+  );
+  assert.deepEqual(
+    validateAction({action: "focus_row", rowName: "HTV", itemIndex: 4}),
+    {action: "focus_row", rowName: "HTV", itemIndex: 4}
+  );
+  assert.deepEqual(
+    validateAction({action: "focus_text", text: "Xem ngay"}),
+    {action: "focus_text", text: "Xem ngay"}
+  );
+  assert.deepEqual(validateAction({action: "press_ok"}), {action: "press_ok"});
+  assert.throws(
+    () => validateAction({action: "focus_text", text: ""}),
+    /text.*non-empty/i
+  );
+  assert.throws(
+    () => validateAction({action: "focus_row", rowName: ""}),
+    /rowName.*non-empty/i
+  );
+  assert.throws(
+    () => validateAction({action: "focus_row", rowName: "HTV", itemIndex: 0}),
+    /itemIndex.*positive.*1-based/i
   );
 });
 

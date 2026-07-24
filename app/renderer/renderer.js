@@ -8,9 +8,14 @@ function maskActionForDisplay(action) {
 
 function redactSensitiveText(value) {
     return String(value ?? "")
+        .replace(/("(?:password|api_authorization|authorization|token|secret)"\s*:\s*")[^"]*(")/gi, "$1••••••$2")
         .replace(/((?:tài khoản|tai khoan|username|user)\s*[=:]?\s*[^\/\s,;:]+)\s*\/\s*([^\s]+)/gi, "$1/••••••")
-        .replace(/((?:mật khẩu|mat khau|password)\s*[=:]?\s*)([^\s]+)/gi, "$1••••••")
-        .replace(/("password"\s*:\s*")[^"]*(")/gi, "$1••••••$2");
+        .replace(/((?:mật khẩu|mat khau|password)\s*[=:]?\s*)([^\s]+)/gi, "$1••••••");
+}
+
+function formatGmtPlusSevenTimestamp(date = new Date()) {
+    const offsetMs = 7 * 60 * 60 * 1000;
+    return new Date(date.getTime() + offsetMs).toISOString().slice(0, 19).replace("T", " ");
 }
 
 function normalizeSearchText(value) {
@@ -47,6 +52,7 @@ function validateRunValues(values) {
 const DEFAULT_SETTINGS = {
     APP_URL: "https://html5stage.mytv.vn/",
     API_DOMAIN: "http://172.16.240.254:30100",
+    API_AUTHORIZATION: "",
     PROJECT_ID: "1",
     ENVIRONMENT: "UI",
     API_TIMEOUT_SECONDS: "30",
@@ -66,6 +72,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const apiLoadingOverlay = get("api-loading-overlay");
     const settingsAppUrlInput = get("settings-app-url-input");
     const apiDomainInput = get("api-domain-input");
+    const apiAuthorizationInput = get("api-authorization-input");
     const projectIdInput = get("project-id-input");
     const environmentSelect = get("environment-select");
     const apiTimeoutInput = get("api-timeout-input");
@@ -103,8 +110,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     let browserMuted = true;
     let settings = {...DEFAULT_SETTINGS};
     let activeFolderId = "";
+    let activeFolderPath = "";
     const foldersByPath = new Map();
     let apiRequestDepth = 0;
+    let activeRunnerLog = null;
     const blockApiInteraction = (event) => {
         event.preventDefault?.();
         event.stopPropagation?.();
@@ -120,6 +129,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         settings = {
             ...DEFAULT_SETTINGS,
             ...saved,
+            API_AUTHORIZATION: String(saved.API_AUTHORIZATION ?? DEFAULT_SETTINGS.API_AUTHORIZATION).trim(),
             ENVIRONMENT: ["API", "UI"].includes(saved.ENVIRONMENT) ? saved.ENVIRONMENT : DEFAULT_SETTINGS.ENVIRONMENT,
             API_TIMEOUT_SECONDS: Number(saved.API_TIMEOUT_SECONDS) > 0
                 ? String(saved.API_TIMEOUT_SECONDS)
@@ -131,6 +141,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         activePreviewType = settings.PREVIEW_TYPE;
         if (settingsAppUrlInput) settingsAppUrlInput.value = settings.APP_URL;
         if (apiDomainInput) apiDomainInput.value = settings.API_DOMAIN;
+        if (apiAuthorizationInput) apiAuthorizationInput.value = settings.API_AUTHORIZATION;
         if (projectIdInput) projectIdInput.value = settings.PROJECT_ID;
         if (environmentSelect) environmentSelect.value = settings.ENVIRONMENT;
         if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
@@ -145,6 +156,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             ...settings,
             APP_URL: settingsAppUrlInput?.value?.trim() || settings.APP_URL,
             API_DOMAIN: apiDomainInput?.value?.trim() || settings.API_DOMAIN,
+            API_AUTHORIZATION: apiAuthorizationInput?.value?.trim() || "",
             PROJECT_ID: projectIdInput?.value?.trim() || settings.PROJECT_ID,
             ENVIRONMENT: ["API", "UI"].includes(environmentSelect?.value)
                 ? environmentSelect.value
@@ -188,13 +200,114 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         formMessage.classList.toggle("hidden", !message);
     }
 
-    function appendLog(value) {
-        if (!logOutput) return;
-        logOutput.textContent += redactSensitiveText(value);
-        logOutput.scrollTop = logOutput.scrollHeight;
+    function updateLogEntryOverflow(entry, content) {
+        const scrollHeight = Number(content?.scrollHeight);
+        const clientHeight = Number(content?.clientHeight);
+        if (!Number.isFinite(scrollHeight) || !Number.isFinite(clientHeight) || clientHeight <= 0) return;
+
+        const isCollapsible = scrollHeight > clientHeight + 1;
+        entry.classList.toggle("is-collapsible", isCollapsible);
+        if (!isCollapsible) entry.classList.remove("is-expanded");
+        entry.setAttribute("aria-expanded", String(!isCollapsible || entry.classList.contains("is-expanded")));
+        if (isCollapsible) {
+            entry.setAttribute("role", "button");
+            entry.setAttribute("tabindex", "0");
+        } else {
+            entry.removeAttribute("role");
+            entry.removeAttribute("tabindex");
+        }
+    }
+
+    function appendLog(value, label = "Runner", {preserveWhitespace = false} = {}) {
+        if (!logOutput || !doc?.createElement) return;
+
+        const entry = doc.createElement("article");
+        entry.className = "log-entry";
+        const header = doc.createElement("header");
+        header.className = "log-entry-header";
+        const timestamp = formatGmtPlusSevenTimestamp();
+        const time = doc.createElement("time");
+        time.className = "log-entry-timestamp";
+        time.dateTime = `${timestamp.replace(" ", "T")}+07:00`;
+        time.textContent = timestamp;
+        const entryLabel = doc.createElement("span");
+        entryLabel.className = "log-entry-label";
+        entryLabel.textContent = label;
+        const expandHint = doc.createElement("span");
+        expandHint.className = "log-entry-expand-hint";
+        expandHint.textContent = "Expand";
+        header.append(time, entryLabel, expandHint);
+
+        const content = doc.createElement("pre");
+        content.className = "log-entry-content";
+        const text = redactSensitiveText(value);
+        content.textContent = preserveWhitespace ? text : text.trim();
+        entry.append(header, content);
+        const toggleExpanded = () => {
+            if (!entry.classList.contains("is-collapsible")) return;
+            const expanded = entry.classList.toggle("is-expanded");
+            entry.setAttribute("aria-expanded", String(expanded));
+        };
+        entry.addEventListener("click", toggleExpanded);
+        entry.addEventListener("keydown", (event) => {
+            if (event.key !== "Enter" && event.key !== " ") return;
+            event.preventDefault?.();
+            toggleExpanded();
+        });
+        content.addEventListener("click", (event) => {
+            if (entry.classList.contains("is-expanded")) event.stopPropagation?.();
+        });
+        logOutput.prepend(entry);
+        updateLogEntryOverflow(entry, content);
+        win?.requestAnimationFrame?.(() => updateLogEntryOverflow(entry, content));
+        logOutput.scrollTop = 0;
+        return {entry, content};
+    }
+
+    function appendRunnerLog(value) {
+        if (!value) return;
+        activeRunnerLog ||= appendLog("", "Playwright runner output", {preserveWhitespace: true});
+        const runnerLog = activeRunnerLog;
+        runnerLog.content.textContent += redactSensitiveText(value);
+        updateLogEntryOverflow(runnerLog.entry, runnerLog.content);
+        win?.requestAnimationFrame?.(() =>
+            updateLogEntryOverflow(runnerLog.entry, runnerLog.content)
+        );
+        logOutput.scrollTop = 0;
+    }
+
+    function refreshLogEntryOverflows() {
+        logOutput?.querySelectorAll?.(".log-entry").forEach((entry) => {
+            updateLogEntryOverflow(entry, entry.querySelector(".log-entry-content"));
+        });
+    }
+
+    function formatLogDetails(value) {
+        try {
+            return JSON.stringify(value, null, 2);
+        } catch {
+            return String(value ?? "");
+        }
+    }
+
+    function appendApiRequestLog(operation, request) {
+        appendLog(formatLogDetails(request), `[API] ${operation} request`);
+    }
+
+    function appendApiResponseLog(operation, response) {
+        const details = response?.apiLog;
+        const result = {
+            ok: Boolean(response?.ok),
+            message: response?.message || "",
+            timeout: Boolean(response?.timeout),
+            request: details?.request || null,
+            response: details?.response || null,
+        };
+        appendLog(formatLogDetails(result), `[API] ${operation} response`);
     }
 
     function clearLog() {
+        activeRunnerLog = null;
         if (logOutput) logOutput.textContent = "";
     }
 
@@ -402,6 +515,13 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         try {
             const response = await api.loadTestCases();
             if (!response?.ok) throw new Error(response?.message || "Không thể tải test cases.");
+            if (response.source === "cache" && response.folder?.id !== undefined) {
+                activeFolderId = String(response.folder.id);
+                activeFolderPath = String(response.folder.fullPath || "");
+            } else {
+                activeFolderId = "";
+                activeFolderPath = "";
+            }
             renderCaseList(response.cases || []);
             return response;
         } catch (error) {
@@ -421,7 +541,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     function renderFolders(nextFolders = []) {
         foldersByPath.clear();
-        const selectedPath = folderSelect?.value || "";
+        const selectedPath = activeFolderPath || folderSelect?.value || "";
         if (!folderSelect) return;
         folderSelect.replaceChildren();
         const placeholder = doc.createElement("option");
@@ -446,9 +566,15 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     }
 
     async function loadFolders() {
+        appendApiRequestLog("Load flow-case folders", {
+            apiDomain: currentSettings().API_DOMAIN,
+            projectId: currentSettings().PROJECT_ID,
+            timeoutSeconds: currentSettings().API_TIMEOUT_SECONDS,
+        });
         beginApiRequest();
         try {
             const response = await api.loadFlowCaseFolders(currentSettings());
+            appendApiResponseLog("Load flow-case folders", response);
             if (!response?.ok) {
                 showApiError(response);
                 return response;
@@ -457,6 +583,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             return response;
         } catch (error) {
             const response = {ok: false, message: error.message, timeout: Boolean(error.timeout)};
+            appendApiResponseLog("Load flow-case folders", response);
             showApiError(response);
             return response;
         } finally {
@@ -472,24 +599,29 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             return {ok: false, message: "Please select a folder first."};
         }
 
+        const request = {
+            ...currentSettings(),
+            FOLDER_ID: String(selectedFolder.id),
+            FOLDER_NAME: selectedFolder.fullPath,
+            FOLDER_NAME_LABEL: selectedFolder.name,
+        };
+        appendApiRequestLog("Load flow cases", request);
         beginApiRequest();
         try {
-            const response = await api.loadFlowCases({
-                ...currentSettings(),
-                FOLDER_ID: String(selectedFolder.id),
-                FOLDER_NAME: selectedFolder.fullPath,
-                FOLDER_NAME_LABEL: selectedFolder.name,
-            });
+            const response = await api.loadFlowCases(request);
+            appendApiResponseLog("Load flow cases", response);
             if (!response?.ok) {
                 showApiError(response);
                 return response;
             }
             activeFolderId = String(response.folder?.id ?? selectedFolder.id);
+            activeFolderPath = String(response.folder?.fullPath ?? selectedFolder.fullPath);
             renderCaseList(response.cases || []);
             setFormMessage(`Loaded ${response.cases?.length || 0} test cases.`, "ok");
             return response;
         } catch (error) {
             const response = {ok: false, message: error.message, timeout: Boolean(error.timeout)};
+            appendApiResponseLog("Load flow cases", response);
             showApiError(response);
             return response;
         } finally {
@@ -556,6 +688,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         settings = {
             APP_URL: settingsAppUrlInput?.value?.trim() || DEFAULT_SETTINGS.APP_URL,
             API_DOMAIN: apiDomainInput?.value?.trim() || DEFAULT_SETTINGS.API_DOMAIN,
+            API_AUTHORIZATION: apiAuthorizationInput?.value?.trim() || "",
             PROJECT_ID: projectIdInput?.value?.trim() || DEFAULT_SETTINGS.PROJECT_ID,
             ENVIRONMENT: ["API", "UI"].includes(environmentSelect?.value) ? environmentSelect.value : DEFAULT_SETTINGS.ENVIRONMENT,
             API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
@@ -604,7 +737,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         try {
             await preparePreview(payload);
             const response = await api.runTest(payload);
-            if (response?.initialLog) appendLog(response.initialLog);
+            activeRunnerLog = null;
+            if (response?.initialLog) appendRunnerLog(response.initialLog);
             if (!response?.ok) {
                 activeCompletion = null;
                 appendLog(`${response?.message || "Failed to start"}\n`);
@@ -618,7 +752,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             renderCaseStatus(testCaseId, passed ? "passed" : "failed");
             appendLog(`\n${testCaseId}: ${passed ? "Passed" : "Failed"}\n`);
             resetBrowserPreview();
-            return {passed, stopped: Boolean(result?.stopped)};
+            return {
+                passed,
+                started: true,
+                stopped: Boolean(result?.stopped),
+                executionResult: result,
+            };
         } catch (error) {
             activeCompletion = null;
             renderCaseStatus(testCaseId, "failed");
@@ -643,10 +782,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         ids.forEach((id) => renderCaseStatus(id, ""));
         setFormRunning(true);
         setStatus("running", "Running");
+        if (typeof api.startReport === "function") await api.startReport();
         let completed = 0;
         let failed = 0;
         let skipped = 0;
         let stopped = false;
+        const caseRuns = [];
 
         try {
             for (const id of ids) {
@@ -657,6 +798,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 }
 
                 const result = await runSingleCase(id, values, currentBatch);
+                caseRuns.push({id, result});
                 if (result.passed) completed += 1;
                 else failed += 1;
                 if (result.stopped) {
@@ -666,13 +808,71 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             }
         } finally {
             batchState = null;
-            setFormRunning(false);
         }
 
         const summary = `Completed: ${completed}, Failed: ${failed}, Skipped: ${skipped}`;
         setStatus(failed > 0 || stopped ? "failed" : "passed", failed > 0 || stopped ? "Failed" : "Passed");
+        const allSelectedCasesRan =
+            !stopped &&
+            skipped === 0 &&
+            caseRuns.length === ids.length &&
+            caseRuns.every(({result}) => result.started && !result.stopped);
+        let resultSubmission;
+
+        if (allSelectedCasesRan && values.FLOW_CASE_RESULT_CONTEXT) {
+            const submission = buildFlowCaseResultSubmission(values.FLOW_CASE_RESULT_CONTEXT, caseRuns);
+            appendApiRequestLog("Send flow-case results", submission);
+            try {
+                resultSubmission = await api.submitFlowCaseResults?.(submission);
+                appendApiResponseLog("Send flow-case results", resultSubmission);
+                if (!resultSubmission?.ok) {
+                    throw new Error(resultSubmission?.message || "Failed to send flow-case results.");
+                }
+            } catch (error) {
+                const message = `Failed to send flow-case results: ${error.message}`;
+                appendLog(`${message}\n`);
+                setFormMessage(`${summary}. ${message}`, "error");
+                setFormRunning(false);
+                return {completed, failed, skipped, stopped, resultSubmission: {ok: false, message: error.message}};
+            }
+        }
+
+        setFormRunning(false);
         setFormMessage(summary, failed > 0 || stopped ? "error" : "ok");
-        return {completed, failed, skipped, stopped};
+        return {completed, failed, skipped, stopped, resultSubmission};
+    }
+
+    function buildFlowCaseResultSubmission(context, caseRuns) {
+        return {
+            API_DOMAIN: context.API_DOMAIN,
+            API_AUTHORIZATION: context.API_AUTHORIZATION,
+            PROJECT_ID: context.PROJECT_ID,
+            API_TIMEOUT_SECONDS: context.API_TIMEOUT_SECONDS,
+            FOLDER_PATH: context.FOLDER_PATH,
+            testcases: caseRuns.map(({id, result}) => buildFlowCaseResult(id, result)),
+        };
+    }
+
+    function buildFlowCaseResult(testCaseId, run) {
+        const passed = Boolean(run.passed);
+        const failedStepMessage = run.executionResult?.caseResult?.steps
+            ?.find((step) => step?.status === "failed" && step.message)
+            ?.message;
+        const message = passed
+            ? "Testcase chạy thành công."
+            : String(failedStepMessage || run.executionResult?.message || "Testcase chạy thất bại.");
+
+        return {
+            id: testCaseId,
+            status: "tested",
+            testResult: {
+                status: passed ? "success" : "failed",
+                message,
+                passed: passed ? 1 : 0,
+                failed: passed ? 0 : 1,
+                finishedAt: new Date().toISOString(),
+            },
+        };
     }
 
     async function handleSubmit(event) {
@@ -685,6 +885,15 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             PREVIEW_TYPE: activePreviewType,
         };
         if (activeFolderId) values.TEST_CASE_FOLDER_ID = activeFolderId;
+        if (activeFolderId && activeFolderPath) {
+            values.FLOW_CASE_RESULT_CONTEXT = {
+                API_DOMAIN: runSettings.API_DOMAIN,
+                API_AUTHORIZATION: runSettings.API_AUTHORIZATION,
+                PROJECT_ID: runSettings.PROJECT_ID,
+                API_TIMEOUT_SECONDS: runSettings.API_TIMEOUT_SECONDS,
+                FOLDER_PATH: activeFolderPath,
+            };
+        }
         await runSelectedCases(values);
     }
 
@@ -767,6 +976,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     get("logs-button")?.addEventListener?.("click", async () => {
         await suspendInteractiveBrowserForModal();
         openModal(logsModal);
+        refreshLogEntryOverflows();
+        win?.requestAnimationFrame?.(refreshLogEntryOverflows);
     });
     get("settings-close-button")?.addEventListener?.("click", async () => {
         closeModal(settingsModal);
@@ -803,7 +1014,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         setFormRunning(true);
         setStatus("running", "Running");
     });
-    api.onLog?.((line) => appendLog(line));
+    api.onLog?.((line) => appendRunnerLog(line));
     api.onPreview?.((dataUrl) => {
         if (activePreviewType !== "live") return;
         if (!dataUrl) return resetBrowserPreview();
@@ -812,7 +1023,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         browserPreviewEmpty.classList.add("hidden");
     });
     api.onFinished?.((result) => {
-        if (resolveActiveCompletion(result)) return;
+        if (resolveActiveCompletion(result)) {
+            activeRunnerLog = null;
+            return;
+        }
+        activeRunnerLog = null;
         setFormRunning(false);
         setStatus(result.code === 0 ? "passed" : "failed", result.code === 0 ? "Passed" : "Failed");
         appendLog(`\nFinished with code ${result.code}\n`);

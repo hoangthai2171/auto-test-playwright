@@ -26,6 +26,7 @@ Electron application.
 
 ```text
 testcased.json                  Read-only local server-shaped fixture
+ACTION-COMPILER.md              Server-side qaDescription-to-actions guide
 app/
   main.js                       Electron main process and test-case runner IPC
   preload.js                    Safe IPC bridge
@@ -57,10 +58,12 @@ playwright.config.js
 
 ## Run With the Electron Case Browser
 
-The app starts with `testcased.json` as a local fallback. API-loaded cases are
-downloaded from the configured flow-case folder, validated, and stored in the
-Electron user-data cache at `<userData>/testcases-cache.json`, keyed by folder
-ID. Downloading the same folder again replaces only that folder's cache entry.
+The app restores the most recently downloaded API folder at startup. API-loaded
+cases are downloaded from the configured flow-case folder, validated, and stored
+in the Electron user-data cache at `<userData>/testcases-cache.json`, keyed by
+folder ID and timestamped. Downloading the same folder again replaces only that
+folder's cache entry. `testcased.json` is used only as the local fallback when
+no cached API folder is available.
 
 1. Add or update server-shaped cases in `testcased.json`.
 2. Start the desktop runner:
@@ -69,12 +72,14 @@ ID. Downloading the same folder again replaces only that folder's cache entry.
    npm run app:dev
    ```
 
-3. Open Settings and configure `APP_URL`, API domain, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save.
+3. Open Settings and configure `APP_URL`, API domain, optional API Authorize value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. The authorization value is sent verbatim in the `Authorization` header for all flow-case API requests and is redacted from Logs.
 4. Select a folder in the sidebar and click `Get test cases`; use the refresh icon to reload the folder tree.
 5. Search by case ID substring or name with the instant filter, then check one or more visible cases in the table.
 6. Use `Detail` to review metadata, expected result, and normalized actions.
 7. Click `Run Selected (N)` and watch the cases execute sequentially in the logs and optional browser preview.
-8. Open the Playwright report after the batch finishes.
+8. Open the test report after the batch finishes. Use `Details` for any test to
+   see its expected result; passed tests also show their final viewport
+   screenshot, while failed tests show the failed item name, poster, and screenshot.
 
 The renderer captures checked case IDs in table order and sends one
 `TEST_CASE_ID`, `APP_URL`, preview-settings, and active folder ID at a time to
@@ -84,7 +89,33 @@ failures show an alert and leave the existing list/cache untouched. The main
 process validates each ID from the selected folder cache, then starts the
 generic spec `tests/run-test-case-mytv.spec.js`. The renderer waits for each
 process to finish, records its row status, and continues after a pass or
-failure.
+failure. When every checked API-loaded case has completed, it sends one
+`PATCH /api/v1/projects/{projectId}/flow-cases/by-folder` request with the
+selected folder path and each case's `tested` lifecycle status plus its
+`testResult`. A stopped, skipped, local-fixture, or failed-to-launch batch is
+not submitted partially.
+
+Player checks wait for normal playback using the configured default, capture the
+player screen for the report, then return with Back before the next non-player
+step or test completion. A final player check waits two seconds after Back so
+watching-session teardown API calls can finish; player-check failures retain the
+player-screen capture in the compact report.
+
+Each generic case invokes the trusted app global `window.processLogOut` after
+execution, including failed cases. The cleanup is awaited and is isolated from
+the shared legacy session fixture.
+
+If login displays the device-limit popup, the workflow detects its message and
+remotely selects `Tiếp tục` before continuing to profile selection. The four
+supported dialog families (`#dialog_confirm_v2`, `#dialog_alert_v2`,
+`#dialog_alert_full`, and `#dialog_confirm_full`) report their active button
+with `.active`; normal controls report focus with `.focused`.
+
+Recognized `expectedResult` values are checked after all declared actions. Play
+or Phát success wording waits six seconds, then verifies a healthy playing player; service-screen
+success wording verifies either left-menu/all-services navigation or the Home
+“Thể loại” row route (`focus_row`, `focus_text`, `press_ok`) without requiring
+the service name to appear on the destination screen.
 
 ### Case execution contract
 
@@ -93,17 +124,31 @@ initial action vocabulary is:
 
 - `login`
 - `open_home`
+- `focus_row`
+- `focus_row_first_item`
+- `focus_text`
+- `press_ok`
 - `open_service`
+- `open_search`
+- `search_content`
+- `play_content`
+- `play_search_result`
+- `play_row`
 - `assert_screen`
 - `press_back`
 - `wait_for_ready`
 
-If a case has no explicit actions, `test-case-compiler.js` supports a small,
-deterministic subset of `qaDescription`: login with a literal account, enter
-home, open a named service, press back, and wait for the known app/home/content
-or player readiness states. Unsupported or ambiguous lines fail with the case
-ID and original source line. The compiler is a migration fallback, not a
-general natural-language executor.
+`focus_row` requires a `rowName` and normally focuses its first visible item.
+For a numbered poster, provide a positive 1-based `itemIndex`, for example
+`{"action":"focus_row","rowName":"HTV","itemIndex":4}`.
+
+Server responses should transpile `qaDescription` into explicit `actions`
+before they reach the app. See [ACTION-COMPILER.md](ACTION-COMPILER.md) for the
+grammar, normalization rules, output shapes, and failure behavior. If a case
+still has no explicit actions, `test-case-compiler.js` provides the same
+deterministic grammar as a migration fallback. Unsupported or ambiguous lines
+fail with the case ID and original source line; it is not a general
+natural-language executor.
 
 Case login actions may contain literal test credentials because different
 cases can use different accounts. Treat `testcased.json` as sensitive runtime
@@ -114,9 +159,31 @@ generated from the source case, so report folders also require appropriate
 access control.
 
 The local fixture remains available when no API folder has been downloaded.
-Successful API responses are validated before an atomic cache replacement, and
-the generic executor uses the same action handlers for either local or cached
-cases.
+Successful API responses are validated before an atomic, timestamped cache
+replacement, and the generic executor uses the same action handlers for either
+local or cached cases.
+
+Playback actions use only content currently visible in the TV page's rows:
+
+```json
+{"action":"play_content","name":"VTV1 HD","type":"channel"}
+{"action":"play_content","name":"Dune","type":"movie"}
+{"action":"open_search"}
+{"action":"search_content","name":"Căn phòng tử thần","type":"movie"}
+{"action":"play_search_result","type":"movie"}
+{"action":"play_row","rowIndex":2,"count":3}
+{"action":"play_row","rowName":"Phim song song"}
+```
+
+`play_content` verifies the selected item is playing. `play_row` opens each
+item, waits for playback, returns to the row, and continues after individual
+failures. Its `rowIndex` is 1-based; omit `count` to request all items. The
+row playback JSON/HTML report includes the name and poster of each attempted item,
+including failed items.
+
+search_content uses the on-screen virtual keyboard, activates #callSearch,
+waits three seconds, then focuses the best fuzzy match in the visible
+search-result rows. play_search_result plays that focused result.
 
 Reports created by the packaged app are written to the Electron user-data
 folder, not inside the application bundle.
@@ -219,8 +286,10 @@ Development runs use `.playwright-browsers/` from the project root.
 Terminal runs use the Playwright HTML reporter configured in
 `playwright.config.js`. Failure artifacts can include screenshots, popup text,
 player state, focus state, and search or movie candidate details. Electron runs
-store reports and test output under Electron `userData` and expose report
-controls in the UI.
+show a compact test report from `userData/user-report/test-report.html`,
+whose `Details` rows show the expected result and final viewport screenshot for
+passed tests; the full Playwright HTML report remains under
+`userData/playwright-report` for debugging.
 
 ## Common Issues
 

@@ -117,6 +117,10 @@ function createScopedDomScanner(page) {
             rect.height <= (geometry.maxHeight ?? Number.MAX_SAFE_INTEGER) &&
             rect.x >= (geometry.minX ?? 0) &&
             rect.y >= (geometry.minY ?? 0) &&
+            rect.right > 0 &&
+            rect.bottom > 0 &&
+            rect.left < (window.innerWidth || Number.MAX_SAFE_INTEGER) &&
+            rect.top < (window.innerHeight || Number.MAX_SAFE_INTEGER) &&
             style.display !== "none" &&
             style.visibility !== "hidden" &&
             Number(style.opacity) !== 0 &&

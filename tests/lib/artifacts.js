@@ -1,4 +1,5 @@
 const {test}=require("playwright/test");
+const {normalizeVietnameseText}=require("./text-utils");
 
 const dependencies={getFocusedState:async()=>null,collectMovieSearchCandidates:async()=>[],collectSearchResultCandidates:async()=>[]};
 function configureArtifacts(next={}){Object.assign(dependencies,next);return module.exports;}
@@ -18,10 +19,16 @@ async function runStep(page, testInfo, title, action) {
 }
 
 async function attachCurrentAppScreenshot(page, testInfo, name) {
+  await captureCurrentAppScreenshot(page, testInfo, name);
+}
+
+async function captureCurrentAppScreenshot(page, testInfo, name) {
+  const image = await page.screenshot({ fullPage: false });
   await testInfo.attach(`${safeArtifactName(name)}.png`, {
-    body: await page.screenshot({ fullPage: false }),
+    body: image,
     contentType: "image/png",
   });
+  return imageDataUrl(image);
 }
 
 async function attachMovieSearchFailureArtifacts(page, testInfo, movieName, error) {
@@ -128,7 +135,7 @@ function renderPlaybackResultsHtml(results) {
         <tr>
           <td>${escapeHtml(String(item.index))}</td>
           <td>${item.poster ? `<img class="poster" src="${escapeHtml(item.poster)}" alt="" />` : ""}</td>
-          <td>${escapeHtml(item.title)}</td>
+          <td>${escapeHtml(item.name || item.title)}</td>
           <td class="${item.status === "playable" ? "ok" : "failed"}">${escapeHtml(item.status)}</td>
           <td>${renderPlaybackErrorCell(item)}</td>
         </tr>`
@@ -183,7 +190,7 @@ function renderPlaybackErrorCell(item) {
       ${errorText ? `<div class="error-text">${escapeHtml(errorText)}</div>` : ""}
       ${
         screenshot
-          ? `<img class="error-screenshot" src="${escapeHtml(screenshot)}" alt="${escapeHtml(`Screenshot lỗi ${item.title}`)}" />`
+          ? `<img class="error-screenshot" src="${escapeHtml(screenshot)}" alt="${escapeHtml(`Screenshot lỗi ${item.name || item.title}`)}" />`
           : ""
       }
       ${screenshotName ? `<div class="error-screenshot-caption">${escapeHtml(screenshotName)}</div>` : ""}
@@ -204,4 +211,4 @@ function escapeHtml(value) {
 }
 
 
-module.exports={configureArtifacts,runStep,attachCurrentAppScreenshot,attachMovieSearchFailureArtifacts,attachSearchNoResultArtifacts,attachFailureArtifacts,attachFirstRowPlaybackReport,renderPlaybackResultsHtml,renderPlaybackErrorCell,imageDataUrl,escapeHtml,safeArtifactName};
+module.exports={configureArtifacts,runStep,attachCurrentAppScreenshot,captureCurrentAppScreenshot,attachMovieSearchFailureArtifacts,attachSearchNoResultArtifacts,attachFailureArtifacts,attachFirstRowPlaybackReport,renderPlaybackResultsHtml,renderPlaybackErrorCell,imageDataUrl,escapeHtml,safeArtifactName};

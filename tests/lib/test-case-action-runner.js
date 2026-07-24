@@ -2,6 +2,10 @@ const { compileTestCase } = require("./test-case-compiler");
 const { expect } = require("playwright/test");
 const workflows = require("./workflows");
 const { normalizeVietnameseText } = require("./text-utils");
+const { PLAYER_PLAYBACK_WAIT_SECONDS } = require("./playback");
+const { captureCurrentAppScreenshot } = require("./artifacts");
+
+const PLAYER_RETURN_DELAY_MS = 2000;
 
 function attachJson(testInfo, name, value) {
   if (!testInfo || typeof testInfo.attach !== "function") return Promise.resolve();
@@ -18,6 +22,30 @@ function actionName(action) {
 
 function errorMessage(error) {
   return error && error.message ? error.message : String(error);
+}
+
+function escapeRegExp(value) {
+  return value.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
+function classifyExpectedResult(expectedResult) {
+  const normalized = normalizeVietnameseText(expectedResult)
+    .replace(/[.!?…。！？]+$/u, "")
+    .trim();
+
+  if (
+    /^(?:play|phat)(?:\s+(?:noi dung|kenh|phim))?\s+(?:binh thuong|thanh cong)$/u.test(
+      normalized
+    )
+  ) {
+    return "player";
+  }
+
+  if (/^vao man hinh dich vu\s+.+\s+thanh cong$/u.test(normalized)) {
+    return "service";
+  }
+
+  return "";
 }
 
 function visibleScreenTextPredicate(page, expected) {
@@ -98,13 +126,12 @@ async function assertVisibleScreenText(page, text, {timeoutMs = 30000, pollInter
     .toBe(true);
 }
 
-function createActionRunner({ handlers = {}, stepRunner }) {
+function createActionRunner({ handlers = {}, stepRunner, afterAction, onActionError }) {
   if (typeof stepRunner !== "function") {
     throw new TypeError("stepRunner must be a function");
   }
 
   return async function runActionRunner(page, testInfo, testCase, options = {}) {
-    const compiledTestCase = compileTestCase(testCase);
     const steps = [];
     const result = {
       testCaseId: String(testCase.id),
@@ -116,6 +143,25 @@ function createActionRunner({ handlers = {}, stepRunner }) {
     };
 
     await attachJson(testInfo, "test-case.json", testCase);
+
+    let compiledTestCase;
+    try {
+      compiledTestCase = compileTestCase(testCase);
+    } catch (error) {
+      const step = {
+        index: 0,
+        action: "compile",
+        status: "failed",
+        durationMs: 0,
+        message: errorMessage(error),
+      };
+      result.status = "failed";
+      steps.push(step);
+      if (error && typeof error === "object") error.testCaseResult = result;
+      await attachJson(testInfo, "test-case-result.json", result);
+      throw error;
+    }
+
     await attachJson(testInfo, "normalized-actions.json", compiledTestCase.actions);
 
     for (const action of compiledTestCase.actions) {
@@ -136,16 +182,44 @@ function createActionRunner({ handlers = {}, stepRunner }) {
       const startedAt = Date.now();
 
       try {
-        await stepRunner(page, testInfo, label, () =>
+        const handlerResult = await stepRunner(page, testInfo, label, () =>
           handlers[label]({ page, testInfo, action, testCase: compiledTestCase, options })
         );
+        if (typeof afterAction === "function") {
+          await afterAction({
+            page,
+            testInfo,
+            action,
+            actionIndex: index,
+            testCase: compiledTestCase,
+            options,
+          });
+        }
+        if (handlerResult !== undefined) step.result = handlerResult;
         step.durationMs = Date.now() - startedAt;
       } catch (error) {
+        if (typeof onActionError === "function") {
+          try {
+            await onActionError({
+              page,
+              testInfo,
+              action,
+              actionIndex: index,
+              testCase: compiledTestCase,
+              options,
+              error,
+            });
+          } catch (cleanupError) {
+            if (error && typeof error === "object") error.playerCleanupError = errorMessage(cleanupError);
+          }
+        }
         step.status = "failed";
         step.durationMs = Date.now() - startedAt;
         step.message = errorMessage(error);
+        if (error?.details !== undefined) step.details = error.details;
         result.status = "failed";
         steps.push(step);
+        if (error && typeof error === "object") error.testCaseResult = result;
 
         try {
           await attachJson(testInfo, "test-case-result.json", result);
@@ -159,9 +233,199 @@ function createActionRunner({ handlers = {}, stepRunner }) {
       steps.push(step);
     }
 
+    if (typeof options.postRun === "function") {
+      const startedAt = Date.now();
+      try {
+        const postRunResult = await options.postRun({
+          page,
+          testInfo,
+          testCase: compiledTestCase,
+          steps,
+          options,
+        });
+        if (postRunResult !== undefined) {
+          const { completionScreenshotDataUrl, ...stepResult } = postRunResult;
+          if (completionScreenshotDataUrl) {
+            result.completionScreenshotDataUrl = completionScreenshotDataUrl;
+          }
+          steps.push({
+            index: steps.length,
+            action: "expected_result",
+            status: "passed",
+            durationMs: Date.now() - startedAt,
+            message: "",
+            result: stepResult,
+          });
+        }
+      } catch (error) {
+        const step = {
+          index: steps.length,
+          action: "expected_result",
+          status: "failed",
+          durationMs: Date.now() - startedAt,
+          message: errorMessage(error),
+        };
+        result.status = "failed";
+        if (error?.playerCheckScreenshotDataUrl) {
+          result.completionScreenshotDataUrl = error.playerCheckScreenshotDataUrl;
+        }
+        steps.push(step);
+        if (error && typeof error === "object") error.testCaseResult = result;
+
+        try {
+          await attachJson(testInfo, "test-case-result.json", result);
+        } catch (_attachmentError) {
+          // Preserve the expected-result error if reporting is unavailable.
+        }
+
+        throw error;
+      }
+    }
+
     await attachJson(testInfo, "test-case-result.json", result);
     return result;
   };
+}
+
+async function verifyExpectedResult({page, testInfo, testCase, steps, helpers}) {
+  const kind = classifyExpectedResult(testCase.expectedResult);
+  if (!kind) return undefined;
+
+  if (kind === "player") {
+    let playerScreenshotDataUrl = "";
+    try {
+      await page.waitForTimeout(PLAYER_PLAYBACK_WAIT_SECONDS * 1000);
+      await assertPlayerReadyAfterDefaultWait(helpers, page);
+      playerScreenshotDataUrl = await capturePlayerCheckScreenshot(page, testInfo);
+      await finishPlayerCheck(page, helpers);
+      return {
+        type: "player",
+        verified: "Player is open and playing normally",
+        ...(playerScreenshotDataUrl ? {completionScreenshotDataUrl: playerScreenshotDataUrl} : {}),
+      };
+    } catch (error) {
+      playerScreenshotDataUrl ||= await capturePlayerCheckScreenshot(page, testInfo);
+      if (playerScreenshotDataUrl && error && typeof error === "object") {
+        error.playerCheckScreenshotDataUrl = playerScreenshotDataUrl;
+      }
+      try {
+        await finishPlayerCheck(page, helpers);
+      } catch (cleanupError) {
+        if (error && typeof error === "object") error.playerCleanupError = errorMessage(cleanupError);
+      }
+      throw error;
+    }
+  }
+
+  if (!hasSuccessfulServiceNavigation(testCase, steps)) {
+    throw new Error(
+      `Expected result requires a completed service navigation path: ${testCase.expectedResult}`
+    );
+  }
+
+  return {
+    type: "service",
+    verified: "Service navigation action completed; destination label was not asserted",
+  };
+}
+
+async function assertPlayerReadyAfterDefaultWait(helpers, page) {
+  const [popup, playerState] = await Promise.all([
+    helpers.__internal.getVisiblePopup(page),
+    helpers.getPlayerState(page),
+  ]);
+
+  if (!popup && playerState?.hasVideo === true && playerState?.isProbablyPlaying === true) {
+    return;
+  }
+
+  const popupText = typeof popup?.text === "string" ? popup.text.trim() : "";
+  const playerReason = typeof playerState?.reason === "string" ? playerState.reason.trim() : "";
+  const reason = popup
+    ? `popup remained visible${popupText ? `: ${popupText}` : ""}`
+    : `player state was not healthy${playerReason ? `: ${playerReason}` : ""}`;
+  const error = new Error(
+    `Player check failed after ${PLAYER_PLAYBACK_WAIT_SECONDS} seconds: ${reason}`
+  );
+  error.details = {popup: popup || null, playerState: playerState || null};
+  throw error;
+}
+
+function isPlayerCheckingAction(action) {
+  return (
+    action?.action === "play_content" ||
+    action?.action === "play_search_result" ||
+    (action?.action === "wait_for_ready" && action.name === "player")
+  );
+}
+
+function nextStepRequiresPlayer(testCase, actionIndex) {
+  const actions = testCase.actions || [];
+  const nextAction = actions[actionIndex + 1];
+  if (nextAction?.action === "wait_for_ready" && nextAction.name === "player") return true;
+  if (nextAction?.action === "press_back") return true;
+  return !nextAction && classifyExpectedResult(testCase.expectedResult) === "player";
+}
+
+async function cleanupAfterPlayerAction({page, action, actionIndex, testCase, helpers}) {
+  if (!isPlayerCheckingAction(action) || nextStepRequiresPlayer(testCase, actionIndex)) return;
+  await returnFromPlayer(page, helpers);
+  if (actionIndex === (testCase.actions || []).length - 1) {
+    await page.waitForTimeout(PLAYER_RETURN_DELAY_MS);
+  }
+}
+
+async function cleanupAfterFailedPlayerAction({page, action, helpers, error}) {
+  const playerWasChecked =
+    action?.action === "wait_for_ready" && action.name === "player" ||
+    Boolean(error?.details?.playerState);
+  if (!playerWasChecked) return;
+  await finishPlayerCheck(page, helpers);
+}
+
+async function finishPlayerCheck(page, helpers) {
+  await returnFromPlayer(page, helpers);
+  await page.waitForTimeout(PLAYER_RETURN_DELAY_MS);
+}
+
+async function returnFromPlayer(page, helpers) {
+  if (typeof helpers.remotePress === "function") {
+    await helpers.remotePress(page, "Backspace");
+    return;
+  }
+  await page.keyboard.press("Backspace");
+}
+
+async function capturePlayerCheckScreenshot(page, testInfo) {
+  if (typeof page?.screenshot !== "function") return "";
+  try {
+    return await captureCurrentAppScreenshot(page, testInfo, "expected-player-check");
+  } catch {
+    return "";
+  }
+}
+
+function hasSuccessfulServiceNavigation(testCase, steps) {
+  const actions = testCase.actions || [];
+  const stepPassed = (index) => steps[index]?.status === "passed";
+
+  if (actions.some((action, index) => action.action === "open_service" && stepPassed(index))) {
+    return true;
+  }
+
+  return actions.some((action, index) => {
+    if (action.action !== "press_ok" || !stepPassed(index)) return false;
+
+    const preceding = actions.slice(0, index);
+    const rowFocusIndex = preceding.findIndex((candidate) =>
+      candidate.action === "focus_row" &&
+      normalizeVietnameseText(candidate.rowName || "") === "the loai"
+    );
+    const serviceFocusIndex = preceding.findIndex((candidate) => candidate.action === "focus_text");
+
+    return rowFocusIndex >= 0 && serviceFocusIndex >= 0 &&
+      stepPassed(rowFocusIndex) && stepPassed(serviceFocusIndex);
+  });
 }
 
 async function resolveReadyWait(helpers, page, testInfo, name) {
@@ -204,12 +468,54 @@ function createDefaultActionHandlers({ helpers }) {
     },
     open_home: ({ page, testInfo }) =>
       workflows.__internal.waitForHomeReady(page, testInfo),
-    open_service: ({ page, testInfo, action }) =>
-      helpers.openServiceFromLeftMenuOrAllServices(
+    focus_row: ({ page, action }) =>
+      helpers.focusRequestedContentRow(page, {
+        rowName: action.rowName,
+        ...(action.itemIndex ? {itemIndex: action.itemIndex} : {}),
+      }),
+    focus_row_first_item: ({ page }) =>
+      helpers.focusFirstItemInCurrentContentRow(page),
+    focus_text: ({ page, action }) =>
+      helpers.remoteFocusByText(
         page,
-        action.service,
+        new RegExp(`^\\s*${escapeRegExp(action.text.trim())}\\s*$`, "iu")
+      ),
+    press_ok: ({ page }) => helpers.remotePress(page, "Enter"),
+    open_service: async ({ page, testInfo, action }) => {
+      const serviceName = String(action.service || "").trim();
+      try {
+        return await helpers.openServiceFromLeftMenuOrAllServices(
+          page,
+          serviceName,
+          testInfo
+        );
+      } catch (error) {
+        const serviceError = new Error(`Không thể tìm thấy dịch vụ ${serviceName}`);
+        serviceError.cause = error;
+        throw serviceError;
+      }
+    },
+    open_search: ({ page, testInfo }) =>
+      helpers.openSearchFromLeftMenu(page, testInfo),
+    search_content: ({ page, testInfo, action }) =>
+      helpers.searchContentByName(
+        page,
+        {name: action.name, type: action.type},
         testInfo
       ),
+    play_content: ({ page, testInfo, action }) =>
+      helpers.playVisibleContentByName(page, testInfo, {
+        name: action.name,
+        type: action.type,
+      }),
+    play_search_result: ({ page, testInfo, action }) =>
+      helpers.playFocusedSearchResult(page, testInfo, {type: action.type}),
+    play_row: ({ page, testInfo, action }) =>
+      helpers.playItemsInRow(page, testInfo, {
+        rowIndex: action.rowIndex,
+        rowName: action.rowName,
+        count: action.count,
+      }),
     press_back: async ({ page, action }) => {
       for (let index = 0; index < (action.count ?? 1); index += 1) {
         await page.keyboard.press("Backspace");
@@ -228,11 +534,26 @@ async function runTestCase(page, testInfo, testCase, options = {}) {
   const handlers = options.handlers || createDefaultActionHandlers({ helpers });
   const stepRunner = options.stepRunner || helpers.runStep;
 
-  return createActionRunner({ handlers, stepRunner })(
+  return createActionRunner({
+    handlers,
+    stepRunner,
+    afterAction: (context) => cleanupAfterPlayerAction({...context, helpers}),
+    onActionError: (context) => cleanupAfterFailedPlayerAction({...context, helpers}),
+  })(
     page,
     testInfo,
     testCase,
-    options
+    {
+      ...options,
+      postRun: ({page: runPage, testInfo: runTestInfo, testCase: compiledTestCase, steps}) =>
+        verifyExpectedResult({
+          page: runPage,
+          testInfo: runTestInfo,
+          testCase: compiledTestCase,
+          steps,
+          helpers,
+        }),
+    }
   );
 }
 
@@ -241,4 +562,9 @@ module.exports = {
   createDefaultActionHandlers,
   runTestCase,
   assertVisibleScreenText,
+  classifyExpectedResult,
+  hasSuccessfulServiceNavigation,
+  verifyExpectedResult,
+  isPlayerCheckingAction,
+  nextStepRequiresPlayer,
 };

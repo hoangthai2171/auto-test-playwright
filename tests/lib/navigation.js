@@ -1,7 +1,6 @@
 const {expect}=require("playwright/test");
-const {getSelectorContract}=require("./selectors");
+const {FOCUS_SELECTORS}=require("./selectors");
 
-const FOCUS_SELECTOR = `.${getSelectorContract("focus").alternatives[0].classPatterns[0]}`;
 const DEFAULT_REMOTE_PRESS_DELAY = 100;
 const VIRTUAL_KEYBOARD_ROWS = [
   ["a", "b", "c", "d", "e", "f", "1", "2", "3"],
@@ -22,8 +21,8 @@ async function expectFocusedText(page, text) {
 }
 
 async function expectFocusedElementToLookOrange(page) {
-  const orangeScore = await page.evaluate((focusSelector) => {
-    const focused = document.querySelector(focusSelector);
+  const orangeScore = await page.evaluate((focusSelectors) => {
+    const focused = findFocusedElement(focusSelectors);
     if (!focused) return 0;
     const style = getComputedStyle(focused);
     const colors = [style.backgroundColor, style.borderColor, style.boxShadow, style.color].join(" ");
@@ -36,7 +35,20 @@ async function expectFocusedElementToLookOrange(page) {
     })
       ? 1
       : 0;
-  }, FOCUS_SELECTOR);
+    function findFocusedElement(selectors) {
+      for (const selector of selectors) {
+        const candidate = Array.from(document.querySelectorAll(selector)).find(isVisible);
+        if (candidate) return candidate;
+      }
+      return null;
+    }
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+    }
+  }, FOCUS_SELECTORS);
 
   expect(orangeScore).toBe(1);
 }
@@ -248,20 +260,34 @@ async function remoteFocusById(page, id, maxMoves = 50, options = {}) {
       // rather than the container itself.  Accept focus if the focused element
       // is contained within the target element.
       return page.evaluate(
-        ({ focusedId, targetId, focusSelector }) => {
+        ({ focusedId, targetId, focusSelectors }) => {
           const target = document.getElementById(targetId);
           if (!target) return false;
           const focusedEl = focusedId
             ? document.getElementById(focusedId)
-            : document.querySelector(focusSelector);
+            : findFocusedElement(focusSelectors);
           if (!focusedEl) return false;
           // Accept focus when:
           //   1. focused element is a descendant of the target (e.g. focus on img child of #space)
           //   2. target element is a descendant of the focused element (e.g. focus on #space container
           //      while target is the #key-space-v2 img child inside it)
           return target.contains(focusedEl) || focusedEl.contains(target);
+
+          function findFocusedElement(selectors) {
+            for (const selector of selectors) {
+              const candidate = Array.from(document.querySelectorAll(selector)).find(isVisible);
+              if (candidate) return candidate;
+            }
+            return null;
+          }
+
+          function isVisible(element) {
+            const rect = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+          }
         },
-        { focusedId: state.id, targetId: id, focusSelector: FOCUS_SELECTOR }
+        { focusedId: state.id, targetId: id, focusSelectors: FOCUS_SELECTORS }
       );
     },
     getTargetRect: async () =>
@@ -363,12 +389,8 @@ function center(rect) {
 }
 
 async function getFocusedState(page) {
-  return page.evaluate((focusSelector) => {
-    const focused = Array.from(document.querySelectorAll(focusSelector)).find((element) => {
-      const rect = element.getBoundingClientRect();
-      const style = getComputedStyle(element);
-      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
-    });
+  return page.evaluate((focusSelectors) => {
+    const focused = findFocusedElement(focusSelectors);
 
     if (!focused) {
       return {
@@ -398,7 +420,20 @@ async function getFocusedState(page) {
         height: rect.height,
       },
     };
-  }, FOCUS_SELECTOR);
+    function findFocusedElement(selectors) {
+      for (const selector of selectors) {
+        const candidate = Array.from(document.querySelectorAll(selector)).find(isVisible);
+        if (candidate) return candidate;
+      }
+      return null;
+    }
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
+    }
+  }, FOCUS_SELECTORS);
 }
 
 module.exports={DEFAULT_REMOTE_PRESS_DELAY,remotePress,enterWithVirtualKeyboard,remoteFocusByVirtualKey,virtualKeyIds,searchKeyboardInput,remoteFocusByText,remoteFocusByKeyText,remoteFocusById,remoteFocus,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange,__internal:{chooseDirection,rangesOverlap,fallbackDirection,center}};

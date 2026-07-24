@@ -1,17 +1,36 @@
 const ALLOWED_ACTIONS = new Set([
   "login",
   "open_home",
+  "focus_row",
+  "focus_row_first_item",
+  "focus_text",
+  "press_ok",
   "open_service",
+  "open_search",
+  "search_content",
+  "play_content",
+  "play_search_result",
+  "play_row",
   "assert_screen",
   "press_back",
   "wait_for_ready",
 ]);
 
 const READY_NAMES = new Set(["app", "home", "content", "player"]);
+const PLAY_CONTENT_TYPES = new Set(["channel", "movie", "content"]);
 const ACTION_KEYS = {
   login: ["action", "username", "password"],
   open_home: ["action"],
+  focus_row: ["action", "rowName", "itemIndex"],
+  focus_row_first_item: ["action"],
+  focus_text: ["action", "text"],
+  press_ok: ["action"],
   open_service: ["action", "service"],
+  open_search: ["action"],
+  search_content: ["action", "name", "type"],
+  play_content: ["action", "name", "type"],
+  play_search_result: ["action", "type"],
+  play_row: ["action", "rowIndex", "rowName", "count"],
   assert_screen: ["action", "text"],
   press_back: ["action", "count"],
   wait_for_ready: ["action", "name"],
@@ -54,6 +73,75 @@ function validateAction(action, path = "action") {
     throw new Error(`${path}.service must be a non-empty string`);
   }
 
+  if (action.action === "focus_text" && !isNonEmptyString(action.text)) {
+    throw new Error(`${path}.text must be a non-empty string`);
+  }
+
+  if (action.action === "focus_row" && !isNonEmptyString(action.rowName)) {
+    throw new Error(`${path}.rowName must be a non-empty string`);
+  }
+
+  if (
+    action.action === "focus_row" &&
+    hasOwn(action, "itemIndex") &&
+    (!Number.isInteger(action.itemIndex) || action.itemIndex < 1)
+  ) {
+    throw new Error(`${path}.itemIndex must be a positive 1-based integer when provided`);
+  }
+
+  if (action.action === "search_content") {
+    if (!isNonEmptyString(action.name)) {
+      throw new Error(`${path}.name must be a non-empty string`);
+    }
+    if (!PLAY_CONTENT_TYPES.has(action.type)) {
+      throw new Error(`${path}.type must be one of channel, movie, or content`);
+    }
+  }
+
+  if (action.action === "play_content") {
+    if (!isNonEmptyString(action.name)) {
+      throw new Error(`${path}.name must be a non-empty string`);
+    }
+    if (!PLAY_CONTENT_TYPES.has(action.type)) {
+      throw new Error(`${path}.type must be one of channel, movie, or content`);
+    }
+  }
+
+  if (
+    action.action === "play_search_result" &&
+    hasOwn(action, "type") &&
+    !PLAY_CONTENT_TYPES.has(action.type)
+  ) {
+    throw new Error(`${path}.type must be one of channel, movie, or content`);
+  }
+
+  if (action.action === "play_row") {
+    const hasRowIndex = hasOwn(action, "rowIndex");
+    const hasRowName = hasOwn(action, "rowName");
+
+    if (hasRowIndex === hasRowName) {
+      throw new Error(`${path} must define exactly one of rowIndex or rowName`);
+    }
+
+    if (
+      hasRowIndex &&
+      (!Number.isInteger(action.rowIndex) || action.rowIndex < 1)
+    ) {
+      throw new Error(`${path}.rowIndex must be a positive 1-based integer`);
+    }
+
+    if (hasRowName && !isNonEmptyString(action.rowName)) {
+      throw new Error(`${path}.rowName must be a non-empty string`);
+    }
+
+    if (
+      hasOwn(action, "count") &&
+      (!Number.isInteger(action.count) || action.count < 1)
+    ) {
+      throw new Error(`${path}.count must be a positive integer when provided`);
+    }
+  }
+
   if (action.action === "assert_screen" && !isNonEmptyString(action.text)) {
     throw new Error(`${path}.text must be a non-empty string`);
   }
@@ -87,7 +175,9 @@ function normalizeTestCase(testCase) {
     normalized.id = String(normalized.id);
   }
 
-  if (Array.isArray(normalized.actions)) {
+  if (normalized.actions === null) {
+    normalized.actions = [];
+  } else if (Array.isArray(normalized.actions)) {
     normalized.actions = normalized.actions.map((action, actionIndex) =>
       validateAction(action, `actions[${actionIndex}]`)
     );
@@ -118,13 +208,15 @@ function validateTestCase(testCase, index = 0) {
   }
 
   const hasActions = hasOwn(testCase, "actions");
+  const hasActionList = Array.isArray(testCase.actions);
+  const hasNullActions = hasActions && testCase.actions === null;
   const hasDescription = hasOwn(testCase, "qaDescription");
 
-  if (hasActions && !Array.isArray(testCase.actions)) {
+  if (hasActions && !hasActionList && !hasNullActions) {
     throw new Error(`${path}.actions must be an array`);
   }
 
-  if ((!hasActions || testCase.actions.length === 0) && !hasDescription) {
+  if ((!hasActionList || testCase.actions.length === 0) && !hasDescription) {
     throw new Error(`${path} ${testCase.id} requires actions or qaDescription`);
   }
 
@@ -139,7 +231,9 @@ function validateTestCase(testCase, index = 0) {
   if (typeof normalized.id === "number") {
     normalized.id = String(normalized.id);
   }
-  if (hasActions) {
+  if (hasNullActions) {
+    normalized.actions = [];
+  } else if (hasActionList) {
     normalized.actions = testCase.actions.map((action, actionIndex) =>
       validateAction(action, `${path}.actions[${actionIndex}]`)
     );

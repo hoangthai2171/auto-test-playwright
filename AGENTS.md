@@ -25,6 +25,7 @@ The Electron workflow is source-independent at the execution boundary:
 
 ```text
 testcased.json
+ACTION-COMPILER.md                 Server-side qaDescription-to-actions guide
       |
       v
 test-case-source.js
@@ -42,24 +43,33 @@ test-case-schema.js
                                       MyTV helpers
 ```
 
-`testcased.json` is the read-only local fallback fixture. `app/main.js` also
-owns flow-case API IPC, sanitizes passwords for the renderer, validates the
+`testcased.json` is the read-only local fallback fixture. On startup, the app
+restores the most recently downloaded API folder from the user-data cache; it
+uses the fixture only when no cached folder is available. `app/main.js` also
+owns flow-case API IPC, sanitizes passwords and authorization headers for the renderer, validates the
 selected case ID from either the fixture or the user-data cache, and starts the
 generic `tests/run-test-case-mytv.spec.js` entry point. The renderer sends the
 selected case ID, `APP_URL`, preview settings, and active folder ID for a run.
+After every selected API-loaded case has completed, the renderer submits one
+validated `tested`/`testResult` batch through main-process IPC; stopped,
+skipped, local-fixture, and launch-failed batches are never partially sent.
 
-Explicit structured `actions` are authoritative. The deterministic compiler
-is a migration fallback for a limited set of `qaDescription` lines: login with
-literal credentials, enter home, open a named service, press back, and wait for
-the known app/home/content/player readiness states. Unsupported or ambiguous
-lines must fail with the case ID and original line; never guess arbitrary
-behavior or evaluate server-provided code.
+Explicit structured `actions` are authoritative. `ACTION-COMPILER.md` is the
+server-side guide for transforming `qaDescription` into validated actions
+before delivery. The app-side deterministic compiler remains a migration
+fallback for supported descriptions, including login, home/service/search
+navigation, named/search-result/row playback, back, and readiness waits.
+Unsupported or ambiguous lines must fail with the case ID and original line;
+never guess arbitrary behavior or evaluate server-provided code.
 
 API folder and case retrieval runs in the main process through the preload IPC
 bridge. Successful case responses are validated and atomically replace the
-matching folder-ID entry in `<userData>/testcases-cache.json`. The generic
+matching folder-ID entry in `<userData>/testcases-cache.json`, timestamped for
+startup restoration. The generic
 action executor receives either the local fixture source or a validated cache
-source and does not contain API or cache logic.
+source and does not contain API or cache logic. Result submission uses
+`PATCH /api/v1/projects/{projectId}/flow-cases/by-folder` with a `folderPath`
+and per-case `tested` lifecycle/test-result records.
 
 ### Terminal regression runner
 
@@ -81,6 +91,7 @@ workers without redesigning session ownership.
 testcased.json
 app/
   main.js                         Electron process, case loading, run IPC
+  test-report.js                  Compact user report HTML/data generation
   preload.js                      Context-isolated IPC bridge
   flow-case-api.js                Flow-case API URLs, fetch, normalization, timeout
   test-case-cache.js              Atomic folder-keyed user-data cache
@@ -111,7 +122,7 @@ tests/
   open-setting-mytv.spec.js       Legacy settings flow
 scripts/run-headed.js             Interactive legacy runner
 scripts/run-electron-app.js       Electron development entry point
-playwright.config.js              1920x1080 viewport, one worker, HTML report
+playwright.config.js              1920x1080 viewport, one worker, debug HTML report
 package.json                      Commands and Electron Builder configuration
 ```
 
@@ -126,11 +137,34 @@ The supported action allowlist is:
 
 - `login`: requires `username` and `password`.
 - `open_home`: waits for the ready home state.
-- `open_service`: requires a service name and uses left-menu/all-services
-  fallback navigation.
+- `focus_row`: requires a row/category name and navigates to it using its first visible item as the TV focus anchor. An optional positive 1-based `itemIndex` focuses that visible item instead. Home rows are matched by visible headings/content and do not depend on dynamic row IDs.
+- `focus_row_first_item`: focuses the leftmost item in the currently active row, regardless of content type.
+- `focus_text`: focuses a visible control by its human-readable text through remote navigation.
+- `press_ok`: sends the remote OK/Enter key.
+- `open_service`: requires a service name and uses the left-menu or “Tất cả
+  dịch vụ” fallback navigation. A service can also be entered from the Home
+  “Thể loại” row with `focus_row`, `focus_text`, and `press_ok`.
+- `open_search`: opens the global search page through the left menu.
+- `search_content`: requires a content `name` and `type` (`channel`, `movie`,
+  or `content`), enters the normalized name through the virtual keyboard,
+  submits `#callSearch`, waits three seconds, and focuses a fuzzy result.
+- `play_content`: requires a visible content `name` and `type` (`channel`,
+  `movie`, or `content`), then verifies playback of the matching visible item.
+- `play_search_result`: plays the result currently focused by `search_content`.
+- `play_row`: requires either a 1-based `rowIndex` or a `rowName`; optional
+  positive `count` limits the number of items, and omitted `count` requests all
+  items within the existing batch runtime budget.
 - `assert_screen`: checks visible body text.
 - `press_back`: sends Backspace; optional `count` repeats it.
 - `wait_for_ready`: accepts `app`, `home`, `content`, or `player`.
+
+After credential submission, the login workflow detects the device-limit popup
+(`Vượt quá số lượng thiết bị cho phép`) and remotely activates `Tiếp tục` to
+remove the oldest logged-in device before profile selection. The shared focus
+model reads `.active` inside `#dialog_confirm_v2`, `#dialog_alert_v2`,
+`#dialog_alert_full`, and `#dialog_confirm_full`; regular controls continue to
+use `.focused`. Generic case cleanup still calls `window.processLogOut` after
+the run to release the account.
 
 Every action is validated before browser interaction. Server data must not
 provide JavaScript, module paths, selectors, or function names.
@@ -141,6 +175,24 @@ reads `TEST_CASE_PATH` (defaulting to the project fixture). It selects
 `TEST_CASE_ID` and calls `runTestCase`. The runner compiles or validates the
 case, dispatches actions in order, wraps each step with the existing artifact
 mechanism, and returns structured per-step results.
+
+After all action steps pass, recognized `expectedResult` values add a final
+`expected_result` check. Playback-success wording waits six seconds, then waits
+for a healthy playing player; service-screen-success wording requires either a completed
+`open_service` action or the Home “Thể loại” sequence (`focus_row` →
+`focus_text` → `press_ok`) but does not assert the service name on the
+destination screen. Player checks capture the player screen before cleanup,
+remotely return to the prior screen, then wait two seconds when final so
+watching-session teardown API calls can complete, unless the next action
+explicitly waits for the player or performs its own Back action.
+Failed player checks retain that player-screen capture in the compact report.
+
+After each generic selected-case run, `run-test-case-mytv.spec.js` invokes the
+trusted app cleanup function `window.processLogOut` in a `finally` path and
+awaits its result. A cleanup failure after a passing case is recorded as a
+failed `logout_cleanup` step; when the test already failed, the original test
+failure remains authoritative. The shared legacy session fixture is not logged
+out automatically because ordered legacy specs may reuse its authentication.
 
 ## Credentials and Sensitive Data
 
@@ -165,6 +217,7 @@ private fixture data.
 - `TEST_CASE_CACHE_PATH` — user-data cache path for API-downloaded cases.
 - `TEST_CASE_FOLDER_ID` — folder cache key for the selected API case.
 - `MYTV_PREVIEW_PATH` — live screenshot output path.
+- `MYTV_CASE_RESULT_PATH` — per-case structured result sidecar for the compact user report.
 - `MYTV_INTERACTIVE_CDP_URL` — CDP endpoint for interactive preview.
 - `MYTV_INTERACTIVE_VIEW_SCALE` — interactive preview scale.
 - `PLAYWRIGHT_BROWSERS_PATH` — bundled or local browser directory.
@@ -216,6 +269,14 @@ Use the wait utilities and observers in `tests/lib/waits.js`,
 `tests/lib/workflows.js`, and `tests/lib/playback.js` for asynchronous app
 state. Use `runStep` and the artifact helpers so failures retain screenshots,
 popup text, focused state, player state, and search/movie diagnostics.
+
+Electron runs write the user-facing compact report to
+`<userData>/user-report/test-report.html`, with one row per selected test and a
+`Details` row for every test. The row shows the expected result; passed tests
+also show their final viewport screenshot, while failed tests show failed item
+name, poster, and screenshot.
+The Playwright HTML report remains under `<userData>/playwright-report` for
+debugging and is not the user-facing report.
 
 ### Content rows and playback
 

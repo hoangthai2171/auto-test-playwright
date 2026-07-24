@@ -15,13 +15,13 @@ async function readTestCaseCache(cachePath) {
   }
 }
 
-async function replaceFolderCacheEntry({cachePath, folder, cases}) {
+async function replaceFolderCacheEntry({cachePath, folder, cases, updatedAt = new Date().toISOString()}) {
   if (!folder || folder.id === undefined || folder.id === null) {
     throw new Error("A folder id is required to write the test-case cache.");
   }
 
   const cache = await readTestCaseCache(cachePath);
-  cache[String(folder.id)] = {folder, cases};
+  cache[String(folder.id)] = {folder, cases, updatedAt};
   await fs.mkdir(path.dirname(cachePath), {recursive: true});
 
   const temporaryPath = `${cachePath}.${process.pid}.${Date.now()}.tmp`;
@@ -41,4 +41,29 @@ async function readFolderCacheEntry({cachePath, folderId}) {
   return cache[String(folderId)] || null;
 }
 
-module.exports = {readTestCaseCache, replaceFolderCacheEntry, readFolderCacheEntry};
+async function readMostRecentFolderCacheEntry({cachePath}) {
+  const cache = await readTestCaseCache(cachePath);
+  let mostRecent = null;
+  let mostRecentTimestamp = Number.NEGATIVE_INFINITY;
+
+  for (const entry of Object.values(cache)) {
+    if (!entry?.folder || !Array.isArray(entry.cases)) continue;
+    const timestamp = Date.parse(entry.updatedAt);
+    const comparableTimestamp = Number.isFinite(timestamp)
+      ? timestamp
+      : Number.NEGATIVE_INFINITY;
+    if (!mostRecent || comparableTimestamp >= mostRecentTimestamp) {
+      mostRecent = entry;
+      mostRecentTimestamp = comparableTimestamp;
+    }
+  }
+
+  return mostRecent;
+}
+
+module.exports = {
+  readTestCaseCache,
+  replaceFolderCacheEntry,
+  readFolderCacheEntry,
+  readMostRecentFolderCacheEntry,
+};
