@@ -1,0 +1,44 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://mytv.vn/schemas/auto-test/tv-device-profile-v1.json",
+  "title": "MyTV Auto Test non-secret TV device profile",
+  "type": "object",
+  "additionalProperties": false,
+  "required": ["version", "devices"],
+  "properties": {
+    "version": {"const": 1},
+    "devices": {
+      "type": "array",
+      "items": {"$ref": "#/$defs/device"},
+      "uniqueItems": true
+    }
+  },
+  "$defs": {
+    "device": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["id", "label", "platform", "appId", "backendEnvironment"],
+      "properties": {
+        "id": {
+          "type": "string",
+          "pattern": "^[a-z0-9][a-z0-9-]{1,62}$"
+        },
+        "label": {"type": "string", "minLength": 1, "maxLength": 120},
+        "platform": {"enum": ["tizen", "webos"]},
+        "lastKnownHost": {"type": "string", "minLength": 1, "maxLength": 255},
+        "appId": {"type": "string", "minLength": 1, "maxLength": 255},
+        "backendEnvironment": {"enum": ["production", "staging"]},
+        "defaultPackagePath": {"type": "string", "minLength": 1, "maxLength": 4096},
+        "defaultPackageVersion": {"type": "string", "maxLength": 255},
+        "accessMode": {"enum": ["private", "shared-manual", "shared-leased"]},
+        "vendorDeviceName": {"type": "string", "maxLength": 255},
+        "model": {"type": "string", "maxLength": 255},
+        "osVersion": {"type": "string", "maxLength": 100},
+        "firmwareVersion": {"type": "string", "maxLength": 100},
+        "notes": {"type": "string", "maxLength": 1000},
+        "createdAt": {"type": "string", "format": "date-time"},
+        "updatedAt": {"type": "string", "format": "date-time"}
+      }
+    }
+  }
+}

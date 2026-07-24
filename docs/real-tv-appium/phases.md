@@ -1,0 +1,266 @@
+# Phased Delivery Plan
+
+> Work phases in order. A failed gate stops the next phase; do not hide a
+> platform limitation with timing sleeps or visual guesses.
+
+## Phase 0 — Commit the test-lab contract
+
+**Outcome:** A named Samsung and LG pilot device exist, their compatibility
+facts are recorded, and the team agrees what may be installed and reset.
+
+- [ ] Answer every blocking item in [HANDOFF.md](HANDOFF.md).
+- [ ] Record model, model year, OS/firmware, network IP/reservation, app ID,
+  package format, and owner for one Samsung and one LG TV.
+- [ ] Confirm both TVs can stay on the same trusted LAN as the macOS/Windows
+  Appium host and that each has a dedicated test account.
+- [ ] Mark each TV `private` or `shared-manual`. For a shared device, agree the
+  human coordination process and require the planned GUI acknowledgement. This
+  is a temporary risk acceptance, not a concurrency control.
+- [ ] Identify the production-equivalent signed package and app ID for each
+  platform; the initial pilot packages connect to the production backend using
+  dedicated test accounts. Do not add test-only application code for v1.
+- [ ] Decide whether package installation/reset is permitted before every run,
+  once per batch, or manually.
+
+**Gate:** The team can state, for both devices, how the production-equivalent
+package is signed,
+installed, launched, observed, and returned to a clean session.
+
+## Phase 1 — Command-line hardware POC (no GUI changes)
+
+**Outcome:** Appium controls one physical TV per platform before this project
+depends on it. Execute this POC on macOS first; validate Windows only after the
+macOS pilot evidence passes. Within macOS, prove Samsung first, then LG.
+
+- [ ] Install/validate the vendor SDK and CLI on the future test-host machine:
+  Tizen Studio/SDB for Samsung; webOS TV CLI for LG.
+- [ ] Enable developer mode and connect each device through its vendor workflow.
+- [ ] Install Appium plus the two community drivers as pinned local project/tool
+  dependencies; record exact versions and driver checks in a setup script.
+- [ ] Pair the Samsung remote and LG remote once with operator confirmation on
+  the actual TV. Keep pairing artifacts out of source control.
+- [ ] Deploy the QA build, launch it, send `up/right/ok/back`, and collect a
+  screenshot for both platforms.
+- [ ] Prove the exact platform-specific reset method clears only MyTV app
+  storage, restarts the app, and preserves Developer Mode, pairing, and
+  unrelated apps on both pilot TVs.
+- [ ] Prove a selected multi-case batch resets/restarts before every individual
+  case and reports a reset failure before any case action is attempted.
+- [ ] Verify Appium exposes reliable DOM inspection on the pilot models: body
+  text, focused element, virtual keyboard, content rows, player checks, and
+  screenshots. If it cannot, that model is out of v1 semantic automation.
+
+**Gate:** A reproducible, documented command starts one session per platform,
+presses a real remote key, reads the expected DOM focus/screen state, captures
+a screenshot, and ends cleanly.
+
+## Phase 2 — Runner foundation and safe device registry
+
+**Outcome:** The project can start one TV test through a controlled internal
+API, with no renderer access to tools or secrets.
+
+**Files to create/modify:**
+
+- Create `app/device-registry.js`, `app/device-secret-store.js`,
+  `app/device-discovery.js`, `app/appium-server-manager.js`, and
+  `app/tv-runner.js`.
+- Create `tests/lib/tv-session/{tv-session,qa-state,tizen-appium-session,webos-appium-session}.js`.
+- Create `tests/run-test-case-tv.spec.js`.
+- Modify `app/main.js`, `app/preload.js`, `package.json`, and Electron build
+  packaging configuration.
+- Add focused `node:test` contracts under `tests/unit/` for every pure module.
+
+- [ ] Implement atomic non-secret device-registry reads/writes using the schema,
+  with optional `lastKnownHost` rather than a required static IP.
+- [ ] Implement redacted profile responses and encrypted secret capability
+  checks; never return pairing tokens to the renderer or logs.
+- [ ] Add a per-device local lock keyed by profile ID. Add a manual
+  shared-device acknowledgement to the immutable run configuration and report
+  metadata; it does not claim cross-laptop exclusivity.
+- [ ] Implement Appium lifecycle start/health/stop, loopback binding, robust
+  child-process termination, and log redaction.
+- [ ] Implement session creation/close and normalized `pressKey`, screenshot,
+  DOM inspection, diagnostic, reset, and capability errors for each platform.
+- [ ] Retain the existing Browser process and result behavior unchanged.
+
+**Tests:** Unit-test schema validation, registry atomicity, redaction, lock
+release, shared-device acknowledgement, Appium command/config construction,
+remote-key normalization, and failure classification using injected child/client
+fakes.
+
+**Gate:** A CLI/integration harness starts `TvSession`, runs one `pressKey`,
+gets DOM focus/screen evidence, and cleans up for both pilot devices. Browser
+unit tests continue passing.
+
+## Phase 3 — Make server test cases truly target-neutral
+
+**Outcome:** The existing case format runs through an abstraction rather than
+requiring a Playwright `page`.
+
+Every selected case is eligible on Browser, Samsung, and LG by default. Do not
+add per-case target tags, filtering, or target-specific catalogues in v1.
+
+- [ ] Introduce a target-neutral action context: `{session, testInfo, helpers,
+  capabilities}`.
+- [ ] Keep test-account selection in each server-provided case's `login`
+  action. Do not add credentials to TV profiles or a separate device-account
+  picker; preserve current password masking and trusted-main-process handling.
+- [ ] Enforce that an authenticated flow includes its own `login` action after
+  the per-case clean-state reset; do not provide automatic shared login.
+- [ ] Preserve the existing trusted automatic logout cleanup after each TV case
+  and its existing result-precedence semantics.
+- [ ] Split pure case validation/compiler behavior from DOM-specific helpers.
+- [ ] Port current DOM helpers behind `DomSession`, then port actions in this
+  safe order: `wait_for_ready`, `press_ok`,
+  `press_back`, `assert_screen`, `login`, `open_home`, `open_search`,
+  `search_content`, playback actions, then row-navigation actions.
+- [ ] Preserve character-by-character virtual-keyboard input for TV login and
+  search. No direct text injection.
+- [ ] Make unsupported action/capability combinations fail preflight with the
+  original case ID and action index.
+- [ ] Map screenshots, DOM state, focused control, and Appium diagnostics into
+  the existing step-result/report format.
+- [ ] Keep TV screenshots and redacted DOM diagnostics in the local host-app
+  report folder only. Submit status/results to the flow-case API without
+  artifact uploads.
+- [ ] Keep the v1 result submission payload identical to the Browser runner.
+  Store TV metadata locally; do not add fields to the API until its versioned
+  server contract supports them.
+- [ ] Add explicit business-versus-infrastructure error codes. Continue a
+  multi-case batch after business failures. On connection/network/Appium/reset/
+  unknown technical failures, hold at the active case and retry full recovery
+  plus clean-case rerun three times; then require **Keep retrying** or **Stop**.
+  Never resume a mid-case action or advance to the next case while recovery is
+  unresolved; preserve explicit pairing pauses.
+- [ ] Change manual-stop result handling: submit only fully completed cases to
+  the flow-case API after a user stop, never the interrupted/unstarted cases;
+  retain an immutable in-memory pending payload during the app session on sync
+  failure and surface an explicit **Retry sync** action.
+- [ ] Intercept app close while a run is active or results are unsynced. Require
+  explicit **Stop run and close** / **Close and discard unsynced retry** consent;
+  do not restore pending retry data after reopening.
+
+**Tests:** Add contract tests running an injected fake `TvSession` through each
+action. Keep existing Playwright action-runner tests and prove the Browser path
+still selects its existing page-based helpers.
+
+**Gate:** One fixture case covering login, search, playback, logout, and report
+generation passes against each pilot TV from the terminal.
+
+## Phase 4 — Device management IPC and target GUI
+
+**Outcome:** An operator can choose Browser/Samsung/LG and register or validate
+the real target from the desktop app.
+
+**Files to modify:**
+
+- `app/renderer/index.html`, `app/renderer/renderer.js`,
+  `app/renderer/styles.css`
+- `app/preload.js`, `app/main.js`
+- `tests/unit/renderer.test.js` plus new device/IPC unit tests.
+
+- [ ] Add the target selector and platform-specific device fields described in
+  [architecture.md](architecture.md).
+- [ ] Add a device modal with direct IP, saved device list, scan results,
+  validation state, default-package metadata, and an explicit **Save device**
+  action.
+- [ ] Support an explicit one-off direct-IP run without a saved profile. Keep
+  its platform/IP/app confirmation in memory only; require confirmation of the
+  detected installed app ID/version and offer **Save as device profile** as an
+  optional post-validation action. List compatible installed MyTV apps first;
+  when none can be found, offer explicit one-off package installation.
+- [ ] Add a separate **Install/Update app** action that chooses a `.wgt` or
+  `.ipk`, confirms target/device/package, installs and validates the app, then
+  updates the profile. Ordinary test runs must only reset and launch the
+  already installed default app.
+- [ ] Record the package backend label in the profile and artifact manifest.
+  V1 accepts only production-connected pilot packages; a future staging build
+  is separately packaged and never selected by a run-time backend switch.
+- [ ] Add MyTV app-identity safety validation: LG uses `com.mytvb2c.app` and
+  explicit deployment may replace the version already on a lab TV after an
+  unambiguous confirmation; never
+  select or deploy Samsung store app `PP2MTMRMs9.MyTV` as a test package. Make
+  that safety block non-overridable, including for administrators. Allow a
+  profile-specific distinct Samsung test ID, validate package metadata before
+  install, and mark the store app non-eligible in discovery.
+- [ ] Do not add automatic app uninstall, rollback, or restoration after a TV
+  run. Engineers restore the LG release manually from the app store if needed.
+- [ ] Before every run, validate installed MyTV app ID/version against the
+  selected profile; block mismatches before reset or Appium actions and route
+  the operator to **Install/Update app**.
+- [ ] Add **Settings → Test** with TV artifact retention choices `3 days`
+  (default), `5 days`, `7 days`, and `Forever`; pass the retained value only to
+  the main-process TV run and implement manifest-based cleanup of completed TV
+  artifact folders.
+- [ ] Add a locally persisted **Settings → Test → TV case timeout**, default
+  `10 minutes`, covering one complete real-TV case attempt from reset through
+  automatic logout cleanup. Permit a validated server-case override for longer
+  flows up to `30 minutes` and record the effective timeout in the manifest.
+- [ ] Add **Settings → Test → TV toolchain** status. Automatically detect and
+  validate vendor SDK/CLI, Appium, and Chromedriver on Windows/macOS; provide
+  locally persisted, main-process-validated path overrides only when detection
+  fails.
+- [ ] Implement an explicit user-initiated **Install missing tools** workflow
+  backed by a pinned official-source manifest, download/progress/error events,
+  post-install verification, and no overwrite of an existing user-managed SDK
+  without consent. Do not silently install at app startup.
+- [ ] Add a Settings **Help** button and instruction modal for manual
+  installation/repair, developer mode, pairing, direct-IP, and redacted
+  diagnostics on Windows/macOS.
+- [ ] Connect only preload IPC methods; never put a CLI command in renderer JS.
+- [ ] Disable Run with a clear reason until a TV is selected and validation
+  passes. Preserve Browser default behavior.
+- [ ] Present pairing-required states as an operator pause with exact on-TV
+  instructions; do not loop or retry pairing silently.
+- [ ] Change preview labels and use TV screenshot frames for TV targets. Hide
+  Browser's interactive-webview mode for TV targets; during a run expose only
+  live status, screenshots/logs, and **Stop**, never manual remote keys.
+- [ ] Send credential-free native OS notifications for run completion, recovery
+  decisions, and unsynced results.
+
+**Gate:** Mocked renderer tests prove target persistence, platform switching,
+scan/add/validate flows, invalid-run prevention, redaction, and payload shape.
+Manual GUI verification shows a selected TV's status and screenshot preview.
+
+## Phase 5 — End-to-end lab pilot and reliability hardening
+
+**Outcome:** A small, trustworthy physical-TV regression suite runs from the
+desktop GUI.
+
+- [ ] Run five cases per platform: launch, login, search, play, logout.
+- [ ] Repeat each case at least ten times per device and record pass rate,
+  median duration, failure class, and recovery behavior.
+- [ ] Validate cancellation at pairing, launch, navigation, player, and report
+  stages. Ensure stopped cases are never partially submitted to the flow-case
+  API.
+- [ ] Add three-attempt recovery cycles only around known transport/session
+  establishment/reset failures, rerunning the active case from clean state;
+  never retry user-visible product assertions automatically. Require an
+  operator decision after a failed cycle.
+- [ ] Validate Electron packaging contains the required Appium runtime/drivers
+  or presents a clear host-prerequisite failure.
+- [ ] Update `README.md` and `AGENTS.md` with supported target behavior,
+  setup, security, diagnostics, and validation commands.
+
+**Gate:** The GUI successfully runs the pilot suite on both TVs with reliable
+artifacts and cleanup. The team signs off on the supported model/firmware list.
+
+## Phase 6 — Optional scale-out
+
+Only begin after phase 5 is stable.
+
+- [ ] Add multi-device selected batches with one independent run/session,
+  artifact subtree, report result, and lock per target. Do not repurpose the
+  existing one-worker browser assumption without redesigning session ownership.
+- [ ] Deploy the separate internal TV-lab lease service documented in
+  [lease-service.md](lease-service.md), then replace manual shared-device
+  acknowledgement with atomic acquire/renew/release behavior.
+- [ ] Add the deferred QA-build-only read-only bridge for model families that
+  cannot expose a reliable debugger/DOM channel.
+- [ ] Add controlled power/HDMI capture hardware only if visual or boot
+  recovery evidence is a proven requirement.
+- [ ] Add **Settings → Test** capture configuration for opt-in video, audio, or
+  HDMI evidence, including availability checks, artifact paths and redaction
+  review. Keep screenshots plus DOM diagnostics as the default evidence path.
+- [ ] Add CI/lab-agent execution after host secrets, network access, and device
+  locking are managed by infrastructure rather than a developer desktop.
