@@ -39,20 +39,150 @@ macOS pilot evidence passes. Within macOS, prove Samsung first, then LG.
   dependencies; record exact versions and driver checks in a setup script.
 - [ ] Pair the Samsung remote and LG remote once with operator confirmation on
   the actual TV. Keep pairing artifacts out of source control.
-- [ ] Deploy the QA build, launch it, send `up/right/ok/back`, and collect a
-  screenshot for both platforms.
+- [ ] Deploy the QA build, launch it, send `up/right/ok/back`, and attempt a
+  genuine Appium screenshot for both platforms. Samsung may record
+  `visualCapture: unavailable` and continue only under the approved DOM-only
+  policy; LG screenshot capture remains a gate. Never substitute a synthetic
+  image.
 - [ ] Prove the exact platform-specific reset method clears only MyTV app
   storage, restarts the app, and preserves Developer Mode, pairing, and
   unrelated apps on both pilot TVs.
 - [ ] Prove a selected multi-case batch resets/restarts before every individual
   case and reports a reset failure before any case action is attempted.
 - [ ] Verify Appium exposes reliable DOM inspection on the pilot models: body
-  text, focused element, virtual keyboard, content rows, player checks, and
-  screenshots. If it cannot, that model is out of v1 semantic automation.
+  text, focused element, virtual keyboard, content rows, and player checks.
+  Visual capture is separately recorded. Its absence does not block the
+  approved Samsung DOM-only semantic path, but it remains an LG gate and must
+  never be hidden or substituted.
 
 **Gate:** A reproducible, documented command starts one session per platform,
-presses a real remote key, reads the expected DOM focus/screen state, captures
-a screenshot, and ends cleanly.
+presses a real remote key, reads the expected DOM focus/screen state, and ends
+cleanly. Samsung may record `visualCapture: unavailable` without visual-
+regression coverage; LG must capture a genuine screenshot until explicitly
+changed.
+
+### Current Samsung Phase 1 record — 2026-07-24
+
+- [x] Added a macOS command-line Samsung POC harness and safety/redaction unit
+  tests. It has no Electron dependency or GUI change.
+- [x] Pinned local Appium `2.19.0` and installed
+  `appium-tizen-tv-driver` `0.18.1` in ignored project-local Appium state.
+  Appium `3.5.2` was incompatible with this driver and was removed from the
+  POC pin.
+- [x] Verified the local server loads `tizentv@0.18.1`, listens only on
+  `127.0.0.1`, responds to health checking, and can be stopped cleanly.
+- [x] Connected SDB to the Samsung pilot on 2026-07-24. SDB reports
+  `QA50Q80BAKXXV`; SDB `4.2.36` and Tizen CLI `2.5.25` are installed. Read-only
+  app discovery found only the Samsung store MyTV app, which was left untouched.
+- [x] Inspected a supplied `PP2MTMRMs8.MyTV` v`3.5.3` `.wgt` and attempted
+  installation through the Tizen TV CLI. The TV rejected it with invalid
+  certificate chain (`install failed[118, -12]`); no test package was installed
+  and the store app stayed untouched.
+- [x] Rebuilt the distinct test app with the currently active Samsung profile
+  `MyTV-test-2`. The initial rebuild included stale unsigned `.sign` content.
+  A clean temporary rebuild excluding stale signing artifacts, package outputs,
+  and Finder metadata produced `MyTV-VNPT-test-clean.wgt`, retaining
+  `PP2MTMRMs8.MyTV` v`3.5.3`, with redacted local SHA-256
+  `bf33974bcb4c…30cd9a7121429`.
+- [ ] Deploy/launch the re-signed test package, then provide a compatible
+  Chromedriver, pair the remote, and validate DOM inspection, screenshots,
+  per-case MyTV-only reset/restart, and automatic logout.
+- [ ] Restore the pilot TV's SDB reachability from the current Mac network (or
+  update its direct IP) before retrying deployment. The latest attempt made no
+  package transfer and changed neither MyTV app.
+- [x] Exploratory home-TV connection: SDB reached `QA65Q70TAKXXV`; its
+  initial package transferred but failed. A no-space retry revealed unsigned
+  stale `.sign/.manifest.tmp`; the clean package then installed successfully as
+  `PP2MTMRMs8.MyTV` alongside production `PP2MTMRMs9.MyTV`. This is a separate
+  non-pilot deployment result and does not establish Samsung support.
+- [x] Home-TV launch: the Samsung-documented `tizen run -p
+  PP2MTMRMs8.MyTV` command reported success after an earlier package-ID attempt
+  failed, and the operator physically confirmed MyTV opened.
+- [x] Home-TV read-only SDB recheck on 2026-07-26: the current connected model
+  is `QA65Q70TAKXXV`. The live serial differed from an earlier supplied value,
+  so the POC harness now requires the serial explicitly and provides it to
+  Appium as `appium:udid`, separately from the TV address. The serial/address
+  values remain out of this repository.
+- [x] Home-TV Samsung Appium remote pairing completed with operator confirmation.
+  The driver retains the token in its local secure cache; the harness can use
+  that cache without receiving, logging, or storing the token.
+- [x] Home-TV visual-capture capability is `unavailable`. The dedicated test
+  account is runtime-only and is neither guessed nor stored; this does not
+  block the approved DOM-only semantic POC.
+- [x] Home-TV Appium/DOM preflight: a paired remote-only session started, the
+  detected Chrome `69.0.3497.128` endpoint accepted ChromeDriver `2.44` and
+  `2.43`, plus the compatible `2.42` candidate, and
+  the reset test app exposed visible welcome/focus DOM state. Session and
+  Appium shutdown completed cleanly for the earlier `2.44`/`2.43` trials. This
+  is not a POC pass.
+- [x] Home-TV Appium visual-capture capability is `unavailable`: the fresh
+  welcome-screen screenshot failed because
+  all three compatible ChromeDriver candidates (`2.44`, `2.43`, and `2.42`)
+  timed out receiving a renderer response. The driver's documented fallback
+  `2.36` attached and advertised screenshot support but reproduced the same
+  hang while DOM JavaScript still responded. Direct DevTools evaluation also
+  worked while `Page.captureScreenshot` timed out, eliminating a driver-side
+  ChromeDriver-versus-DevTools capture fix. The hardened retry stopped Appium
+  and released its SDB forward but could not cleanly delete the blocked
+  WebDriver session. Keep visual capture unavailable; this no longer blocks the
+  approved DOM-only semantic POC.
+- [x] Screenshot-capture investigation: the current `appium-tizen-tv-driver`
+  `0.18.1` has no native Tizen capture command; its standard screenshot route
+  is proxied to ChromeDriver, while direct DevTools capture also times out.
+  Samsung documents no supported application screen-capture API. No compliant
+  genuine-Appium screenshot candidate exists for this Tizen `5.5` / Chromium
+  `69.0.3497.128` home TV. No new physical-TV action was run during this
+  investigation; synthetic/DOM, `html2canvas`, HDMI, and camera alternatives
+  remain invalid for this gate.
+- [x] Home-TV partial no-screenshot POC: an explicit
+  `--skip-screenshot-gate` mode may continue reset/restart, real remote keys,
+  DOM inspection, normal WebDriver close, Appium stop, and SDB-forward cleanup
+  without making any screenshot request. The first test-app-only/no-account
+  run recorded `passed_without_screenshot_gate`: reset/restart, `up/right/ok/back`,
+  DOM focus change, WebDriver close, Appium stop, and new-forward cleanup all
+  passed. It is transport/auth evidence for the DOM-only POC, not visual
+  evidence or general Samsung support.
+- [x] Home-TV authorized partial login/logout: a subsequent
+  `--skip-screenshot-gate --login-from-env --verify-logout` run used only the
+  distinct test app and runtime-only credentials. It reset the test app after
+  the remote-key proof, activated the welcome login control, entered both
+  values through the virtual keyboard one character at a time, then completed
+  trusted `window.processLogOut`. The redacted local manifest records passed
+  login, logout, normal WebDriver close, Appium shutdown, and only-new SDB
+  forward cleanup. It made no screenshot request and performed no deployment.
+  Appium process-log capture was disabled before credential entry, and profile
+  selection DOM is redacted before retained evidence is written.
+- [x] Latest retained partial evidence:
+  `samsung-tizen-2026-07-26T05-38-38-188Z` records the completed exact-model
+  DOM-only semantic result with successful search, playback assessment,
+  WebDriver close, local Appium shutdown, and newly-created SDB-forward
+  cleanup. The trusted logout invocation resolved, but there is still no
+  partial-POC assertion for a clean visible post-logout screen. The earlier
+  `Mã lỗi: 3000` observation in `samsung-tizen-2026-07-26T04-36-53-108Z`
+  remains unresolved and is not a product-flow logout pass or failure. A local
+  unit contract prevents any later required cleanup failure from retaining or
+  printing a partial-success result.
+- [x] Home-TV reset-preservation observation: after the MyTV-only reset runs,
+  the operator confirmed Developer Mode remained enabled and opened unrelated
+  YouTube; subsequent Appium sessions continued using the existing pairing
+  cache. A genuine Appium screenshot remains unavailable. These partial
+  findings do not establish visual capture or general Samsung support.
+- [x] Samsung DOM-only semantic Phase 1 teardown recheck (exact home model
+  only): the historical semantic evidence
+  `samsung-tizen-2026-07-26T05-38-38-188Z` is valid for search/playback but
+  called trusted logout while the player remained open. The corrected harness
+  now directly activates the initial `Đăng nhập` control, then exits the player
+  with Back and waits two seconds before logout; every `--verify-logout` run
+  waits two seconds, requires MyTV's account-login control, and clears MyTV
+  `localStorage`. The final physical evidence,
+  `samsung-tizen-2026-07-26T06-23-41-538Z`, passed direct login, semantic
+  search/playback, Back plus the two-second unload wait, account-login logout
+  confirmation, WebDriver close, Appium shutdown, and only-new SDB-forward
+  cleanup. It made no deployment or screenshot request. This remains DOM-only
+  and exact-model only; `visualCapture` is unavailable and no result supports
+  `QAQ80BAKXXV` or any other Samsung model.
+- [ ] LG Phase 1. Deliberately not started until Samsung physical evidence is
+  recorded and handed off.
 
 ## Phase 2 — Runner foundation and safe device registry
 
@@ -79,8 +209,9 @@ API, with no renderer access to tools or secrets.
   metadata; it does not claim cross-laptop exclusivity.
 - [ ] Implement Appium lifecycle start/health/stop, loopback binding, robust
   child-process termination, and log redaction.
-- [ ] Implement session creation/close and normalized `pressKey`, screenshot,
-  DOM inspection, diagnostic, reset, and capability errors for each platform.
+- [ ] Implement session creation/close and normalized `pressKey`, optional
+  visual capture, mandatory DOM inspection, diagnostic, reset, and capability
+  errors for each platform.
 - [ ] Retain the existing Browser process and result behavior unchanged.
 
 **Tests:** Unit-test schema validation, registry atomicity, redaction, lock
@@ -118,11 +249,12 @@ add per-case target tags, filtering, or target-specific catalogues in v1.
   search. No direct text injection.
 - [ ] Make unsupported action/capability combinations fail preflight with the
   original case ID and action index.
-- [ ] Map screenshots, DOM state, focused control, and Appium diagnostics into
-  the existing step-result/report format.
-- [ ] Keep TV screenshots and redacted DOM diagnostics in the local host-app
-  report folder only. Submit status/results to the flow-case API without
-  artifact uploads.
+- [ ] Map available screenshots, DOM state, focused control, visual-capture
+  capability, and Appium diagnostics into the existing step-result/report
+  format.
+- [ ] Keep available TV screenshots and redacted DOM diagnostics in the local
+  host-app report folder only. Submit status/results to the flow-case API
+  without artifact uploads.
 - [ ] Keep the v1 result submission payload identical to the Browser runner.
   Store TV metadata locally; do not add fields to the API until its versioned
   server contract supports them.
@@ -162,17 +294,20 @@ the real target from the desktop app.
 - [ ] Add the target selector and platform-specific device fields described in
   [architecture.md](architecture.md).
 - [ ] Add a device modal with direct IP, saved device list, scan results,
-  validation state, default-package metadata, and an explicit **Save device**
-  action.
+  validation state, a visible **Path to package file** field, default-package
+  metadata, and an explicit **Save device** action. Samsung accepts only `.wgt`
+  and LG only `.ipk`; the main process validates the chosen path and extracts
+  package metadata.
 - [ ] Support an explicit one-off direct-IP run without a saved profile. Keep
   its platform/IP/app confirmation in memory only; require confirmation of the
   detected installed app ID/version and offer **Save as device profile** as an
   optional post-validation action. List compatible installed MyTV apps first;
   when none can be found, offer explicit one-off package installation.
-- [ ] Add a separate **Install/Update app** action that chooses a `.wgt` or
-  `.ipk`, confirms target/device/package, installs and validates the app, then
-  updates the profile. Ordinary test runs must only reset and launch the
-  already installed default app.
+- [ ] Add a separate **Install/Update app** action that uses the saved or
+  newly chosen **Path to package file**, confirms target/device/package, installs
+  and validates the app, then updates the profile. Choosing/saving a path does
+  not install it. Ordinary test runs must only reset and launch the already
+  installed default app.
 - [ ] Record the package backend label in the profile and artifact manifest.
   V1 accepts only production-connected pilot packages; a future staging build
   is separately packaged and never selected by a run-time backend switch.
@@ -212,15 +347,17 @@ the real target from the desktop app.
   passes. Preserve Browser default behavior.
 - [ ] Present pairing-required states as an operator pause with exact on-TV
   instructions; do not loop or retry pairing silently.
-- [ ] Change preview labels and use TV screenshot frames for TV targets. Hide
-  Browser's interactive-webview mode for TV targets; during a run expose only
-  live status, screenshots/logs, and **Stop**, never manual remote keys.
+- [ ] Change preview labels and use TV screenshot frames when `visualCapture`
+  is available; otherwise show an explicit DOM-only/no-visual-capture state.
+  Hide Browser's interactive-webview mode for TV targets; during a run expose
+  only live status, artifacts/logs, and **Stop**, never manual remote keys.
 - [ ] Send credential-free native OS notifications for run completion, recovery
   decisions, and unsynced results.
 
 **Gate:** Mocked renderer tests prove target persistence, platform switching,
 scan/add/validate flows, invalid-run prevention, redaction, and payload shape.
-Manual GUI verification shows a selected TV's status and screenshot preview.
+Manual GUI verification shows a selected TV's status and either screenshot
+preview or explicit DOM-only/no-visual-capture state.
 
 ## Phase 5 — End-to-end lab pilot and reliability hardening
 
@@ -264,3 +401,11 @@ Only begin after phase 5 is stable.
   review. Keep screenshots plus DOM diagnostics as the default evidence path.
 - [ ] Add CI/lab-agent execution after host secrets, network access, and device
   locking are managed by infrastructure rather than a developer desktop.
+- [ ] **Deferred future feature:** add a separately user-confirmed **Manage
+  Samsung signing / Repackage for this TV** workflow. It may create/select a
+  Samsung TV certificate profile for a reviewed DUID and package from a local
+  source tree, but it must never run during test execution, silently collect
+  Samsung credentials/private keys, or deploy without the separate
+  **Install/Update app** confirmation. Pre-signed DUID-bound `.wgt` packages
+  remain the supported workflow until this feature passes dedicated security
+  and vendor-integration validation.

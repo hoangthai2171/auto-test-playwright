@@ -1,0 +1,5 @@
+{
+  "appium": "2.19.0",
+  "tizenDriver": "0.18.1",
+  "lgWebOsDriver": "0.5.0"
+}

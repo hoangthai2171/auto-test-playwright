@@ -12,7 +12,11 @@
     "browsers:install": "node scripts/install-playwright-browsers.js",
     "test": "playwright test",
     "test:unit": "node --test tests/unit/*.test.js",
-    "test:headed": "node scripts/run-headed.js"
+    "test:headed": "node scripts/run-headed.js",
+    "tv:poc:tizen:setup": "node scripts/real-tv-appium/tizen-poc.js setup",
+    "tv:poc:tizen:doctor": "node scripts/real-tv-appium/tizen-poc.js doctor",
+    "tv:poc:tizen:pair": "node scripts/real-tv-appium/tizen-poc.js pair",
+    "tv:poc:tizen": "node scripts/real-tv-appium/tizen-poc.js"
   },
   "keywords": [],
   "author": "",
@@ -22,8 +26,9 @@
     "playwright": "^1.61.1"
   },
   "devDependencies": {
+    "appium": "2.19.0",
     "electron": "^31.7.7",
-    "electron-builder": "^24.13.3"
+        "electron-builder": "^24.13.3"
   },
   "build": {
     "appId": "vn.mytv.autotest",

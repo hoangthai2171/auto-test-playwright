@@ -21,3 +21,4 @@ yarn-error.log*
 pnpm-debug.log*
 .worktrees/
 .superpowers/
+.real-tv-appium/

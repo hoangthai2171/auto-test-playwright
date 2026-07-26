@@ -43,7 +43,10 @@ Run target
   Device  [ Lab Samsung 2024 (192.168.1.40)       ▾ ]
           [ Scan ] [ Add IP ]
   Status  ● Ready · Tizen 8 · app vn.mytv.qa
-  Build   Installed v3.14.2 · [ Install/Update app… ]
+  Build   Installed v3.14.2
+  Package [ Path to package file…                    ] [ Choose… ]
+          Samsung: .wgt · LG: .ipk
+          [ Install/Update app… ]
 ```
 
 - `Browser` is the default and preserves today's behavior.
@@ -54,10 +57,11 @@ Run target
   enabled.
 - The workspace preview title changes to the selected device label and target.
   Browser retains its optional interactive webview; TVs show screenshot frames
-  only in v1 (future video is opt-in). During a TV run, the GUI is observation
-  and emergency-stop only: do not provide manual remote keys, clicking, or
-  other interactive TV controls, because concurrent input makes results
-  nondeterministic.
+  only when the selected device advertises `visualCapture: available`.
+  DOM-only devices show an explicit non-visual state and redacted diagnostics.
+  During a TV run, the GUI is observation and emergency-stop only: do not
+  provide manual remote keys, clicking, or other interactive TV controls,
+  because concurrent input makes results nondeterministic.
 - **Stop** ends the case, stops preview polling, asks the session to clean up,
   releases the local lock, and applies the documented manual-stop result-sync
   policy for fully completed cases only.
@@ -66,18 +70,76 @@ Run target
   completed results remain unsynced. Notifications contain no credentials or
   DOM/screenshot content.
 
-V1 TV evidence is limited to Appium screenshots and redacted DOM diagnostics.
-Video, audio, and HDMI capture are deferred. When implemented, they belong in a
-new **Settings → Test** page with an explicit capture mode and retention notice;
-they must never start implicitly or become a hidden dependency of ordinary
-test-case runs.
+### Per-device package-file setting
+
+The TV device form includes a visible **Path to package file** setting. The
+operator can type a local absolute path or select it through a main-process
+native file picker. The field is platform-specific: Samsung accepts only a
+`.wgt`; LG accepts only an `.ipk`. The selected path is local profile metadata,
+not a shared project setting, because it is meaningful only for one engineer's
+laptop and one platform/device profile.
+
+Choosing or saving a path never installs an app. It records the profile's
+default package candidate for a future explicit **Install/Update app** action.
+The main process rechecks file existence, extension, package metadata, app ID,
+version, backend label, and target platform immediately before deployment; the
+renderer must not trust the saved path or inspect the package itself. The
+confirmation names the exact TV, platform, app ID, package version, backend
+label, and selected path. A normal Run never reads this field to install or
+replace an app: it validates, clears MyTV storage, and launches the already
+installed expected app only.
+
+For Samsung, a selected `.wgt` is rejected before confirmation if its app ID is
+`PP2MTMRMs9.MyTV`. This safety rule applies to typed paths, file-picker paths,
+saved profiles, one-off runs, and every administrator role; there is no
+override. A successful explicit deployment updates the profile's default
+package path and detected app ID/version only after installed-app validation
+passes.
+
+### Deferred future feature: Manage Samsung signing / Repackage for this TV
+
+This is explicitly **not** part of V1, ordinary **Install/Update app**, or a
+test Run. A future, separately user-confirmed device-management workflow may
+help an authorised developer prepare a Samsung test package for a newly chosen
+TV:
+
+1. Read or ask the operator to enter the TV DUID and display it for review.
+2. Require the operator to authenticate in the vendor-managed Samsung
+   certificate flow; the app never collects, logs, or transmits Samsung account
+   credentials, certificate passwords, or private-key material.
+3. Create or select a Samsung **TV** distributor certificate profile that
+   includes that DUID. Adding a TV to an existing distributor certificate is
+   not assumed possible; the workflow must support issuing/selecting a new
+   profile while retaining the approved author certificate where appropriate.
+4. Repackage from an explicitly selected local source tree, validate the
+   distinct Samsung test app ID and package metadata, and save the resulting
+   local `.wgt` only as a package candidate.
+5. Require the normal separate **Install/Update app** confirmation before any
+   deployment.
+
+It must be unavailable during a run, default to off, retain only redacted local
+audit metadata, and never add certificate files, private keys, DUIDs, or signed
+packages to source control. Until this feature is implemented and validated,
+engineers provide a pre-signed `.wgt` whose distributor certificate already
+includes the selected TV's DUID.
+
+V1 TV evidence always includes redacted DOM diagnostics and includes genuine
+Appium screenshots only when `visualCapture: available`. A missing capture path
+is recorded as `visualCapture: unavailable`, without HDMI, camera, DOM-rendered,
+or other synthetic substitutes. Video, audio, and HDMI capture are deferred.
+When implemented, they belong in a new **Settings → Test** page with an explicit
+capture mode and retention notice; they must never start implicitly or become a
+hidden dependency of ordinary test-case runs.
+
+The currently approved DOM-only exception is Samsung Tizen only. LG keeps a
+genuine screenshot requirement until the user explicitly changes that policy.
 
 Store v1 TV artifacts in the existing writable Electron host report location,
 not beside the installed application bundle:
 
 ```text
 <Electron userData>/user-report/tv-artifacts/<runId>/<caseId>/
-  screenshots/
+  screenshots/                  # present only when visualCapture is available
   dom-diagnostics/
   manifest.json
 ```
@@ -290,6 +352,9 @@ Add only structured preload methods:
 - `listTvDevices()` → redacted device profiles and last-known status.
 - `scanTvDevices({platform})` → ephemeral discovery results.
 - `saveTvDevice(profile)` and `removeTvDevice(deviceId)` → validated metadata.
+- `chooseTvPackage({platform})` → a user-selected, extension-filtered local
+  path plus main-process-extracted non-secret package metadata; it does not
+  install anything.
 - `validateTvDevice(deviceId)` → connection, developer mode, build/app, and
   pairing readiness; it never starts a test.
 - `runTest(payload)` and `stopTest()` → extend the existing methods.
@@ -304,13 +369,13 @@ cases on another Samsung/LG TV, the operator starts a separate batch after the
 first one completes or stops. Do not add a multi-device checkbox, shared batch,
 or concurrent Appium sessions in v1.
 
-Each saved TV profile has a default package path and expected app ID/version.
-Ordinary runs reset and launch that already installed app; they do not install a
-package. A separate **Install/Update app** device-management action lets an
-operator choose a replacement `.wgt` or `.ipk`, confirms the exact device and
-package, installs it through the platform adapter, validates the installed app
-ID/version, and then updates the local profile's default-package metadata. This
-action is unavailable while a run is active.
+Each saved TV profile has a visible **Path to package file** value and expected
+app ID/version. Ordinary runs reset and launch that already installed app; they
+do not install a package. A separate **Install/Update app** device-management
+action uses the saved or newly chosen `.wgt`/`.ipk`, confirms the exact device
+and package, installs it through the platform adapter, validates the installed
+app ID/version, and then updates the local profile's default-package metadata.
+This action is unavailable while a run is active.
 
 Before every TV run, main-process validation reads the installed app identity
 and version from the platform adapter and compares them with the saved profile.
@@ -417,7 +482,7 @@ class TvSession {
   async pressKey(key) {}
   async getDomState() {}
   async waitForDomState(predicate, {timeoutMs}) {}
-  async screenshot() {}
+  async screenshot() {} // throws a capability error when visualCapture is unavailable
   async collectDiagnostics() {}
   async cleanup() {}
   async close() {}
@@ -477,7 +542,7 @@ tests/run-test-case-tv.spec.js    generic TV case entry point
 tests/unit/                       contracts and renderer/device tests
 ```
 
-## V1 observation contract: DOM and screenshots
+## V1 observation contract: mandatory DOM, optional visual capture
 
 V1 does not modify the MyTV package. Appium must expose a compatible WebDriver
 DOM session for the installed production-equivalent app. Each physical model is
@@ -488,8 +553,14 @@ current browser runner:
 - `.focused` and supported dialog `.active` focus state;
 - virtual-keyboard controls;
 - content-row discovery;
-- player DOM state and media time where the platform exposes it;
-- Appium screenshot capture after actions and on errors.
+- player DOM state and media time where the platform exposes it.
+
+Each model also declares `visualCapture: available | unavailable`. An available
+model captures genuine Appium screenshots after actions and on errors. An
+unavailable **Samsung** model records redacted DOM diagnostics only and may run
+the approved DOM-only semantic automation; its manifest/report must state the
+limitation and must not create or imply a visual artifact. An unavailable LG
+model fails visual preflight until its policy changes explicitly.
 
 The TV adapters may use read-only DOM JavaScript/standard WebDriver queries but
 must not inject application behavior, click elements directly, or modify app
@@ -503,9 +574,9 @@ focus, virtual-keyboard, row, and playback primitives behind a target-neutral
 
 Every selected TV must advertise `domInspection: true` during validation. If
 Appium can only run in remote-only mode, reject semantic test cases before the
-first action with an explicit unsupported-model/capability result. A screenshot
-alone is not a reliable replacement for `focus_row`, search, or playback
-assertions.
+first action with an explicit unsupported-model/capability result. Visual
+capture is not a replacement for `focus_row`, search, or playback assertions,
+and its absence is not a reason to reject a DOM-capable model.
 
 ## Future MyTV QA bridge contract
 
@@ -554,8 +625,8 @@ handlers against `TvSession`/`DomSession`, not directly against a Playwright
   Vietnamese matching rules.
 - `assert_screen` asserts visible DOM text.
 - Playback success uses the current player DOM checks and advancing media time
-  where available, with screenshots/artifacts retained. Do not claim that a
-  screenshot alone proves playback.
+  where available, with a genuine screenshot retained only when visual capture
+  is available. Do not claim that a screenshot alone proves playback.
 
 Do not silently run a DOM-dependent action in remote-only mode. Fail before
 interaction with a message naming the action, platform, TV model, and missing
