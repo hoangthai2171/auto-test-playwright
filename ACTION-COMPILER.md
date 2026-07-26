@@ -35,7 +35,9 @@ traceability, but do not require the app to compile it again.
 
 ## Compilation algorithm
 
-For each non-empty line, in order:
+Before parsing the steps, retain `preCondition` as case metadata and inspect it
+only as a possible credential source for an uncredentialed login step. Then,
+for each non-empty line, in order:
 
 1. Remove only the optional step prefix, such as `B1.`, `B2.`, or `B12.`.
 2. Keep the original line for diagnostics and preserve the original
@@ -56,6 +58,10 @@ number, and original line. Do not send a partially compiled action list.
 The content `name` sent in an action should remain human-readable, for example
 `"Căn phòng tử thần"`. The runtime search helper normalizes it to lowercase
 ASCII (`"can phong tu than"`) before entering the virtual keyboard.
+
+The app-side runtime does not read `preCondition` to obtain credentials. When
+the server uses it as described below, it must emit the resolved `username` and
+`password` in the explicit `login` action.
 
 ## Action grammar and output
 
@@ -81,6 +87,36 @@ or may place a package name between `tài khoản` and the username. Package or
 subscription wording is ignored; only the username and password are emitted.
 Credentials are sensitive and must not be written to logs or failure
 messages.
+
+#### Login credentials from `preCondition`
+
+If a login step clearly requests login but does not provide both a username and
+password, resolve that one login action from the case's `preCondition` field.
+For example:
+
+```json
+{
+  "preCondition": "Tài khoản đăng nhập: <username>/<password>",
+  "qaDescription": "B1. Đăng nhập vào ứng dụng\nB2. Vào trang chủ ứng dụng",
+  "actions": [
+    {"action":"login","username":"<username>","password":"<password>"},
+    {"action":"open_home"}
+  ]
+}
+```
+
+Apply these rules deterministically:
+
+1. Credentials stated on the login line take precedence over `preCondition`.
+2. Use `preCondition` only when it supplies one unambiguous complete credential
+   pair in a supported login format (`username/password` or labeled username
+   and password/pass values).
+3. Do not infer credentials from the case name, expected result, another
+   metadata field, or a partial value in `preCondition`.
+4. If the login line omits credentials and `preCondition` is absent, malformed,
+   partial, or contains more than one possible credential pair, reject the
+   transformation with the case ID and the original login line. Never emit a
+   `login` action with missing values.
 
 ### Home and service navigation
 
@@ -123,6 +159,34 @@ There are two supported ways to enter a service:
 
 The Home row is located from its visible heading and nearby service items. Do
 not depend on a generated row ID because it can change between renders.
+
+#### Required service-success assertion
+
+Opening or focusing a service poster is not itself a successful service test.
+For every case whose purpose is to open a service or category, retain a service
+success assertion in `expectedResult`. Accepted Vietnamese forms include:
+
+```text
+Vào chuyên mục "TV xem lại" bình thường
+Mở dịch vụ "Thiếu nhi" thành công
+Vào màn hình dịch vụ Phim truyện thành công
+```
+
+If the source puts that assertion as the final `qaDescription` line instead of
+in `expectedResult`, use that exact line to populate `expectedResult`; it is a
+result assertion, not another navigation action. Do not emit a duplicate
+`open_service` or `press_ok` action for it.
+
+The runtime checks the outcome immediately after the service is activated:
+
+1. A visible auto-hide toast/tooltip is a failure.
+2. A popup saying that the service has no data/content (or another service
+   error) is a failure.
+3. Success requires leaving Home and showing at least one visible content row
+   on the destination screen.
+
+Therefore a case must not pass solely because the target poster was visible,
+focused, or received OK/Enter.
 
 ### Focus a named control and press OK
 
@@ -229,7 +293,10 @@ Output:
 {"action":"press_ok"}
 ```
 
-`press_ok` sends the remote Enter key after the preceding focus action.
+`press_ok` sends the remote Enter key after the preceding focus action. When
+that focus is a Home `Thể loại` service poster, the runtime immediately checks
+the service-success outcome above rather than treating the key press itself as
+success.
 
 ### Open global search
 

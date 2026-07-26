@@ -5,6 +5,7 @@ const {loadLocalTestCases, loadCachedTestCases, findTestCaseById} = require("./l
 const {runTestCase} = require("./lib/test-case-action-runner");
 const {logoutApp} = require("./lib/app-cleanup");
 const {captureCurrentAppScreenshot} = require("./lib/artifacts");
+const {waitForServiceScreenImages} = require("./lib/service-screenshot");
 
 async function writeCaseResult(resultPath, result) {
   if (!resultPath) return;
@@ -79,6 +80,7 @@ async function capturePassedTestScreenshot(page, testInfo, result) {
 
   try {
     if (!result.completionScreenshotDataUrl) {
+      await waitForServiceScreenImages(page, result);
       result.completionScreenshotDataUrl = await captureCurrentAppScreenshot(
         page,
         testInfo,

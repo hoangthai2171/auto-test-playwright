@@ -138,6 +138,16 @@ initial action vocabulary is:
 - `press_back`
 - `wait_for_ready`
 
+When `focus_text` immediately follows `focus_row` for Home `Thể loại`, it
+scans the complete reachable service carousel, moving right and re-reading the
+row until it finds the requested poster. It never falls back to a matching
+left-menu label.
+
+After any generic service activation (`open_service`, or `focus_row` →
+`focus_text` → `press_ok` on Home `Thể loại`), the runner requires a non-Home
+screen with visible content rows. A visible toast/tooltip or no-data/error
+popup fails the action; an Enter press alone is not a successful service open.
+
 `focus_row` requires a `rowName` and normally focuses its first visible item.
 For a numbered poster, provide a positive 1-based `itemIndex`, for example
 `{"action":"focus_row","rowName":"HTV","itemIndex":4}`.

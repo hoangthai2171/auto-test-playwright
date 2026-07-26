@@ -183,7 +183,8 @@ async function searchContentByName(page, options, testInfo) {
   return result;
 }
 
-async function openServiceFromLeftMenuOrAllServices(page, serviceName, testInfo) {
+async function openServiceFromLeftMenuOrAllServices(page, serviceName, testInfo, options = {}) {
+  const activationDelay = Number(options.activationDelay ?? 3000);
   const serviceNames = getServiceSearchNames(serviceName);
   await openLeftMenuFromHome(page);
 
@@ -199,7 +200,7 @@ async function openServiceFromLeftMenuOrAllServices(page, serviceName, testInfo)
 
   if (leftMenuItemId) {
     await remoteFocusById(page, leftMenuItemId, 100);
-    await activateVerifiedTarget(page, {testInfo, name: `open-service-${serviceName}`, contractName: "menuItem", expectedId: leftMenuItemId, expectedLabel: matchedServiceName, delay: 3000});
+    await activateVerifiedTarget(page, {testInfo, name: `open-service-${serviceName}`, contractName: "menuItem", expectedId: leftMenuItemId, expectedLabel: matchedServiceName, delay: activationDelay});
     return;
   }
 
@@ -211,7 +212,176 @@ async function openServiceFromLeftMenuOrAllServices(page, serviceName, testInfo)
 
   const serviceId = await findServiceIdInAllServices(page, serviceNames);
   await remoteFocusById(page, serviceId, 120);
-  await activateVerifiedTarget(page, {testInfo, name: `open-service-${serviceName}-fallback`, contractName: "menuItem", expectedId: serviceId, expectedLabel: matchedServiceName, delay: 3000});
+  await activateVerifiedTarget(page, {testInfo, name: `open-service-${serviceName}-fallback`, contractName: "menuItem", expectedId: serviceId, expectedLabel: matchedServiceName, delay: activationDelay});
+}
+
+async function assertServiceOpened(page, {service, testInfo, timeout = 30000, polling = 100} = {}) {
+  const deadline = Date.now() + timeout;
+  let observation = null;
+
+  while (Date.now() <= deadline) {
+    observation = await observeServiceOpenState(page);
+    if (observation.failure) {
+      await attachServiceOpenFailure(page, testInfo, service, observation);
+      throw serviceOpenError(service, observation);
+    }
+
+    if (observation.routeValue && observation.routeValue !== "homeNewUI" &&
+      !observation.home.visible && observation.content.visible) {
+      return {
+        type: "service",
+        service: String(service || "").trim(),
+        route: observation.routeValue,
+        rowCount: observation.content.rowCount,
+        visibleCount: observation.content.visibleCount,
+        verified: "Service opened to a non-Home screen with visible content rows",
+      };
+    }
+
+    await page.waitForTimeout(Math.min(polling, Math.max(0, deadline - Date.now())));
+  }
+
+  await attachServiceOpenFailure(page, testInfo, service, observation);
+  throw serviceOpenError(service, observation, "did not reach a non-Home screen with visible content rows");
+}
+
+async function observeServiceOpenState(page) {
+  const [rows, destinationContent, popup, toast, home] = await Promise.all([
+    collectVisibleContentRows(page).catch(() => []),
+    observeServiceDestinationContent(page).catch(() => ({visible: false, visibleCount: 0, rowCount: 0})),
+    getVisibleServicePopup(page).catch(() => []),
+    getVisibleServiceToast(page).catch(() => null),
+    observeVisibleHomeScreen(page).catch(() => ({visible: false})),
+  ]);
+  const routeValue = getSubpageSafe(page?.url?.());
+  const failedPopup = popup.find((candidate) => isServiceFailurePopup(candidate.text));
+  const failure = toast || (failedPopup ? {kind: "popup", text: failedPopup.text} : null);
+
+  return {
+    routeValue,
+    content: destinationContent.visible
+      ? destinationContent
+      : {
+          visible: rows.length > 0,
+          visibleCount: rows.reduce((count, row) => count + row.items.length, 0),
+          rowCount: rows.length,
+          kind: "content-rows",
+        },
+    popup,
+    toast,
+    home,
+    failure,
+  };
+}
+
+async function observeVisibleHomeScreen(page) {
+  return page.evaluate(() => {
+    const homeMarkers = Array.from(document.querySelectorAll("[id^='homePage2_']"));
+    const visible = homeMarkers.some((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" &&
+        style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    });
+    return {visible};
+  });
+}
+
+async function observeServiceDestinationContent(page) {
+  return page.evaluate(() => {
+    const visible = (element) => {
+      if (!element) return false;
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" &&
+        style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    };
+    const tvod = Array.from(document.querySelectorAll(".tvod_container"))
+      .find(visible);
+    if (!tvod) return {visible: false, visibleCount: 0, rowCount: 0};
+
+    const items = Array.from(tvod.querySelectorAll(".lw_r_item"))
+      .filter(visible);
+    return {
+      visible: items.length > 0,
+      visibleCount: items.length,
+      rowCount: items.length > 0 ? 1 : 0,
+      kind: "tvod-schedule",
+    };
+  });
+}
+
+async function getVisibleServicePopup(page) {
+  return page.evaluate(() => Array.from(document.querySelectorAll("body *"))
+    .map((element) => {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      const marker = `${element.id || ""} ${element.className || ""} ${element.getAttribute("role") || ""}`.toLowerCase();
+      return {
+        marker,
+        text: (element.textContent || "").replace(/\s+/g, " ").trim(),
+        visible: rect.width > 0 && rect.height > 0 && style.display !== "none" &&
+          style.visibility !== "hidden" && Number(style.opacity) !== 0,
+      };
+    })
+    .filter((item) => item.visible && /popup|modal|dialog|alert/.test(item.marker))
+    .slice(0, 20)
+  );
+}
+
+async function getVisibleServiceToast(page) {
+  return page.evaluate(() => {
+    const candidate = Array.from(document.querySelectorAll("body *"))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        const marker = `${element.id || ""} ${element.className || ""} ${element.getAttribute("role") || ""}`.toLowerCase();
+        return {
+          marker,
+          text: (element.textContent || "").replace(/\s+/g, " ").trim(),
+          visible: rect.width > 0 && rect.height > 0 && style.display !== "none" &&
+            style.visibility !== "hidden" && Number(style.opacity) !== 0,
+        };
+      })
+      .find((item) => item.visible && /toast|tooltip|notification|snackbar/.test(item.marker));
+
+    return candidate ? {kind: "toast", text: candidate.text, marker: candidate.marker} : null;
+  });
+}
+
+function isServiceFailurePopup(text) {
+  const normalized = normalizeVietnameseText(text);
+  return /(?:khong co|chua co)\s+(?:du lieu|noi dung)|khong the|that bai|xin loi|\bloi\b|vui long thu lai/u.test(normalized);
+}
+
+function getSubpageSafe(url) {
+  try {
+    return getSubpage(String(url || ""));
+  } catch (_) {
+    return "";
+  }
+}
+
+function serviceOpenError(service, observation, fallbackReason = "showed service failure feedback") {
+  const failure = observation?.failure;
+  const reason = failure?.text || fallbackReason;
+  const error = new Error(`Dịch vụ "${service}" không mở thành công: ${reason}`);
+  error.details = observation || null;
+  return error;
+}
+
+async function attachServiceOpenFailure(page, testInfo, service, observation) {
+  if (!testInfo?.attach) return;
+  await testInfo.attach(`${safeArtifactName(service || "service")}-service-open.json`, {
+    body: JSON.stringify({service, observation}, null, 2),
+    contentType: "application/json",
+  });
+  if (typeof page?.screenshot === "function") {
+    await testInfo.attach(`${safeArtifactName(service || "service")}-service-open.png`, {
+      body: await page.screenshot({fullPage: false}),
+      contentType: "image/png",
+    });
+  }
 }
 
 function getServiceSearchNames(serviceName) {
@@ -1875,4 +2045,4 @@ function scoreWorkflowText(label, target) {
   return 0;
 }
 
-module.exports={getTestOptions,runStep,openAppAndEnterLoginPage,loginWithAccount,chooseFirstProfileAndEnterHome,closeHomePopupsAndVerifyHome,openSearchFromLeftMenu,searchContentByName,openTelevisionFromLeftMenu,openMovieFromLeftMenu,openSettingFromLeftMenu,openServiceFromLeftMenuOrAllServices,openChannel,searchAndOpenBestContent,openMovieContent,openFirstMovieContent,playAllItemsInFirstRow,playItemsInRow,playVisibleContentByName,playFocusedSearchResult,assertChannelPlayback:playback.assertChannelPlayback,assertMoviePlayback:playback.assertMoviePlayback,assertSearchContentPlayback:playback.assertSearchContentPlayback,attachCurrentAppScreenshot,__internal:{focusFirstRowStart,findServiceIdInAllServices,getServiceSearchNames,closeAdvertisePopupIfVisible,getVisiblePopup:playback.getVisiblePopup,chooseDirection:navigation.__internal.chooseDirection,waitForAppReady,waitForHomeReady,observeAppReadyState,observeHomeReadyState,observeVisibleContentRows,isValidFocusedState}};
+module.exports={getTestOptions,runStep,openAppAndEnterLoginPage,loginWithAccount,chooseFirstProfileAndEnterHome,closeHomePopupsAndVerifyHome,openSearchFromLeftMenu,searchContentByName,openTelevisionFromLeftMenu,openMovieFromLeftMenu,openSettingFromLeftMenu,openServiceFromLeftMenuOrAllServices,assertServiceOpened,openChannel,searchAndOpenBestContent,openMovieContent,openFirstMovieContent,playAllItemsInFirstRow,playItemsInRow,playVisibleContentByName,playFocusedSearchResult,assertChannelPlayback:playback.assertChannelPlayback,assertMoviePlayback:playback.assertMoviePlayback,assertSearchContentPlayback:playback.assertSearchContentPlayback,attachCurrentAppScreenshot,__internal:{focusFirstRowStart,findServiceIdInAllServices,getServiceSearchNames,closeAdvertisePopupIfVisible,getVisiblePopup:playback.getVisiblePopup,observeServiceOpenState,observeServiceDestinationContent,observeVisibleHomeScreen,getVisibleServicePopup,getVisibleServiceToast,chooseDirection:navigation.__internal.chooseDirection,waitForAppReady,waitForHomeReady,observeAppReadyState,observeHomeReadyState,observeVisibleContentRows,isValidFocusedState}};

@@ -29,9 +29,19 @@ function createHandlerHelpers(overrides = {}) {
     closeHomePopupsAndVerifyHome: async () => {},
     focusRequestedContentRow: async () => {},
     focusFirstItemInCurrentContentRow: async () => {},
+    focusServiceCategoryItem: async () => {},
+    remoteFocusById: async () => {},
     remoteFocusByText: async () => {},
     remotePress: async () => {},
     openServiceFromLeftMenuOrAllServices: async () => {},
+    assertServiceOpened: async () => ({
+      type: "service",
+      service: "Service",
+      route: "service",
+      rowCount: 1,
+      visibleCount: 1,
+      verified: "Service opened to a non-Home screen with visible content rows",
+    }),
     openSearchFromLeftMenu: async () => {},
     searchContentByName: async () => {},
     playVisibleContentByName: async () => {},
@@ -113,6 +123,37 @@ test("runs each declared action through its handler in order", async () => {
     { index: 0, action: "open_home", status: "passed", message: "" },
     { index: 1, action: "open_service", status: "passed", message: "" },
   ]);
+});
+
+test("retains a service verification result when the step wrapper does not return the callback value", async () => {
+  const runner = createActionRunner({
+    handlers: {
+      press_ok: async () => ({
+        type: "service",
+        service: "TV Xem lại",
+        route: "tvod",
+        rowCount: 1,
+        visibleCount: 12,
+      }),
+    },
+    stepRunner: async (_page, _testInfo, _label, callback) => {
+      await callback();
+    },
+  });
+
+  const result = await runner({id: "page"}, createTestInfo(), {
+    id: "preserve-service-result",
+    name: "Preserve service result",
+    actions: [{action: "press_ok"}],
+  });
+
+  assert.deepEqual(result.steps[0].result, {
+    type: "service",
+    service: "TV Xem lại",
+    route: "tvod",
+    rowCount: 1,
+    visibleCount: 12,
+  });
 });
 
 test("fails before execution when an action handler is missing", async () => {
@@ -435,49 +476,74 @@ test("returns from a final player action before waiting for the player session c
   assert.deepEqual(events, ["play", "press:Backspace", "wait:2000"]);
 });
 
-test("accepts a service expectedResult after a successful service action without screen text assertion", async () => {
+test("accepts a verified service expectedResult after a successful service action", async () => {
+  const helpers = createHandlerHelpers({
+    assertServiceOpened: async () => ({
+      type: "service",
+      service: "Phim truyện",
+      route: "movie",
+      rowCount: 2,
+      visibleCount: 8,
+      verified: "Service opened to a non-Home screen with visible content rows",
+    }),
+  });
   const result = await runTestCase({id: "page"}, createTestInfo(), {
     id: "expected-service",
     name: "Expected service",
     expectedResult: "Vào màn hình dịch vụ phim truyện thành công",
     actions: [{action: "open_service", service: "Phim truyện"}],
   }, {
-    helpers: createHandlerHelpers(),
-    handlers: {open_service: async () => {}},
+    helpers,
+    handlers: createDefaultActionHandlers({helpers}),
     stepRunner: async (_page, _testInfo, _label, callback) => callback(),
   });
 
   assert.equal(result.steps.at(-1).action, "expected_result");
   assert.deepEqual(result.steps.at(-1).result, {
     type: "service",
-    verified: "Service navigation action completed; destination label was not asserted",
+    service: "Phim truyện",
+    route: "movie",
+    rowCount: 2,
+    visibleCount: 8,
+    verified: "Service opened to a non-Home screen with visible content rows",
   });
 });
 
 test("accepts a service expectedResult after entering through the home Thể loại row", async () => {
+  const helpers = createHandlerHelpers({
+    focusRequestedContentRow: async () => ({title: "Thể loại", items: []}),
+    assertServiceOpened: async () => ({
+      type: "service",
+      service: "Truyền hình",
+      route: "television",
+      rowCount: 3,
+      visibleCount: 12,
+      verified: "Service opened to a non-Home screen with visible content rows",
+    }),
+  });
   const result = await runTestCase({id: "page"}, createTestInfo(), {
     id: "expected-home-row-service",
     name: "Expected home-row service",
-    expectedResult: "Vào màn hình dịch vụ Truyền hình thành công",
+    expectedResult: "Vào chuyên mục Truyền hình bình thường",
     actions: [
       {action: "focus_row", rowName: "Thể loại"},
       {action: "focus_text", text: "Truyền hình"},
       {action: "press_ok"},
     ],
   }, {
-    helpers: createHandlerHelpers(),
-    handlers: {
-      focus_row: async () => {},
-      focus_text: async () => {},
-      press_ok: async () => {},
-    },
+    helpers,
+    handlers: createDefaultActionHandlers({helpers}),
     stepRunner: async (_page, _testInfo, _label, callback) => callback(),
   });
 
   assert.equal(result.steps.at(-1).action, "expected_result");
   assert.deepEqual(result.steps.at(-1).result, {
     type: "service",
-    verified: "Service navigation action completed; destination label was not asserted",
+    service: "Truyền hình",
+    route: "television",
+    rowCount: 3,
+    visibleCount: 12,
+    verified: "Service opened to a non-Home screen with visible content rows",
   });
 });
 
@@ -611,6 +677,34 @@ test("focuses the first poster in the requested content row", async () => {
   assert.deepEqual(calls, [[page, {rowName: "Thịnh hành"}]]);
 });
 
+test("scans the selected Thể loại row for a requested service before the left menu", async () => {
+  const calls = [];
+  const page = {id: "page"};
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      focusRequestedContentRow: async () => ({
+        title: "Thể loại",
+        items: [
+          {id: "service-world-cup", title: "World Cup 2026"},
+        ],
+      }),
+      focusServiceCategoryItem: async (...args) => calls.push(["category", ...args]),
+      remoteFocusById: async (...args) => calls.push(["id", ...args]),
+      remoteFocusByText: async (...args) => calls.push(["text", ...args]),
+    }),
+  });
+
+  await handlers.focus_row({page, action: {action: "focus_row", rowName: "Thể loại"}});
+  await handlers.focus_text({page, action: {action: "focus_text", text: "Thiếu nhi"}});
+
+  assert.deepEqual(calls, [["category", page, "Thiếu nhi", {
+    initialRow: {
+      title: "Thể loại",
+      items: [{id: "service-world-cup", title: "World Cup 2026"}],
+    },
+  }]]);
+});
+
 test("focuses a requested numbered poster in the named content row", async () => {
   const calls = [];
   const handlers = createDefaultActionHandlers({
@@ -676,7 +770,30 @@ test("opens a service with the action service and test context", async () => {
     action: { action: "open_service", service: "Phim truyện" },
   });
 
-  assert.deepEqual(calls, [[page, "Phim truyện", testInfo]]);
+  assert.deepEqual(calls, [[page, "Phim truyện", testInfo, {activationDelay: 0}]]);
+});
+
+test("checks that a clicked service opened content rather than only accepting the Enter press", async () => {
+  const calls = [];
+  const page = {id: "page"};
+  const testInfo = {id: "test-info"};
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      openServiceFromLeftMenuOrAllServices: async (...args) => calls.push(["open", ...args]),
+      assertServiceOpened: async (...args) => calls.push(["verify", ...args]),
+    }),
+  });
+
+  await handlers.open_service({
+    page,
+    testInfo,
+    action: {action: "open_service", service: "Phim truyện"},
+  });
+
+  assert.deepEqual(calls, [
+    ["open", page, "Phim truyện", testInfo, {activationDelay: 0}],
+    ["verify", page, {service: "Phim truyện", testInfo}],
+  ]);
 });
 
 test("reports the requested service name when service navigation fails", async () => {

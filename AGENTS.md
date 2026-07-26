@@ -139,8 +139,10 @@ The supported action allowlist is:
 - `open_home`: waits for the ready home state.
 - `focus_row`: requires a row/category name and navigates to it using its first visible item as the TV focus anchor. An optional positive 1-based `itemIndex` focuses that visible item instead. Home rows are matched by visible headings/content and do not depend on dynamic row IDs.
 - `focus_row_first_item`: focuses the leftmost item in the currently active row, regardless of content type.
-- `focus_text`: focuses a visible control by its human-readable text through remote navigation.
-- `press_ok`: sends the remote OK/Enter key.
+- `focus_text`: focuses a visible control by its human-readable text through remote navigation. Immediately after `focus_row` for the Home `Thể loại` row, it scans every reachable service poster in that carousel, moving right and re-reading the row until it finds the requested service or reaches the end. It never falls back to a same-named left-menu item.
+- `press_ok`: sends the remote OK/Enter key. After a Home `Thể loại` service
+  poster it immediately requires a non-Home destination with visible content
+  rows; a visible toast/tooltip or no-data/error popup fails the action.
 - `open_service`: requires a service name and uses the left-menu or “Tất cả
   dịch vụ” fallback navigation. A service can also be entered from the Home
   “Thể loại” row with `focus_row`, `focus_text`, and `press_ok`.
@@ -178,10 +180,11 @@ mechanism, and returns structured per-step results.
 
 After all action steps pass, recognized `expectedResult` values add a final
 `expected_result` check. Playback-success wording waits six seconds, then waits
-for a healthy playing player; service-screen-success wording requires either a completed
-`open_service` action or the Home “Thể loại” sequence (`focus_row` →
-`focus_text` → `press_ok`) but does not assert the service name on the
-destination screen. Player checks capture the player screen before cleanup,
+for a healthy playing player; service-success wording (`Vào`/`Mở` a service or
+category `bình thường`/`thành công`) requires the activation check to have
+observed a non-Home destination with visible content rows. A visible
+auto-hide toast/tooltip or no-data/error popup fails service access. Player
+checks capture the player screen before cleanup,
 remotely return to the prior screen, then wait two seconds when final so
 watching-session teardown API calls can complete, unless the next action
 explicitly waits for the player or performs its own Back action.

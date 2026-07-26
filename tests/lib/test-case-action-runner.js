@@ -41,7 +41,7 @@ function classifyExpectedResult(expectedResult) {
     return "player";
   }
 
-  if (/^vao man hinh dich vu\s+.+\s+thanh cong$/u.test(normalized)) {
+  if (/^(?:vao|mo)(?:\s+(?:man hinh|chuyen muc|dich vu))?\s+.+\s+(?:binh thuong|thanh cong)$/u.test(normalized)) {
     return "service";
   }
 
@@ -182,9 +182,12 @@ function createActionRunner({ handlers = {}, stepRunner, afterAction, onActionEr
       const startedAt = Date.now();
 
       try {
-        const handlerResult = await stepRunner(page, testInfo, label, () =>
-          handlers[label]({ page, testInfo, action, testCase: compiledTestCase, options })
-        );
+        let handlerResult;
+        const stepRunnerResult = await stepRunner(page, testInfo, label, async () => {
+          handlerResult = await handlers[label]({ page, testInfo, action, testCase: compiledTestCase, options });
+          return handlerResult;
+        });
+        if (handlerResult === undefined) handlerResult = stepRunnerResult;
         if (typeof afterAction === "function") {
           await afterAction({
             page,
@@ -317,15 +320,16 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers}) 
     }
   }
 
-  if (!hasSuccessfulServiceNavigation(testCase, steps)) {
+  const serviceAccess = getSuccessfulServiceAccess(testCase, steps);
+  if (!serviceAccess) {
     throw new Error(
-      `Expected result requires a completed service navigation path: ${testCase.expectedResult}`
+      `Expected result requires a verified service destination with content rows: ${testCase.expectedResult}`
     );
   }
 
   return {
     type: "service",
-    verified: "Service navigation action completed; destination label was not asserted",
+    ...serviceAccess,
   };
 }
 
@@ -409,11 +413,7 @@ function hasSuccessfulServiceNavigation(testCase, steps) {
   const actions = testCase.actions || [];
   const stepPassed = (index) => steps[index]?.status === "passed";
 
-  if (actions.some((action, index) => action.action === "open_service" && stepPassed(index))) {
-    return true;
-  }
-
-  return actions.some((action, index) => {
+  const hasServicePath = actions.some((action, index) => action.action === "open_service" && stepPassed(index)) || actions.some((action, index) => {
     if (action.action !== "press_ok" || !stepPassed(index)) return false;
 
     const preceding = actions.slice(0, index);
@@ -426,6 +426,14 @@ function hasSuccessfulServiceNavigation(testCase, steps) {
     return rowFocusIndex >= 0 && serviceFocusIndex >= 0 &&
       stepPassed(rowFocusIndex) && stepPassed(serviceFocusIndex);
   });
+
+  return hasServicePath && Boolean(getSuccessfulServiceAccess(testCase, steps));
+}
+
+function getSuccessfulServiceAccess(_testCase, steps) {
+  return steps
+    .map((step) => step?.result)
+    .find((result) => result?.type === "service" && result?.route && result?.rowCount > 0) || null;
 }
 
 async function resolveReadyWait(helpers, page, testInfo, name) {
@@ -454,6 +462,9 @@ async function resolveReadyWait(helpers, page, testInfo, name) {
 }
 
 function createDefaultActionHandlers({ helpers }) {
+  let mostRecentlyFocusedRow = null;
+  let pendingServiceName = "";
+
   return {
     login: async ({ page, testInfo, action, options }) => {
       const account = {
@@ -468,32 +479,52 @@ function createDefaultActionHandlers({ helpers }) {
     },
     open_home: ({ page, testInfo }) =>
       workflows.__internal.waitForHomeReady(page, testInfo),
-    focus_row: ({ page, action }) =>
-      helpers.focusRequestedContentRow(page, {
+    focus_row: async ({ page, action }) => {
+      mostRecentlyFocusedRow = await helpers.focusRequestedContentRow(page, {
         rowName: action.rowName,
         ...(action.itemIndex ? {itemIndex: action.itemIndex} : {}),
-      }),
+      });
+      return mostRecentlyFocusedRow;
+    },
     focus_row_first_item: ({ page }) =>
       helpers.focusFirstItemInCurrentContentRow(page),
-    focus_text: ({ page, action }) =>
-      helpers.remoteFocusByText(
+    focus_text: async ({ page, action }) => {
+      const focusedRow = mostRecentlyFocusedRow;
+      mostRecentlyFocusedRow = null;
+      if (normalizeVietnameseText(focusedRow?.title || "") === "the loai") {
+        const service = await helpers.focusServiceCategoryItem(page, action.text, {initialRow: focusedRow});
+        pendingServiceName = action.text;
+        return service;
+      }
+
+      pendingServiceName = "";
+      return helpers.remoteFocusByText(
         page,
         new RegExp(`^\\s*${escapeRegExp(action.text.trim())}\\s*$`, "iu")
-      ),
-    press_ok: ({ page }) => helpers.remotePress(page, "Enter"),
+      );
+    },
+    press_ok: async ({ page, testInfo }) => {
+      await helpers.remotePress(page, "Enter");
+      if (!pendingServiceName) return undefined;
+      const service = pendingServiceName;
+      pendingServiceName = "";
+      return helpers.assertServiceOpened(page, {service, testInfo});
+    },
     open_service: async ({ page, testInfo, action }) => {
       const serviceName = String(action.service || "").trim();
       try {
-        return await helpers.openServiceFromLeftMenuOrAllServices(
+        await helpers.openServiceFromLeftMenuOrAllServices(
           page,
           serviceName,
-          testInfo
+          testInfo,
+          {activationDelay: 0}
         );
       } catch (error) {
         const serviceError = new Error(`Không thể tìm thấy dịch vụ ${serviceName}`);
         serviceError.cause = error;
         throw serviceError;
       }
+      return helpers.assertServiceOpened(page, {service: serviceName, testInfo});
     },
     open_search: ({ page, testInfo }) =>
       helpers.openSearchFromLeftMenu(page, testInfo),
@@ -564,6 +595,7 @@ module.exports = {
   assertVisibleScreenText,
   classifyExpectedResult,
   hasSuccessfulServiceNavigation,
+  getSuccessfulServiceAccess,
   verifyExpectedResult,
   isPlayerCheckingAction,
   nextStepRequiresPlayer,

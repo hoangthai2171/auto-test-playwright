@@ -18,9 +18,10 @@ const dependencies={
 const CONTENT_ITEM_CONTRACT = getSelectorContract("contentItem");
 const NAMED_ROW_MAX_ATTEMPTS = 45;
 const NAMED_ROW_SCROLL_DELAY = 1500;
+const SERVICE_CATEGORY_MAX_SCAN_STEPS = 40;
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
-function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
+function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
 function remotePress(...args){return dependencies.remotePress(...args);}
 function remoteFocusById(...args){return dependencies.remoteFocusById(...args);}
 function remoteFocusByText(...args){return dependencies.remoteFocusByText(...args);}
@@ -127,15 +128,15 @@ async function findServiceCategoryRow(page, targetPattern) {
       .map((element) => {
         const rect = element.getBoundingClientRect();
         const style = getComputedStyle(element);
-        const title = [
-          element.getAttribute("service_title") || "",
-          element.getAttribute("service_name") || "",
-          element.getAttribute("title") || "",
-          element.textContent || "",
-        ].join(" ").replace(/\s+/g, " ").trim();
+        const explicitServiceLabel =
+          element.getAttribute("service_title") || element.getAttribute("service_name") || "";
+        const title = (
+          explicitServiceLabel || element.getAttribute("title") || element.textContent || ""
+        ).replace(/\s+/g, " ").trim();
         return {
           id: element.id || "",
           title,
+          explicitServiceLabel: Boolean(explicitServiceLabel),
           rect: {x: rect.x, y: rect.y, width: rect.width, height: rect.height},
           visible: isVisible(rect, style) && rect.width >= 100 && rect.height >= 80 &&
             rect.width <= 700 && rect.height <= 500 && rect.x >= 80,
@@ -186,13 +187,68 @@ async function findServiceCategoryRow(page, targetPattern) {
     function dedupeByPosition(values) {
       const output = [];
       for (const value of values) {
-        if (!output.some((existing) => Math.abs(existing.rect.x - value.rect.x) <= 24 && Math.abs(existing.rect.y - value.rect.y) <= 24)) {
+        const duplicateIndex = output.findIndex((existing) =>
+          Math.abs(existing.rect.x - value.rect.x) <= 24 && Math.abs(existing.rect.y - value.rect.y) <= 24
+        );
+        if (duplicateIndex < 0) {
           output.push(value);
+        } else if (value.explicitServiceLabel && !output[duplicateIndex].explicitServiceLabel) {
+          output[duplicateIndex] = value;
         }
       }
       return output;
     }
   });
+}
+
+async function focusServiceCategoryItem(page, serviceName, options = {}) {
+  const snapshotCache = options.snapshotCache || createDomSnapshotCache();
+  const observedServices = new Set();
+  const visitedFocusIds = new Set();
+  let row = options.initialRow || await findServiceCategoryRow(page, "the loai");
+
+  for (let attempt = 0; attempt <= SERVICE_CATEGORY_MAX_SCAN_STEPS; attempt++) {
+    const service = findServiceItemByName(row?.items, serviceName);
+    const before = await getFocusedState(page);
+    for (const item of row?.items || []) {
+      if (item?.title) observedServices.add(item.title);
+    }
+    if (service && isFocusedServiceItem(before, service)) return service;
+
+    if (!row || attempt === SERVICE_CATEGORY_MAX_SCAN_STEPS) break;
+
+    if (!before?.id || visitedFocusIds.has(before.id)) break;
+    visitedFocusIds.add(before.id);
+
+    await remotePress(page, "ArrowRight", 500, {snapshotCache});
+    const after = await getFocusedState(page);
+    if (!after?.id || after.id === before.id || visitedFocusIds.has(after.id)) break;
+
+    row = await findServiceCategoryRow(page, "the loai");
+  }
+
+  throw new Error(
+    `Không tìm thấy dịch vụ "${serviceName}" trong hàng/cate "Thể loại" sau khi quét toàn bộ poster. ` +
+    `Các dịch vụ đã thấy: ${[...observedServices].join(", ")}`
+  );
+}
+
+function findServiceItemByName(items, serviceName) {
+  const target = normalizeVietnameseText(serviceName);
+  return (items || []).find((item) =>
+    item?.id && normalizeVietnameseText(item?.title || "") === target
+  ) || null;
+}
+
+function isFocusedServiceItem(focused, service) {
+  if (!focused || !service) return false;
+  if (focused.id && focused.id === service.id) return true;
+
+  const serviceTitle = normalizeVietnameseText(service.title || "");
+  if (!serviceTitle) return false;
+  return [focused.text, focused.label]
+    .map((value) => normalizeVietnameseText(value))
+    .some((value) => value === serviceTitle);
 }
 
 async function focusFirstItemInCurrentContentRow(page, options = {}) {
@@ -778,4 +834,4 @@ function contentItemSignature(item) {
 }
 
 
-module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,focusRequestedContentRow,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};
+module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,focusRequestedContentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};
