@@ -8,6 +8,7 @@ const {redactSensitiveText, createLogRedactor} = require("./credential-redaction
 const {fetchFlowCaseFolders, fetchFlowCases, submitFlowCaseResults, normalizeTimeoutMs} = require("./flow-case-api");
 const {replaceFolderCacheEntry, readMostRecentFolderCacheEntry} = require("./test-case-cache");
 const {createEmptyReport, buildTestReportEntry, upsertTestReport, renderUserReport} = require("./test-report");
+const {buildPlaywrightTestArgs} = require("./playwright-runner");
 
 const INTERACTIVE_BROWSER_DEBUG_PORT = Number(process.env.MYTV_INTERACTIVE_BROWSER_DEBUG_PORT) || 43000 + Math.floor(Math.random() * 1000);
 
@@ -280,7 +281,11 @@ ipcMain.handle("run-test", async (event, values = {}) => {
     const previewPath = path.join(outputRoot, "browser-preview", "current.png");
     const previewType = values.PREVIEW_TYPE || "live";
     const interactiveCdpUrl = previewType === "interactive" ? `http://127.0.0.1:${INTERACTIVE_BROWSER_DEBUG_PORT}` : "";
-    const args = [playwrightCli, "test", "tests/run-test-case-mytv.spec.js", "--project=chromium", "--output", testResultsDir];
+    const args = buildPlaywrightTestArgs({
+        playwrightCli,
+        testResultsDir,
+        tsconfigPath: path.join(projectRoot, "app", "playwright.tsconfig.json"),
+    });
 
     const env = {
         ...process.env,
