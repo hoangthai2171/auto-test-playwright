@@ -98,12 +98,14 @@ async function main() {
   };
   const serverManager = createAppiumServerManager({spawn, fetch, kill: process.kill.bind(process), redact: redactor, wait});
   let testCaseResult;
+  let failureCode;
   const caseExecutor = async (input) => {
     try {
       testCaseResult = await runTvTestCase(input);
       return testCaseResult;
     } catch (error) {
       testCaseResult = error?.testCaseResult;
+      failureCode = error?.code;
       throw error;
     }
   };
@@ -123,6 +125,7 @@ async function main() {
       manifest,
       writer: evidenceWriter,
       getTestCaseResult: () => testCaseResult,
+      getFailureCode: (error) => failureCode || error?.code,
       run: () => runner.run({
         profileId: profile.id,
         host: args.host,

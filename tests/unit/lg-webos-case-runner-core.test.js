@@ -165,3 +165,19 @@ test("marks the gate failed when cleanup throws after every semantic action pass
     case: {status: "failed", steps: [{index: 0, action: "login", status: "passed", durationMs: 43}]},
   });
 });
+
+test("records a safe component failure code without retaining error text", async () => {
+  const written = [];
+  await assert.rejects(
+    () => runLgProductGateWithEvidence({
+      manifest: createLgProductGateManifest({model: "55QNED80SRA", appId: "com.mytvb2c.app"}),
+      writer: {write(value) { written.push(value); }},
+      run: async () => { throw new Error("reset failed for runtime-password"); },
+      getFailureCode: () => "RESET_UNAVAILABLE",
+    }),
+    /runtime-password/,
+  );
+
+  assert.equal(written[0].failureCode, "RESET_UNAVAILABLE");
+  assert.equal(JSON.stringify(written[0]).includes("runtime-password"), false);
+});

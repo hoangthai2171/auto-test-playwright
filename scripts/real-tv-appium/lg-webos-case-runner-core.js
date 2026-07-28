@@ -52,7 +52,12 @@ function summarizeStep(step, index) {
   };
 }
 
-function finalizeLgProductGateManifest(manifest, {testCaseResult, forceFailed = false} = {}) {
+function safeFailureCode(value) {
+  const code = typeof value === "string" ? value.trim() : "";
+  return /^[A-Z][A-Z0-9_]{0,63}$/.test(code) ? code : "";
+}
+
+function finalizeLgProductGateManifest(manifest, {testCaseResult, forceFailed = false, failureCode} = {}) {
   const steps = Array.isArray(testCaseResult?.steps)
     ? testCaseResult.steps.map(summarizeStep)
     : [];
@@ -61,6 +66,7 @@ function finalizeLgProductGateManifest(manifest, {testCaseResult, forceFailed = 
     ...manifest,
     status,
     case: {status, steps},
+    ...(safeFailureCode(failureCode) ? {failureCode: safeFailureCode(failureCode)} : {}),
   };
 }
 
@@ -80,16 +86,21 @@ function createLgProductGateEvidenceWriter({rootDir, runId} = {}) {
   };
 }
 
-async function runLgProductGateWithEvidence({manifest, writer, run, getTestCaseResult = () => undefined} = {}) {
+async function runLgProductGateWithEvidence({manifest, writer, run, getTestCaseResult = () => undefined, getFailureCode = (error) => error?.code} = {}) {
   if (!writer || typeof writer.write !== "function") throw new TypeError("An LG product-gate evidence writer is required.");
   if (typeof run !== "function") throw new TypeError("An LG product-gate run function is required.");
   if (typeof getTestCaseResult !== "function") throw new TypeError("An LG product-gate case-result accessor is required.");
+  if (typeof getFailureCode !== "function") throw new TypeError("An LG product-gate failure-code accessor is required.");
   try {
     const result = await run();
     writer.write(finalizeLgProductGateManifest(manifest, {testCaseResult: result?.caseResult || getTestCaseResult()}));
     return result;
   } catch (error) {
-    writer.write(finalizeLgProductGateManifest(manifest, {testCaseResult: error?.testCaseResult || getTestCaseResult(), forceFailed: true}));
+    writer.write(finalizeLgProductGateManifest(manifest, {
+      testCaseResult: error?.testCaseResult || getTestCaseResult(),
+      forceFailed: true,
+      failureCode: getFailureCode(error),
+    }));
     throw error;
   }
 }
