@@ -99,7 +99,7 @@ function searchCandidatesScript() {
       var fields = [element.textContent || '', element.getAttribute('title') || '', element.getAttribute('title_text') || '', element.getAttribute('movie_name') || '', element.getAttribute('vod_name') || '', element.getAttribute('content_name') || '', element.getAttribute('channel_name') || ''];
       var label = fields.join(' ').replace(/\\s+/g, ' ').trim();
       if (!label) continue;
-      results.push({id:element.id,label:label,type:element.getAttribute('channel_name') ? 'channel' : ((element.getAttribute('movie_name') || element.getAttribute('vod_name')) ? 'movie' : 'content')});
+      results.push({id:element.id,label:label,type:element.getAttribute('channel_name') ? 'channel' : ((element.getAttribute('movie_name') || element.getAttribute('vod_name')) ? 'movie' : '')});
     }
     return results;
   })();`;
@@ -143,7 +143,7 @@ function scoreCandidate(label, name) {
 
 function bestSearchCandidate(candidates, {name, type}) {
   return (candidates || [])
-    .filter((candidate) => candidate && candidate.id && candidate.label && (type === "content" || candidate.type === type))
+    .filter((candidate) => candidate && candidate.id && candidate.label && (type === "content" || candidate.type === type || !candidate.type))
     .map((candidate) => ({...candidate, score: scoreCandidate(candidate.label, name)}))
     .filter((candidate) => candidate.score >= 80)
     .sort((left, right) => right.score - left.score || left.label.length - right.label.length)[0] || null;
@@ -187,6 +187,15 @@ function createWebOsMyTvAutomation({execute, pressKey, wait} = {}) {
       await wait(250);
     }
     throw semanticError("DOM_STATE_TIMEOUT", message);
+  }
+  async function waitForSearchCandidate({name, type}, {timeoutMs = 20_000, pollIntervalMs = 250} = {}) {
+    const attempts = Math.max(1, Math.floor(timeoutMs / pollIntervalMs) + 1);
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const candidate = bestSearchCandidate(await execute(searchCandidatesScript(), []), {name, type});
+      if (candidate) return candidate;
+      if (attempt < attempts - 1) await wait(pollIntervalMs);
+    }
+    return null;
   }
   async function focusVisibleText(text) {
     const id = await execute(visibleTextScript(text), []);
@@ -239,7 +248,7 @@ function createWebOsMyTvAutomation({execute, pressKey, wait} = {}) {
   async function searchContent({name, type}) {
     if (!CONTENT_TYPES.has(type)) throw semanticError("CONTENT_TYPE_INVALID", "The MyTV content type is invalid.");
     await focusId("callSearch"); await pressKey("Enter"); await wait(3_000);
-    const candidate = bestSearchCandidate(await execute(searchCandidatesScript(), []), {name, type});
+    const candidate = await waitForSearchCandidate({name, type});
     if (!candidate) throw semanticError("CONTENT_NOT_FOUND", "No matching visible MyTV search result was found.");
     await focusId(candidate.id); selectedSearchResult = candidate;
     return {name: candidate.label, type: candidate.type};

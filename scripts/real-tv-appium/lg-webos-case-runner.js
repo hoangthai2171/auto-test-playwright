@@ -14,6 +14,7 @@ const {
   createLgProductGateEvidenceWriter,
   createLgProductGateManifest,
   parseLgCaseRunnerArgs,
+  requestLoopbackAppium,
   runLgProductGateWithEvidence,
   withoutLgProductGateCredentials,
 } = require("./lg-webos-case-runner-core");
@@ -28,15 +29,8 @@ function redactFactory(secrets) {
   return (value) => secrets.reduce((text, secret) => String(text).split(String(secret)).join("[REDACTED]"), String(value ?? ""));
 }
 
-async function appiumRequest(baseUrl, pathname, method = "GET", body) {
-  const response = await fetch(`${baseUrl}${pathname}`, {
-    method,
-    headers: body ? {"content-type": "application/json"} : undefined,
-    body: body ? JSON.stringify(body) : undefined,
-  });
-  const payload = await response.json().catch(() => ({}));
-  if (!response.ok) throw new Error("Loopback Appium request failed.");
-  return payload.value;
+function appiumRequest(baseUrl, pathname, method = "GET", body) {
+  return requestLoopbackAppium({fetchImpl: fetch, baseUrl, pathname, method, body});
 }
 
 function createAppiumClient({baseUrl}) {

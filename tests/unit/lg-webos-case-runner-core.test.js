@@ -11,6 +11,7 @@ const {
   createLgProductGateManifest,
   finalizeLgProductGateManifest,
   parseLgCaseRunnerArgs,
+  requestLoopbackAppium,
   runLgProductGateWithEvidence,
   withoutLgProductGateCredentials,
 } = require("../../scripts/real-tv-appium/lg-webos-case-runner-core");
@@ -191,4 +192,43 @@ test("records the running gate manifest before starting terminal execution", asy
   });
 
   assert.deepEqual(written.map((manifest) => manifest.status), ["running", "passed"]);
+});
+
+test("finalizes a pending LG gate as interrupted before Node exits", async () => {
+  const written = [];
+  const handlers = new Map();
+  const processLike = {
+    once(name, handler) { handlers.set(name, handler); },
+    removeListener(name, handler) { if (handlers.get(name) === handler) handlers.delete(name); },
+  };
+
+  void runLgProductGateWithEvidence({
+    manifest: createLgProductGateManifest({model: "55QNED80SRA", appId: "com.mytvb2c.app"}),
+    writer: {write(value) { written.push(value); }},
+    run: () => new Promise(() => {}),
+    processLike,
+  });
+
+  assert.equal(typeof handlers.get("beforeExit"), "function");
+  handlers.get("beforeExit")();
+  assert.equal(written.at(-1).status, "failed");
+  assert.equal(written.at(-1).failureCode, "RUN_INTERRUPTED");
+});
+
+test("bounds a pending loopback Appium request without retaining its URL", async () => {
+  let aborted = false;
+  await assert.rejects(
+    () => requestLoopbackAppium({
+      fetchImpl: (_url, {signal}) => new Promise((_resolve, reject) => {
+        signal.addEventListener("abort", () => { aborted = true; reject(new Error("request aborted")); });
+      }),
+      baseUrl: "http://127.0.0.1:4727",
+      pathname: "/session/private-id/execute/sync",
+      timeoutMs: 1,
+      setTimeoutImpl(handler) { queueMicrotask(handler); return 1; },
+      clearTimeoutImpl() {},
+    }),
+    (error) => error.code === "APPIUM_REQUEST_TIMEOUT" && !/private-id|127\.0\.0\.1/.test(error.message),
+  );
+  assert.equal(aborted, true);
 });

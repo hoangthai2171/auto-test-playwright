@@ -506,7 +506,13 @@ generation passes against each pilot TV from the terminal.
   required before any product-flow claim. The next fresh gate confirmed that
   argument fix but stopped at redacted `CONTENT_NOT_FOUND` before the welcome
   DOM was ready; trusted focus now has bounded control-readiness coverage and
-  requires another fresh approved run.
+  requires another fresh approved run. A later fresh gate passed login and
+  native Search navigation, then stopped at redacted `CONTENT_NOT_FOUND` while
+  waiting for the requested result. LG search now mirrors the browser's bounded
+  result polling and accepts an exact result with missing type metadata; the
+  terminal bridge also bounds outstanding loopback Appium requests and records
+  unfinished runs as redacted `RUN_INTERRUPTED` failures. A fresh approved
+  product gate remains required for search, playback, and logout evidence.
 
 ## Phase 4 — Device management IPC and target GUI
 

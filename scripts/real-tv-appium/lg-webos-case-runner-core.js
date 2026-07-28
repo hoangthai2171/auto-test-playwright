@@ -34,6 +34,36 @@ function withoutLgProductGateCredentials(environment = {}) {
   return sanitized;
 }
 
+async function requestLoopbackAppium({fetchImpl, baseUrl, pathname, method = "GET", body, timeoutMs = 30_000, setTimeoutImpl = setTimeout, clearTimeoutImpl = clearTimeout} = {}) {
+  if (typeof fetchImpl !== "function") throw new TypeError("A loopback Appium fetch implementation is required.");
+  if (typeof baseUrl !== "string" || !baseUrl || typeof pathname !== "string") {
+    throw new TypeError("A loopback Appium URL is required.");
+  }
+  const controller = new AbortController();
+  let timedOut = false;
+  const timeout = setTimeoutImpl(() => {
+    timedOut = true;
+    controller.abort();
+  }, timeoutMs);
+  try {
+    const response = await fetchImpl(`${baseUrl}${pathname}`, {
+      method,
+      headers: body ? {"content-type": "application/json"} : undefined,
+      body: body ? JSON.stringify(body) : undefined,
+      signal: controller.signal,
+    });
+    const payload = await response.json().catch(() => ({}));
+    if (!response.ok) throw new Error("Loopback Appium rejected the request.");
+    return payload.value;
+  } catch {
+    const error = new Error(timedOut ? "Loopback Appium request timed out." : "Loopback Appium request failed.");
+    error.code = timedOut ? "APPIUM_REQUEST_TIMEOUT" : "APPIUM_REQUEST_FAILED";
+    throw error;
+  } finally {
+    clearTimeoutImpl(timeout);
+  }
+}
+
 function createLgProductGateManifest({model, appId} = {}) {
   return {
     platform: "lg-webos",
@@ -86,23 +116,39 @@ function createLgProductGateEvidenceWriter({rootDir, runId} = {}) {
   };
 }
 
-async function runLgProductGateWithEvidence({manifest, writer, run, getTestCaseResult = () => undefined, getFailureCode = (error) => error?.code} = {}) {
+async function runLgProductGateWithEvidence({manifest, writer, run, getTestCaseResult = () => undefined, getFailureCode = (error) => error?.code, processLike = process} = {}) {
   if (!writer || typeof writer.write !== "function") throw new TypeError("An LG product-gate evidence writer is required.");
   if (typeof run !== "function") throw new TypeError("An LG product-gate run function is required.");
   if (typeof getTestCaseResult !== "function") throw new TypeError("An LG product-gate case-result accessor is required.");
   if (typeof getFailureCode !== "function") throw new TypeError("An LG product-gate failure-code accessor is required.");
+  let finalized = false;
+  const finalizeInterrupted = () => {
+    if (finalized) return;
+    finalized = true;
+    writer.write(finalizeLgProductGateManifest(manifest, {
+      testCaseResult: getTestCaseResult(),
+      forceFailed: true,
+      failureCode: "RUN_INTERRUPTED",
+    }));
+  };
   writer.write(manifest);
+  const supportsBeforeExit = typeof processLike?.once === "function" && typeof processLike?.removeListener === "function";
+  if (supportsBeforeExit) processLike.once("beforeExit", finalizeInterrupted);
   try {
     const result = await run();
+    finalized = true;
     writer.write(finalizeLgProductGateManifest(manifest, {testCaseResult: result?.caseResult || getTestCaseResult()}));
     return result;
   } catch (error) {
+    finalized = true;
     writer.write(finalizeLgProductGateManifest(manifest, {
       testCaseResult: error?.testCaseResult || getTestCaseResult(),
       forceFailed: true,
       failureCode: getFailureCode(error),
     }));
     throw error;
+  } finally {
+    if (supportsBeforeExit) processLike.removeListener("beforeExit", finalizeInterrupted);
   }
 }
 
@@ -131,6 +177,7 @@ module.exports = {
   createLgProductGateManifest,
   finalizeLgProductGateManifest,
   parseLgCaseRunnerArgs,
+  requestLoopbackAppium,
   runLgProductGateWithEvidence,
   withoutLgProductGateCredentials,
 };

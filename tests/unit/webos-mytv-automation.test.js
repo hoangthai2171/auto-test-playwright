@@ -4,9 +4,10 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {createWebOsMyTvAutomation} = require("../lib/tv-session/webos-mytv-automation");
 
-function createAutomation({playerStates = [], visibleAfter = {}, bodyText = "Search"} = {}) {
+function createAutomation({playerStates = [], visibleAfter = {}, bodyText = "Search", searchCandidates = [{id: "result-1", label: "Mẫu phim", type: "movie"}], searchCandidatesAfter = 1} = {}) {
   let focusedId = "";
   let playerIndex = 0;
+  let searchCandidateReads = 0;
   const remoteKeys = [];
   const waits = [];
   const rectReads = new Map();
@@ -21,7 +22,10 @@ function createAutomation({playerStates = [], visibleAfter = {}, bodyText = "Sea
         return {x: 0, y: 0, width: 120, height: 80};
       }
       if (script.includes("MYTV_TRUSTED_FOCUS")) return {id: focusedId, text: "", rect: {x: 0, y: 0, width: 120, height: 80}};
-      if (script.includes("MYTV_TRUSTED_SEARCH_CANDIDATES")) return [{id: "result-1", label: "Mẫu phim", type: "movie"}];
+        if (script.includes("MYTV_TRUSTED_SEARCH_CANDIDATES")) {
+          searchCandidateReads += 1;
+          return searchCandidateReads >= searchCandidatesAfter ? searchCandidates : [];
+        }
       if (script.includes("MYTV_TRUSTED_PLAYER")) return playerStates[Math.min(playerIndex++, playerStates.length - 1)];
       if (script.includes("document.body")) return bodyText;
       return "";
@@ -42,6 +46,25 @@ test("LG MyTV login waits for the welcome control after a fresh app reset", asyn
 
   assert.deepEqual(remoteKeys, ["Enter", "Enter"]);
   assert.deepEqual(waits, [250, 250]);
+});
+
+test("LG MyTV search waits for a delayed matching result", async () => {
+  const {automation, waits} = createAutomation({searchCandidatesAfter: 3});
+
+  const result = await automation.searchContent({name: "Mẫu phim", type: "movie"});
+
+  assert.deepEqual(result, {name: "Mẫu phim", type: "movie"});
+  assert.deepEqual(waits, [3_000, 250, 250]);
+});
+
+test("LG MyTV search accepts an untyped exact result for the requested content type", async () => {
+  const {automation} = createAutomation({
+    searchCandidates: [{id: "result-1", label: "VTV3 HD", type: ""}],
+  });
+
+  const result = await automation.searchContent({name: "VTV3 HD", type: "channel"});
+
+  assert.deepEqual(result, {name: "VTV3 HD", type: ""});
 });
 
 test("LG MyTV player readiness does not accept a non-player screen", async () => {

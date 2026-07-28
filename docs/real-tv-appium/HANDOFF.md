@@ -74,6 +74,22 @@ and proves that no key is sent until the control is visible. A fresh explicitly
 approved LG-only gate is required to validate this correction; no retry,
 credential, host, screenshot, or Samsung action was retained.
 
+## Phase 3 LG search-result and terminal-lifecycle correction — 2026-07-28
+
+The following fresh gate passed real login and native Search navigation, then
+failed its `search_content` action with redacted `CONTENT_NOT_FOUND`; playback
+and logout were therefore not attempted. The established browser path waits for
+the visible result set and accepts an exact match when type metadata is absent.
+The trusted LG adapter now uses the same bounded result polling and metadata
+rule, with local contracts for delayed and untyped matching results. The same
+run also exposed an unfinished terminal-manifest edge: the Appium request
+bridge had no deadline, allowing a pending request to outlive normal terminal
+reporting. Loopback Appium requests now have a bounded deadline, and an
+otherwise unfinished process finalizes redacted evidence as `RUN_INTERRUPTED`.
+A fresh explicitly approved LG-only gate is required to validate search,
+playback, and trusted logout; no host, credential, screenshot, or Samsung
+action was retained.
+
 ## Read this first in a new session
 
 This repository has a large existing dirty worktree unrelated to this plan.
