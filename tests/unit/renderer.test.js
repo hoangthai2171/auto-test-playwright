@@ -770,6 +770,71 @@ test("does not submit partial downloaded results after a batch is stopped", asyn
   assert.equal(submissionCount, 0);
 });
 
+test("submits only fully completed downloaded cases after a manual stop", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const submittedResults = [];
+  fixture.runner.loadFlowCases = async () => ({ok: true, folder: {
+    id: "12", name: "Play kênh", fullPath: "/Root/Play kênh",
+  }, cases: [
+    {id: "case-1", name: "Completed remote case", actions: []},
+    {id: "case-2", name: "Interrupted remote case", actions: []},
+    {id: "case-3", name: "Unstarted remote case", actions: []},
+  ]});
+  fixture.runner.runTest = async () => ({ok: true});
+  fixture.runner.submitFlowCaseResults = async (payload) => {
+    submittedResults.push(payload);
+    return {ok: true};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderFolders([{id: "12", name: "Play kênh", fullPath: "/Root/Play kênh"}]);
+  fixture.elements["folder-select"].value = "/Root/Play kênh";
+  await controller.loadCasesFromFolder();
+  fixture.elements["select-all-test-cases"].checked = true;
+  fixture.elements["select-all-test-cases"].dispatchEvent("change", {target: fixture.elements["select-all-test-cases"]});
+
+  const runPromise = fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+  await Promise.resolve();
+  fixture.runner.finishedCallback({code: 0});
+  await new Promise((resolve) => setImmediate(resolve));
+  await fixture.elements["stop-button"].listeners.get("click")();
+  await runPromise;
+
+  assert.equal(submittedResults.length, 1);
+  assert.deepEqual(submittedResults[0].testcases.map((item) => item.id), ["case-1"]);
+});
+
+test("keeps an immutable failed result submission in memory for one explicit retry", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const submissions = [];
+  fixture.runner.loadFlowCases = async () => ({ok: true, folder: {id: "12", name: "Folder", fullPath: "/Root/Folder"}, cases: [
+    {id: "case-1", name: "Remote case", actions: []},
+  ]});
+  fixture.runner.runTest = async () => ({ok: true});
+  fixture.runner.submitFlowCaseResults = async (payload) => {
+    submissions.push(payload);
+    return {ok: submissions.length > 1};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderFolders([{id: "12", name: "Folder", fullPath: "/Root/Folder"}]);
+  fixture.elements["folder-select"].value = "/Root/Folder";
+  await controller.loadCasesFromFolder();
+  fixture.elements["select-all-test-cases"].checked = true;
+  fixture.elements["select-all-test-cases"].dispatchEvent("change", {target: fixture.elements["select-all-test-cases"]});
+
+  const runPromise = fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+  await Promise.resolve();
+  fixture.runner.finishedCallback({code: 0});
+  await runPromise;
+  const retry = await controller.retryResultSync();
+
+  assert.equal(retry.ok, true);
+  assert.equal(submissions.length, 2);
+  assert.deepEqual(submissions[1], submissions[0]);
+  assert.equal((await controller.retryResultSync()).ok, false);
+});
+
 test("submits only the generic test-run payload", async () => {
   assert.equal(loadError, undefined, loadError?.message);
   const fixture = createRendererFixture();

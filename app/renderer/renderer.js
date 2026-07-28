@@ -13,6 +13,19 @@ function redactSensitiveText(value) {
         .replace(/((?:mật khẩu|mat khau|password)\s*[=:]?\s*)([^\s]+)/gi, "$1••••••");
 }
 
+function freezeSubmission(value) {
+    if (Array.isArray(value)) {
+        value.forEach(freezeSubmission);
+    } else if (value && typeof value === "object") {
+        Object.values(value).forEach(freezeSubmission);
+    }
+    return Object.freeze(value);
+}
+
+function cloneFrozenSubmission(value) {
+    return freezeSubmission(JSON.parse(JSON.stringify(value)));
+}
+
 function formatGmtPlusSevenTimestamp(date = new Date()) {
     const offsetMs = 7 * 60 * 60 * 1000;
     return new Date(date.getTime() + offsetMs).toISOString().slice(0, 19).replace("T", " ");
@@ -114,6 +127,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const foldersByPath = new Map();
     let apiRequestDepth = 0;
     let activeRunnerLog = null;
+    let pendingResultSubmission = null;
     const blockApiInteraction = (event) => {
         event.preventDefault?.();
         event.stopPropagation?.();
@@ -817,10 +831,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             skipped === 0 &&
             caseRuns.length === ids.length &&
             caseRuns.every(({result}) => result.started && !result.stopped);
+        const fullyCompletedCaseRuns = caseRuns.filter(({result}) => result.started && !result.stopped);
         let resultSubmission;
 
-        if (allSelectedCasesRan && values.FLOW_CASE_RESULT_CONTEXT) {
-            const submission = buildFlowCaseResultSubmission(values.FLOW_CASE_RESULT_CONTEXT, caseRuns);
+        if ((allSelectedCasesRan || (stopped && fullyCompletedCaseRuns.length > 0)) && values.FLOW_CASE_RESULT_CONTEXT) {
+            const submission = buildFlowCaseResultSubmission(values.FLOW_CASE_RESULT_CONTEXT, fullyCompletedCaseRuns);
             appendApiRequestLog("Send flow-case results", submission);
             try {
                 resultSubmission = await api.submitFlowCaseResults?.(submission);
@@ -829,6 +844,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                     throw new Error(resultSubmission?.message || "Failed to send flow-case results.");
                 }
             } catch (error) {
+                pendingResultSubmission = cloneFrozenSubmission(submission);
                 const message = `Failed to send flow-case results: ${error.message}`;
                 appendLog(`${message}\n`);
                 setFormMessage(`${summary}. ${message}`, "error");
@@ -840,6 +856,22 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         setFormRunning(false);
         setFormMessage(summary, failed > 0 || stopped ? "error" : "ok");
         return {completed, failed, skipped, stopped, resultSubmission};
+    }
+
+    async function retryResultSync() {
+        if (!pendingResultSubmission) {
+            return {ok: false, message: "There are no unsynced completed test results."};
+        }
+        appendApiRequestLog("Retry flow-case results", pendingResultSubmission);
+        try {
+            const result = await api.submitFlowCaseResults?.(pendingResultSubmission);
+            appendApiResponseLog("Retry flow-case results", result);
+            if (!result?.ok) throw new Error(result?.message || "Failed to send flow-case results.");
+            pendingResultSubmission = null;
+            return result;
+        } catch (error) {
+            return {ok: false, message: error.message};
+        }
     }
 
     function buildFlowCaseResultSubmission(context, caseRuns) {
@@ -1048,6 +1080,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         getSelectedCaseIds,
         getActiveFolderId: () => activeFolderId,
         runSelectedCases,
+        retryResultSync,
         maskActionForDisplay,
         redactSensitiveText,
         validateRunValues,
