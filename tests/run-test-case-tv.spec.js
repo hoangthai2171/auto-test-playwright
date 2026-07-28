@@ -5,6 +5,7 @@ const assert = require("node:assert/strict");
 const {createTvRunner} = require("../app/tv-runner");
 const {createDeviceLock} = require("../app/device-lock");
 const {createWebOsAppiumSession, createWebOsSessionFactory} = require("./lib/tv-session/webos-appium-session");
+const {runTvTestCase} = require("./lib/tv-case-runner");
 
 async function runTvContractCase(runner) {
   if (!runner || typeof runner.run !== "function") throw new Error("An injected TV runner is required.");
@@ -117,6 +118,84 @@ test("terminal TV session contract proves a native Right DOM transition using on
   assert.equal(before.focused, "Đăng nhập");
   assert.equal(after.focused, "Trải nghiệm");
   assert.deepEqual(calls, ["create", ["webos: pressKey", [{key: "RIGHT"}]], "delete"]);
+});
+
+test("terminal target-neutral case contract runs every supported action through trusted fakes", async () => {
+  const events = [];
+  const tvSession = {
+    async resetAppState() { events.push("reset"); },
+    async pressKey(key) { events.push(`key:${key}`); },
+    async getDomState() { return {bodyText: "Trải nghiệm", focused: "", active: ""}; },
+    async waitForDomState(predicate) { return predicate({bodyText: "Trải nghiệm", focused: "", active: ""}); },
+    async screenshot() { return "genuine-appium-png"; },
+  };
+  const semantic = new Proxy({}, {
+    get(_target, name) {
+      if (name === "enterVirtualKey") return async (_session, character) => events.push(`virtual:${character}`);
+      if (name === "logout") return async () => events.push("logout");
+      return async (_session, value) => events.push([name, value]);
+    },
+  });
+  const result = await runTvTestCase({
+    tvSession,
+    capabilities: {domInspection: true, visualCapture: true, targetSemanticActions: true, playerInspection: true},
+    helpers: {
+      semantic,
+      async waitForReady(_session, name) { events.push(`ready:${name}`); },
+    },
+    testCase: {
+      id: "fake-all-actions",
+      name: "Fake all target-neutral actions",
+      actions: [
+        {action: "wait_for_ready", name: "app"},
+        {action: "login", username: "ab", password: "12"},
+        {action: "open_home"},
+        {action: "focus_row", rowName: "Thể loại", itemIndex: 1},
+        {action: "focus_row_first_item"},
+        {action: "focus_text", text: "Trải nghiệm"},
+        {action: "press_ok"},
+        {action: "open_service", service: "Truyền hình"},
+        {action: "open_search"},
+        {action: "search_content", name: "xy", type: "content"},
+        {action: "play_content", name: "Mẫu", type: "content"},
+        {action: "play_search_result", type: "content"},
+        {action: "play_row", rowIndex: 1, count: 1},
+        {action: "assert_screen", text: "Trải nghiệm"},
+        {action: "press_back", count: 2},
+      ],
+    },
+  });
+
+  assert.equal(result.status, "passed");
+  assert.equal(result.steps.length, 15);
+  assert.deepEqual(events, [
+    "reset",
+    "ready:app",
+    ["focusLogin", undefined],
+    "virtual:a",
+    "virtual:b",
+    ["submitVirtualField", "username"],
+    "virtual:1",
+    "virtual:2",
+    ["submitVirtualField", "password"],
+    ["completeLogin", undefined],
+    ["openHome", undefined],
+    ["focusRow", {rowName: "Thể loại", itemIndex: 1}],
+    ["focusRowFirstItem", undefined],
+    ["focusText", "Trải nghiệm"],
+    "key:Enter",
+    ["openService", "Truyền hình"],
+    ["openSearch", undefined],
+    "virtual:x",
+    "virtual:y",
+    ["searchContent", {name: "xy", type: "content"}],
+    ["playContent", {name: "Mẫu", type: "content"}],
+    ["playSearchResult", {type: "content"}],
+    ["playRow", {rowIndex: 1, rowName: undefined, count: 1}],
+    "key:Backspace",
+    "key:Backspace",
+    "logout",
+  ]);
 });
 
 module.exports = {runTvContractCase, createFakeTvRunner};
