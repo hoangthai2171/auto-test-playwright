@@ -222,9 +222,14 @@ test("webOS session exposes target-neutral reset, DOM, screenshot, and cleanup m
   assert.equal(typeof session.getDomState, "function");
   assert.equal(typeof session.screenshot, "function");
   assert.equal(typeof session.cleanup, "function");
-  await session.resetAppState();
-  assert.deepEqual(client.calls[0], ["execute", "webos: activeAppInfo", []]);
-  assert.deepEqual(client.calls[1], ["execute", "webos: clearApp", [{appId: APP_ID}]]);
+  await session.start();
+  const reset = await session.resetAppState();
+  assert.deepEqual(reset, {
+    method: "session-start-local-storage-reset",
+    scope: "approved-mytv-app-only",
+  });
+  assert.deepEqual(client.calls[1], ["execute", "webos: activeAppInfo", []]);
+  assert.equal(client.calls.some(([, script]) => script === "webos: clearApp"), false);
   assert.deepEqual(await session.getDomState(), await session.readDomState());
   assert.equal(await session.screenshot(), "genuine-appium-png");
   assert.equal((await session.cleanup()).platform, "lg");
@@ -260,24 +265,52 @@ test("webOS session rejects an unsupported key before client action", async () =
   assert.deepEqual(client.calls, []);
 });
 
-test("webOS session resets only after the foreground app identity is validated", async () => {
+test("webOS session reset attests to the fresh session reset after foreground identity validation", async () => {
   const client = createFakeClient();
   const session = createSession(client);
 
+  await session.start();
   await session.reset();
 
   assert.deepEqual(client.calls, [
+    ["createSession", {
+      capabilities: {
+        alwaysMatch: {
+          platformName: "LGTV",
+          "appium:automationName": "webOS",
+          "appium:deviceName": "Living room OLED",
+          "appium:deviceHost": "192.168.1.9",
+          "appium:appId": APP_ID,
+          "appium:chromedriverExecutable": "/private/runtime/chromedriver",
+          "appium:autoExtendDevMode": false,
+          "appium:noReset": false,
+          "appium:fullReset": false,
+          "appium:remoteOnly": false,
+          "appium:rcMode": "rc",
+          "appium:useSecureWebsocket": true,
+        },
+        firstMatch: [{}],
+      },
+    }],
     ["execute", "webos: activeAppInfo", []],
-    ["execute", "webos: clearApp", [{appId: APP_ID}]],
   ]);
+});
+
+test("webOS session does not attest to a reset before its fresh session starts", async () => {
+  const client = createFakeClient();
+  const session = createSession(client);
+
+  await assert.rejects(session.reset(), (error) => error.code === "RESET_UNAVAILABLE");
+  assert.deepEqual(client.calls, []);
 });
 
 test("webOS session does not clear an unverified foreground app", async () => {
   const client = createFakeClient({activeAppId: "com.example.other"});
   const session = createSession(client);
 
+  await session.start();
   await assert.rejects(session.reset(), (error) => error.code === "APP_IDENTITY_MISMATCH");
-  assert.deepEqual(client.calls, [["execute", "webos: activeAppInfo", []]]);
+  assert.deepEqual(client.calls.slice(1), [["execute", "webos: activeAppInfo", []]]);
 });
 
 test("webOS session fails when a genuine Appium screenshot is unavailable", async () => {

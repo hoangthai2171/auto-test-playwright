@@ -488,13 +488,18 @@ generation passes against each pilot TV from the terminal.
   local operations never accept server selectors or JavaScript. Service/row
   operations remain explicitly unavailable for the live LG adapter rather than
   being inferred from DOM text.
-- [ ] A separately authorized terminal invocation accidentally ran the Phase 1
-  welcome-screen POC rather than this Phase 3 product gate. It did not invoke
-  login and must not be treated as product-flow evidence. The LG terminal gate
-  now writes an ignored, local-only redacted manifest with semantic step status
-  (never credentials, runtime host, messages, or screenshots); a fresh approved
-  live run must verify login, `VTV3 HD` search/playback, logout, and cleanup.
-  Any pairing prompt remains a manual on-TV pause.
+- [ ] A separately authorized terminal invocation initially ran the Phase 1
+  welcome-screen POC rather than this Phase 3 product gate; it did not invoke
+  login and must not be treated as product-flow evidence. A later approved
+  credentialed gate correctly reached the Phase 3 runner but failed before its
+  first semantic action with redacted `RESET_UNAVAILABLE`. The proven session
+  startup reset (`appium:noReset: false`) now replaces the unsupported duplicate
+  `webos: clearApp` command after foreground-app identity validation. The LG
+  terminal gate continues to write an ignored, local-only redacted manifest
+  with semantic step status (never credentials, runtime host, messages, or
+  screenshots); a fresh approved live run must verify login, `VTV3 HD`
+  search/playback, logout, and cleanup. Any pairing prompt remains a manual
+  on-TV pause.
 
 ## Phase 4 — Device management IPC and target GUI
 

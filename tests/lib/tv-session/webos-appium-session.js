@@ -295,8 +295,8 @@ function createWebOsAppiumSession({client, appId, model, secrets = [], connectio
   });
 
   async function reset() {
-    if (typeof client.execute !== "function") {
-      throw sessionError("RESET_UNAVAILABLE", "The injected Appium client cannot validate the foreground app.");
+    if (!started || closed || typeof client.execute !== "function") {
+      throw sessionError("RESET_UNAVAILABLE", "A fresh Appium session is required before validating the MyTV reset.");
     }
     let activeApp;
     try {
@@ -307,11 +307,10 @@ function createWebOsAppiumSession({client, appId, model, secrets = [], connectio
     if (activeApp?.appId !== safeAppId) {
       throw sessionError("APP_IDENTITY_MISMATCH", "The foreground app is not the approved installed MyTV app.");
     }
-    try {
-      return await client.execute("webos: clearApp", [{appId: safeAppId}]);
-    } catch {
-      throw sessionError("RESET_UNAVAILABLE", "The injected Appium client could not reset the approved app.");
-    }
+    return Object.freeze({
+      method: "session-start-local-storage-reset",
+      scope: "approved-mytv-app-only",
+    });
   }
 
   async function close() {

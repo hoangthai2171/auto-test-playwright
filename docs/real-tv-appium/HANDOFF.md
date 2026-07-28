@@ -31,6 +31,22 @@ the virtual keyboard, `VTV3 HD` channel search/playback time advancement,
 trusted logout, WebDriver closure, and loopback Appium cleanup. No Samsung
 action occurred.
 
+## Phase 3 LG reset correction — 2026-07-28
+
+A later approved credentialed terminal-gate invocation correctly ran the
+Phase 3 path but stopped before its first semantic action with redacted failure
+code `RESET_UNAVAILABLE`. The prior LG POC had already proved
+`webos: activeAppInfo` on this same target, isolating the failure to the
+adapter-only `webos: clearApp` command issued after the Appium session had
+already started MyTV with `appium:noReset: false`. The terminal adapter now
+attests that session-start MyTV-local-storage reset only after it revalidates
+the approved foreground app; it no longer sends the unsupported duplicate
+command. Local contract coverage verifies the session-start requirement,
+foreground identity check, and absence of `clearApp`. A fresh explicitly
+approved LG-only gate remains required to validate the correction; do not
+treat local tests as product-flow evidence. No host, credential, screenshot,
+or Samsung action was retained.
+
 ## Read this first in a new session
 
 This repository has a large existing dirty worktree unrelated to this plan.
