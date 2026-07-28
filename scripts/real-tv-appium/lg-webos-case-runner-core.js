@@ -91,6 +91,7 @@ async function runLgProductGateWithEvidence({manifest, writer, run, getTestCaseR
   if (typeof run !== "function") throw new TypeError("An LG product-gate run function is required.");
   if (typeof getTestCaseResult !== "function") throw new TypeError("An LG product-gate case-result accessor is required.");
   if (typeof getFailureCode !== "function") throw new TypeError("An LG product-gate failure-code accessor is required.");
+  writer.write(manifest);
   try {
     const result = await run();
     writer.write(finalizeLgProductGateManifest(manifest, {testCaseResult: result?.caseResult || getTestCaseResult()}));

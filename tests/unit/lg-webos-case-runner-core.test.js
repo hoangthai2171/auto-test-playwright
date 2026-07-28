@@ -133,13 +133,13 @@ test("persists the failed semantic step before a product-gate error returns", as
     /gate failed/,
   );
 
-  assert.deepEqual(written, [{
+  assert.deepEqual(written[1], {
     platform: "lg-webos",
     status: "failed",
     evidencePolicy: "local-only-redacted",
     device: {model: "55QNED80SRA", appId: "com.mytvb2c.app"},
     case: {status: "failed", steps: [{index: 0, action: "login", status: "failed", durationMs: 43}]},
-  }]);
+  });
 });
 
 test("marks the gate failed when cleanup throws after every semantic action passes", async () => {
@@ -157,7 +157,7 @@ test("marks the gate failed when cleanup throws after every semantic action pass
     /cleanup failed/,
   );
 
-  assert.deepEqual(written[0], {
+  assert.deepEqual(written[1], {
     platform: "lg-webos",
     status: "failed",
     evidencePolicy: "local-only-redacted",
@@ -178,6 +178,17 @@ test("records a safe component failure code without retaining error text", async
     /runtime-password/,
   );
 
-  assert.equal(written[0].failureCode, "RESET_UNAVAILABLE");
-  assert.equal(JSON.stringify(written[0]).includes("runtime-password"), false);
+  assert.equal(written[1].failureCode, "RESET_UNAVAILABLE");
+  assert.equal(JSON.stringify(written[1]).includes("runtime-password"), false);
+});
+
+test("records the running gate manifest before starting terminal execution", async () => {
+  const written = [];
+  await runLgProductGateWithEvidence({
+    manifest: createLgProductGateManifest({model: "55QNED80SRA", appId: "com.mytvb2c.app"}),
+    writer: {write(value) { written.push(value); }},
+    run: async () => ({caseResult: {status: "passed", steps: []}}),
+  });
+
+  assert.deepEqual(written.map((manifest) => manifest.status), ["running", "passed"]);
 });
