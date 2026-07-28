@@ -201,6 +201,7 @@ function createRendererFixture() {
     "test-case-details-close-button",
     "run-button",
     "stop-button",
+    "retry-sync-button",
     "open-report-button",
     "show-report-button",
     "settings-button",
@@ -827,11 +828,13 @@ test("keeps an immutable failed result submission in memory for one explicit ret
   await Promise.resolve();
   fixture.runner.finishedCallback({code: 0});
   await runPromise;
+  assert.equal(fixture.elements["retry-sync-button"].disabled, false);
   const retry = await controller.retryResultSync();
 
   assert.equal(retry.ok, true);
   assert.equal(submissions.length, 2);
   assert.deepEqual(submissions[1], submissions[0]);
+  assert.equal(fixture.elements["retry-sync-button"].disabled, true);
   assert.equal((await controller.retryResultSync()).ok, false);
 });
 
@@ -1034,6 +1037,7 @@ test("index markup contains the case browser and no API-key or mode controls", (
     "folder-select", "refresh-folders-button", "get-test-cases-button",
     "settings-app-url-input", "api-domain-input", "api-authorization-input", "project-id-input",
     "environment-select", "api-timeout-input", "api-loading-overlay",
+    "retry-sync-button",
   ].forEach((id) => assert.match(html, new RegExp(`id="${id}"`)));
   assert.doesNotMatch(html, /id="app-url-input"/);
   const retiredAiControls = new RegExp(

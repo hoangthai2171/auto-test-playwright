@@ -100,6 +100,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const formMessage = get("form-message");
     const runButton = get("run-button");
     const stopButton = get("stop-button");
+    const retrySyncButton = get("retry-sync-button");
     const statusDot = get("status-dot");
     const statusText = get("status-text");
     const logOutput = get("log-output");
@@ -132,6 +133,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         event.preventDefault?.();
         event.stopPropagation?.();
     };
+
+    function updateRetrySyncButton() {
+        if (retrySyncButton) retrySyncButton.disabled = !pendingResultSubmission;
+    }
 
     function loadSettings() {
         let saved = {};
@@ -845,6 +850,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 }
             } catch (error) {
                 pendingResultSubmission = cloneFrozenSubmission(submission);
+                updateRetrySyncButton();
                 const message = `Failed to send flow-case results: ${error.message}`;
                 appendLog(`${message}\n`);
                 setFormMessage(`${summary}. ${message}`, "error");
@@ -868,6 +874,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             appendApiResponseLog("Retry flow-case results", result);
             if (!result?.ok) throw new Error(result?.message || "Failed to send flow-case results.");
             pendingResultSubmission = null;
+            updateRetrySyncButton();
             return result;
         } catch (error) {
             return {ok: false, message: error.message};
@@ -998,6 +1005,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         setFormRunning(false);
         setStatus("idle", "Stopped");
     });
+    retrySyncButton?.addEventListener?.("click", async () => {
+        const result = await retryResultSync();
+        setFormMessage(result.ok ? "Completed test results synced." : result.message, result.ok ? "ok" : "error");
+    });
     get("open-report-button")?.addEventListener?.("click", () => api.openReport());
     get("show-report-button")?.addEventListener?.("click", () => api.showReportFolder());
     get("settings-button")?.addEventListener?.("click", async () => {
@@ -1067,6 +1078,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     loadSettings();
     updateFolderControls();
+    updateRetrySyncButton();
 
     return {
         loadCases,
