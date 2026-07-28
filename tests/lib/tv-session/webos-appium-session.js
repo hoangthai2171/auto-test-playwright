@@ -3,6 +3,7 @@
 const path = require("node:path");
 const {normalizeRemoteKey, TvSessionError} = require("./tv-session");
 const {normalizeDomState} = require("./dom-state");
+const {createWebOsMyTvAutomation} = require("./webos-mytv-automation");
 
 const INSTALLED_APP_ID = "com.mytvb2c.app";
 const WEBOS_REMOTE_KEYS = Object.freeze({
@@ -276,6 +277,23 @@ function createWebOsAppiumSession({client, appId, model, secrets = [], connectio
     }
   }
 
+  async function executeTrustedMyTv(script, args = []) {
+    if (!started || closed || typeof client.execute !== "function") {
+      throw sessionError("DOM_INSPECTION_UNAVAILABLE", "Trusted MyTV DOM automation is unavailable for this session.");
+    }
+    try {
+      return await client.execute(script, args);
+    } catch {
+      throw sessionError("DOM_INSPECTION_UNAVAILABLE", "Trusted MyTV DOM automation failed.");
+    }
+  }
+
+  const myTvAutomation = createWebOsMyTvAutomation({
+    execute: executeTrustedMyTv,
+    pressKey,
+    wait,
+  });
+
   async function reset() {
     if (typeof client.execute !== "function") {
       throw sessionError("RESET_UNAVAILABLE", "The injected Appium client cannot validate the foreground app.");
@@ -324,6 +342,7 @@ function createWebOsAppiumSession({client, appId, model, secrets = [], connectio
     captureScreenshot,
     screenshot: captureScreenshot,
     pressKey,
+    createMyTvAutomation: () => myTvAutomation,
     reset,
     resetAppState: reset,
     cleanup,

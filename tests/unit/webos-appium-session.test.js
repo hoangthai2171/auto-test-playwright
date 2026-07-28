@@ -377,3 +377,28 @@ test("webOS session closes idempotently and exposes only redacted diagnostics", 
   );
   assert.deepEqual(session.diagnostics, {platform: "lg", model: "OLED55C4", started: true, closed: true});
 });
+
+test("webOS session exposes only named trusted MyTV semantic operations", () => {
+  const session = createSession(createFakeClient());
+
+  assert.deepEqual(Object.keys(session.createMyTvAutomation()).sort(), [
+    "completeLogin",
+    "enterVirtualKey",
+    "focusLogin",
+    "logout",
+    "openHome",
+    "openSearch",
+    "playContent",
+    "playRow",
+    "playSearchResult",
+    "focusRow",
+    "focusRowFirstItem",
+    "focusText",
+    "openService",
+    "searchContent",
+    "submitVirtualField",
+    "waitForReady",
+  ].sort());
+  assert.equal("execute" in session.createMyTvAutomation(), false);
+  assert.equal("evaluate" in session.createMyTvAutomation(), false);
+});

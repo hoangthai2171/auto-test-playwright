@@ -138,6 +138,16 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (retrySyncButton) retrySyncButton.disabled = !pendingResultSubmission;
     }
 
+    function setRunActive(active) {
+        void api.setRunActive?.(Boolean(active));
+    }
+
+    function setPendingResultSubmission(submission) {
+        pendingResultSubmission = submission ? cloneFrozenSubmission(submission) : null;
+        updateRetrySyncButton();
+        void api.setUnsyncedResultSubmission?.(Boolean(pendingResultSubmission));
+    }
+
     function loadSettings() {
         let saved = {};
         try {
@@ -798,6 +808,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
         const currentBatch = {ids, activeCaseId: null, stopRequested: false};
         batchState = currentBatch;
+        setRunActive(true);
         ids.forEach((id) => renderCaseStatus(id, ""));
         setFormRunning(true);
         setStatus("running", "Running");
@@ -827,6 +838,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             }
         } finally {
             batchState = null;
+            setRunActive(false);
         }
 
         const summary = `Completed: ${completed}, Failed: ${failed}, Skipped: ${skipped}`;
@@ -849,8 +861,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                     throw new Error(resultSubmission?.message || "Failed to send flow-case results.");
                 }
             } catch (error) {
-                pendingResultSubmission = cloneFrozenSubmission(submission);
-                updateRetrySyncButton();
+                setPendingResultSubmission(submission);
                 const message = `Failed to send flow-case results: ${error.message}`;
                 appendLog(`${message}\n`);
                 setFormMessage(`${summary}. ${message}`, "error");
@@ -873,8 +884,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             const result = await api.submitFlowCaseResults?.(pendingResultSubmission);
             appendApiResponseLog("Retry flow-case results", result);
             if (!result?.ok) throw new Error(result?.message || "Failed to send flow-case results.");
-            pendingResultSubmission = null;
-            updateRetrySyncButton();
+            setPendingResultSubmission(null);
             return result;
         } catch (error) {
             return {ok: false, message: error.message};
@@ -991,7 +1001,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     }
 
     form?.addEventListener?.("submit", handleSubmit);
-    get("stop-button")?.addEventListener?.("click", async () => {
+    async function requestStop() {
         if (batchState) {
             batchState.stopRequested = true;
             try {
@@ -1004,7 +1014,9 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         await api.stopTest();
         setFormRunning(false);
         setStatus("idle", "Stopped");
-    });
+    }
+
+    get("stop-button")?.addEventListener?.("click", requestStop);
     retrySyncButton?.addEventListener?.("click", async () => {
         const result = await retryResultSync();
         setFormMessage(result.ok ? "Completed test results synced." : result.message, result.ok ? "ok" : "error");
@@ -1074,6 +1086,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         setFormRunning(false);
         setStatus(result.code === 0 ? "passed" : "failed", result.code === 0 ? "Passed" : "Failed");
         appendLog(`\nFinished with code ${result.code}\n`);
+    });
+    api.onStopRequested?.(() => {
+        void requestStop();
+    });
+    api.onDiscardUnsyncedResultSubmission?.(() => {
+        setPendingResultSubmission(null);
     });
 
     loadSettings();

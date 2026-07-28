@@ -478,12 +478,20 @@ generation passes against each pilot TV from the terminal.
 - [x] Kept the existing Browser action runner and flow-case submission payload
   unchanged; the Browser renderer now submits only fully completed cases after
   a manual stop and exposes an explicit Retry sync control.
-- [ ] Wire the close-consent guard into the Electron lifecycle and add the
-  trusted LG DOM-semantic implementation required for a real case run. These
-  remain local implementation work; no live TV action has been performed.
-- [ ] Run the separately authorized LG terminal gate fixture. It requires an
-  explicit fresh live-operation approval and separately authorized dedicated
-  test-account credentials; pairing remains a manual on-TV pause.
+- [x] Wired the close-consent guard into the Electron lifecycle. A close while
+  a batch is active requires **Stop run and close**; a close with only an
+  in-memory unsynced retry requires **Close and discard unsynced retry**. The
+  retry payload is never restored after reopening.
+- [x] Added the trusted LG DOM-semantic adapter required for the terminal-gate
+  fixture: native remote focus, virtual-key character entry, account login,
+  search-result selection, player assessment, and trusted logout. Its fixed
+  local operations never accept server selectors or JavaScript. Service/row
+  operations remain explicitly unavailable for the live LG adapter rather than
+  being inferred from DOM text.
+- [ ] Run the separately authorized LG terminal gate fixture. It requires
+  separately authorized dedicated runtime test-account credentials; any new
+  pairing prompt remains a manual on-TV pause. No credentialed product flow
+  has been run.
 
 ## Phase 4 — Device management IPC and target GUI
 

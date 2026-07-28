@@ -1,7 +1,7 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const {spawn} = require("node:child_process");
-const {app, BrowserView, BrowserWindow, ipcMain, shell} = require("electron");
+const {app, BrowserView, BrowserWindow, dialog, ipcMain, shell} = require("electron");
 const {loadLocalTestCases, loadCachedTestCases, findTestCaseById} = require("../tests/lib/test-case-source");
 const {validateTestCaseList} = require("../tests/lib/test-case-schema");
 const {redactSensitiveText, createLogRedactor} = require("./credential-redaction");
@@ -9,6 +9,8 @@ const {fetchFlowCaseFolders, fetchFlowCases, submitFlowCaseResults, normalizeTim
 const {replaceFolderCacheEntry, readMostRecentFolderCacheEntry} = require("./test-case-cache");
 const {createEmptyReport, buildTestReportEntry, upsertTestReport, renderUserReport} = require("./test-report");
 const {buildPlaywrightTestArgs} = require("./playwright-runner");
+const {createRunCloseGuard} = require("./run-close-guard");
+const {createManagedWindowCloseController} = require("./window-close-controller");
 
 const INTERACTIVE_BROWSER_DEBUG_PORT = Number(process.env.MYTV_INTERACTIVE_BROWSER_DEBUG_PORT) || 43000 + Math.floor(Math.random() * 1000);
 
@@ -20,6 +22,8 @@ let previewWatcher;
 let interactiveView;
 let interactiveViewScale = 1;
 let interactiveAudioMuted = true;
+let rendererRunActive = false;
+let hasUnsyncedResultSubmission = false;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -37,6 +41,53 @@ function createWindow() {
     });
 
     mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
+    createManagedWindowCloseController({
+        window: mainWindow,
+        guard: createRunCloseGuard({
+            isRunning: () => Boolean(runningProcess) || rendererRunActive,
+            hasUnsyncedResults: () => hasUnsyncedResultSubmission,
+            stopRun: stopActiveTest,
+            discardUnsyncedResults: discardUnsyncedResultSubmission,
+        }),
+        confirm: confirmWindowClose,
+        onError: (error) => {
+            console.warn(`Could not resolve the requested app close: ${error.message}`);
+        },
+    });
+}
+
+async function confirmWindowClose(reason) {
+    const running = reason === "running" || reason === "running_and_unsynced_results";
+    const result = await dialog.showMessageBox(mainWindow, {
+        type: "warning",
+        buttons: [
+            running ? "Stop run and close" : "Close and discard unsynced retry",
+            "Keep open",
+        ],
+        defaultId: 1,
+        cancelId: 1,
+        noLink: true,
+        message: running
+            ? "A test run is active. Stop it before closing?"
+            : "Completed test results are waiting to sync. Discard the in-memory retry before closing?",
+    });
+    if (result.response !== 0) return "keep_open";
+    return running ? "stop_run_and_close" : "close_and_discard_unsynced_retry";
+}
+
+async function stopActiveTest() {
+    if (runningProcess) {
+        runningProcess.kill();
+        runningProcess = null;
+    }
+    stopPreviewWatcher();
+    applyInteractiveViewFitZoom();
+    mainWindow?.webContents.send("request-stop-run");
+}
+
+function discardUnsyncedResultSubmission() {
+    hasUnsyncedResultSubmission = false;
+    mainWindow?.webContents.send("discard-unsynced-result-submission");
 }
 
 function testCasesCachePath() {
@@ -137,6 +188,16 @@ ipcMain.handle("submit-flow-case-results", async (_event, values = {}) => {
     } catch (error) {
         return {ok: false, message: error.message, timeout: false};
     }
+});
+
+ipcMain.handle("set-run-active", async (_event, active) => {
+    rendererRunActive = Boolean(active);
+    return {ok: true};
+});
+
+ipcMain.handle("set-unsynced-result-submission", async (_event, pending) => {
+    hasUnsyncedResultSubmission = Boolean(pending);
+    return {ok: true};
 });
 
 function normalizeFlowCaseResultsPayload(values) {
@@ -433,11 +494,7 @@ ipcMain.handle("start-report", async () => {
 });
 
 ipcMain.handle("stop-test", async () => {
-    if (!runningProcess) return {ok: true};
-    runningProcess.kill();
-    runningProcess = null;
-    stopPreviewWatcher();
-    applyInteractiveViewFitZoom();
+    await stopActiveTest();
     return {ok: true};
 });
 

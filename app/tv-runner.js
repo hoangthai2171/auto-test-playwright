@@ -1,6 +1,8 @@
 "use strict";
 
 const path = require("node:path");
+const {runTvTestCase} = require("../tests/lib/tv-case-runner");
+const {createLgMyTvCaseHelpers} = require("../tests/lib/lg-mytv-case-helpers");
 
 const LG_PLATFORM = "lg";
 const LG_APP_ID = "com.mytvb2c.app";
@@ -132,7 +134,7 @@ function nonEmptyScreenshot(value) {
   return Buffer.isBuffer(value) || ArrayBuffer.isView(value) ? value.byteLength > 0 : false;
 }
 
-function createTvRunner({registry, discovery, lock, serverManager, sessionFactory, redact, caseExecutor} = {}) {
+function createTvRunner({registry, discovery, lock, serverManager, sessionFactory, redact, caseExecutor = runTvTestCase} = {}) {
   requiredDependency(registry, "device registry", "list");
   requiredDependency(discovery, "device discovery", "validate");
   requiredDependency(lock, "device lock", "acquire");
@@ -210,13 +212,10 @@ function createTvRunner({registry, discovery, lock, serverManager, sessionFactor
         }
         events.push("genuine_appium_screenshot_verified");
         if (testCase !== undefined) {
-          if (typeof caseExecutor !== "function") {
-            throw createError("TV_CASE_EXECUTOR_UNAVAILABLE", "The trusted TV case executor is unavailable.");
-          }
           caseResult = await caseExecutor({
             tvSession: session,
             testCase,
-            helpers: caseHelpers || {},
+            helpers: caseHelpers || createLgMyTvCaseHelpers({tvSession: session}),
             testInfo,
             capabilities: Object.freeze({
               domInspection: true,
