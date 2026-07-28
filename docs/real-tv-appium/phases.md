@@ -503,7 +503,10 @@ generation passes against each pilot TV from the terminal.
   redacted `VIRTUAL_KEY_INVALID` because the action layer passed a session
   object to an already session-bound semantic adapter. That argument-shape
   defect is now covered and corrected locally; another fresh approved run is
-  required before any product-flow claim.
+  required before any product-flow claim. The next fresh gate confirmed that
+  argument fix but stopped at redacted `CONTENT_NOT_FOUND` before the welcome
+  DOM was ready; trusted focus now has bounded control-readiness coverage and
+  requires another fresh approved run.
 
 ## Phase 4 — Device management IPC and target GUI
 

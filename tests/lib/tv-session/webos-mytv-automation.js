@@ -156,9 +156,17 @@ function createWebOsMyTvAutomation({execute, pressKey, wait} = {}) {
   let selectedSearchResult = null;
 
   async function readFocus() { return execute(focusProbeScript(), []); }
+  async function waitForVisibleId(id, {timeoutMs = 15_000, pollIntervalMs = 250} = {}) {
+    const attempts = Math.max(1, Math.floor(timeoutMs / pollIntervalMs) + 1);
+    for (let attempt = 0; attempt < attempts; attempt += 1) {
+      const target = await execute(elementRectScript(id), []);
+      if (target) return target;
+      if (attempt < attempts - 1) await wait(pollIntervalMs);
+    }
+    throw semanticError("CONTENT_NOT_FOUND", "The requested MyTV control is not visible.");
+  }
   async function focusId(id, maxMoves = 80) {
-    const target = await execute(elementRectScript(id), []);
-    if (!target) throw semanticError("CONTENT_NOT_FOUND", "The requested MyTV control is not visible.");
+    const target = await waitForVisibleId(id);
     for (let attempt = 0; attempt < maxMoves; attempt += 1) {
       const focus = await readFocus();
       if (focus.id === id) return;

@@ -4,28 +4,45 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {createWebOsMyTvAutomation} = require("../lib/tv-session/webos-mytv-automation");
 
-function createAutomation({playerStates = []} = {}) {
+function createAutomation({playerStates = [], visibleAfter = {}, bodyText = "Search"} = {}) {
   let focusedId = "";
   let playerIndex = 0;
   const remoteKeys = [];
+  const waits = [];
+  const rectReads = new Map();
   const automation = createWebOsMyTvAutomation({
     async execute(script) {
       if (script.includes("MYTV_TRUSTED_RECT")) {
         const id = /document\.getElementById\(("[^"]+")\)/.exec(script)?.[1];
         focusedId = id ? JSON.parse(id) : "";
+        const reads = (rectReads.get(focusedId) || 0) + 1;
+        rectReads.set(focusedId, reads);
+        if (reads < (visibleAfter[focusedId] || 1)) return null;
         return {x: 0, y: 0, width: 120, height: 80};
       }
       if (script.includes("MYTV_TRUSTED_FOCUS")) return {id: focusedId, text: "", rect: {x: 0, y: 0, width: 120, height: 80}};
       if (script.includes("MYTV_TRUSTED_SEARCH_CANDIDATES")) return [{id: "result-1", label: "Mẫu phim", type: "movie"}];
       if (script.includes("MYTV_TRUSTED_PLAYER")) return playerStates[Math.min(playerIndex++, playerStates.length - 1)];
-      if (script.includes("document.body")) return "Search";
+      if (script.includes("document.body")) return bodyText;
       return "";
     },
     async pressKey(key) { remoteKeys.push(key); },
-    async wait() {},
+    async wait(milliseconds) { waits.push(milliseconds); },
   });
-  return {automation, remoteKeys};
+  return {automation, remoteKeys, waits};
 }
+
+test("LG MyTV login waits for the welcome control after a fresh app reset", async () => {
+  const {automation, remoteKeys, waits} = createAutomation({
+    visibleAfter: {"btn-welcome-0-1": 3},
+    bodyText: "Đăng nhập Nhập số điện thoại",
+  });
+
+  await automation.focusLogin();
+
+  assert.deepEqual(remoteKeys, ["Enter", "Enter"]);
+  assert.deepEqual(waits, [250, 250]);
+});
 
 test("LG MyTV player readiness does not accept a non-player screen", async () => {
   const {automation} = createAutomation({

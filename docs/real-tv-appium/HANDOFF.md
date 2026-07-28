@@ -61,6 +61,19 @@ field submission, search, and playback. A fresh explicitly approved LG-only
 gate is required to validate this correction; no retry occurred, and no host,
 credential, screenshot, or Samsung action was retained.
 
+## Phase 3 LG welcome-readiness correction — 2026-07-28
+
+The next fresh gate passed the semantic-argument boundary but stopped in 218 ms
+at redacted `CONTENT_NOT_FOUND` before it could activate the welcome control.
+The retained, redacted Phase 1 evidence confirms that the expected MyTV welcome
+control identity is valid, so the bounded failure identifies post-reset DOM
+readiness rather than a changed control. Trusted LG focus now conditionally
+waits up to the existing bounded interval for the requested visible control
+before it sends a native key. Local coverage simulates the delayed welcome DOM
+and proves that no key is sent until the control is visible. A fresh explicitly
+approved LG-only gate is required to validate this correction; no retry,
+credential, host, screenshot, or Samsung action was retained.
+
 ## Read this first in a new session
 
 This repository has a large existing dirty worktree unrelated to this plan.
