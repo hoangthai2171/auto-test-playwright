@@ -488,10 +488,12 @@ generation passes against each pilot TV from the terminal.
   local operations never accept server selectors or JavaScript. Service/row
   operations remain explicitly unavailable for the live LG adapter rather than
   being inferred from DOM text.
-- [ ] Run the separately authorized LG terminal gate fixture. It requires
-  separately authorized dedicated runtime test-account credentials; any new
-  pairing prompt remains a manual on-TV pause. No credentialed product flow
-  has been run.
+- [x] Ran the separately authorized LG terminal gate fixture on the observed
+  LG model/firmware using dedicated runtime-only test credentials. The case
+  reset MyTV, logged in through the virtual keyboard, searched `VTV3 HD` as a
+  channel, required advancing playback time, then completed trusted logout and
+  local Appium/session cleanup. Credentials and screenshots were not retained.
+  Any future pairing prompt remains a manual on-TV pause.
 
 ## Phase 4 — Device management IPC and target GUI
 

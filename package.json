@@ -18,7 +18,8 @@
     "tv:poc:tizen:doctor": "node scripts/real-tv-appium/tizen-poc.js doctor",
     "tv:poc:tizen:pair": "node scripts/real-tv-appium/tizen-poc.js pair",
     "tv:poc:tizen": "node scripts/real-tv-appium/tizen-poc.js",
-    "tv:poc:lg": "node scripts/real-tv-appium/lg-webos-poc.js"
+    "tv:poc:lg": "node scripts/real-tv-appium/lg-webos-poc.js",
+    "tv:gate:lg": "node scripts/real-tv-appium/lg-webos-case-runner.js"
   },
   "keywords": [],
   "author": "",
