@@ -30,7 +30,9 @@ installed, launched, observed, and returned to a clean session.
 
 **Outcome:** Appium controls one physical TV per platform before this project
 depends on it. Execute this POC on macOS first; validate Windows only after the
-macOS pilot evidence passes. Within macOS, prove Samsung first, then LG.
+macOS pilot evidence passes. The office Samsung pilot is unsupported for the
+current remote-input path; the user authorized the 2022 LG office TV as the
+next Phase 1 target.
 
 - [ ] Install/validate the vendor SDK and CLI on the future test-host machine:
   Tizen Studio/SDB for Samsung; webOS TV CLI for LG.
@@ -62,6 +64,12 @@ regression coverage; LG must capture a genuine screenshot until explicitly
 changed.
 
 ### Current Samsung Phase 1 record — 2026-07-24
+
+**Pilot identity caveat (2026-07-27):** SDB previously reported
+`QA50Q80BAKXXV`, while the `2022` label in this historical record came from
+operator-supplied metadata rather than an SDB model-year field. Reconfirm the
+model string and obtain the TV's displayed model/firmware information before
+the next live session; the model year is currently unconfirmed.
 
 - [x] Added a macOS command-line Samsung POC harness and safety/redaction unit
   tests. It has no Electron dependency or GUI change.
@@ -142,6 +150,14 @@ changed.
   DOM focus change, WebDriver close, Appium stop, and new-forward cleanup all
   passed. It is transport/auth evidence for the DOM-only POC, not visual
   evidence or general Samsung support.
+- [x] Home-TV remote-input recheck on 2026-07-27: a fresh read-only preflight
+  confirmed `QA65Q70TAKXXV` and the installed distinct test app. A fresh
+  no-credential/no-deployment `--skip-screenshot-gate` run with ChromeDriver
+  `2.44` again passed reset/restart, DOM inspection, real
+  `KEY_UP`/`KEY_RIGHT`/`KEY_ENTER`/`KEY_RETURN`, clean WebDriver close, Appium
+  stop, and only-new SDB-forward cleanup. `KEY_RIGHT` moved focus from
+  `Đăng nhập` to `Trải nghiệm`. Visual capture remains unavailable and this
+  does not establish support for the separate 2022 pilot.
 - [x] Home-TV authorized partial login/logout: a subsequent
   `--skip-screenshot-gate --login-from-env --verify-logout` run used only the
   distinct test app and runtime-only credentials. It reset the test app after
@@ -152,7 +168,8 @@ changed.
   forward cleanup. It made no screenshot request and performed no deployment.
   Appium process-log capture was disabled before credential entry, and profile
   selection DOM is redacted before retained evidence is written.
-- [x] Latest retained partial evidence:
+- [x] Historical DOM-only semantic evidence (superseded for teardown/logout
+  confirmation by the final retained manifest below):
   `samsung-tizen-2026-07-26T05-38-38-188Z` records the completed exact-model
   DOM-only semantic result with successful search, playback assessment,
   WebDriver close, local Appium shutdown, and newly-created SDB-forward
@@ -178,11 +195,178 @@ changed.
   `samsung-tizen-2026-07-26T06-23-41-538Z`, passed direct login, semantic
   search/playback, Back plus the two-second unload wait, account-login logout
   confirmation, WebDriver close, Appium shutdown, and only-new SDB-forward
-  cleanup. It made no deployment or screenshot request. This remains DOM-only
+  cleanup. The scoped unit suite passed all 188 tests. It made no deployment or
+  screenshot request. This remains DOM-only
   and exact-model only; `visualCapture` is unavailable and no result supports
   `QAQ80BAKXXV` or any other Samsung model.
-- [ ] LG Phase 1. Deliberately not started until Samsung physical evidence is
-  recorded and handed off.
+- [x] 2022 Samsung pilot read-only preflight on 2026-07-27: SDB connected and
+  reported `QA50Q80BAKXXV`, but the inventory did not contain the required
+  distinct test app `PP2MTMRMs8.MyTV`. The store app was inventory-observed
+  only and was not selected or changed. The POC stopped before Chromedriver,
+  pairing, Appium, screenshots, reset, remote keys, or account actions. This
+  is a prerequisite blocker, not support evidence.
+- [x] 2022 Samsung pilot authorized installation on 2026-07-27: the explicitly
+  confirmed `Debug/SS2020353.wgt` was verified as `PP2MTMRMs8.MyTV` v`3.5.3`,
+  then installed successfully and confirmed through a fresh read-only SDB
+  inventory. Local ChromeDriver `2.36`, `2.42`, `2.43`, and `2.44` binaries are
+  only evidenced for the separate 2020 home TV's Chromium 69 endpoint; none
+  was guessed or selected for this pilot. The POC stopped before pairing,
+  Appium, screenshots, reset, remote keys, or account actions.
+- [x] 2022 Samsung pilot test-app Chromium discovery on 2026-07-27: an
+  operator-authorized SDB debug launch of only `PP2MTMRMs8.MyTV` reported Tizen
+  `6.5` and Chromium `85.0.4183.93`. Its temporary SDB forward was removed;
+  no credentials, product flow, Appium, remote keys, screenshots, or store-app
+  operation occurred. No ChromeDriver 85 binary was found in local
+  development/tool locations, so the genuine screenshot gate remains blocked.
+- [x] 2022 Samsung pilot default screenshot-gate attempt on 2026-07-27: the
+  verified Google ChromeDriver `85.0.4183.87` was used once with only the
+  distinct test app and no deployment, credentials, product flows, or screenshot
+  bypass. Appium created a Tizen session but failed while requesting a remote
+  pairing token with `Invalid WebSocket frame: invalid status code 1005`; it did
+  not reach reset, DOM, remote-key, or screenshot checks. Appium stopped and no
+  new SDB forward remained. No retry or prompt dismissal occurred.
+- [x] 2022 Samsung pilot paired screenshot-gate retry on 2026-07-27: after
+  operator-approved pairing, the default POC created the paired Appium session,
+  reset only the distinct test app, attached ChromeDriver `85.0.4183.87` to
+  Chromium `85.0.4183.93`, and read welcome-screen DOM/focus state. Its genuine
+  Appium screenshot request timed out after 20 seconds. No image was saved or
+  substituted; the runner marked visual capture unavailable for this attempt,
+  stopped Appium, and released its new SDB forward. The screenshot block left
+  clean WebDriver deletion and remaining POC gates unproven.
+- [x] 2022 Samsung pilot DOM-only partial attempt on 2026-07-27: after reset,
+  welcome-screen DOM focused `Đăng nhập`. The harness sent `KEY_UP` and then
+  `KEY_RIGHT`, but the retained DOM focus remained on `Đăng nhập`; the required
+  focus-change check failed. Session close, Appium stop, and SDB-forward cleanup
+  passed. One separately user-authorized unchanged repeat reproduced the same
+  `KEY_RIGHT` result and passed its session-close, Appium-stop, and SDB-forward
+  cleanup checks. No automatic follow-up retry, credentials, product flow,
+  screenshot, or store-app action occurred, so this model is not yet eligible
+  for DOM-only semantic automation.
+- [x] 2022 Samsung pilot one-key readiness diagnostic on 2026-07-27: a
+  user-authorized `KEY_DOWN` command was sent only to the distinct test app,
+  but its pre-key DOM sample was empty while subsequent samples showed the
+  initial `Đăng nhập` focus. The result is inconclusive rather than a key
+  transition; session-close and SDB-forward cleanup passed. No screenshot,
+  credentials, product flow, deployment, or store-app action occurred.
+- [x] 2022 Samsung pilot readiness-guarded `KEY_RIGHT` diagnostic on
+  2026-07-27: the paired Appium `rcMode: remote` session confirmed initial
+  welcome focus before the command, but `Đăng nhập` remained focused after one
+  and three seconds. Session-close and SDB-forward cleanup passed. The result
+  proves no detectable transition for this route. A subsequent manual physical
+  `KEY_RIGHT` in an otherwise equivalent active session changed focus from
+  `Đăng nhập` to `Trải nghiệm`, so app welcome-screen handling works and the
+  remaining fault domain is the current Appium remote-command path or its key
+  delivery/mapping.
+- [x] 2022 Samsung pilot redacted Appium remote trace on 2026-07-27: the
+  `tizen: pressKey` request reached the driver, selected its remote-control
+  implementation, used a cached token with a connected WebSocket, and reported
+  no remote API error, but `KEY_RIGHT` still left `Đăng nhập` focused. Together
+  with the physical-key control check, this blocks Phase 1 at or below the
+  current Appium remote-client command path. Further live retries are deferred
+  pending a compatible driver/vendor path.
+- [x] 2022 Samsung pilot remote-input configuration and key-family checks on
+  2026-07-27: read-only SDB capability reports Tizen `6.5`; the installed
+  `appium-tizen-tv-driver` `0.18.1` is also the current registry version.
+  Omitting `rcOnly` still left `KEY_RIGHT` without a transition, and
+  `KEY_ENTER` did not leave the focused welcome Login control. These results
+  rule out the DOM-session configuration and a direction-only mapping issue;
+  Appium remote input remains blocked on this pilot.
+- [x] 2022 Samsung pilot fresh-pairing recovery check on 2026-07-27: after the
+  operator removed all TV Device Connection Manager entries and manually
+  approved one fresh `pair-remote` request, a no-credential `KEY_ENTER` check
+  still left the focused welcome control unchanged. The stale/denied-pairing
+  recovery path is excluded; no automatic pairing retry occurred.
+- [x] 2022 Samsung pilot foreground-context check on 2026-07-27: after debug
+  attach, the operator manually confirmed that the distinct MyTV test app was
+  visibly foregrounded at its welcome screen before one no-credential Appium
+  `KEY_ENTER` command. The welcome DOM focus and screen state remained
+  unchanged at one and three seconds; session-close and SDB-forward cleanup
+  passed. The Internet Browser/debug-foreground hypothesis is excluded for
+  this route.
+- [x] Pilot final same-harness remote-key recheck on 2026-07-28: a fresh
+  read-only preflight again reported `QA50Q80BAKXXV`, Tizen `6.5`, and the
+  installed test app v`3.5.3`; the historical `2022` model-year label remains
+  unconfirmed. The exact no-credential/no-deployment screenshot-skipped
+  harness sequence used for the 2020 home-TV control run was repeated with the
+  locally available Chromium-85-compatible ChromeDriver `85.0.4183.87`.
+  Reset/restart, session close, Appium stop, and SDB-forward cleanup passed,
+  but `KEY_RIGHT` left the same welcome control focused. This reproduces the
+  pilot remote-input blocker under the equivalent harness without establishing
+  its root cause.
+- [x] LG office-TV read-only preflight on 2026-07-28: authenticated webOS CLI
+  inspection reported model `55QNED80SRA`, SDK `10.3.1`, firmware `33.31.61`,
+  and installed inspectable MyTV `com.mytvb2c.app` v`3.5.0`. The registered
+  target matched the runtime-only host. The project-local Appium home has only
+  the Tizen driver and no local ChromeDriver was evidenced compatible with this
+  TV, so the preflight stopped without Appium, pairing, launch, reset,
+  deployment, credentials, product flows, or retained live evidence.
+- [x] LG Appium screenshot-gated POC attempted once on 2026-07-28: the
+  project-local Appium webOS driver `0.5.0`, legacy webOS TV CLI `1.12.4`, and
+  locally present ChromeDriver `2.36.540469` were available. The driver created
+  a webOS session but received `ECONNRESET` while connecting remote transport,
+  before app launch/reset, ChromeDriver attachment, DOM inspection, remote
+  input, or screenshot capture. Thus ChromeDriver compatibility and the
+  mandatory genuine screenshot gate remain unproven; no retry was made.
+  Deployment still needs separate explicit confirmation naming the exact target
+  and package, and no bypass or synthetic visual fallback is permitted.
+- [x] LG approved package deployment on 2026-07-28: the user named
+  `LG_FHD_3.5.0.ipk` for the shown registered LG target. Its control metadata
+  is `com.mytvb2c.app` v`3.5.0`; the authorized install returned `Success` and
+  a read-only inventory reported the same inspectable, visible app/version.
+  No launch or product flow was issued. The preceding single POC was not
+  rerun, so the screenshot gate remains unmet.
+- [x] LG freshly authorized post-deployment POC on 2026-07-28: fresh read-only
+  device and installed-app checks passed, then the Appium webOS driver created
+  a session and again failed with `ECONNRESET` at its remote-transport
+  connection step. It did not reach app launch/reset, ChromeDriver, DOM,
+  remote input, or a screenshot request. This separately authorized attempt is
+  complete and was not retried; the genuine screenshot gate remains unmet.
+- [x] LG secure remote-transport diagnosis on 2026-07-28: after active VS Code
+  debugging was closed, read-only TCP checks reached both webOS remote endpoints.
+  A separately authorized secure-WebSocket POC established remote pairing
+  registration and obtained a secure pointer-input socket path, then failed
+  with `unable to get local issuer certificate`. It did not reach app
+  launch/reset, ChromeDriver, DOM, input, or screenshot capture, and no retry
+  was made. The local transcript was redacted after it was found to contain a
+  pairing key; the screenshot gate remains unmet.
+- [x] LG secure screenshot-gated POC passed on 2026-07-28: after the user
+  explicitly approved a process-scoped self-signed-certificate exception, the
+  secure-WebSocket Appium run foregrounded installed MyTV, reset only MyTV
+  local storage, inspected DOM, observed a real Right focus change and a real
+  Back action, and saved genuine Appium screenshots before input, after Right,
+  and after Back. Session/Appium cleanup passed. No credentials or product flow
+  was used. Retained metadata/log evidence is redacted; the gate screenshots
+  are retained locally.
+- [x] LG operator-observable secure screenshot-gated POC recheck on 2026-07-28:
+  fresh read-only identity/app-inventory preflight passed, followed by one
+  requested run against the already installed MyTV target. Genuine Appium
+  screenshots before input, after a real Right focus change, and after a real
+  Back action passed; session/Appium cleanup passed. No pairing prompt,
+  credentials, deployment, uninstall, or product flow was used. Evidence is
+  retained locally as redacted metadata/logs plus genuine gate screenshots.
+- [ ] LG welcome-screen target-focus check on 2026-07-28: after the initial
+  Right established `Đăng nhập`, a second real Right did not produce the
+  required `Trải nghiệm` DOM focus within the bounded wait. The check failed;
+  genuine screenshot capture and session/Appium cleanup still passed. Treat
+  splash-to-`Đăng nhập` as initial focus establishment only, not as proof of
+  button-to-button right navigation. No further key retry was made.
+- [x] LG reset-only check on 2026-07-28: the explicitly requested MyTV-only
+  local-storage reset verified the installed test target and clean session/
+  Appium shutdown. No screenshot, remote key, credential, deployment,
+  uninstall, or product-flow action was requested; the operator must launch
+  MyTV manually to inspect its first-run screen.
+- [ ] LG Appium one-Right comparison on 2026-07-28: the operator manually
+  observed `Đăng nhập` already focused and one physical Right reaching
+  `Trải nghiệm`. A fresh Appium session confirmed the same initial DOM focus
+  and genuine screenshot, but its single Right did not produce `Trải nghiệm`
+  within the bounded wait. Keep LG remote navigation unresolved; this is not a
+  Samsung-equivalent unsupported-transport conclusion.
+- [x] LG native-WebSocket remote-input POC on 2026-07-28: source inspection
+  found that the unresolved check had configured `rcMode: js`, which uses
+  synthetic ChromeDriver keyboard events. With `rcMode: rc`, secure-WebSocket
+  `RIGHT` moved focus from `Đăng nhập` to `Trải nghiệm` and held for five
+  seconds; genuine screenshots, `BACK`, DOM inspection, and session/Appium
+  cleanup passed. This establishes only the observed LG model/firmware path.
 
 ## Phase 2 — Runner foundation and safe device registry
 

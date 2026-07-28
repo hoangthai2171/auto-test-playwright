@@ -15,6 +15,7 @@ const {
   recordPocCleanup,
   redactDomState,
   redactHost,
+  redactValue,
   samsungPackageIdFromAppId,
   visualCaptureStatus,
   waitForFocusChange,
@@ -158,6 +159,17 @@ test("Samsung POC redacts host and sensitive DOM text before local evidence is w
   }, ["secret"]);
   assert.doesNotMatch(redacted.bodyText, /secret|192\.168\.1\.40/);
   assert.equal(redacted.screenUrl, "http://192.168.1.x/app");
+});
+
+test("Samsung POC redacts LG remote pairing client keys from local logs", () => {
+  const source = 'Success: key is \'sensitive-pairing-key\'; Got response: {"client-key":"sensitive-pairing-key"}; {"value":"iVBORw0KGgoAAAA"}';
+  const redacted = redactValue(source);
+
+  assert.doesNotMatch(redacted, /sensitive-pairing-key/);
+  assert.doesNotMatch(redacted, /iVBORw0KGgo/);
+  assert.match(redacted, /client-key=\[REDACTED\]/i);
+  assert.match(redacted, /key is '\[REDACTED\]'/i);
+  assert.match(redacted, /\[REDACTED PNG PAYLOAD\]/);
 });
 
 test("Samsung POC redacts profile labels and IDs from logout DOM evidence", () => {

@@ -8,6 +8,10 @@ const PRODUCTION_APP_ID = "PP2MTMRMs9.MyTV";
 const EXPECTED_TEST_APP_ID = "PP2MTMRMs8.MyTV";
 const REDACTED = "[REDACTED]";
 
+function escapeRegExp(value) {
+  return String(value).replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+}
+
 function assertSafeSamsungAppId(appId) {
   if (typeof appId !== "string" || !appId.trim()) {
     throw new Error("A non-empty Samsung test app ID is required.");
@@ -53,9 +57,12 @@ function redactHost(value) {
 function redactValue(value, secrets = []) {
   let text = String(value ?? "");
   for (const secret of secrets.filter(Boolean)) {
-    text = text.split(secret).join(REDACTED);
+    text = text.replace(new RegExp(escapeRegExp(secret), "gi"), REDACTED);
   }
   return text
+    .replace(/(Success:\s*key\s+is\s+)(['"])[^'"]*\2/gi, "$1'" + REDACTED + "'")
+    .replace(/["']?(client[-_]?key|pairing[-_]?key)["']?\s*:\s*["']?[^"',}\s]+["']?/gi, "$1=" + REDACTED)
+    .replace(/("value"\s*:\s*")iVBORw0KGgo[^"]*(")/g, "$1[REDACTED PNG PAYLOAD]$2")
     .replace(/(password|token|authorization|cookie)\s*[:=]\s*[^\s,}]+/gi, "$1=" + REDACTED)
     .replace(/\b(?:\d{1,3}\.){3}\d{1,3}\b/g, (host) => redactHost(host));
 }
