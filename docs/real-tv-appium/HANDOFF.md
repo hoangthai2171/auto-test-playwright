@@ -10,23 +10,26 @@ manual-stop result-sync contracts. Electron now requires explicit close consent
 for an active batch or unsynced in-memory retry. The trusted LG adapter exposes
 only named local operations for the terminal-gate fixture (login, search,
 playback assessment, and logout); it does not accept server selectors or code.
-The separately authorized Phase 3 LG terminal gate is recorded below. Any
-future credentialed product flow still requires dedicated runtime-only test
+The prior attempted Phase 3 LG terminal gate is corrected below: it executed
+the Phase 1 welcome-screen POC instead and did not exercise login. Any future
+credentialed product flow still requires dedicated runtime-only test
 credentials, and any on-TV pairing prompt remains a manual operator approval
 point.
 
 ## Phase 3 LG terminal gate — 2026-07-28
 
-After a fresh read-only identity/app preflight, the separately authorized LG
-terminal gate passed on the observed `55QNED80SRA` / SDK `10.3.1` / firmware
-`33.31.61` path with installed `com.mytvb2c.app`. Dedicated test credentials
-were retrieved into the gate process from local encrypted storage and were not
-retained. The terminal runner was then hardened to strip those variables before
-future vendor/Appium subprocesses are created. The case reset MyTV, used native remote navigation and character-by-character
-virtual-key entry to log in, searched `VTV3 HD` as a channel, required player
-time advancement, then completed trusted logout, WebDriver session closure, and
-loopback Appium cleanup. No credentials or screenshots were retained, and no
-Samsung action occurred.
+After fresh read-only identity/app preflight, an attempted LG terminal-gate
+command ran the existing Phase 1 `RIGHT`/`BACK` welcome-screen POC, as proven
+by its POC-only redacted manifest and loopback port. It did not invoke the
+terminal gate's login action and must not be considered a product-gate pass.
+Dedicated test credentials remain local encrypted-storage inputs only; vendor
+and Appium subprocess environments strip them. The terminal gate now retains
+an ignored, owner-only redacted manifest containing only semantic action status
+and duration. It omits credentials, runtime host, messages, and screenshots.
+A fresh explicitly approved validation must still cover reset, login through
+the virtual keyboard, `VTV3 HD` channel search/playback time advancement,
+trusted logout, WebDriver closure, and loopback Appium cleanup. No Samsung
+action occurred.
 
 ## Read this first in a new session
 

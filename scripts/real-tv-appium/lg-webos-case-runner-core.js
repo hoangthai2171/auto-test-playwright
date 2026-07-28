@@ -1,5 +1,8 @@
 "use strict";
 
+const fs = require("node:fs");
+const path = require("node:path");
+
 const CONTENT_TYPES = new Set(["channel", "movie", "content"]);
 
 function required(value, label) {
@@ -31,6 +34,66 @@ function withoutLgProductGateCredentials(environment = {}) {
   return sanitized;
 }
 
+function createLgProductGateManifest({model, appId} = {}) {
+  return {
+    platform: "lg-webos",
+    status: "running",
+    evidencePolicy: "local-only-redacted",
+    device: {model: required(model, "LG model"), appId: required(appId, "LG app ID")},
+  };
+}
+
+function summarizeStep(step, index) {
+  return {
+    index: Number.isInteger(step?.index) ? step.index : index,
+    action: String(step?.action || ""),
+    status: step?.status === "passed" ? "passed" : "failed",
+    durationMs: Number.isFinite(step?.durationMs) && step.durationMs >= 0 ? step.durationMs : 0,
+  };
+}
+
+function finalizeLgProductGateManifest(manifest, {testCaseResult, forceFailed = false} = {}) {
+  const steps = Array.isArray(testCaseResult?.steps)
+    ? testCaseResult.steps.map(summarizeStep)
+    : [];
+  const status = !forceFailed && testCaseResult?.status === "passed" ? "passed" : "failed";
+  return {
+    ...manifest,
+    status,
+    case: {status, steps},
+  };
+}
+
+function createLgProductGateEvidenceWriter({rootDir, runId} = {}) {
+  const safeRoot = required(rootDir, "LG evidence root");
+  const safeRunId = required(runId, "LG evidence run ID").replace(/[^a-zA-Z0-9._-]/g, "_");
+  const evidenceDir = path.resolve(safeRoot, `lg-product-gate-${safeRunId}`);
+  fs.mkdirSync(evidenceDir, {recursive: true, mode: 0o700});
+  fs.chmodSync(evidenceDir, 0o700);
+  return {
+    evidenceDir,
+    write(manifest) {
+      const destination = path.join(evidenceDir, "manifest.json");
+      fs.writeFileSync(destination, `${JSON.stringify(manifest, null, 2)}\n`, {mode: 0o600});
+      fs.chmodSync(destination, 0o600);
+    },
+  };
+}
+
+async function runLgProductGateWithEvidence({manifest, writer, run, getTestCaseResult = () => undefined} = {}) {
+  if (!writer || typeof writer.write !== "function") throw new TypeError("An LG product-gate evidence writer is required.");
+  if (typeof run !== "function") throw new TypeError("An LG product-gate run function is required.");
+  if (typeof getTestCaseResult !== "function") throw new TypeError("An LG product-gate case-result accessor is required.");
+  try {
+    const result = await run();
+    writer.write(finalizeLgProductGateManifest(manifest, {testCaseResult: result?.caseResult || getTestCaseResult()}));
+    return result;
+  } catch (error) {
+    writer.write(finalizeLgProductGateManifest(manifest, {testCaseResult: error?.testCaseResult || getTestCaseResult(), forceFailed: true}));
+    throw error;
+  }
+}
+
 function parseLgCaseRunnerArgs(argv) {
   const args = {};
   for (let index = 0; index < argv.length; index += 1) {
@@ -50,4 +113,12 @@ function parseLgCaseRunnerArgs(argv) {
   return args;
 }
 
-module.exports = {createLgProductGateCase, parseLgCaseRunnerArgs, withoutLgProductGateCredentials};
+module.exports = {
+  createLgProductGateCase,
+  createLgProductGateEvidenceWriter,
+  createLgProductGateManifest,
+  finalizeLgProductGateManifest,
+  parseLgCaseRunnerArgs,
+  runLgProductGateWithEvidence,
+  withoutLgProductGateCredentials,
+};

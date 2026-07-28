@@ -6,9 +6,17 @@ const {spawn, spawnSync} = require("node:child_process");
 const {createTvRunner} = require("../../app/tv-runner");
 const {createDeviceLock} = require("../../app/device-lock");
 const {createAppiumServerManager} = require("../../app/appium-server-manager");
+const {runTvTestCase} = require("../../tests/lib/tv-case-runner");
 const {createWebOsSessionFactory} = require("../../tests/lib/tv-session/webos-appium-session");
 const {EXPECTED_LG_APP_ID, buildLgRuntimeRedactionSecrets} = require("./lg-webos-poc-core");
-const {createLgProductGateCase, parseLgCaseRunnerArgs, withoutLgProductGateCredentials} = require("./lg-webos-case-runner-core");
+const {
+  createLgProductGateCase,
+  createLgProductGateEvidenceWriter,
+  createLgProductGateManifest,
+  parseLgCaseRunnerArgs,
+  runLgProductGateWithEvidence,
+  withoutLgProductGateCredentials,
+} = require("./lg-webos-case-runner-core");
 
 function usage() {
   return "Usage: node scripts/real-tv-appium/lg-webos-case-runner.js --device <registered-name> --host <runtime-host> --model <observed-model> --app-id com.mytvb2c.app --chromedriver <absolute-path> --search-name <known-title> --content-type <channel|movie|content> --runtime-root <local-runtime-root> [--port <loopback-port>] --secure-websocket --allow-self-signed-tls";
@@ -70,6 +78,11 @@ async function main() {
     appiumBin: path.join(runtimeRoot, "node_modules", ".bin", "appium"),
     webosSdk: path.join(runtimeRoot, ".real-tv-appium", "webos-sdk"),
   };
+  const evidenceWriter = createLgProductGateEvidenceWriter({
+    rootDir: path.join(runtimeRoot, ".real-tv-appium", "evidence"),
+    runId: new Date().toISOString().replace(/[:.]/g, "-"),
+  });
+  const manifest = createLgProductGateManifest({model: args.model, appId: EXPECTED_LG_APP_ID});
   const port = Number(args.port || 4727);
   const redactor = redactFactory([...buildLgRuntimeRedactionSecrets(args.host), username, password]);
   const aresInfo = path.join(runtime.webosSdk, "CLI", "bin", "ares-device-info");
@@ -84,6 +97,16 @@ async function main() {
     },
   };
   const serverManager = createAppiumServerManager({spawn, fetch, kill: process.kill.bind(process), redact: redactor, wait});
+  let testCaseResult;
+  const caseExecutor = async (input) => {
+    try {
+      testCaseResult = await runTvTestCase(input);
+      return testCaseResult;
+    } catch (error) {
+      testCaseResult = error?.testCaseResult;
+      throw error;
+    }
+  };
   const runner = createTvRunner({
     registry: {async list() { return [profile]; }},
     discovery,
@@ -91,19 +114,25 @@ async function main() {
     serverManager,
     sessionFactory: createWebOsSessionFactory({clientFactory: async (options) => createAppiumClient(options), secrets: [args.host, username, password]}),
     redact: redactor,
+    caseExecutor,
   });
   delete process.env.MYTV_LG_TEST_USERNAME;
   delete process.env.MYTV_LG_TEST_PASSWORD;
   try {
-    await runner.run({
-      profileId: profile.id,
-      host: args.host,
-      sharedDeviceAcknowledged: true,
-      secureWebsocket: true,
-      allowSelfSignedTls: true,
-      connection: {deviceName: args.device, deviceHost: args.host, chromedriverPath: path.resolve(args.chromedriver), remoteOnly: false, rcMode: "rc"},
-      appium: {port, appiumHome: runtime.appiumHome, appiumBin: runtime.appiumBin},
-      testCase,
+    await runLgProductGateWithEvidence({
+      manifest,
+      writer: evidenceWriter,
+      getTestCaseResult: () => testCaseResult,
+      run: () => runner.run({
+        profileId: profile.id,
+        host: args.host,
+        sharedDeviceAcknowledged: true,
+        secureWebsocket: true,
+        allowSelfSignedTls: true,
+        connection: {deviceName: args.device, deviceHost: args.host, chromedriverPath: path.resolve(args.chromedriver), remoteOnly: false, rcMode: "rc"},
+        appium: {port, appiumHome: runtime.appiumHome, appiumBin: runtime.appiumBin},
+        testCase,
+      }),
     });
   } finally {
     process.env.MYTV_LG_TEST_USERNAME = username;
