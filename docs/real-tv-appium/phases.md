@@ -463,6 +463,28 @@ still selects its existing page-based helpers.
 **Gate:** One fixture case covering login, search, playback, logout, and report
 generation passes against each pilot TV from the terminal.
 
+### Current Phase 3 local-contract record — 2026-07-28
+
+- [x] Added a target-neutral action context, DOM/session facade, native-key
+  dispatch, capability preflight with case/action context, trusted semantic
+  adapter boundary, and per-case reset/logout precedence contracts.
+- [x] Added fake-only terminal coverage for every supported server action,
+  including character-by-character virtual-key entry; it does not contact a TV
+  or use account credentials.
+- [x] Added explicit business/technical classification, three-attempt
+  clean-case recovery contracts, pairing pause behavior, manual-stop partial
+  result submission, immutable in-memory retry-sync behavior, and close-consent
+  guard contracts.
+- [x] Kept the existing Browser action runner and flow-case submission payload
+  unchanged; the Browser renderer now submits only fully completed cases after
+  a manual stop and exposes an explicit Retry sync control.
+- [ ] Wire the close-consent guard into the Electron lifecycle and add the
+  trusted LG DOM-semantic implementation required for a real case run. These
+  remain local implementation work; no live TV action has been performed.
+- [ ] Run the separately authorized LG terminal gate fixture. It requires an
+  explicit fresh live-operation approval and separately authorized dedicated
+  test-account credentials; pairing remains a manual on-TV pause.
+
 ## Phase 4 — Device management IPC and target GUI
 
 **Outcome:** An operator can choose Browser/Samsung/LG and register or validate

@@ -1,5 +1,16 @@
 # Real-TV Appium Handoff Ledger
 
+## Phase 3 local-contract status — 2026-07-28
+
+The LG-only target-neutral runner foundation is implemented and verified with
+injected fakes. It preserves per-case MyTV-only reset, trusted logout cleanup,
+native remote input, character-by-character virtual-key entry, capability
+preflight, redacted diagnostics, business-versus-technical classification, and
+manual-stop result-sync contracts. No Phase 3 live login, search, playback, or
+credentials have been used. The fresh terminal gate needs a separately approved
+live LG product-flow operation; any on-TV pairing prompt remains a manual
+operator approval point.
+
 ## Read this first in a new session
 
 This repository has a large existing dirty worktree unrelated to this plan.
