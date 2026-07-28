@@ -132,7 +132,7 @@ function nonEmptyScreenshot(value) {
   return Buffer.isBuffer(value) || ArrayBuffer.isView(value) ? value.byteLength > 0 : false;
 }
 
-function createTvRunner({registry, discovery, lock, serverManager, sessionFactory, redact} = {}) {
+function createTvRunner({registry, discovery, lock, serverManager, sessionFactory, redact, caseExecutor} = {}) {
   requiredDependency(registry, "device registry", "list");
   requiredDependency(discovery, "device discovery", "validate");
   requiredDependency(lock, "device lock", "acquire");
@@ -141,7 +141,7 @@ function createTvRunner({registry, discovery, lock, serverManager, sessionFactor
   if (typeof redact !== "function") throw new Error("An injected redaction function is required.");
 
   return {
-    async run({profileId, host, sharedDeviceAcknowledged, secureWebsocket, allowSelfSignedTls, connection, appium} = {}) {
+    async run({profileId, host, sharedDeviceAcknowledged, secureWebsocket, allowSelfSignedTls, connection, appium, testCase, caseHelpers, testInfo} = {}) {
       const profiles = await registry.list();
       const profile = Array.isArray(profiles) ? profiles.find((candidate) => candidate?.id === profileId) : null;
       if (!profile) throw createError("PROFILE_NOT_FOUND", "The requested TV profile was not found.");
@@ -178,6 +178,7 @@ function createTvRunner({registry, discovery, lock, serverManager, sessionFactor
       let lease;
       let server;
       let session;
+      let caseResult;
 
       try {
         lease = await lock.acquire(profile.id);
@@ -208,6 +209,24 @@ function createTvRunner({registry, discovery, lock, serverManager, sessionFactor
           throw createError("VISUAL_CAPTURE_UNAVAILABLE", "The injected LG session did not return a genuine Appium screenshot.");
         }
         events.push("genuine_appium_screenshot_verified");
+        if (testCase !== undefined) {
+          if (typeof caseExecutor !== "function") {
+            throw createError("TV_CASE_EXECUTOR_UNAVAILABLE", "The trusted TV case executor is unavailable.");
+          }
+          caseResult = await caseExecutor({
+            tvSession: session,
+            testCase,
+            helpers: caseHelpers || {},
+            testInfo,
+            capabilities: Object.freeze({
+              domInspection: true,
+              visualCapture: true,
+              targetSemanticActions: true,
+              playerInspection: true,
+            }),
+          });
+          events.push("case_completed");
+        }
       } catch (error) {
         primaryError = error;
       } finally {
@@ -256,6 +275,7 @@ function createTvRunner({registry, discovery, lock, serverManager, sessionFactor
         status: "passed",
         events,
         artifactMetadata: {domInspected: true, genuineAppiumScreenshot: true},
+        ...(caseResult ? {caseResult} : {}),
       }));
     },
   };

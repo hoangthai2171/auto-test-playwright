@@ -35,7 +35,7 @@ function redact(value) {
     .replaceAll("/private/runtime/chromedriver", "[TOOL]");
 }
 
-function createHarness({profiles = [LG_PROFILE], discoveryResult, sessionFactoryCreate, session: suppliedSession, serverStart, serverStop} = {}) {
+function createHarness({profiles = [LG_PROFILE], discoveryResult, sessionFactoryCreate, session: suppliedSession, serverStart, serverStop, caseExecutor} = {}) {
   const calls = {discovery: 0, serverStarts: 0, serverStops: 0, sessionCreates: 0, sessionStarts: 0, domReads: 0, screenshots: 0, sessionCleanups: 0, sessionCloses: 0};
   const lock = createDeviceLock();
   const session = suppliedSession || {
@@ -87,8 +87,9 @@ function createHarness({profiles = [LG_PROFILE], discoveryResult, sessionFactory
   };
   return {
     calls,
+    session,
     lock,
-    runner: createTvRunner({registry, discovery, lock, serverManager, sessionFactory, redact}),
+    runner: createTvRunner({registry, discovery, lock, serverManager, sessionFactory, redact, caseExecutor}),
   };
 }
 
@@ -203,6 +204,26 @@ test("runner verifies injected DOM and genuine Appium screenshot then returns im
   assert.ok(Object.isFrozen(result.artifactMetadata));
   assert.doesNotMatch(JSON.stringify(result), /192\.168\.1\.9|pairing-secret|chromedriver/i);
   assert.deepEqual(result.artifactMetadata, {domInspected: true, genuineAppiumScreenshot: true});
+});
+
+test("runner invokes a trusted injected case executor only after the session preflight", async () => {
+  const received = [];
+  const {runner, calls, session} = createHarness({
+    async caseExecutor(context) {
+      received.push(context);
+      return {testCaseId: context.testCase.id, status: "passed", steps: []};
+    },
+  });
+  const testCase = {id: "case-1", name: "Trusted case", actions: [{action: "wait_for_ready", name: "app"}]};
+
+  const result = await runner.run(validRun({testCase, caseHelpers: {semantic: {}}}));
+
+  assert.equal(received.length, 1);
+  assert.equal(received[0].testCase, testCase);
+  assert.equal(received[0].tvSession, session);
+  assert.equal(received[0].runtimeHost, undefined);
+  assert.equal(received[0].connection, undefined);
+  assert.deepEqual(result.caseResult, {testCaseId: "case-1", status: "passed", steps: []});
 });
 
 test("runner releases its lock and stops Appium when injected session creation fails", async () => {
