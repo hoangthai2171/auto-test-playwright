@@ -499,7 +499,11 @@ generation passes against each pilot TV from the terminal.
   with semantic step status (never credentials, runtime host, messages, or
   screenshots); a fresh approved live run must verify login, `VTV3 HD`
   search/playback, logout, and cleanup. Any pairing prompt remains a manual
-  on-TV pause.
+  on-TV pause. The first corrected gate reached `login` but stopped at
+  redacted `VIRTUAL_KEY_INVALID` because the action layer passed a session
+  object to an already session-bound semantic adapter. That argument-shape
+  defect is now covered and corrected locally; another fresh approved run is
+  required before any product-flow claim.
 
 ## Phase 4 — Device management IPC and target GUI
 

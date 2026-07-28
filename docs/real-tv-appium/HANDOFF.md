@@ -47,6 +47,20 @@ approved LG-only gate remains required to validate the correction; do not
 treat local tests as product-flow evidence. No host, credential, screenshot,
 or Samsung action was retained.
 
+## Phase 3 LG semantic-argument correction — 2026-07-28
+
+The first fresh gate after the reset correction passed reset and reached the
+real `login` action, then stopped during virtual-keyboard entry with redacted
+failure code `VIRTUAL_KEY_INVALID`. Source and contract tracing isolated the
+fault to the target-action layer passing its session object into the already
+session-bound LG semantic adapter. The virtual-key method consequently received
+an object instead of one character; the same mismatch would have shifted every
+later semantic-action argument. The action layer now passes only each trusted
+operation's documented parameters, with coverage for login, character entry,
+field submission, search, and playback. A fresh explicitly approved LG-only
+gate is required to validate this correction; no retry occurred, and no host,
+credential, screenshot, or Samsung action was retained.
+
 ## Read this first in a new session
 
 This repository has a large existing dirty worktree unrelated to this plan.
