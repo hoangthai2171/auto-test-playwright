@@ -513,6 +513,12 @@ generation passes against each pilot TV from the terminal.
   terminal bridge also bounds outstanding loopback Appium requests and records
   unfinished runs as redacted `RUN_INTERRUPTED` failures. A fresh approved
   product gate remains required for search, playback, and logout evidence.
+- [x] LG-only Phase 3 terminal product gate passed on 2026-07-29 after fresh
+  read-only preflight: login, native Search navigation, `VTV3 HD` channel
+  search-result selection, playback assessment, trusted logout cleanup,
+  WebDriver closure, and loopback Appium cleanup completed through the approved
+  installed MyTV target. The retained local manifest is redacted and excludes
+  runtime host, credentials, screenshots, pairing material, and error text.
 
 ## Phase 4 — Device management IPC and target GUI
 

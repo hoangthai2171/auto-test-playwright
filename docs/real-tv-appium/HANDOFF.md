@@ -90,6 +90,19 @@ A fresh explicitly approved LG-only gate is required to validate search,
 playback, and trusted logout; no host, credential, screenshot, or Samsung
 action was retained.
 
+## Phase 3 LG product gate passed — 2026-07-29
+
+After fresh read-only identity and installed-app preflight, one explicitly
+approved native-RC LG gate passed its complete terminal fixture: login through
+the virtual keyboard, native Search navigation, `VTV3 HD` channel search-result
+selection, playback assessment, trusted logout cleanup, WebDriver closure, and
+loopback Appium cleanup. The gate used only the approved installed MyTV target,
+the proven session-start MyTV-local-storage reset, native remote keys, genuine
+Appium DOM/screenshot preflight, and runtime-only local credentials. The local
+manifest retains only redacted platform/model/app identity and per-action status
+and duration. No host, credential, screenshot, pairing material, deployment,
+uninstall, or Samsung action was retained.
+
 ## Read this first in a new session
 
 This repository has a large existing dirty worktree unrelated to this plan.
