@@ -14,8 +14,9 @@ workspace setting and does not change the LG device list.
 ## Dialog flow
 
 1. The dialog accepts a device label, host, and passphrase for this attempt.
-   The values are runtime-only: they are not persisted, returned to the
-   renderer after use, logged, or included in result text.
+   The input travels once from the renderer to the main process, then remains
+   runtime-only: it is not persisted, returned in an IPC result, logged, or
+   included in result text.
 2. **Inspect TV** explains that it will make one read-only LG connection to
    retrieve the exact model and firmware. The maintainer must explicitly
    approve this live-TV contact before it starts.
@@ -23,9 +24,11 @@ workspace setting and does not change the LG device list.
    existing catalog pair found, or new compatibility required. No driver is
    downloaded during inspection.
 4. When an existing verified pair is found, **Run compatibility validation**
-   becomes available. It requires a separate explicit confirmation before a
-   temporary verified ChromeDriver download and the approved MyTV-only product
-   gate. It removes temporary files afterwards.
+   becomes available only when exactly one compatible LG product-gate case is
+   selected in the workspace. It requires a separate explicit confirmation
+   before a temporary verified ChromeDriver download and that selected
+   MyTV-only product-gate case. It removes temporary files afterwards and does
+   not retry automatically.
 5. A successful validation still requires the existing final **Record this
    compatibility?** or **Update this compatibility?** confirmation before the
    local catalog can change. Publishing remains separate.
@@ -34,6 +37,10 @@ workspace setting and does not change the LG device list.
 
 - LG only.
 - Inspection is the first live-TV operation and always requires fresh approval.
+- Inspection creates one unique local webOS CLI target with the entered
+  connection values and removes that exact target in `finally`. It never saves
+  an application device profile, modifies another target, changes the default
+  target, searches the network, or resets the CLI target list.
 - Never use `appium:rcMode "js"` or `webos: clearApp`.
 - Never deploy, install, uninstall, reset, pair, or otherwise change a TV app
   outside the separately approved MyTV-only product gate.
