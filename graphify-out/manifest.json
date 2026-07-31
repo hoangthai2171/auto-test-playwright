@@ -1,17 +1,17 @@
 {
   "app/main.js": {
-    "mtime": 1785489641.6934927,
-    "ast_hash": "c11dc1c8ebd3fafb50119c7ab42766ca",
+    "mtime": 1785492620.4582098,
+    "ast_hash": "87e0ad4be7c74340899a03fdbba466e1",
     "semantic_hash": ""
   },
   "app/preload.js": {
-    "mtime": 1785489641.6938906,
-    "ast_hash": "396e81844b2f7fa5bdd735834a69eb7e",
+    "mtime": 1785491744.620188,
+    "ast_hash": "64450b9cf3621e0b04057918d2296c76",
     "semantic_hash": ""
   },
   "app/renderer/renderer.js": {
-    "mtime": 1785489641.6981459,
-    "ast_hash": "9cbca1ea6b410a64f24d6ee64b322f1f",
+    "mtime": 1785492903.101178,
+    "ast_hash": "ef22a3c396b8c1ad6b2400514c70cdf6",
     "semantic_hash": ""
   },
   "package.json": {
@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1785489641.6837828,
-    "ast_hash": "e76f59a55a4a9004ae96ef7a33608f3f",
+    "mtime": 1785490019.1423373,
+    "ast_hash": "e9468f5baebcfe74523e86f87131e211",
     "semantic_hash": ""
   },
   "IDEA.md": {
@@ -115,8 +115,8 @@
     "semantic_hash": ""
   },
   "app/renderer/index.html": {
-    "mtime": 1785489641.6968207,
-    "ast_hash": "9b4b336e53fe5673830304ea6c6df27a",
+    "mtime": 1785493007.066153,
+    "ast_hash": "557b9cb3e991622d5e51e846a028a09a",
     "semantic_hash": ""
   },
   ".codex/skills/playwright-interactive/assets/playwright-small.svg": {
@@ -655,8 +655,8 @@
     "semantic_hash": ""
   },
   "tests/unit/renderer.test.js": {
-    "mtime": 1785489641.7260027,
-    "ast_hash": "b0db19027b2031be1b2efff8de8262a1",
+    "mtime": 1785493011.0820248,
+    "ast_hash": "69dc2fc15b60f2a551bfbaf7053bac3b",
     "semantic_hash": ""
   },
   "tests/unit/run-close-guard.test.js": {
@@ -1065,8 +1065,8 @@
     "semantic_hash": ""
   },
   "tests/unit/preload.test.js": {
-    "mtime": 1785489641.72569,
-    "ast_hash": "9ba563be7a93f4cd49c5fc41a7537234",
+    "mtime": 1785491848.6812587,
+    "ast_hash": "3a2b9bea05232439ac1bfa15bf68fa00",
     "semantic_hash": ""
   },
   "docs/superpowers/plans/2026-07-29-lg-installer-progress-and-driver-registration.md": {
@@ -1327,6 +1327,31 @@
   "docs/real-tv-appium/LG-COMPATIBILITY-PAUSE-HANDOFF.md": {
     "mtime": 1785489641.7003324,
     "ast_hash": "24cbe9af1ec8d89b08b4c31dca4c1c06",
+    "semantic_hash": ""
+  },
+  ".codex/hooks.json": {
+    "mtime": 1785490019.1430063,
+    "ast_hash": "4463e143c50ad360d9d457477dd2854c",
+    "semantic_hash": ""
+  },
+  "app/hosts-file-elevation.js": {
+    "mtime": 1785492635.67458,
+    "ast_hash": "4face7e91f0f5ac2a29bdf2dac197029",
+    "semantic_hash": ""
+  },
+  "app/hosts-file.js": {
+    "mtime": 1785492684.4904761,
+    "ast_hash": "f0ae81e3e4aeb99e7fe42e5c79a23eea",
+    "semantic_hash": ""
+  },
+  "tests/unit/hosts-file-elevation.test.js": {
+    "mtime": 1785492648.8282504,
+    "ast_hash": "b4f370ad576c5abc59ec579b90d0a2d4",
+    "semantic_hash": ""
+  },
+  "tests/unit/hosts-file.test.js": {
+    "mtime": 1785492654.583949,
+    "ast_hash": "1f46c45cd6e09b6f2282b2b8f54d30cc",
     "semantic_hash": ""
   }
 }

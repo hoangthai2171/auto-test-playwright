@@ -50,6 +50,7 @@ const {createLoopbackAppiumClient} = require("./loopback-appium-client");
 const {createTvRunner} = require("./tv-runner");
 const {createWebOsSessionFactory} = require("../tests/lib/tv-session/webos-appium-session");
 const {revealWindowOnFirstPaint} = require("./window-startup");
+const {createHostsFileService} = require("./hosts-file");
 
 const INTERACTIVE_BROWSER_DEBUG_PORT = Number(process.env.MYTV_INTERACTIVE_BROWSER_DEBUG_PORT) || 43000 + Math.floor(Math.random() * 1000);
 
@@ -213,6 +214,7 @@ const browserToolchainInstaller = createBrowserToolchainInstaller({
     spawn,
 });
 const browserRunLauncher = createBrowserRunLauncher({browserToolchain, managedRoot: browserRoot});
+const hostsFileService = createHostsFileService({fs, platform: process.platform, spawn});
 const deviceRegistry = createDeviceRegistry({filePath: tvDevicesPath(), fs});
 const deviceSecrets = createDeviceSecretStore({
     safeStorage,
@@ -386,6 +388,10 @@ ipcMain.handle("load-test-cases", async () => {
     const cases = await loadLocalTestCases(fixturePath);
     return {ok: true, source: "local", cases: cases.map(sanitizeCaseForUi)};
 });
+
+ipcMain.handle("get-host-entry-status", async (_event, values = {}) => hostsFileService.getStatus(values.entry));
+ipcMain.handle("add-host-entry", async (_event, values = {}) => hostsFileService.add(values.entry));
+ipcMain.handle("remove-host-entry", async (_event, values = {}) => hostsFileService.remove(values.entry));
 
 ipcMain.handle("load-flow-case-folders", async (_event, settings = {}) => {
     const result = await fetchFlowCaseFolders({

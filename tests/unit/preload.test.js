@@ -62,6 +62,20 @@ test("exposes browser configuration calls and a removable progress subscription"
   assert.equal(listeners.has("browser-toolchain-install-progress"), false);
 });
 
+test("exposes hosts-file status and update calls", () => {
+  const {bridge, invokes} = loadPreload();
+
+  bridge.getHostEntryStatus("172.16.240.254 html5stage.mytv.vn");
+  bridge.addHostEntry("172.16.240.254 html5stage.mytv.vn");
+  bridge.removeHostEntry("172.16.240.254 html5stage.mytv.vn");
+
+  assert.deepEqual(invokes, [
+    ["get-host-entry-status", {entry: "172.16.240.254 html5stage.mytv.vn"}],
+    ["add-host-entry", {entry: "172.16.240.254 html5stage.mytv.vn"}],
+    ["remove-host-entry", {entry: "172.16.240.254 html5stage.mytv.vn"}],
+  ]);
+});
+
 test("exposes the selected-device connection check without a host or passphrase argument", () => {
   const {bridge, invokes} = loadPreload();
 

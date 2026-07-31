@@ -193,6 +193,10 @@ function createRendererFixture() {
     "project-id-input",
     "environment-select",
     "api-timeout-input",
+    "dns-host-input",
+    "dns-host-add-button",
+    "dns-host-remove-button",
+    "dns-host-status",
     "run-target-browser",
     "run-target-webos",
     "lg-device-panel",
@@ -406,6 +410,9 @@ function createRendererFixture() {
     installLgToolchain: async () => ({ok: false, status: "TOOLCHAIN_UNAVAILABLE"}),
     onLgToolchainInstallProgress: () => () => {},
     getBrowserToolchainStatus: async () => ({ok: true, state: "ready", component: {id: "playwright-chromium", label: "Playwright Chromium", version: "1.61.1", status: "ready"}}),
+    getHostEntryStatus: async () => ({ok: true, exists: false}),
+    addHostEntry: async () => ({ok: true, exists: true}),
+    removeHostEntry: async () => ({ok: true, exists: false}),
     planBrowserToolchainSetup: async () => ({ok: true, state: "ready", component: {id: "playwright-chromium", label: "Playwright Chromium", version: "1.61.1", status: "ready"}}),
     installBrowserToolchain: async () => ({ok: true, state: "ready", component: {id: "playwright-chromium", label: "Playwright Chromium", version: "1.61.1", status: "ready"}}),
     onBrowserToolchainInstallProgress: () => () => {},
@@ -975,6 +982,45 @@ test("loads and saves connection and network settings", () => {
   assert.equal(stored.API_TIMEOUT_SECONDS, "45");
   assert.equal(stored.API_AUTHORIZATION, "Bearer saved-token");
   assert.equal(stored.ENVIRONMENT, "API");
+});
+
+test("does not fetch folders during startup; Refresh remains manual", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let folderRequests = 0;
+  fixture.runner.loadFlowCaseFolders = async () => {
+    folderRequests += 1;
+    return {ok: true, folders: []};
+  };
+  renderer.bootstrapRenderer(fixture);
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(folderRequests, 0);
+
+  fixture.elements["refresh-folders-button"].dispatchEvent("click");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(folderRequests, 1);
+});
+
+test("enables DNS host actions from hosts-file presence", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let exists = false;
+  const updates = [];
+  fixture.runner.getHostEntryStatus = async () => ({ok: true, exists});
+  fixture.runner.addHostEntry = async (entry) => { updates.push(["add", entry]); exists = true; return {ok: true, exists: true}; };
+  fixture.runner.removeHostEntry = async (entry) => { updates.push(["remove", entry]); exists = false; return {ok: true, exists: false}; };
+  const controller = renderer.createRendererController(fixture);
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(fixture.elements["dns-host-input"].value, "172.16.240.254 html5stage.mytv.vn");
+  assert.equal(fixture.elements["dns-host-add-button"].disabled, false);
+  assert.equal(fixture.elements["dns-host-remove-button"].disabled, true);
+  fixture.elements["dns-host-add-button"].dispatchEvent("click");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(updates, [["add", "172.16.240.254 html5stage.mytv.vn"]]);
+  assert.equal(fixture.elements["dns-host-add-button"].disabled, true);
+  assert.equal(fixture.elements["dns-host-remove-button"].disabled, false);
+  assert.equal(typeof controller.validateRunValues, "function");
 });
 
 test("includes the active folder ID when running downloaded cases", async () => {
@@ -2161,7 +2207,7 @@ test("index markup contains the case browser and no API-key or mode controls", (
   [
     "folder-select", "refresh-folders-button", "get-test-cases-button",
     "settings-app-url-input", "api-domain-input", "api-authorization-input", "project-id-input",
-    "environment-select", "api-timeout-input", "api-loading-overlay",
+    "environment-select", "api-timeout-input", "dns-host-input", "dns-host-add-button", "dns-host-remove-button", "dns-host-status", "api-loading-overlay",
     "retry-sync-button", "run-target-browser", "run-target-webos", "tv-device-select", "tv-device-status", "tv-device-connection-status", "tv-device-connection-dot", "tv-device-check-connection-button", "tv-device-add-button", "tv-device-edit-button", "tv-device-dialog", "tv-device-name-input", "tv-device-host-input", "tv-device-passphrase-input", "tv-device-passphrase-toggle", "tv-device-dialog-submit-button",
     "sdk-managed-toolchain-status", "sdk-component-list", "sdk-install-review", "sdk-install-progress", "sdk-install-progress-text", "sdk-install-progress-steps", "tv-toolchain-sdk-home-input", "tv-toolchain-appium-home-input", "tv-toolchain-appium-bin-input", "tv-toolchain-chromedriver-input", "tv-toolchain-save-button",
     "lg-run-availability", "configure-lg-sdk-button", "lg-run-confirmation-dialog", "lg-run-confirm-button", "lg-run-cancel-button", "lg-run-state", "lg-preview-image", "lg-preview-empty", "lg-recovery-dialog", "lg-recovery-retry-button", "lg-recovery-stop-button",
@@ -2225,7 +2271,7 @@ test("ships the normal application shell under the first loading overlay", () =>
   );
 
   assert.match(html, /<main class="app-shell">/);
-  assert.match(html, /<div id="api-loading-overlay" class="api-loading-overlay"[^>]*>/);
+  assert.match(html, /<div id="api-loading-overlay" class="api-loading-overlay hidden"[^>]*aria-busy="false"[^>]*>/);
   assert.match(html, /Loading workspace\.\.\./);
 });
 

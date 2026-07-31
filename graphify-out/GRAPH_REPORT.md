@@ -1,16 +1,16 @@
-# Graph Report - phase3-target-neutral-actions  (2026-07-31)
+# Graph Report - auto-test-playwright  (2026-07-31)
 
 ## Corpus Check
-- 260 files · ~231,783 words
+- 265 files · ~233,519 words
 - Verdict: corpus is large enough that graph structure adds value.
 
 ## Summary
-- 2750 nodes · 4167 edges · 192 communities (186 shown, 6 thin omitted)
-- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 390 edges (avg confidence: 0.52)
+- 2782 nodes · 4212 edges · 196 communities (190 shown, 6 thin omitted)
+- Extraction: 91% EXTRACTED · 9% INFERRED · 0% AMBIGUOUS · INFERRED: 397 edges (avg confidence: 0.52)
 - Token cost: 0 input · 0 output
 
 ## Graph Freshness
-- Built from commit: `08075368`
+- Built from commit: `cdffb9b7`
 - Run `git rev-parse HEAD` and compare to check if the graph is stale.
 - Run `graphify update .` after code changes (no API cost).
 
@@ -186,6 +186,8 @@
 - app-cleanup.test.js
 - firmwareVersion
 - Desktop LG Product-Gate Flow Implementation Plan
+- dom-snapshot.spec.js
+- target-action-context.js
 - findServiceIdInAllServices
 - compilerOptions
 - Target selector and workspace behavior
@@ -193,8 +195,10 @@
 - File structure
 - defaultPackageVersion
 - File structure
+- lg-toolchain-manifest.test.js
 - lg-toolchain-installer.test.js
 - flow-case-api.test.js
+- createdAt
 - vendorDeviceName
 - App-deployment decision supplied by the user
 - lg-cli-operator-guide.md
@@ -232,14 +236,14 @@
 ## Import Cycles
 - None detected.
 
-## Communities (192 total, 6 thin omitted)
+## Communities (196 total, 6 thin omitted)
 
 ### Community 0 - "mytv-helpers.js"
 Cohesion: 0.08
 Nodes (14): approvedChromeDriverArtifact(), {createHash: defaultCreateHash}, createLgManagedInstallDependencies(), {createReadStream: defaultCreateReadStream}, {execFile}, fsPromises, path, {promisify} (+6 more)
 
 ### Community 1 - "AGENTS.md"
-Cohesion: 0.14
+Cohesion: 0.15
 Nodes (21): attachCurrentAppScreenshot(), attachFailureArtifacts(), attachFirstRowPlaybackReport(), attachMovieSearchFailureArtifacts(), attachSearchNoResultArtifacts(), captureCurrentAppScreenshot(), collectMovieSearchCandidates(), collectSearchResultCandidates() (+13 more)
 
 ### Community 2 - "renderer.js"
@@ -269,7 +273,7 @@ Nodes (13): {__internal}, {test, expect}, test, {
 
 ### Community 4 - "main.js"
 Cohesion: 0.02
-Nodes (88): {app, BrowserView, BrowserWindow, dialog, ipcMain, safeStorage, shell}, applyInteractiveViewZoom(), browserRoot, browserRunLauncher, browserToolchain, browserToolchainInstaller, {buildPlaywrightTestArgs}, bundledLgCompatibilityCatalog (+80 more)
+Nodes (90): {app, BrowserView, BrowserWindow, dialog, ipcMain, safeStorage, shell}, applyInteractiveViewZoom(), browserRoot, browserRunLauncher, browserToolchain, browserToolchainInstaller, {buildPlaywrightTestArgs}, bundledLgCompatibilityCatalog (+82 more)
 
 ### Community 5 - "MyTV Auto Test - Session Handoff Notes"
 Cohesion: 0.67
@@ -296,8 +300,8 @@ Cohesion: 0.04
 Nodes (44): Action compiler guide, Action grammar and output, Back navigation, Compilation algorithm, Failure behavior, Focus a named control and press OK, Home and service navigation, Login (+36 more)
 
 ### Community 11 - "playAllItemsInFirstRow"
-Cohesion: 0.13
-Nodes (14): caseRun(), createLgDesktopBatchRunner(), requireMethod(), SAFE_EVENT_CODES, safeExecutionResult(), text(), TV_CAPABILITIES, {TV_FAILURE_KIND, classifyTvFailure} (+6 more)
+Cohesion: 0.07
+Nodes (35): caseRun(), createLgDesktopBatchRunner(), requireMethod(), SAFE_EVENT_CODES, safeExecutionResult(), text(), TV_CAPABILITIES, {TV_FAILURE_KIND, classifyTvFailure} (+27 more)
 
 ### Community 12 - "lastKnownHost"
 Cohesion: 0.32
@@ -328,28 +332,28 @@ Cohesion: 0.31
 Nodes (7): createDeviceSecretFileStore(), decodeEnvelope(), invalidStore(), requireKey(), assert, {createDeviceSecretFileStore}, test
 
 ### Community 19 - "graphify.js"
-Cohesion: 0.20
-Nodes (9): applyViewportScale(), base, {chromium}, fs, {getTestOptions}, isLivePreviewMode(), path, VIEWPORT (+1 more)
+Cohesion: 0.18
+Nodes (12): applyViewportScale(), base, {chromium}, fs, {getTestOptions}, isInteractiveBrowserPage(), isLivePreviewMode(), path (+4 more)
 
 ### Community 20 - "ai-row-selection.spec.js"
 Cohesion: 0.18
-Nodes (11): format, type, properties, pattern, type, maxLength, minLength, type (+3 more)
+Nodes (11): maxLength, type, properties, pattern, type, maxLength, minLength, type (+3 more)
 
 ### Community 23 - "content-rows.js"
 Cohesion: 0.10
-Nodes (49): imageDataUrl(), activateVerifiedTarget(), collectFirstRowPlayableItems(), collectVisibleContentRows(), configureContentRows(), CONTENT_ITEM_CONTRACT, contentItemSignature(), createContentRowsApi() (+41 more)
+Nodes (49): activateVerifiedTarget(), collectFirstRowPlayableItems(), collectVisibleContentRows(), configureContentRows(), CONTENT_ITEM_CONTRACT, contentItemSignature(), createContentRowsApi(), {createDomSnapshotCache,getDomSnapshotIdentity} (+41 more)
 
 ### Community 24 - "workflows.js"
 Cohesion: 0.05
-Nodes (57): expectFocusedElementToLookOrange(), normalizeVietnameseText(), searchKeyboardInput(), {acceptDeviceLimitPopupIfVisible}, artifacts, assertServiceOpened(), attachServiceOpenFailure(), chooseFirstProfileAndEnterHome() (+49 more)
+Nodes (56): expectFocusedElementToLookOrange(), normalizeVietnameseText(), searchKeyboardInput(), {acceptDeviceLimitPopupIfVisible}, artifacts, assertServiceOpened(), attachServiceOpenFailure(), chooseFirstProfileAndEnterHome() (+48 more)
 
 ### Community 25 - "Real-TV Appium Handoff Ledger"
 Cohesion: 0.04
 Nodes (49): Artifact decision supplied by the user, Batch-failure decision supplied by the user, Blocking questions — answer before phase 1, Browser configuration local contracts — 2026-07-29, Chosen architecture, Compatibility catalog maintainer workflow, Current LG device dialog, Current repository facts (+41 more)
 
 ### Community 26 - "lg-webos-poc.js"
-Cohesion: 0.10
-Nodes (41): appiumHome, appiumRequest(), commandVersion(), assertSafeLgAppId(), buildLgCapabilities(), buildLgPocEnvironment(), buildLgRuntimeRedactionSecrets(), hasFocusedText() (+33 more)
+Cohesion: 0.09
+Nodes (46): wait(), appiumHome, appiumRequest(), commandVersion(), assertSafeLgAppId(), buildLgCapabilities(), buildLgPocEnvironment(), buildLgRuntimeRedactionSecrets() (+38 more)
 
 ### Community 27 - "waits.js"
 Cohesion: 0.09
@@ -361,7 +365,7 @@ Nodes (31): 2022 Samsung pilot authorized test-app installation — 2026-07-27, 
 
 ### Community 29 - "tizen-poc.js"
 Cohesion: 0.11
-Nodes (38): appiumEnvironment(), appiumHome, appiumRequest(), captureEvidence(), commandVersion(), doctor(), evidenceRoot, execute() (+30 more)
+Nodes (39): appiumEnvironment(), appiumHome, appiumRequest(), captureEvidence(), commandVersion(), capturePocEvidence(), doctor(), evidenceRoot (+31 more)
 
 ### Community 30 - "tizen-poc-semantic.js"
 Cohesion: 0.09
@@ -369,7 +373,7 @@ Nodes (19): assessPlayback(), CONTENT_TYPES, { createRemotePage }, createSemanti
 
 ### Community 31 - "tizen-poc-core.js"
 Cohesion: 0.13
-Nodes (25): captureGenuinePocEvidence(), assertSafePackage(), assertSafeSamsungAppId(), assertSdbSerial(), buildTizenCapabilities(), buildTizenInstallArgs(), capturePocEvidence(), escapeRegExp() (+17 more)
+Nodes (22): assertSafePackage(), assertSafeSamsungAppId(), assertSdbSerial(), buildTizenCapabilities(), buildTizenInstallArgs(), createCredentialSafeAppiumLogCapture(), escapeRegExp(), focusIdentity() (+14 more)
 
 ### Community 32 - "playFocusedContent"
 Cohesion: 0.21
@@ -384,20 +388,27 @@ Cohesion: 0.09
 Nodes (8): assert, createRendererFixture(), FakeClassList, FakeElement, fs, matchesSelector(), path, test
 
 ### Community 35 - "test-case-action-runner.js"
-Cohesion: 0.13
-Nodes (27): actionName(), assertPlayerReadyAfterDefaultWait(), assertVisibleScreenText(), attachJson(), { captureCurrentAppScreenshot }, classifyExpectedResult(), cleanupAfterFailedPlayerAction(), cleanupAfterPlayerAction() (+19 more)
+Cohesion: 0.09
+Nodes (33): actionName(), assertPlayerReadyAfterDefaultWait(), assertVisibleScreenText(), attachJson(), { captureCurrentAppScreenshot }, capturePlayerCheckScreenshot(), classifyExpectedResult(), cleanupAfterFailedPlayerAction() (+25 more)
 
 ### Community 36 - "selector-validation.js"
-Cohesion: 0.10
-Nodes (30): getDomSnapshotIdentity(), {getSelectorContract}, activateVerifiedTarget(), assertFocusedTarget(), assertSelectorHealth(), captureActivationDiagnostics(), collectSelectorDiagnostics(), DEFAULT_MATCH_OPTIONS (+22 more)
+Cohesion: 0.12
+Nodes (28): activateVerifiedTarget(), assertFocusedTarget(), assertSelectorHealth(), captureActivationDiagnostics(), collectSelectorDiagnostics(), DEFAULT_MATCH_OPTIONS, describeVerificationFailure(), fuzzyLabelMatch() (+20 more)
 
 ### Community 37 - "window-close-controller.test.js"
 Cohesion: 0.11
 Nodes (12): createRunCloseGuard(), requiredCheck(), createManagedWindowCloseController(), createWindowCloseController(), required(), assert, {createRunCloseGuard}, test (+4 more)
 
 ### Community 38 - "lg-webos-case-runner-core.test.js"
-Cohesion: 0.08
-Nodes (34): CONTENT_TYPES, createLgProductGateCase(), createLgProductGateEvidenceWriter(), createLgProductGateManifest(), finalizeLgProductGateManifest(), fs, parseLgCaseRunnerArgs(), path (+26 more)
+Cohesion: 0.15
+Nodes (15): parseLgCaseRunnerArgs(), withoutLgProductGateCredentials(), {createAppiumServerManager}, {createDeviceLock}, {
+  createLgProductGateCase,
+  createLgProductGateEvidenceWriter,
+  createLgProductGateManifest,
+  parseLgCaseRunnerArgs,
+  runLgProductGateWithEvidence,
+  withoutLgProductGateCredentials,
+}, {createLoopbackAppiumClient}, {createTvRunner}, {createWebOsSessionFactory} (+7 more)
 
 ### Community 39 - "Architecture"
 Cohesion: 0.22
@@ -416,8 +427,8 @@ Cohesion: 0.17
 Nodes (22): applyInteractiveViewFitZoom(), finishTestProcess(), reportPath(), stopActiveTest(), stopPreviewWatcher(), userReportHtmlPath(), userReportJsonPath(), writeLgReportEntry() (+14 more)
 
 ### Community 43 - "navigation.js"
-Cohesion: 0.09
-Nodes (31): {collectVisibleContentRows}, {createDomSnapshotCache, getDomSnapshotIdentity}, {remotePress}, {test, expect}, acceptDeviceLimitPopupIfVisible(), {expect}, navigation, {POPUP_FOCUS_DIALOG_IDS} (+23 more)
+Cohesion: 0.11
+Nodes (27): acceptDeviceLimitPopupIfVisible(), {expect}, navigation, {POPUP_FOCUS_DIALOG_IDS}, center(), chooseDirection(), enterWithVirtualKeyboard(), {expect} (+19 more)
 
 ### Community 44 - "run-test-case-tv.spec.js"
 Cohesion: 0.10
@@ -440,8 +451,8 @@ Cohesion: 0.13
 Nodes (20): buildRuntimeAppium(), buildRuntimeConnection(), createError(), {createLgMyTvCaseHelpers}, freezeValue(), path, redactedText(), redactValue() (+12 more)
 
 ### Community 49 - "lastKnownHost"
-Cohesion: 0.21
-Nodes (15): assertCases(), completedCase(), errorResult(), requestOperatorDecision(), requireMethod(), runTvCaseBatch(), stoppedCase(), {TV_FAILURE_KIND, classifyTvFailure} (+7 more)
+Cohesion: 0.10
+Nodes (18): {createElevatedHostsFileWriter}, createHostsFileService(), createElevatedHostsFileWriter(), createMacOsScript(), createWindowsCommand(), encodePowerShellCommand(), runCommand(), net (+10 more)
 
 ### Community 50 - "device-discovery.test.js"
 Cohesion: 0.14
@@ -465,7 +476,7 @@ Nodes (18): attachCurrentAppScreenshot(), attachFailureArtifacts(), attachMovieS
 
 ### Community 54 - "webos-mytv-automation.js"
 Cohesion: 0.09
-Nodes (11): bestSearchCandidate(), CONTENT_TYPES, createWebOsMyTvAutomation(), FOCUS_SELECTORS, {normalizeVietnameseText}, scoreCandidate(), openSearch(), assert (+3 more)
+Nodes (12): bestSearchCandidate(), CONTENT_TYPES, createWebOsMyTvAutomation(), FOCUS_SELECTORS, {normalizeVietnameseText}, scoreCandidate(), openSearch(), logout() (+4 more)
 
 ### Community 55 - "lg-cli-archive-importer.js"
 Cohesion: 0.14
@@ -512,8 +523,8 @@ Cohesion: 0.15
 Nodes (7): createTvToolchainInspector(), fs, path, {spawnSync: defaultSpawnSync}, assert, {createTvToolchainInspector}, test
 
 ### Community 66 - "webos-read-only-adapter.js"
-Cohesion: 0.12
-Nodes (28): ambiguousStepError(), compileLine(), compileQaDescription(), compileTestCase(), getCaseId(), hasOwn(), hasTrailingCommand(), { normalizeVietnameseText } (+20 more)
+Cohesion: 0.21
+Nodes (15): ambiguousStepError(), compileLine(), compileQaDescription(), compileTestCase(), getCaseId(), hasOwn(), hasTrailingCommand(), { normalizeVietnameseText } (+7 more)
 
 ### Community 67 - "index.js"
 Cohesion: 0.14
@@ -528,8 +539,8 @@ Cohesion: 0.18
 Nodes (7): confirmWindowClose(), createWindow(), discardUnsyncedResultSubmission(), revealWindowOnFirstPaint(), assert, {revealWindowOnFirstPaint}, test
 
 ### Community 70 - "target-action-runner.js"
-Cohesion: 0.17
-Nodes (13): ACTION_CAPABILITIES, {compileTestCase}, createTargetActionHandlers(), {createTvMyTvActionHandlers}, notifyStep(), {requireActionCapabilities}, runTargetActions(), createTvMyTvActionHandlers() (+5 more)
+Cohesion: 0.29
+Nodes (7): createTargetActionHandlers(), createTvMyTvActionHandlers(), enterVirtualText(), requiredOperation(), assert, {createTvMyTvActionHandlers}, test
 
 ### Community 71 - "test-case-source.test.js"
 Cohesion: 0.14
@@ -548,8 +559,8 @@ Cohesion: 0.15
 Nodes (12): createLgManagedInstallOperations(), FAILURE_STATUSES, path, PROGRESS_CODES, assert, bundle, createHarness(), {createLgManagedInstallOperations} (+4 more)
 
 ### Community 75 - "tv-case-runner.js"
-Cohesion: 0.15
-Nodes (13): {classifyTvFailure}, {createDomSession}, {createTargetActionContext}, frameDataUrl(), PROGRESS_CODES, requireReset(), {runTargetActions}, runTvTestCase() (+5 more)
+Cohesion: 0.16
+Nodes (12): {classifyTvFailure}, {createDomSession}, {createTargetActionContext}, frameDataUrl(), PROGRESS_CODES, requireReset(), {runTargetActions}, runTvTestCase() (+4 more)
 
 ### Community 76 - "test-case-schema.js"
 Cohesion: 0.12
@@ -564,8 +575,8 @@ Cohesion: 0.22
 Nodes (6): api, fs, helpers, path, {test, expect}, workflows
 
 ### Community 79 - "lg-toolchain-manifest.js"
-Cohesion: 0.13
-Nodes (22): bundledCatalog, cloned(), createLgToolchainManifest(), expectedCliArchiveName(), isHttpsUrl(), {selectChromeDriver, validateChromeDriverArtifact, validateLgCompatibilityCatalog}, SUPPORTED_PLATFORMS, TRUSTED_BASELINE_CATALOG (+14 more)
+Cohesion: 0.20
+Nodes (14): bundledCatalog, cloned(), createLgToolchainManifest(), expectedCliArchiveName(), isHttpsUrl(), {selectChromeDriver, validateChromeDriverArtifact, validateLgCompatibilityCatalog}, SUPPORTED_PLATFORMS, TRUSTED_BASELINE_CATALOG (+6 more)
 
 ### Community 80 - "LG-only Real-TV Phase 2 Foundation Design"
 Cohesion: 0.15
@@ -577,15 +588,15 @@ Nodes (6): assert, createHarness(), profile, {redactSensitiveText}, {registerTvD
 
 ### Community 82 - "AGENTS.md"
 Cohesion: 0.09
-Nodes (20): Adding or Changing Tests, Architecture, Content rows and playback, Credentials and Sensitive Data, Electron generic runner, Electron local case runner, Environment Variables, Key Files (+12 more)
+Nodes (21): Adding or Changing Tests, Architecture, Content rows and playback, Credentials and Sensitive Data, Electron generic runner, Electron local case runner, Environment Variables, graphify (+13 more)
 
 ### Community 83 - "service-access.spec.js"
 Cohesion: 0.17
 Nodes (10): classifiedError(), createConfiguredWebOsReadOnlyAdapter(), createWebOsReadOnlyAdapter(), path, readDeviceName(), {spawnSync: defaultSpawnSync}, createReadDeviceInfo(), assert (+2 more)
 
 ### Community 84 - "lg-toolchain-installer.js"
-Cohesion: 0.16
-Nodes (10): SAFE_INSTALL_FAILURES, SAFE_VERIFICATION_RESULTS, {trustedLgToolchainBundle, trustedLgToolchainManifest}, {trustedLgToolchainNpmClosure}, CLOSURE, {gunzipSync}, trustedLgToolchainNpmClosure(), assert (+2 more)
+Cohesion: 0.29
+Nodes (6): CLOSURE, {gunzipSync}, trustedLgToolchainNpmClosure(), assert, test, {trustedLgToolchainNpmClosure}
 
 ### Community 85 - "webos-target-registration.js"
 Cohesion: 0.18
@@ -639,8 +650,8 @@ Cohesion: 0.22
 Nodes (8): Data and IPC boundaries, LG Device Dialog and Validation Design, Live validation boundary, Non-goals, Purpose, Tests and verification, Toolchain and compatibility behavior, User experience
 
 ### Community 97 - "createScopedDomScanner"
-Cohesion: 0.67
-Nodes (3): maxLength, type, defaultPackageVersion
+Cohesion: 0.26
+Nodes (12): ACTION_KEYS, ALLOWED_ACTIONS, hasOwn(), isNonEmptyString(), normalizeTestCase(), PLAY_CONTENT_TYPES, READY_NAMES, validateAction() (+4 more)
 
 ### Community 98 - "appium-server-manager.test.js"
 Cohesion: 0.12
@@ -672,7 +683,7 @@ Nodes (9): Compatibility model, Error and security behavior, LG SDK Auto-Configu
 
 ### Community 105 - "dom-scanning-performance.spec.js"
 Cohesion: 0.17
-Nodes (13): loadLgBatchCase(), testCasesCachePath(), findTestCaseById(), fs, loadCachedTestCases(), loadLocalTestCases(), { validateTestCaseList }, assert (+5 more)
+Nodes (14): loadLgBatchCase(), testCasesCachePath(), validateTestCaseList(), findTestCaseById(), fs, loadCachedTestCases(), loadLocalTestCases(), { validateTestCaseList } (+6 more)
 
 ### Community 106 - "focusRequestedContentRow"
 Cohesion: 0.24
@@ -715,16 +726,16 @@ Cohesion: 0.39
 Nodes (9): contentItemSignature(), expectFocusedContent(), getFocusedContentMetadata(), imageDataUrl(), isFocusedContentItem(), isFocusedNearRow(), moveToNextFirstRowContent(), playAllItemsInFirstRow() (+1 more)
 
 ### Community 116 - "tv-batch-runner.test.js"
-Cohesion: 0.28
-Nodes (6): assert, businessError(), executeCase(), {runTvCaseBatch}, technicalError(), test
+Cohesion: 0.20
+Nodes (10): normalizeDomState(), redact(), normalizeRemoteKey(), REMOTE_KEYS, TV_CAPABILITIES, TvSessionError, assert, {normalizeDomState} (+2 more)
 
 ### Community 117 - "browser-toolchain-ipc.test.js"
 Cohesion: 0.22
 Nodes (7): FAILURE_STATUSES, PROGRESS_CODES, publicResult(), registerBrowserToolchainIpc(), assert, {registerBrowserToolchainIpc}, test
 
 ### Community 118 - "test-case-action-runner.test.js"
-Cohesion: 0.09
-Nodes (27): normalizeDomState(), redact(), normalizeRemoteKey(), REMOTE_KEYS, TV_CAPABILITIES, TvSessionError, assertApprovedProfile(), assertInstalledAppId() (+19 more)
+Cohesion: 0.13
+Nodes (17): assertApprovedProfile(), assertInstalledAppId(), createWebOsAppiumSession(), {createWebOsMyTvAutomation}, endpointRedactionSecrets(), factoryError(), normalizeConnection(), {normalizeDomState} (+9 more)
 
 ### Community 119 - "tv-batch-runner.test.js"
 Cohesion: 0.13
@@ -739,13 +750,17 @@ Cohesion: 0.33
 Nodes (10): trustedLgCliArchive(), INSTALL_PROGRESS_CODES, INSTALL_PROGRESS_FAILURES, publicCompatibilityCatalogStatus(), publicInstallProgress(), publicLgToolchainInstallResult(), publicLgToolchainReview(), redactValue() (+2 more)
 
 ### Community 122 - "lg-toolchain-npm-closure.js"
-Cohesion: 0.18
-Nodes (5): assert, {
-  createActionRunner,
-  createDefaultActionHandlers,
-  runTestCase,
-  assertVisibleScreenText,
-}, defaultHelpers, test, workflows
+Cohesion: 0.15
+Nodes (7): requestLoopbackAppium(), assert, {
+  createLgProductGateCase,
+  createLgProductGateEvidenceWriter,
+  createLgProductGateManifest,
+  finalizeLgProductGateManifest,
+  parseLgCaseRunnerArgs,
+  requestLoopbackAppium,
+  runLgProductGateWithEvidence,
+  withoutLgProductGateCredentials,
+}, fs, os, path, test
 
 ### Community 123 - "devices"
 Cohesion: 0.25
@@ -760,12 +775,8 @@ Cohesion: 0.50
 Nodes (4): maxLength, minLength, type, defaultPackagePath
 
 ### Community 126 - "target-action-runner.test.js"
-Cohesion: 0.13
-Nodes (12): createTargetActionContext(), objectOrEmpty(), requireActionCapabilities(), TargetActionError, validateTargetCaseCapabilities(), assert, {
-  TargetActionError,
-  createTargetActionContext,
-  requireActionCapabilities,
-}, test (+4 more)
+Cohesion: 0.15
+Nodes (12): requireActionCapabilities(), ACTION_CAPABILITIES, {compileTestCase}, {createTvMyTvActionHandlers}, notifyStep(), {requireActionCapabilities}, runTargetActions(), validateTargetCaseCapabilities() (+4 more)
 
 ### Community 127 - "tizen-poc-semantic.test.js"
 Cohesion: 0.28
@@ -812,8 +823,8 @@ Cohesion: 0.33
 Nodes (7): assertChannelPlayback(), assertMoviePlayback(), assertPlayback(), assertSearchContentPlayback(), getPlayerState(), getVisiblePopup(), inspectPlaybackAfterWait()
 
 ### Community 138 - "createdAt"
-Cohesion: 0.50
-Nodes (5): isInteractiveBrowserPage(), waitForInteractivePage(), waitForPageInContext(), defaultWait(), resolve()
+Cohesion: 0.26
+Nodes (11): CONTENT_TYPES, createLgProductGateCase(), createLgProductGateEvidenceWriter(), createLgProductGateManifest(), finalizeLgProductGateManifest(), fs, path, required() (+3 more)
 
 ### Community 139 - "Global Constraints"
 Cohesion: 0.29
@@ -947,6 +958,18 @@ Nodes (3): maxLength, type, firmwareVersion
 Cohesion: 0.20
 Nodes (9): Desktop LG Product-Gate Flow Implementation Plan, File and interface map, Global Constraints, Plan self-review, Task 1: Lock zero-contact LG batch admission and compatibility contracts, Task 2: Extract the local Appium transport and add safe TV-run lifecycle hooks, Task 3: Build the main-process serial LG batch, retry/recovery, report, and IPC boundary, Task 4: Integrate the existing workspace UI with LG readiness, confirmation, run state, previews, and recovery (+1 more)
 
+### Community 173 - "dom-snapshot.spec.js"
+Cohesion: 0.22
+Nodes (6): {collectVisibleContentRows}, {createDomSnapshotCache, getDomSnapshotIdentity}, {remotePress}, {test, expect}, getDomSnapshotIdentity(), {getSelectorContract}
+
+### Community 174 - "target-action-context.js"
+Cohesion: 0.27
+Nodes (6): createTargetActionContext(), objectOrEmpty(), TargetActionError, assert, {
+  TargetActionError,
+  createTargetActionContext,
+  requireActionCapabilities,
+}, test
+
 ### Community 175 - "findServiceIdInAllServices"
 Cohesion: 0.17
 Nodes (16): containsTextPattern(), escapeRegExp(), fuzzyMatch(), normalizeVietnameseText(), findLeftMenuItemIdByFuzzyText(), findServiceIdInAllServices(), findVisibleElementIdByFuzzyLabelScoped(), findVisibleServiceIdByTitleAttributeScoped() (+8 more)
@@ -971,9 +994,17 @@ Nodes (3): maxLength, type, notes
 Cohesion: 0.29
 Nodes (6): Device Compatibility Check Skill Implementation Plan, File structure, Global Constraints, Task 1: Define the pure candidate-validation and recording contract, Task 2: Add the non-interactive candidate runner without running it live, Task 3: Create and validate the project-only skill and documentation
 
+### Community 182 - "lg-toolchain-manifest.test.js"
+Cohesion: 0.33
+Nodes (6): assert, automaticArtifact(), {createLgToolchainManifest, trustedLgCliArchive, trustedChromeDriverArchive, trustedLgToolchainBundle, trustedLgToolchainManifest}, fixedManifest(), SHA, test
+
 ### Community 183 - "lg-toolchain-installer.test.js"
-Cohesion: 0.29
-Nodes (5): createLgToolchainInstaller(), assert, createInstaller(), {createLgToolchainInstaller}, test
+Cohesion: 0.15
+Nodes (11): createLgToolchainInstaller(), SAFE_INSTALL_FAILURES, SAFE_VERIFICATION_RESULTS, {trustedLgToolchainBundle, trustedLgToolchainManifest}, {trustedLgToolchainNpmClosure}, trustedLgToolchainBundle(), trustedLgToolchainManifest(), assert (+3 more)
+
+### Community 185 - "createdAt"
+Cohesion: 0.67
+Nodes (3): format, type, createdAt
 
 ### Community 186 - "vendorDeviceName"
 Cohesion: 0.67
@@ -1005,24 +1036,24 @@ Cohesion: 0.67
 Nodes (3): maxLength, type, osVersion
 
 ## Knowledge Gaps
-- **1264 isolated node(s):** `PROGRESS_CODES`, `FAILURE_STATUSES`, `{randomUUID}`, `VERIFIED_FACT_FIELDS`, `REQUIRED_FIELDS` (+1259 more)
+- **1278 isolated node(s):** `PROGRESS_CODES`, `FAILURE_STATUSES`, `{randomUUID}`, `VERIFIED_FACT_FIELDS`, `REQUIRED_FIELDS` (+1273 more)
   These have ≤1 connection - possible missing edges or undocumented components.
 - **6 thin communities (<3 nodes) omitted from report** — run `graphify query` to explore isolated nodes.
 
 ## Suggested Questions
 _Questions this graph is uniquely positioned to answer:_
 
-- **Why does `resolve()` connect `createdAt` to `tv-toolchain.test.js`, `window-close-controller.test.js`, `lg-webos-case-runner-core.test.js`, `waits.js`, `assertPlayback`, `locator-contracts.spec.js`, `lg-webos-poc.js`, `tizen-poc-login.js`, `tizen-poc.js`, `tizen-poc-core.js`?**
-  _High betweenness centrality (0.080) - this node is a cross-community bridge._
-- **Why does `getPlayerState()` connect `assertPlayback` to `openAppAndEnterLoginPage`, `mytv-helpers.legacy.js`, `createdAt`?**
-  _High betweenness centrality (0.043) - this node is a cross-community bridge._
+- **Why does `resolve()` connect `lg-webos-poc.js` to `tv-toolchain.test.js`, `window-close-controller.test.js`, `waits.js`, `assertPlayback`, `locator-contracts.spec.js`, `graphify.js`, `tizen-poc-login.js`, `tizen-poc.js`, `tizen-poc-core.js`?**
+  _High betweenness centrality (0.087) - this node is a cross-community bridge._
+- **Why does `getPlayerState()` connect `assertPlayback` to `openAppAndEnterLoginPage`, `mytv-helpers.legacy.js`, `lg-webos-poc.js`?**
+  _High betweenness centrality (0.054) - this node is a cross-community bridge._
 - **Why does `normalizeVietnameseText()` connect `findServiceIdInAllServices` to `AGENTS.md`, `webos-read-only-adapter.js`, `test-case-action-runner.js`, `selector-validation.js`, `dom-session.js`, `webos-mytv-automation.js`, `content-rows.js`, `workflows.js`?**
-  _High betweenness centrality (0.032) - this node is a cross-community bridge._
+  _High betweenness centrality (0.030) - this node is a cross-community bridge._
 - **What connects `PROGRESS_CODES`, `FAILURE_STATUSES`, `{randomUUID}` to the rest of the system?**
-  _1264 weakly-connected nodes found - possible documentation gaps or missing edges._
+  _1278 weakly-connected nodes found - possible documentation gaps or missing edges._
 - **Should `mytv-helpers.js` be split into smaller, more focused modules?**
   _Cohesion score 0.08 - nodes in this community are weakly interconnected._
 - **Should `AGENTS.md` be split into smaller, more focused modules?**
-  _Cohesion score 0.14492753623188406 - nodes in this community are weakly interconnected._
+  _Cohesion score 0.14855072463768115 - nodes in this community are weakly interconnected._
 - **Should `mytv-session-fixture.js` be split into smaller, more focused modules?**
   _Cohesion score 0.12105263157894737 - nodes in this community are weakly interconnected._

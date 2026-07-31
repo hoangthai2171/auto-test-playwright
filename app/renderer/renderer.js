@@ -68,6 +68,7 @@ const DEFAULT_SETTINGS = {
     PROJECT_ID: "1",
     ENVIRONMENT: "UI",
     API_TIMEOUT_SECONDS: "30",
+    DNS_HOST: "172.16.240.254 html5stage.mytv.vn",
     PREVIEW_TYPE: "live",
     RUN_TARGET: "browser",
 };
@@ -124,6 +125,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const projectIdInput = get("project-id-input");
     const environmentSelect = get("environment-select");
     const apiTimeoutInput = get("api-timeout-input");
+    const dnsHostInput = get("dns-host-input");
+    const dnsHostAddButton = get("dns-host-add-button");
+    const dnsHostRemoveButton = get("dns-host-remove-button");
+    const dnsHostStatus = get("dns-host-status");
     const browserTargetInput = get("run-target-browser");
     const webosTargetInput = get("run-target-webos");
     const lgDevicePanel = get("lg-device-panel");
@@ -203,6 +208,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     if (sdkInstallConfirmButton) sdkInstallConfirmButton.disabled = true;
     if (sdkUseManagedButton) sdkUseManagedButton.disabled = true;
     if (browserInstallConfirmButton) browserInstallConfirmButton.disabled = true;
+    if (dnsHostAddButton) dnsHostAddButton.disabled = true;
+    if (dnsHostRemoveButton) dnsHostRemoveButton.disabled = true;
     const formMessage = get("form-message");
     const runButton = get("run-button");
     const stopButton = get("stop-button");
@@ -306,6 +313,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (projectIdInput) projectIdInput.value = settings.PROJECT_ID;
         if (environmentSelect) environmentSelect.value = settings.ENVIRONMENT;
         if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
+        if (dnsHostInput) dnsHostInput.value = settings.DNS_HOST;
         doc?.querySelectorAll?.('[name="preview-type"]').forEach((input) => {
             input.checked = input.value === activePreviewType;
         });
@@ -326,6 +334,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
                 ? String(timeoutSeconds)
                 : settings.API_TIMEOUT_SECONDS,
+            DNS_HOST: dnsHostInput?.value?.trim() || settings.DNS_HOST,
             RUN_TARGET: runTarget,
         };
     }
@@ -1854,6 +1863,43 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         resetBrowserInstallProgress({dismiss: true});
     }
 
+    let dnsHostStatusRequest = 0;
+    async function refreshDnsHostStatus() {
+        const requestId = ++dnsHostStatusRequest;
+        const entry = dnsHostInput?.value?.trim() || DEFAULT_SETTINGS.DNS_HOST;
+        if (dnsHostAddButton) dnsHostAddButton.disabled = true;
+        if (dnsHostRemoveButton) dnsHostRemoveButton.disabled = true;
+        const response = await api.getHostEntryStatus?.(entry);
+        if (requestId !== dnsHostStatusRequest) return;
+        if (!response?.ok) {
+            if (dnsHostStatus) {
+                dnsHostStatus.textContent = response?.message || "Could not read the hosts file.";
+                dnsHostStatus.className = "field-note settings-message error";
+            }
+            return;
+        }
+        if (dnsHostAddButton) dnsHostAddButton.disabled = response.exists;
+        if (dnsHostRemoveButton) dnsHostRemoveButton.disabled = !response.exists;
+        if (dnsHostStatus) {
+            dnsHostStatus.textContent = response.exists ? "Host is present in the hosts file." : "Host is not present in the hosts file.";
+            dnsHostStatus.className = "field-note settings-message";
+        }
+    }
+
+    async function updateDnsHost(action) {
+        const entry = dnsHostInput?.value?.trim() || DEFAULT_SETTINGS.DNS_HOST;
+        if (dnsHostAddButton) dnsHostAddButton.disabled = true;
+        if (dnsHostRemoveButton) dnsHostRemoveButton.disabled = true;
+        const response = await api[action]?.(entry);
+        if (dnsHostStatus) {
+            dnsHostStatus.textContent = response?.ok
+                ? (action === "addHostEntry" ? "Host added to the hosts file." : "Host removed from the hosts file.")
+                : (response?.message || "Could not update the hosts file.");
+            dnsHostStatus.className = response?.ok ? "field-note settings-message ok" : "field-note settings-message error";
+        }
+        await refreshDnsHostStatus();
+    }
+
     selectAllTestCases?.addEventListener?.("change", (event) => {
         const shouldSelect = event.target?.checked ?? selectAllTestCases.checked;
         const visibleIds = getVisibleCaseIds();
@@ -1884,6 +1930,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
                 ? String(timeoutSeconds)
                 : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
+            DNS_HOST: dnsHostInput?.value?.trim() || DEFAULT_SETTINGS.DNS_HOST,
             PREVIEW_TYPE: activePreviewType,
             RUN_TARGET: runTarget,
         };
@@ -2288,6 +2335,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         await suspendInteractiveBrowserForModal();
         selectSettingsPanel("gui");
         openModal(settingsModal);
+        void refreshDnsHostStatus();
     });
     get("logs-button")?.addEventListener?.("click", async () => {
         await suspendInteractiveBrowserForModal();
@@ -2320,6 +2368,9 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         await resumeInteractiveBrowserAfterModal();
     });
     get("gui-settings-save-button")?.addEventListener?.("click", savePreviewSettings);
+    dnsHostInput?.addEventListener?.("input", () => { void refreshDnsHostStatus(); });
+    dnsHostAddButton?.addEventListener?.("click", () => { void updateDnsHost("addHostEntry"); });
+    dnsHostRemoveButton?.addEventListener?.("click", () => { void updateDnsHost("removeHostEntry"); });
     browserTargetInput?.addEventListener?.("change", () => { void selectRunTarget("browser"); });
     webosTargetInput?.addEventListener?.("change", () => { void selectRunTarget("webos"); });
     tvDeviceAddButton?.addEventListener?.("click", () => { openTvDeviceDialog("add"); });
@@ -2454,6 +2505,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     });
 
     loadSettings();
+    void refreshDnsHostStatus();
     void loadBrowserToolchainStatus();
     if (runTarget === "webos") void selectRunTarget("webos", {persist: false});
     updateFolderControls();
@@ -2510,10 +2562,9 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     };
 }
 
-function bootstrapRenderer() {
-    const controller = createRendererController();
+function bootstrapRenderer(dependencies) {
+    const controller = createRendererController(dependencies);
     controller.loadCases();
-    controller.loadFolders();
     return controller;
 }
 
@@ -2528,6 +2579,7 @@ if (typeof document !== "undefined" && typeof window !== "undefined" && window.m
 if (typeof module !== "undefined" && module.exports) {
     module.exports = {
         createRendererController,
+        bootstrapRenderer,
         renderCaseList: (cases, dependencies) => createRendererController(dependencies).renderCaseList(cases),
         selectCase: (id, dependencies) => createRendererController(dependencies).selectCase(id),
         renderCaseDetails: (testCase, dependencies) => createRendererController(dependencies).renderCaseDetails(testCase),
