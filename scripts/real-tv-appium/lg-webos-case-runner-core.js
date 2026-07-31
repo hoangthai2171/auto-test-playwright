@@ -20,6 +20,7 @@ function createLgProductGateCase({username, password, searchName, contentType} =
     name: "LG product gate",
     actions: [
       {action: "login", username: safeUsername, password: safePassword},
+      {action: "open_home"},
       {action: "open_search"},
       {action: "search_content", name: safeSearchName, type: contentType},
       {action: "play_search_result", type: contentType},

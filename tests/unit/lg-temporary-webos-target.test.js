@@ -20,7 +20,7 @@ function createHarness({listed = [], addStatus = 0, removeStatus = 0} = {}) {
   return {target, calls};
 }
 
-test("adds one unique temporary LG target and removes only that target", async () => {
+test("adds one unique temporary LG target with the Developer Mode passphrase as its CLI password", async () => {
   const {target, calls} = createHarness({listed: [{name: "emulator"}]});
 
   const lease = await target.acquire({host: "192.0.2.10", passphrase: "runtime-only"});
@@ -35,9 +35,29 @@ test("adds one unique temporary LG target and removes only that target", async (
     "--info", "host=192.0.2.10",
     "--info", "port=9922",
     "--info", "username=prisoner",
-    "--info", "passphrase=runtime-only",
+    "--info", "password=runtime-only",
   ]);
   assert.deepEqual(calls[2][1], ["--remove", "lgcompat-a1"]);
+});
+
+test("reuses only the default CLI target's local key reference with the entered passphrase", async () => {
+  const {target, calls} = createHarness({listed: [
+    {name: "other-device", default: false, details: {privatekey: "other-key"}},
+    {name: "default-device", default: true, details: {privatekey: "default-key"}},
+  ]});
+
+  const lease = await target.acquire({host: "192.0.2.10", passphrase: "runtime-only"});
+  assert.equal(lease.ok, true);
+  await lease.release();
+
+  assert.deepEqual(calls[1][1], [
+    "--add", "lgcompat-a1",
+    "--info", "host=192.0.2.10",
+    "--info", "port=9922",
+    "--info", "username=prisoner",
+    "--info", "privatekey=default-key",
+    "--info", "passphrase=runtime-only",
+  ]);
 });
 
 test("never adds a temporary target for invalid input or an existing target name", async () => {

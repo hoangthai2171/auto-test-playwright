@@ -157,6 +157,9 @@ function matchesSelector(element, selector) {
     return element.getAttribute("name") === nameValueMatch[1] && element.value === nameValueMatch[2];
   }
 
+  const nameMatch = selector.match(/^\[name="([^"]+)"\]$/);
+  if (nameMatch) return element.getAttribute("name") === nameMatch[1];
+
   const classMatch = selector.match(/^\.([\w-]+)$/);
   if (classMatch) return element.classList.contains(classMatch[1]);
 
@@ -190,6 +193,73 @@ function createRendererFixture() {
     "project-id-input",
     "environment-select",
     "api-timeout-input",
+    "run-target-browser",
+    "run-target-webos",
+    "lg-device-panel",
+    "tv-device-select",
+    "tv-device-status",
+    "tv-device-connection-status",
+    "tv-device-connection-dot",
+    "tv-device-check-connection-button",
+    "tv-device-add-button",
+    "tv-device-edit-button",
+    "lg-run-availability",
+    "configure-lg-sdk-button",
+    "tv-device-dialog",
+    "tv-device-dialog-title",
+    "tv-device-dialog-status",
+    "tv-device-name-input",
+    "tv-device-host-input",
+    "tv-device-passphrase-input",
+    "tv-device-passphrase-toggle",
+    "tv-device-dialog-cancel-button",
+    "tv-device-dialog-submit-button",
+    "tv-toolchain-status",
+    "sdk-auto-configure-button",
+    "sdk-install-confirm-button",
+    "sdk-use-managed-button",
+    "sdk-managed-toolchain-status",
+    "sdk-component-list",
+    "sdk-compatibility-catalog-status",
+    "sdk-compatibility-catalog-refresh-button",
+    "sdk-compatibility-check-button",
+    "lg-compatibility-product-gate-status",
+    "lg-compatibility-product-gate-username-input",
+    "lg-compatibility-product-gate-password-input",
+    "lg-compatibility-product-gate-save-button",
+    "lg-compatibility-dialog",
+    "lg-compatibility-dialog-status",
+    "lg-compatibility-name-input",
+    "lg-compatibility-host-input",
+    "lg-compatibility-passphrase-input",
+    "lg-compatibility-inspection-review-button",
+    "lg-compatibility-inspection-confirm-button",
+    "lg-compatibility-validation-review-button",
+    "lg-compatibility-validation-confirm-button",
+    "lg-compatibility-close-button",
+    "sdk-install-review",
+    "sdk-install-progress",
+    "sdk-install-progress-text",
+    "sdk-install-progress-steps",
+    "browser-component-list",
+    "browser-auto-configure-button",
+    "browser-install-confirm-button",
+    "browser-install-review",
+    "browser-install-progress",
+    "browser-install-progress-text",
+    "browser-install-progress-steps",
+    "browser-toolchain-run-status",
+    "configure-browser-button",
+    "tv-toolchain-sdk-home-input",
+    "tv-toolchain-appium-home-input",
+    "tv-toolchain-appium-bin-input",
+    "tv-toolchain-chromedriver-input",
+    "tv-toolchain-save-button",
+    "sdk-choose-lg-cli-button",
+    "tv-device-register-button",
+    "tv-help-button",
+    "tv-help-modal",
+    "tv-help-close-button",
     "selected-test-case-id",
     "test-case-list",
     "test-case-list-body",
@@ -212,6 +282,7 @@ function createRendererFixture() {
     "logs-close-button",
     "gui-settings-save-button",
     "settings-message",
+    "preview-target-status",
     "form-message",
     "status-dot",
     "status-text",
@@ -219,7 +290,17 @@ function createRendererFixture() {
     "browser-mute-button",
     "browser-preview-empty",
     "browser-preview-image",
+    "lg-preview-empty",
+    "lg-preview-image",
     "interactive-browser",
+    "lg-run-confirmation-dialog",
+    "lg-run-confirmation-count",
+    "lg-run-confirm-button",
+    "lg-run-cancel-button",
+    "lg-run-state",
+    "lg-recovery-dialog",
+    "lg-recovery-retry-button",
+    "lg-recovery-stop-button",
   ];
 
   ids.forEach((id) => {
@@ -235,7 +316,14 @@ function createRendererFixture() {
   elements["test-case-list"].append(elements["test-case-list-body"]);
 
   elements["test-case-details-modal"].className = "modal hidden";
-  elements["api-loading-overlay"].className = "api-loading-overlay hidden";
+  elements["settings-modal"].className = "modal hidden";
+  elements["tv-help-modal"].className = "modal hidden";
+  elements["tv-device-dialog"].className = "modal hidden";
+  elements["lg-compatibility-dialog"].className = "modal hidden";
+  elements["lg-run-confirmation-dialog"].className = "modal hidden";
+  elements["lg-recovery-dialog"].className = "modal hidden";
+  elements["tv-device-passphrase-input"].setAttribute("type", "password");
+  elements["api-loading-overlay"].className = "api-loading-overlay";
 
   const stage = new FakeElement("div");
   stage.className = "browser-preview-stage";
@@ -244,6 +332,14 @@ function createRendererFixture() {
   const settingsClose = new FakeElement("div");
   settingsClose.setAttribute("data-close-settings", "");
   elements["settings-modal"].append(settingsClose);
+
+  const tvHelpClose = new FakeElement("div");
+  tvHelpClose.setAttribute("data-close-tv-help", "");
+  elements["tv-help-modal"].append(tvHelpClose);
+
+  const compatibilityClose = new FakeElement("div");
+  compatibilityClose.setAttribute("data-close-lg-compatibility-dialog", "");
+  elements["lg-compatibility-dialog"].append(compatibilityClose);
 
   const logsClose = new FakeElement("div");
   logsClose.setAttribute("data-close-logs", "");
@@ -257,6 +353,16 @@ function createRendererFixture() {
   guiPanel.setAttribute("data-settings-content", "gui");
   root.append(guiPanel);
 
+  const sdkNav = new FakeElement("button");
+  sdkNav.setAttribute("data-settings-panel", "sdk");
+  elements["sdk-settings-nav"] = sdkNav;
+  root.append(sdkNav);
+
+  const sdkPanel = new FakeElement("section");
+  sdkPanel.setAttribute("data-settings-content", "sdk");
+  sdkPanel.className = "hidden";
+  root.append(sdkPanel);
+
   ["none", "live", "interactive"].forEach((value) => {
     const input = new FakeElement("input");
     input.setAttribute("name", "preview-type");
@@ -264,10 +370,50 @@ function createRendererFixture() {
     root.append(input);
   });
 
+  ["browser", "webos"].forEach((value) => {
+    const input = elements[`run-target-${value}`];
+    input.tagName = "INPUT";
+    input.setAttribute("name", "run-target");
+    input.value = value;
+    input.checked = value === "browser";
+  });
+
   const runner = {
     loadTestCases: async () => ({ ok: true, cases: [] }),
     loadFlowCaseFolders: async () => ({ok: true, folders: []}),
     loadFlowCases: async () => ({ok: true, folder: null, cases: []}),
+    listTvDevices: async () => ({ok: true, devices: [{
+      id: "lab-lg",
+      label: "Lab LG",
+      platform: "webos",
+      appId: "com.mytvb2c.app",
+      backendEnvironment: "production",
+      model: "55QNED80SRA",
+      hasLastKnownHost: true,
+    }]}),
+    validateAndSaveTvDevice: async () => ({ok: false, status: "VALIDATION_UNAVAILABLE"}),
+    getTvToolchainConfiguration: async () => ({ok: true, configured: false, platform: "webos", components: []}),
+    saveTvToolchainConfiguration: async () => ({ok: false, status: "TOOLCHAIN_UNAVAILABLE"}),
+    inspectTvToolchain: async () => ({ok: false, status: "TOOLCHAIN_UNAVAILABLE"}),
+    getLgToolchainStatus: async () => ({ok: false, status: "TOOLCHAIN_UNAVAILABLE"}),
+    getLgRunAvailability: async () => ({ok: false, status: "TOOLCHAIN_UNAVAILABLE"}),
+    runLgBatchCalls: [],
+    async runLgBatch(request) { this.runLgBatchCalls.push(request); return {ok: true, caseRuns: [], stopped: false}; },
+    async resolveLgRunRecovery() { return {ok: true}; },
+    onLgRunStatus: () => () => {},
+    onLgRunPreview: () => () => {},
+    planLgToolchainSetup: async () => ({ok: false, status: "TOOLCHAIN_UNAVAILABLE"}),
+    installLgToolchain: async () => ({ok: false, status: "TOOLCHAIN_UNAVAILABLE"}),
+    onLgToolchainInstallProgress: () => () => {},
+    getBrowserToolchainStatus: async () => ({ok: true, state: "ready", component: {id: "playwright-chromium", label: "Playwright Chromium", version: "1.61.1", status: "ready"}}),
+    planBrowserToolchainSetup: async () => ({ok: true, state: "ready", component: {id: "playwright-chromium", label: "Playwright Chromium", version: "1.61.1", status: "ready"}}),
+    installBrowserToolchain: async () => ({ok: true, state: "ready", component: {id: "playwright-chromium", label: "Playwright Chromium", version: "1.61.1", status: "ready"}}),
+    onBrowserToolchainInstallProgress: () => () => {},
+    activateManagedLgToolchain: async () => ({ok: false, status: "TOOLCHAIN_UNAVAILABLE"}),
+    inspectLgCompatibilityDevice: async () => ({ok: false, status: "INSPECTION_FAILED"}),
+    runLgCompatibilityValidation: async () => ({ok: false, status: "VALIDATION_FAILED"}),
+    discardLgCompatibilityAttempt: async () => ({ok: true}),
+    registerWebOsTarget: async () => ({ok: false, status: "TOOLCHAIN_UNAVAILABLE"}),
     submitFlowCaseResults: async () => ({ok: true}),
     runTest: async () => ({ ok: true }),
     stopTest: async () => ({ ok: true }),
@@ -307,6 +453,117 @@ test("renderer entry is available to lightweight UI tests", () => {
   assert.equal(typeof renderer.createRendererController, "function");
 });
 
+test("opens the compatibility dialog without calling live-TV IPC", () => {
+  const fixture = createRendererFixture();
+  let inspections = 0;
+  fixture.runner.inspectLgCompatibilityDevice = async () => { inspections += 1; };
+  const controller = renderer.createRendererController(fixture);
+
+  controller.openLgCompatibilityDialog();
+
+  assert.equal(inspections, 0);
+  assert.equal(fixture.elements["lg-compatibility-dialog"].classList.contains("hidden"), false);
+});
+
+test("requires inspection and validation confirmations, then clears transient values on close", async () => {
+  const fixture = createRendererFixture();
+  const inspections = [];
+  const validations = [];
+  const discards = [];
+  fixture.runner.inspectLgCompatibilityDevice = async (request) => {
+    inspections.push(request);
+    return {ok: true, status: "COMPATIBILITY_VERIFIED", attemptId: "attempt-a1", model: "model-a", firmware: "firmware-a"};
+  };
+  fixture.runner.runLgCompatibilityValidation = async (request) => {
+    validations.push(request);
+    return {ok: true, status: "VALIDATION_PASSED"};
+  };
+  fixture.runner.discardLgCompatibilityAttempt = async (request) => { discards.push(request); return {ok: true}; };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCaseList([{id: "case-1", name: "Product gate", actions: [{action: "open_home"}]}]);
+  const checkbox = fixture.elements["test-case-list-body"].querySelector("input");
+  checkbox.checked = true;
+  checkbox.dispatchEvent("change", {target: checkbox});
+
+  controller.openLgCompatibilityDialog();
+  fixture.elements["lg-compatibility-name-input"].value = "Lab";
+  fixture.elements["lg-compatibility-host-input"].value = "192.0.2.10";
+  fixture.elements["lg-compatibility-passphrase-input"].value = "runtime-only";
+  controller.reviewLgCompatibilityInspection();
+  assert.deepEqual(inspections, []);
+  await controller.confirmLgCompatibilityInspection();
+  assert.deepEqual(inspections, [{confirmed: true, label: "Lab", host: "192.0.2.10", passphrase: "runtime-only"}]);
+  assert.equal(fixture.elements["lg-compatibility-host-input"].value, "");
+  assert.equal(fixture.elements["lg-compatibility-passphrase-input"].value, "");
+
+  controller.reviewLgCompatibilityValidation();
+  assert.deepEqual(validations, []);
+  await controller.confirmLgCompatibilityValidation();
+  assert.deepEqual(validations, [{confirmed: true, attemptId: "attempt-a1"}]);
+  assert.doesNotMatch(fixture.elements["lg-compatibility-dialog-status"].textContent, /192\.0\.2\.10|runtime-only|attempt-a1/i);
+
+  await controller.closeLgCompatibilityDialog();
+  assert.deepEqual(discards, [{attemptId: "attempt-a1"}]);
+  assert.equal(fixture.elements["lg-compatibility-name-input"].value, "");
+  assert.equal(fixture.elements["lg-compatibility-dialog"].classList.contains("hidden"), true);
+});
+
+test("uses fixed redacted compatibility status copy for hostile IPC results", async () => {
+  const fixture = createRendererFixture();
+  fixture.runner.inspectLgCompatibilityDevice = async () => ({
+    ok: false,
+    status: "COMPATIBILITY_PROFILE_UNVERIFIED",
+    host: "192.0.2.10",
+    passphrase: "runtime-only",
+    archivePath: "/tmp/private",
+  });
+  const controller = renderer.createRendererController(fixture);
+  controller.openLgCompatibilityDialog();
+  fixture.elements["lg-compatibility-name-input"].value = "Lab";
+  fixture.elements["lg-compatibility-host-input"].value = "192.0.2.10";
+  fixture.elements["lg-compatibility-passphrase-input"].value = "runtime-only";
+  controller.reviewLgCompatibilityInspection();
+
+  await controller.confirmLgCompatibilityInspection();
+
+  assert.match(fixture.elements["lg-compatibility-dialog-status"].textContent, /does not have a verified compatibility profile/i);
+  assert.doesNotMatch(fixture.elements["lg-compatibility-dialog-status"].textContent, /192\.0\.2\.10|runtime-only|\/tmp\/private/i);
+});
+
+test("explains when a selected case is outside the LG compatibility gate", async () => {
+  const fixture = createRendererFixture();
+  fixture.runner.inspectLgCompatibilityDevice = async () => ({
+    ok: true,
+    status: "COMPATIBILITY_VERIFIED",
+    attemptId: "attempt-a1",
+    model: "model-a",
+    firmware: "firmware-a",
+  });
+  fixture.runner.runLgCompatibilityValidation = async () => ({
+    ok: false,
+    status: "LG_COMPATIBILITY_CASE_UNSUPPORTED",
+  });
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCaseList([{id: "case-1", name: "Product gate", actions: [{action: "focus_row"}]}]);
+  const checkbox = fixture.elements["test-case-list-body"].querySelector("input");
+  checkbox.checked = true;
+  checkbox.dispatchEvent("change", {target: checkbox});
+
+  controller.openLgCompatibilityDialog();
+  fixture.elements["lg-compatibility-name-input"].value = "Lab";
+  fixture.elements["lg-compatibility-host-input"].value = "192.0.2.10";
+  fixture.elements["lg-compatibility-passphrase-input"].value = "runtime-only";
+  controller.reviewLgCompatibilityInspection();
+  await controller.confirmLgCompatibilityInspection();
+  controller.reviewLgCompatibilityValidation();
+  await controller.confirmLgCompatibilityValidation();
+
+  const status = fixture.elements["lg-compatibility-dialog-status"].textContent;
+  assert.match(status, /built-in LG compatibility case is not supported/i);
+  assert.doesNotMatch(status, /unavailable/i);
+  assert.doesNotMatch(status, /192\.0\.2\.10|runtime-only|attempt-a1/i);
+});
+
 test("groups runner log chunks into one complete expandable entry", () => {
   assert.equal(loadError, undefined, loadError?.message);
   const fixture = createRendererFixture();
@@ -344,6 +601,60 @@ test("renders test cases as selectable table rows with a disabled empty batch ac
   assert.equal(fixture.elements["selected-test-case-count"].textContent, "0 selected");
   assert.equal(fixture.elements["run-button"].textContent, "Run Selected (0)");
   assert.equal(fixture.elements["run-button"].disabled, true);
+});
+
+test("requires Browser configuration before a selected case can run without managed Chromium", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  fixture.runner.getBrowserToolchainStatus = async () => ({
+    ok: true,
+    state: "missing",
+    component: {id: "playwright-chromium", label: "Playwright Chromium", version: "1.61.1", status: "missing"},
+  });
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.loadBrowserToolchainStatus();
+  controller.renderCaseList([{id: "case-1", name: "First case", actions: []}]);
+  const checkbox = fixture.elements["test-case-list-body"].querySelector("input");
+  checkbox.checked = true;
+  checkbox.dispatchEvent("change", {target: checkbox});
+
+  assert.equal(fixture.elements["run-button"].disabled, true);
+  assert.match(fixture.elements["browser-toolchain-run-status"].textContent, /Configure Browser/);
+  assert.equal(fixture.elements["configure-browser-button"].classList.contains("hidden"), false);
+
+  fixture.elements["configure-browser-button"].dispatchEvent("click");
+  await Promise.resolve();
+  assert.equal(fixture.elements["settings-modal"].classList.contains("hidden"), false);
+  assert.equal(fixture.elements["sdk-settings-nav"].classList.contains("active"), true);
+});
+
+test("renders only fixed redacted progress for a confirmed Browser installation", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const requests = [];
+  let onProgress;
+  fixture.runner.onBrowserToolchainInstallProgress = (callback) => {
+    onProgress = callback;
+    return () => {};
+  };
+  fixture.runner.installBrowserToolchain = async (request) => {
+    requests.push(request);
+    onProgress({code: "downloading-chromium", path: "/private-browser-cache", output: "private"});
+    return {
+      ok: true,
+      state: "ready",
+      component: {id: "playwright-chromium", label: "Playwright Chromium", version: "1.61.1", status: "ready"},
+    };
+  };
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.installBrowserToolchain();
+
+  assert.deepEqual(requests, [{confirmed: true}]);
+  assert.match(fixture.elements["browser-install-progress-steps"].textContent, /Downloading reviewed Chromium/i);
+  assert.doesNotMatch(fixture.elements["browser-install-progress-steps"].textContent, /private-browser-cache|private/i);
+  assert.match(fixture.elements["browser-component-list"].textContent, /Ready/i);
 });
 
 test("select-all and per-row checkboxes update the selected count in table order", () => {
@@ -1016,6 +1327,820 @@ test("refuses to run until a test case id is selected", () => {
     renderer.validateRunValues({ TEST_CASE_ID: "case-1" }),
     ""
   );
+  assert.equal(
+    renderer.validateRunValues({ TEST_CASE_ID: "case-1", target: "webos" }),
+    "",
+  );
+});
+
+test("loads saved LG status but keeps Run disabled for an unvalidated target", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+
+  controller.renderCaseList([{id: "case-1", name: "Case 1"}]);
+  controller.selectCase("case-1");
+  assert.equal(fixture.elements["run-button"].disabled, false);
+
+  await controller.selectRunTarget("webos");
+
+  assert.equal(fixture.elements["run-button"].disabled, true);
+  assert.equal(fixture.elements["tv-device-select"].children[0].textContent, "Lab LG");
+  assert.match(fixture.elements["tv-device-status"].textContent, /readiness review/i);
+});
+
+test("restores the persisted LG target and its saved device list on startup", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  fixture.storage.getItem = () => JSON.stringify({RUN_TARGET: "webos"});
+
+  renderer.createRendererController(fixture);
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.equal(fixture.elements["run-target-webos"].checked, true);
+  assert.equal(fixture.elements["run-target-browser"].checked, false);
+  assert.equal(fixture.elements["tv-device-select"].children[0].textContent, "Lab LG");
+  assert.doesNotMatch(fixture.elements["tv-device-status"].textContent, /Browser runner is selected/i);
+});
+
+test("checks a selected saved LG device only after the operator clicks Check connection", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const checks = [];
+  fixture.runner.checkTvDeviceConnection = async (deviceId) => {
+    checks.push(deviceId);
+    return {ok: true, status: "CONNECTED"};
+  };
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.selectRunTarget("webos");
+
+  assert.match(fixture.elements["tv-device-connection-status"].textContent, /Connection not checked/i);
+  assert.match(fixture.elements["tv-device-connection-dot"].className, /not-checked/);
+  assert.equal(fixture.elements["tv-device-check-connection-button"].disabled, false);
+  fixture.elements["tv-device-check-connection-button"].dispatchEvent("click");
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(checks, ["lab-lg"]);
+  assert.match(fixture.elements["tv-device-connection-status"].textContent, /Connected/i);
+  assert.match(fixture.elements["tv-device-connection-dot"].className, /connected/);
+});
+
+test("resets a locally displayed device connection state when the selection changes", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  fixture.runner.listTvDevices = async () => ({ok: true, devices: [
+    {id: "lab-lg", label: "Lab LG", platform: "webos"},
+    {id: "living-room", label: "Living room", platform: "webos"},
+  ]});
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.selectRunTarget("webos");
+  fixture.elements["tv-device-connection-status"].textContent = "Connected";
+  fixture.elements["tv-device-connection-dot"].className = "tv-device-connection-dot connected";
+  fixture.elements["tv-device-check-connection-button"].disabled = false;
+  fixture.elements["tv-device-select"].value = "living-room";
+  fixture.elements["tv-device-select"].dispatchEvent("change");
+
+  assert.match(fixture.elements["tv-device-connection-status"].textContent, /Connection not checked/i);
+  assert.match(fixture.elements["tv-device-connection-dot"].className, /not-checked/);
+  assert.equal(fixture.elements["tv-device-check-connection-button"].disabled, true);
+});
+
+test("persists each selected run target immediately", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const updates = [];
+  fixture.storage.setItem = (key, value) => updates.push([key, JSON.parse(value)]);
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.selectRunTarget("webos");
+  await controller.selectRunTarget("browser");
+
+  assert.deepEqual(updates.map(([key, settings]) => [key, settings.RUN_TARGET]), [
+    ["mytv-auto-test-settings", "webos"],
+    ["mytv-auto-test-settings", "browser"],
+  ]);
+});
+
+test("shows LG device controls only for the LG target", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.selectRunTarget("browser");
+
+  assert.equal(fixture.elements["lg-device-panel"].classList.contains("hidden"), true);
+
+  await controller.selectRunTarget("webos");
+
+  assert.equal(fixture.elements["lg-device-panel"].classList.contains("hidden"), false);
+});
+
+test("selecting LG removes a Browser preview and shows the LG preview state", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  fixture.elements["browser-preview-image"].setAttribute("src", "data:image/png;base64,preview");
+  fixture.elements["browser-preview-image"].className = "browser-preview-image";
+  fixture.elements["interactive-browser"].className = "interactive-browser";
+  fixture.elements["browser-mute-button"].className = "preview-control";
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.selectRunTarget("webos");
+
+  assert.equal(fixture.elements["browser-preview-image"].getAttribute("src"), null);
+  assert.match(fixture.elements["browser-preview-image"].className, /hidden/);
+  assert.match(fixture.elements["interactive-browser"].className, /hidden/);
+  assert.match(fixture.elements["browser-mute-button"].className, /hidden/);
+  assert.match(fixture.elements["browser-preview-empty"].className, /hidden/);
+  assert.doesNotMatch(fixture.elements["lg-preview-empty"].className, /hidden/);
+});
+
+test("selecting LG disables Browser-only preview settings and explains why", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const previewInputs = fixture.document.querySelectorAll('[name="preview-type"]');
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.selectRunTarget("webos");
+
+  assert.ok(previewInputs.every((input) => input.disabled));
+  assert.match(fixture.elements["preview-target-status"].textContent, /Browser runner only/i);
+
+  await controller.selectRunTarget("browser");
+
+  assert.ok(previewInputs.every((input) => !input.disabled));
+  assert.match(fixture.elements["preview-target-status"].className, /hidden/);
+});
+
+test("does not expose a direct LG device validation action outside the dialog", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.selectRunTarget("webos");
+
+  assert.equal(controller.validateSelectedTvDevice, undefined);
+  assert.equal(fixture.elements["run-button"].disabled, true);
+  assert.match(fixture.elements["tv-device-status"].textContent, /readiness review/i);
+});
+
+test("shows a local LG toolchain report only after the operator requests it", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let inspections = 0;
+  fixture.runner.inspectTvToolchain = async () => {
+    inspections += 1;
+    return {
+      ok: true,
+      platform: "webos",
+      tools: [
+        {id: "webos-cli", label: "webOS CLI", status: "ready"},
+        {id: "appium", label: "Appium", status: "ready", version: "2.19.0"},
+        {id: "appium-lg-webos-driver", label: "LG webOS driver", status: "ready", version: "0.5.0"},
+      ],
+    };
+  };
+  const controller = renderer.createRendererController(fixture);
+
+  assert.equal(inspections, 0);
+  await controller.inspectTvToolchain();
+
+  assert.equal(inspections, 1);
+  assert.match(fixture.elements["tv-toolchain-status"].textContent, /webOS CLI: ready/i);
+  assert.match(fixture.elements["tv-toolchain-status"].textContent, /Appium: ready \(2\.19\.0\)/i);
+  assert.match(fixture.elements["tv-toolchain-status"].textContent, /LG webOS driver: ready \(0\.5\.0\)/i);
+  assert.doesNotMatch(fixture.elements["tv-toolchain-status"].textContent, /host|device|pairing/i);
+});
+
+test("Auto configure requests only a redacted local review without inspection, import, registration, validation, or a test run", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const calls = [];
+  fixture.runner.planLgToolchainSetup = async () => {
+    calls.push("plan");
+    return {
+      ok: true,
+      source: "managed",
+      state: "missing",
+      components: [
+        {id: "node", label: "Node.js and npm", status: "missing", version: "24.18.0"},
+        {id: "webos-cli", label: "webOS CLI", status: "missing", version: "1.12.4"},
+      ],
+    };
+  };
+  fixture.runner.inspectTvToolchain = async () => { throw new Error("must not inspect"); };
+  fixture.runner.chooseLgCliArchive = async () => { throw new Error("must not import"); };
+  fixture.runner.registerWebOsTarget = async () => { throw new Error("must not register"); };
+  fixture.runner.validateTvDevice = async () => { throw new Error("must not validate"); };
+  fixture.runner.runTest = async () => { throw new Error("must not run"); };
+  const controller = renderer.createRendererController(fixture);
+
+  const result = await controller.planLgToolchainSetup();
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(calls, ["plan"]);
+  assert.match(fixture.elements["sdk-component-list"].textContent, /Node\.js and npm.*24\.18\.0.*Missing.*Included in reviewed installation/i);
+  assert.match(fixture.elements["sdk-component-list"].textContent, /webOS CLI.*1\.12\.4.*Missing.*Download from LG, then choose the original archive/i);
+  assert.match(fixture.elements["sdk-install-review"].textContent, /Review complete.*Nothing is installed until you confirm/i);
+  assert.equal(fixture.elements["sdk-install-review"].classList.contains("hidden"), false);
+  assert.doesNotMatch(`${fixture.elements["sdk-component-list"].textContent} ${fixture.elements["sdk-install-review"].textContent}`, /\/Users\/|https?:\/\//);
+});
+
+test("requires a separate Settings confirmation before installing a reviewed LG bundle", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const calls = [];
+  fixture.runner.planLgToolchainSetup = async () => {
+    calls.push("plan");
+    return {
+      ok: true,
+      state: "missing",
+      components: [{id: "node", label: "Node.js and npm", status: "missing", version: "24.18.0"}],
+    };
+  };
+  fixture.runner.installLgToolchain = async (request) => {
+    calls.push(["install", request]);
+    return {
+      ok: true,
+      state: "installable",
+      components: [{id: "node", label: "Node.js and npm", status: "ready", version: "24.18.0"}],
+    };
+  };
+  fixture.runner.inspectTvToolchain = async () => { throw new Error("must not inspect"); };
+  fixture.runner.chooseLgCliArchive = async () => { throw new Error("must not import"); };
+  fixture.runner.registerWebOsTarget = async () => { throw new Error("must not register"); };
+  fixture.runner.validateTvDevice = async () => { throw new Error("must not validate"); };
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.selectRunTarget("webos");
+  assert.equal(fixture.elements["sdk-install-confirm-button"].disabled, true);
+  await controller.planLgToolchainSetup();
+  assert.deepEqual(calls, ["plan"]);
+  assert.equal(fixture.elements["sdk-install-confirm-button"].disabled, false);
+  await controller.installLgToolchain();
+
+  assert.deepEqual(calls, ["plan", ["install", {confirmed: true, deviceId: "lab-lg"}]]);
+  assert.equal(fixture.elements["sdk-install-confirm-button"].disabled, true);
+  assert.match(fixture.elements["sdk-component-list"].textContent, /Node\.js and npm.*24\.18\.0.*Ready.*Verified locally/i);
+  assert.doesNotMatch(fixture.elements["sdk-component-list"].textContent, /\/Users\/|https?:\/\//);
+});
+
+test("renders only fixed safe milestones for a confirmed LG installation", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let progressListener;
+  let resolveInstall;
+  fixture.runner.onLgToolchainInstallProgress = (callback) => {
+    progressListener = callback;
+    return () => {};
+  };
+  fixture.runner.installLgToolchain = async () => new Promise((resolve) => { resolveInstall = resolve; });
+  const controller = renderer.createRendererController(fixture);
+
+  const pending = controller.installLgToolchain();
+  progressListener({code: "installing-appium", path: "/private/managed"});
+
+  assert.equal(fixture.elements["sdk-install-progress"].classList.contains("hidden"), false);
+  assert.match(fixture.elements["sdk-install-progress-text"].textContent, /Installing reviewed Appium and the LG driver/i);
+  assert.match(fixture.elements["sdk-install-progress-steps"].textContent, /Preparing the managed installation/i);
+  assert.doesNotMatch(fixture.elements["sdk-install-progress"].textContent, /\/private\/managed|\/private/i);
+
+  progressListener({code: "failed", status: "VERIFICATION_FAILED", detail: "raw command output"});
+  assert.match(fixture.elements["sdk-install-progress-text"].textContent, /Installation stopped/i);
+  assert.match(fixture.elements["sdk-install-progress"].className, /attention/);
+  assert.match(fixture.elements["sdk-install-progress-steps"].querySelector(".current").textContent, /Installing reviewed Appium and the LG driver/i);
+  assert.doesNotMatch(fixture.elements["sdk-install-progress"].textContent, /raw command/i);
+
+  resolveInstall({ok: false, status: "VERIFICATION_FAILED", verification: "LG_DRIVER_UNVERIFIED"});
+  await pending;
+});
+
+test("marks completed LG installation progress as complete", () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let progressListener;
+  fixture.runner.onLgToolchainInstallProgress = (callback) => {
+    progressListener = callback;
+    return () => {};
+  };
+  renderer.createRendererController(fixture);
+
+  progressListener({code: "complete"});
+
+  assert.match(fixture.elements["sdk-install-progress"].className, /complete/);
+  assert.doesNotMatch(fixture.elements["sdk-install-progress"].className, /attention/);
+  assert.match(fixture.elements["sdk-install-progress-text"].textContent, /Installation complete/i);
+});
+
+test("clears transient LG installation progress when Settings closes", () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let progressListener;
+  fixture.runner.onLgToolchainInstallProgress = (callback) => {
+    progressListener = callback;
+    return () => {};
+  };
+  renderer.createRendererController(fixture);
+  progressListener({code: "installing-appium"});
+
+  fixture.elements["settings-close-button"].dispatchEvent("click");
+
+  assert.equal(fixture.elements["sdk-install-progress"].classList.contains("hidden"), true);
+  assert.equal(fixture.elements["sdk-install-progress-text"].textContent, "");
+  assert.equal(fixture.elements["sdk-install-progress-steps"].children.length, 0);
+});
+
+test("keeps the reviewed component status after a confirmed LG installation fails", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  fixture.runner.planLgToolchainSetup = async () => ({
+    ok: true,
+    state: "missing",
+    components: [{id: "node", label: "Node.js and npm", status: "missing", version: "24.18.0"}],
+  });
+  fixture.runner.installLgToolchain = async () => ({ok: false, status: "DOWNLOAD_FAILED"});
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.planLgToolchainSetup();
+  await controller.installLgToolchain();
+
+  assert.match(fixture.elements["sdk-component-list"].textContent, /Node\.js and npm.*24\.18\.0.*Missing.*Included in reviewed installation/i);
+  assert.match(fixture.elements["sdk-install-review"].textContent, /reviewed Node download could not complete.*Nothing was changed/i);
+  assert.doesNotMatch(`${fixture.elements["sdk-component-list"].textContent} ${fixture.elements["sdk-install-review"].textContent}`, /network unavailable|\/Users\/|https?:\/\//i);
+});
+
+test("explains which reviewed component did not verify", async () => {
+  const fixture = createRendererFixture();
+  fixture.runner.installLgToolchain = async () => ({
+    ok: false,
+    status: "VERIFICATION_FAILED",
+    verification: "LG_DRIVER_UNVERIFIED",
+  });
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.installLgToolchain();
+
+  assert.match(fixture.elements["sdk-install-review"].textContent, /LG webOS driver did not verify.*Nothing was changed/i);
+  assert.doesNotMatch(fixture.elements["sdk-install-review"].textContent, /\/Users\/|https?:\/\//);
+});
+
+test("selects a complete managed source without installation or a TV operation", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const calls = [];
+  fixture.runner.getLgToolchainStatus = async () => {
+    calls.push("status");
+    return {
+      ok: true,
+      source: "managed",
+      state: "ready",
+      components: [{id: "node", label: "Node.js and npm", status: "ready", version: "24.18.0"}],
+    };
+  };
+  fixture.runner.activateManagedLgToolchain = async () => {
+    calls.push("activate");
+    return {
+      ok: true,
+      configured: true,
+      source: "managed",
+      platform: "webos",
+      components: [{id: "appium-home", label: "Appium home", status: "ready"}],
+    };
+  };
+  fixture.runner.installLgToolchain = async () => { throw new Error("must not install"); };
+  fixture.runner.inspectTvToolchain = async () => { throw new Error("must not inspect"); };
+  fixture.runner.registerWebOsTarget = async () => { throw new Error("must not register"); };
+  fixture.runner.validateTvDevice = async () => { throw new Error("must not validate"); };
+  const controller = renderer.createRendererController(fixture);
+
+  assert.equal(fixture.elements["sdk-use-managed-button"].disabled, true);
+  await controller.loadLgToolchainStatus();
+  assert.deepEqual(calls, ["status"]);
+  assert.equal(fixture.elements["sdk-use-managed-button"].disabled, false);
+  await controller.activateManagedLgToolchain();
+
+  assert.deepEqual(calls, ["status", "activate"]);
+  assert.equal(fixture.elements["sdk-use-managed-button"].disabled, true);
+  assert.match(fixture.elements["tv-toolchain-status"].textContent, /Selected source: Managed/i);
+});
+
+test("a confirmed legacy CLI import refreshes only redacted managed availability", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const calls = [];
+  fixture.runner.chooseLgCliArchive = async () => {
+    calls.push("choose");
+    return {ok: true, status: "CLI_IMPORTED"};
+  };
+  fixture.runner.getLgToolchainStatus = async () => {
+    calls.push("managed-status");
+    return {
+      ok: true,
+      source: "managed",
+      state: "missing",
+      components: [{id: "webos-cli", label: "webOS CLI", status: "ready", version: "1.12.4"}],
+    };
+  };
+  fixture.runner.planLgToolchainSetup = async () => { throw new Error("must not plan"); };
+  fixture.runner.inspectTvToolchain = async () => { throw new Error("must not inspect"); };
+  fixture.runner.registerWebOsTarget = async () => { throw new Error("must not register"); };
+  fixture.runner.validateTvDevice = async () => { throw new Error("must not validate"); };
+  renderer.createRendererController(fixture);
+
+  fixture.elements["sdk-choose-lg-cli-button"].dispatchEvent("click");
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(calls, ["choose", "managed-status"]);
+  assert.match(fixture.elements["sdk-component-list"].textContent, /webOS CLI.*1\.12\.4.*Ready.*Verified locally/i);
+  assert.doesNotMatch(fixture.elements["sdk-component-list"].textContent, /\/Users\/|https?:\/\//);
+});
+
+test("selecting SDK configuration separates the selected source from redacted managed availability", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const calls = [];
+  fixture.runner.getTvToolchainConfiguration = async () => {
+    calls.push("configuration");
+    return {
+      ok: true,
+      configured: true,
+      source: "advanced",
+      platform: "webos",
+      components: [{id: "webos-sdk", label: "webOS SDK", status: "ready"}],
+    };
+  };
+  fixture.runner.getLgToolchainStatus = async () => {
+    calls.push("managed-status");
+    return {
+      ok: true,
+      source: "managed",
+      state: "missing",
+      components: [{id: "node", label: "Node.js and npm", status: "missing", version: "24.18.0"}],
+    };
+  };
+  fixture.runner.planLgToolchainSetup = async () => { throw new Error("must not plan"); };
+  fixture.runner.inspectTvToolchain = async () => { throw new Error("must not inspect"); };
+  fixture.runner.validateTvDevice = async () => { throw new Error("must not validate"); };
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.loadSdkToolchainStatus();
+
+  assert.deepEqual(calls, ["configuration", "managed-status"]);
+  assert.match(fixture.elements["tv-toolchain-status"].textContent, /Selected source: Advanced paths/i);
+  assert.match(fixture.elements["tv-toolchain-status"].textContent, /webOS SDK: ready/i);
+  assert.match(fixture.elements["sdk-component-list"].textContent, /Node\.js and npm.*24\.18\.0.*Missing.*Included in reviewed installation/i);
+  assert.doesNotMatch(`${fixture.elements["tv-toolchain-status"].textContent} ${fixture.elements["sdk-component-list"].textContent}`, /\/Users\/|https?:\/\//);
+});
+
+test("renders compatibility catalog status and refreshes only after the operator clicks", async () => {
+  const fixture = createRendererFixture();
+  const calls = [];
+  fixture.runner.getLgCompatibilityCatalogStatus = async () => {
+    calls.push("status");
+    return {ok: true, state: "available", source: "bundled", refreshedAt: null, profileCount: 1};
+  };
+  fixture.runner.refreshLgCompatibilityCatalog = async (request) => {
+    calls.push(["refresh", request]);
+    return {ok: true, state: "available", source: "cached", refreshedAt: "2026-07-30T00:00:00.000Z", profileCount: 1};
+  };
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.loadSdkToolchainStatus();
+  assert.match(fixture.elements["sdk-compatibility-catalog-status"].textContent, /Compatibility catalog available.*1 profile/i);
+  assert.deepEqual(calls, ["status"]);
+
+  await controller.refreshLgCompatibilityCatalog();
+  assert.equal(calls.length, 2);
+  assert.doesNotMatch(fixture.elements["sdk-compatibility-catalog-status"].textContent, /private|https?:/i);
+});
+
+test("saves the local compatibility account without rendering its credentials", async () => {
+  const fixture = createRendererFixture();
+  const requests = [];
+  fixture.runner.getLgCompatibilityProductGateStatus = async () => ({ok: false, status: "LG_COMPATIBILITY_CREDENTIALS_REQUIRED"});
+  fixture.runner.saveLgCompatibilityProductGateCredentials = async (request) => {
+    requests.push(request);
+    return {ok: true, status: "LG_COMPATIBILITY_CREDENTIALS_SAVED"};
+  };
+  const controller = renderer.createRendererController(fixture);
+  fixture.elements["lg-compatibility-product-gate-username-input"].value = "account";
+  fixture.elements["lg-compatibility-product-gate-password-input"].value = "secret";
+
+  await controller.saveLgCompatibilityProductGateCredentials();
+
+  assert.deepEqual(requests, [{username: "account", password: "secret"}]);
+  assert.match(fixture.elements["lg-compatibility-product-gate-status"].textContent, /saved locally/i);
+  assert.equal(fixture.elements["lg-compatibility-product-gate-username-input"].value, "");
+  assert.equal(fixture.elements["lg-compatibility-product-gate-password-input"].value, "");
+  assert.doesNotMatch(fixture.elements["lg-compatibility-product-gate-status"].textContent, /secret/i);
+});
+
+test("runs the fixed compatibility case without selecting a normal test case", async () => {
+  const fixture = createRendererFixture();
+  const validations = [];
+  fixture.runner.inspectLgCompatibilityDevice = async () => ({
+    ok: true,
+    status: "COMPATIBILITY_VERIFIED",
+    attemptId: "attempt-a1",
+    model: "model-a",
+    firmware: "firmware-a",
+  });
+  fixture.runner.runLgCompatibilityValidation = async (request) => {
+    validations.push(request);
+    return {ok: true, status: "VALIDATION_PASSED"};
+  };
+  const controller = renderer.createRendererController(fixture);
+
+  controller.openLgCompatibilityDialog();
+  fixture.elements["lg-compatibility-name-input"].value = "Lab";
+  fixture.elements["lg-compatibility-host-input"].value = "192.0.2.10";
+  fixture.elements["lg-compatibility-passphrase-input"].value = "runtime-only";
+  controller.reviewLgCompatibilityInspection();
+  await controller.confirmLgCompatibilityInspection();
+
+  assert.equal(controller.reviewLgCompatibilityValidation(), true);
+  await controller.confirmLgCompatibilityValidation();
+  assert.deepEqual(validations, [{confirmed: true, attemptId: "attempt-a1"}]);
+});
+
+test("renders the failed compatibility action when validation reports one", async () => {
+  const fixture = createRendererFixture();
+  fixture.runner.inspectLgCompatibilityDevice = async () => ({
+    ok: true,
+    status: "COMPATIBILITY_VERIFIED",
+    attemptId: "attempt-a1",
+    model: "model-a",
+    firmware: "firmware-a",
+  });
+  fixture.runner.runLgCompatibilityValidation = async () => ({ok: false, status: "VALIDATION_FAILED", failedAction: "search_content"});
+  const controller = renderer.createRendererController(fixture);
+
+  controller.openLgCompatibilityDialog();
+  fixture.elements["lg-compatibility-name-input"].value = "Lab";
+  fixture.elements["lg-compatibility-host-input"].value = "192.0.2.10";
+  fixture.elements["lg-compatibility-passphrase-input"].value = "runtime-only";
+  controller.reviewLgCompatibilityInspection();
+  await controller.confirmLgCompatibilityInspection();
+
+  assert.equal(controller.reviewLgCompatibilityValidation(), true);
+  await controller.confirmLgCompatibilityValidation();
+  assert.match(fixture.elements["lg-compatibility-dialog-status"].textContent, /search step did not pass/i);
+});
+
+test("renders the failed compatibility stage when validation fails before any action step is reported", async () => {
+  const fixture = createRendererFixture();
+  fixture.runner.inspectLgCompatibilityDevice = async () => ({
+    ok: true,
+    status: "COMPATIBILITY_VERIFIED",
+    attemptId: "attempt-a1",
+    model: "model-a",
+    firmware: "firmware-a",
+  });
+  fixture.runner.runLgCompatibilityValidation = async () => ({ok: false, status: "VALIDATION_FAILED", failureCode: "SESSION_UNAVAILABLE", appiumFailureCode: "APPIUM_CAPABILITY_AUTOMATION_NAME", failureStage: "session-creating"});
+  const controller = renderer.createRendererController(fixture);
+
+  controller.openLgCompatibilityDialog();
+  fixture.elements["lg-compatibility-name-input"].value = "Lab";
+  fixture.elements["lg-compatibility-host-input"].value = "192.0.2.10";
+  fixture.elements["lg-compatibility-passphrase-input"].value = "runtime-only";
+  controller.reviewLgCompatibilityInspection();
+  await controller.confirmLgCompatibilityInspection();
+
+  assert.equal(controller.reviewLgCompatibilityValidation(), true);
+  await controller.confirmLgCompatibilityValidation();
+  assert.match(fixture.elements["lg-compatibility-dialog-status"].textContent, /rejected the LG automationName capability/i);
+});
+
+test("renders the failed compatibility preparation stage before the product-gate case starts", async () => {
+  const fixture = createRendererFixture();
+  fixture.runner.inspectLgCompatibilityDevice = async () => ({
+    ok: true,
+    status: "COMPATIBILITY_VERIFIED",
+    attemptId: "attempt-a1",
+    model: "model-a",
+    firmware: "firmware-a",
+  });
+  fixture.runner.runLgCompatibilityValidation = async () => ({ok: false, status: "VALIDATION_FAILED", failureStage: "chromedriver-download"});
+  const controller = renderer.createRendererController(fixture);
+
+  controller.openLgCompatibilityDialog();
+  fixture.elements["lg-compatibility-name-input"].value = "Lab";
+  fixture.elements["lg-compatibility-host-input"].value = "192.0.2.10";
+  fixture.elements["lg-compatibility-passphrase-input"].value = "runtime-only";
+  controller.reviewLgCompatibilityInspection();
+  await controller.confirmLgCompatibilityInspection();
+
+  assert.equal(controller.reviewLgCompatibilityValidation(), true);
+  await controller.confirmLgCompatibilityValidation();
+  assert.match(fixture.elements["lg-compatibility-dialog-status"].textContent, /download the verified temporary ChromeDriver/i);
+});
+
+test("opens LG help without invoking inspection, validation, or a test run", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let inspections = 0;
+  let validations = 0;
+  let runs = 0;
+  fixture.runner.inspectTvToolchain = async () => { inspections += 1; return {ok: true}; };
+  fixture.runner.validateTvDevice = async () => { validations += 1; return {ok: true}; };
+  fixture.runner.runTest = async () => { runs += 1; return {ok: true}; };
+  renderer.createRendererController(fixture);
+
+  fixture.elements["tv-help-button"].dispatchEvent("click");
+  await Promise.resolve();
+
+  assert.doesNotMatch(fixture.elements["tv-help-modal"].className, /hidden/);
+  assert.equal(inspections, 0);
+  assert.equal(validations, 0);
+  assert.equal(runs, 0);
+});
+
+test("keeps LG device editing closed until the user opens the Add dialog", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.selectRunTarget("webos");
+  assert.match(fixture.elements["tv-device-dialog"].className, /hidden/);
+
+  controller.openTvDeviceDialog("add");
+
+  assert.doesNotMatch(fixture.elements["tv-device-dialog"].className, /hidden/);
+  assert.equal(fixture.elements["tv-device-name-input"].value, "");
+  assert.equal(fixture.elements["tv-device-host-input"].value, "");
+  assert.equal(fixture.elements["tv-device-passphrase-input"].value, "");
+  assert.equal(fixture.elements["tv-device-id-input"], undefined);
+  assert.equal(fixture.elements["tv-device-model-input"], undefined);
+});
+
+test("saves local toolchain configuration without validation, registration, or a test run", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const calls = [];
+  fixture.runner.saveTvToolchainConfiguration = async (input) => {
+    calls.push(input);
+    return {
+      ok: true,
+      configured: true,
+      platform: "webos",
+      components: [{id: "webos-sdk", label: "webOS SDK", status: "ready"}],
+    };
+  };
+  fixture.runner.validateTvDevice = async () => { throw new Error("must not validate"); };
+  fixture.runner.registerWebOsTarget = async () => { throw new Error("must not register"); };
+  fixture.runner.runTest = async () => { throw new Error("must not run"); };
+  fixture.elements["tv-toolchain-sdk-home-input"].value = "/toolchain/webos-sdk";
+  fixture.elements["tv-toolchain-appium-home-input"].value = "/toolchain/appium-home";
+  fixture.elements["tv-toolchain-appium-bin-input"].value = "/toolchain/appium/bin/appium";
+  fixture.elements["tv-toolchain-chromedriver-input"].value = "/toolchain/chromedriver";
+  const controller = renderer.createRendererController(fixture);
+
+  const result = await controller.saveTvToolchainConfiguration();
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(calls, [{
+    webosSdkHome: "/toolchain/webos-sdk",
+    appiumHome: "/toolchain/appium-home",
+    appiumBin: "/toolchain/appium/bin/appium",
+    chromedriverPath: "/toolchain/chromedriver",
+  }]);
+  assert.equal(fixture.elements["tv-toolchain-sdk-home-input"].value, "");
+  assert.equal(fixture.elements["tv-toolchain-appium-home-input"].value, "");
+  assert.equal(fixture.elements["tv-toolchain-appium-bin-input"].value, "");
+  assert.equal(fixture.elements["tv-toolchain-chromedriver-input"].value, "");
+  assert.doesNotMatch(fixture.elements["tv-toolchain-status"].textContent, /\/toolchain\//);
+  assert.equal(fixture.elements["run-button"].disabled, true);
+});
+
+test("opens Edit without returning a saved connection value to the renderer", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.selectRunTarget("webos");
+  controller.openTvDeviceDialog("edit");
+
+  assert.equal(fixture.elements["tv-device-name-input"].value, "Lab LG");
+  assert.equal(fixture.elements["tv-device-host-input"].value, "");
+  assert.equal(fixture.elements["tv-device-passphrase-input"].value, "");
+});
+
+test("keeps a deferred validation candidate in the dialog without calling a TV operation", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const candidates = [];
+  fixture.runner.validateAndSaveTvDevice = async (candidate) => {
+    candidates.push(candidate);
+    return {ok: false, status: "VALIDATION_UNAVAILABLE"};
+  };
+  const controller = renderer.createRendererController(fixture);
+
+  controller.openTvDeviceDialog("add");
+  fixture.elements["tv-device-name-input"].value = "Living room";
+  fixture.elements["tv-device-host-input"].value = "candidate-host";
+  fixture.elements["tv-device-passphrase-input"].value = "candidate-passphrase";
+  await controller.submitTvDeviceDialog();
+
+  assert.deepEqual(candidates, [{label: "Living room", host: "candidate-host", passphrase: "candidate-passphrase"}]);
+  assert.doesNotMatch(fixture.elements["tv-device-dialog"].className, /hidden/);
+  assert.match(fixture.elements["tv-device-dialog-status"].textContent, /not available/i);
+  assert.doesNotMatch(fixture.elements["tv-device-status"].textContent, /candidate-host|candidate-passphrase/);
+});
+
+test("LG Run Selected remains disabled until the main-process readiness review is READY", async () => {
+  const fixture = createRendererFixture();
+  fixture.runner.loadTestCases = async () => ({ok: true, cases: [{id: "42", name: "LG case", actions: [{action: "assert_screen", text: "Ready"}]}]});
+  fixture.runner.getLgRunAvailability = async () => ({ok: false, status: "TOOLCHAIN_UNAVAILABLE"});
+  const controller = renderer.createRendererController(fixture);
+  await controller.loadCases();
+  controller.selectCase("42");
+  await controller.selectRunTarget("webos");
+
+  assert.equal(fixture.elements["run-button"].disabled, true);
+  assert.match(fixture.elements["lg-run-availability"].textContent, /Configure SDK/i);
+
+  fixture.runner.getLgRunAvailability = async () => ({ok: true, status: "READY"});
+  await controller.refreshLgRunAvailability();
+  assert.equal(fixture.elements["run-button"].disabled, false);
+
+  await controller.selectRunTarget("browser");
+  assert.equal(fixture.runner.runLgBatchCalls.length, 0);
+});
+
+test("LG readiness includes the active cache folder for selected API cases", async () => {
+  const fixture = createRendererFixture();
+  const requests = [];
+  fixture.runner.loadTestCases = async () => ({ok: true, source: "cache", folder: {id: "folder-1"}, cases: [{id: "42", name: "LG case", actions: [{action: "assert_screen", text: "Ready"}]}]});
+  fixture.runner.getLgRunAvailability = async (request) => {
+    requests.push(request);
+    return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+  };
+  const controller = renderer.createRendererController(fixture);
+  await controller.loadCases();
+  controller.selectCase("42");
+  await controller.selectRunTarget("webos");
+
+  assert.deepEqual(requests.at(-1), {deviceId: "lab-lg", selectedCaseIds: ["42"], folderId: "folder-1"});
+});
+
+test("LG Run Selected requires confirmation and renders only safe status and PNG preview events", async () => {
+  const fixture = createRendererFixture();
+  fixture.runner.loadTestCases = async () => ({ok: true, source: "cache", folder: {id: "folder-1"}, cases: [{id: "42", name: "LG case", actions: [{action: "assert_screen", text: "Ready"}]}]});
+  fixture.runner.getLgRunAvailability = async () => ({ok: true, status: "READY"});
+  fixture.runner.runLgBatch = async (request) => {
+    fixture.runner.runLgBatchCalls.push(request);
+    return {ok: true, caseRuns: [{id: "42", result: {passed: true, started: true, stopped: false, executionResult: {status: "passed"}}}], stopped: false};
+  };
+  const submissions = [];
+  fixture.runner.submitFlowCaseResults = async (payload) => { submissions.push(payload); return {ok: true}; };
+  let statusListener;
+  let previewListener;
+  fixture.runner.onLgRunStatus = (callback) => { statusListener = callback; return () => {}; };
+  fixture.runner.onLgRunPreview = (callback) => { previewListener = callback; return () => {}; };
+  const controller = renderer.createRendererController(fixture);
+  await controller.loadCases();
+  controller.selectCase("42");
+  await controller.selectRunTarget("webos");
+  await controller.refreshLgRunAvailability();
+
+  await controller.runSelectedCases({target: "webos", TEST_CASE_FOLDER_ID: "folder-1", FLOW_CASE_RESULT_CONTEXT: {
+    API_DOMAIN: "https://api.example", API_AUTHORIZATION: "authorization-value", PROJECT_ID: "1", API_TIMEOUT_SECONDS: "30", FOLDER_PATH: "/folder",
+  }});
+  assert.doesNotMatch(fixture.elements["lg-run-confirmation-dialog"].className, /hidden/);
+  assert.equal(fixture.runner.runLgBatchCalls.length, 0);
+
+  fixture.elements["lg-run-confirm-button"].dispatchEvent("click");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(fixture.runner.runLgBatchCalls[0], {
+    deviceId: "lab-lg", selectedCaseIds: ["42"], folderId: "folder-1", confirmed: true,
+  });
+  assert.doesNotMatch(JSON.stringify(fixture.runner.runLgBatchCalls[0]), /APP_URL|AUTHORIZATION|host|passphrase|path|actions/i);
+  assert.deepEqual(submissions.map((payload) => payload.testcases.map((testCase) => [testCase.id, testCase.testResult.status])), [[["42", "success"]]]);
+
+  statusListener({code: "case-started", caseId: "42", attempt: 1});
+  previewListener("data:image/png;base64,ZmFrZQ==");
+  previewListener("/private/frame.png");
+  assert.match(fixture.elements["lg-run-state"].textContent, /Starting selected case/i);
+  assert.equal(fixture.elements["lg-preview-image"].src, "data:image/png;base64,ZmFrZQ==");
+});
+
+test("LG recovery controls forward only an explicit retry or stop choice", async () => {
+  const fixture = createRendererFixture();
+  const calls = [];
+  fixture.runner.resolveLgRunRecovery = async (request) => { calls.push(request); return {ok: true}; };
+  let statusListener;
+  fixture.runner.onLgRunStatus = (callback) => { statusListener = callback; return () => {}; };
+  const controller = renderer.createRendererController(fixture);
+
+  statusListener({code: "recovery-required", caseId: "42", attempt: 3, reason: "technical"});
+  assert.doesNotMatch(fixture.elements["lg-recovery-dialog"].className, /hidden/);
+  fixture.elements["lg-recovery-retry-button"].dispatchEvent("click");
+  await new Promise((resolve) => setImmediate(resolve));
+  fixture.elements["lg-recovery-stop-button"].dispatchEvent("click");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(calls, [{action: "retry"}, {action: "stop"}]);
+  assert.equal(typeof controller.openLgBatchConfirmation, "function");
 });
 
 test("index markup contains the case browser and no API-key or mode controls", () => {
@@ -1037,8 +2162,15 @@ test("index markup contains the case browser and no API-key or mode controls", (
     "folder-select", "refresh-folders-button", "get-test-cases-button",
     "settings-app-url-input", "api-domain-input", "api-authorization-input", "project-id-input",
     "environment-select", "api-timeout-input", "api-loading-overlay",
-    "retry-sync-button",
+    "retry-sync-button", "run-target-browser", "run-target-webos", "tv-device-select", "tv-device-status", "tv-device-connection-status", "tv-device-connection-dot", "tv-device-check-connection-button", "tv-device-add-button", "tv-device-edit-button", "tv-device-dialog", "tv-device-name-input", "tv-device-host-input", "tv-device-passphrase-input", "tv-device-passphrase-toggle", "tv-device-dialog-submit-button",
+    "sdk-managed-toolchain-status", "sdk-component-list", "sdk-install-review", "sdk-install-progress", "sdk-install-progress-text", "sdk-install-progress-steps", "tv-toolchain-sdk-home-input", "tv-toolchain-appium-home-input", "tv-toolchain-appium-bin-input", "tv-toolchain-chromedriver-input", "tv-toolchain-save-button",
+    "lg-run-availability", "configure-lg-sdk-button", "lg-run-confirmation-dialog", "lg-run-confirm-button", "lg-run-cancel-button", "lg-run-state", "lg-preview-image", "lg-preview-empty", "lg-recovery-dialog", "lg-recovery-retry-button", "lg-recovery-stop-button",
   ].forEach((id) => assert.match(html, new RegExp(`id="${id}"`)));
+  assert.doesNotMatch(html, /id="tv-device-validate-button"/);
+  assert.doesNotMatch(html, /id="tv-device-id-input"/);
+  assert.doesNotMatch(html, /id="tv-device-model-input"/);
+  assert.doesNotMatch(html, /id="tv-device-register-button"/);
+  assert.doesNotMatch(html, /id="tv-toolchain-check-button"/);
   assert.doesNotMatch(html, /id="app-url-input"/);
   const retiredAiControls = new RegExp(
     [
@@ -1052,7 +2184,7 @@ test("index markup contains the case browser and no API-key or mode controls", (
     ].join("|")
   );
   assert.doesNotMatch(html, retiredAiControls);
-  assert.doesNotMatch(html, /username-input|password-input|mode-select|test-description-input/);
+  assert.doesNotMatch(html, /id="(?:username-input|password-input|mode-select|test-description-input)"/);
 });
 
 test("keeps the app brand in the header and settings controls on the right", () => {
@@ -1082,6 +2214,19 @@ test("uses the taller default Electron window size", () => {
     mainSource,
     /new BrowserWindow\(\{[\s\S]*?width:\s*1240,[\s\S]*?height:\s*900,[\s\S]*?minWidth:\s*920,[\s\S]*?minHeight:\s*760,/
   );
+  assert.match(mainSource, /show:\s*false,/);
+  assert.match(mainSource, /revealWindowOnFirstPaint\(mainWindow\)/);
+});
+
+test("ships the normal application shell under the first loading overlay", () => {
+  const html = fs.readFileSync(
+    path.join(__dirname, "../../app/renderer/index.html"),
+    "utf8"
+  );
+
+  assert.match(html, /<main class="app-shell">/);
+  assert.match(html, /<div id="api-loading-overlay" class="api-loading-overlay"[^>]*>/);
+  assert.match(html, /Loading workspace\.\.\./);
 });
 
 test("keeps the test-case table at 35vh and scrolls overflowing rows", () => {

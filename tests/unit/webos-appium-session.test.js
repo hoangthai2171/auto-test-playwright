@@ -153,7 +153,7 @@ test("webOS session rejects an unapproved app identity before client commands", 
   assert.deepEqual(client.calls, []);
 });
 
-test("webOS session creates one installed-app session without deployment capabilities", async () => {
+test("webOS session creates one installed-app session without deployment or reset capabilities", async () => {
   const client = createFakeClient();
   const session = createSession(client);
 
@@ -172,7 +172,7 @@ test("webOS session creates one installed-app session without deployment capabil
         "appium:appId": APP_ID,
         "appium:chromedriverExecutable": "/private/runtime/chromedriver",
         "appium:autoExtendDevMode": false,
-        "appium:noReset": false,
+        "appium:noReset": true,
         "appium:fullReset": false,
         "appium:remoteOnly": false,
         "appium:rcMode": "rc",
@@ -283,7 +283,7 @@ test("webOS session reset attests to the fresh session reset after foreground id
           "appium:appId": APP_ID,
           "appium:chromedriverExecutable": "/private/runtime/chromedriver",
           "appium:autoExtendDevMode": false,
-          "appium:noReset": false,
+          "appium:noReset": true,
           "appium:fullReset": false,
           "appium:remoteOnly": false,
           "appium:rcMode": "rc",
@@ -329,13 +329,18 @@ test("webOS session fails when a genuine Appium screenshot is unavailable", asyn
 
 test("webOS session never includes runtime connection values in client failure messages", async () => {
   const client = createFakeClient({
-    createSession: async () => { throw new Error("192.168.1.9 could not use /private/runtime/chromedriver"); },
+    createSession: async () => {
+      const error = new Error("192.168.1.9 could not use /private/runtime/chromedriver");
+      error.appiumFailureCode = "APPIUM_CHROMEDRIVER";
+      throw error;
+    },
   });
   const session = createSession(client);
 
   await assert.rejects(
     session.start(),
     (error) => error.code === "SESSION_UNAVAILABLE"
+      && error.failureCode === "APPIUM_CHROMEDRIVER"
       && !/192\.168\.1\.9|chromedriver/i.test(error.message),
   );
 });

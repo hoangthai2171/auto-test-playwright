@@ -173,23 +173,30 @@ policy rather than moving to another case. A server test case may explicitly
 override that default for a longer flow; the override is validated before run
 start, must not exceed **30 minutes**, and is recorded in its manifest.
 
-Add **Settings → Test → TV toolchain**. On startup and before TV validation,
-the main process automatically detects Tizen Studio/SDB, webOS TV CLI, Appium,
-and compatible Chromedriver using platform-appropriate standard installation
-locations and executable/version checks. If automatic detection fails, Settings
-shows the failed component and lets the user choose a local executable/directory
-override. Overrides are stored locally, revalidated before each TV run, and can
-be reset to automatic detection. The renderer never probes the file system
-directly.
+Add **Settings → SDK configuration** for the LG-only local toolchain. Selecting
+the SDK tab performs main-process-only reads of the selected source status and
+the fixed app-managed location, showing only redacted component state and pinned
+versions; it does not inspect user PATH locations, contact a TV, or run vendor
+commands. **Auto configure** is a separate user action that returns the managed
+local installation review only.
+It never writes, downloads, opens an archive picker, registers a target, or
+validates a device. The renderer never probes the file system directly.
 
-When a required component is missing, this page offers an explicit **Install
-missing tools** action. It downloads and installs the required Appium drivers
-and vendor tooling automatically after the user initiates that action; it never
-silently installs software at application startup. The installer must use a
-pinned manifest of official vendor/package sources, display source/version/
-license and any required elevated-permission prompt, verify the installed
-version/executable afterward, and preserve an existing user-managed installation
-unless the user explicitly chooses replacement.
+The active configuration is a versioned `managed` or `advanced` source. Managed
+paths are derived and verified only in the main process; an existing developer-
+managed setup remains an explicit Advanced fallback and must name its Appium
+executable, never relying on a project or system binary. The legacy LG webOS TV
+CLI is never bundled or downloaded by the app. Operators download its original
+archive from LG's official CLI page and select it through the main-process
+picker, where its exact audited archive record is verified. A separate explicit
+confirmation can install only the app-owned Node and audited Appium/LG-driver
+closure. When the selected saved device exactly matches a centrally maintained,
+verified compatibility profile, that same confirmed local installation also
+installs its pinned ChromeDriver into private managed storage. An unknown
+profile returns `COMPATIBILITY_PROFILE_UNVERIFIED` and changes nothing; it
+never selects a version or downloads a guessed driver. Only a complete detector
+result enables the separate local action that selects `managed` as the active
+source.
 
 Add a **Help** button on the Settings page. It opens an instruction modal with
 Windows/macOS prerequisites, detected status, install/repair guidance,
@@ -221,6 +228,18 @@ TV details to the API only through a future versioned backend contract change.
 | Browser | Not shown | Existing `APP_URL` configuration only |
 | Samsung | List currently SDB-connected and saved profiles. This is best-effort, not a guaranteed subnet discovery mechanism. | Ask for the TV's current host/IP, then attempt `sdb connect <host>` and validate developer-mode access. Remote pairing remains an explicit user-approved step. |
 | LG | Run webOS CLI target discovery/list commands and merge saved profiles. | Ask for the TV's current host/IP and label, register/validate the Developer Mode target, then ask the operator to complete TV passphrase/key and remote-pair prompts. |
+
+### Browser configuration
+
+Browser tests use only the app-private, project-pinned Playwright Chromium. The
+main process sets its per-user storage root before loading Playwright, exposes
+only redacted status/review/install IPC, and rejects a Browser run when the
+verified executable is absent. The renderer provides **Settings → SDK
+configuration → Browser configuration**: Auto configure is read-only, while a
+separate explicit install action runs the pinned Playwright CLI for the host
+platform and verifies the result locally. Chromium is not bundled in macOS or
+Windows artifacts, the app does not modify or fall back to a system browser,
+and this local setup does not contact a TV.
 
 Discovery must show **Found**, **Configured but unreachable**, **Needs pairing**,
 or an actionable validation error. It must not store a device until the user
@@ -456,6 +475,35 @@ desktop-app session and expose a visible **Retry sync** action. Retry sends that
 exact payload only; it never reruns, resets, or changes any test case. Pending
 sync is deliberately not restored after the app closes.
 
+### Current LG desktop product-gate boundary
+
+The implemented LG desktop flow reuses the ordinary selected-case batch UI;
+there is no separate terminal-style product-gate button. The renderer requests
+only a selected saved LG profile ID, case IDs, optional folder context, and an
+explicit confirmation. It cannot receive or transmit connection values,
+pairing material, local tool paths, raw vendor output, or case credentials.
+
+Device compatibility validation is separate from normal LG batches. It always
+uses one fixed local MyTV product-gate case—login, Home, Search, `VTV1 HD`
+search, and matching-result playback—rather than a selected API case. Its
+account is configured once in SDK configuration and stored only through
+Electron encryption; after saving, the renderer receives status only.
+
+Before confirmation, readiness is local-only: the selected profile, accepted
+actions, complete selected toolchain, and a centrally maintained verified
+compatibility profile must all be available. After confirmation, the main
+process reads secrets, performs the fresh read-only identity and installed-MyTV
+app preflight, then starts a loopback-only Appium session. A failed preflight
+does not start Appium, reset/launch MyTV, or send input. The session uses native
+remote mode and the attested session-start MyTV-only reset; `appium:rcMode:
+"js"` and `webos: clearApp` are prohibited.
+
+The renderer receives only fixed lifecycle events and genuine PNG frame data.
+It offers observation and Stop, never manual remote control. This desktop
+boundary has local contract coverage, not a live GUI certification. The first
+GUI pilot remains subject to the explicit approval and evidence rules in the
+runbook and handoff.
+
 Intercept desktop-app close requests while a TV/browser run is active or a
 result is unsynced. Show a blocking confirmation:
 
@@ -631,3 +679,21 @@ handlers against `TvSession`/`DomSession`, not directly against a Playwright
 Do not silently run a DOM-dependent action in remote-only mode. Fail before
 interaction with a message naming the action, platform, TV model, and missing
 capability.
+
+## Current LG device-dialog boundary
+
+The current LG device dialog sends only a short-lived candidate (name, host,
+and passphrase) across narrow IPC. Connection values are encrypted in
+app-owned storage and never returned to renderer state. Its production
+validator intentionally returns `VALIDATION_UNAVAILABLE`: candidate validation
+cannot create or change a target, pair, save a profile, start Appium, or alter
+the TV app. Separately, an explicit **Check connection** action may perform
+only fresh-approved, read-only identity and installed-app checks against the
+profile's already registered target. It accepts only the profile ID and returns
+fixed redacted status; it never exposes connection values, vendor output,
+model/firmware facts, or paths. It resolves only an explicitly selected
+Advanced CLI or a verified user-imported app-managed legacy CLI; this narrow
+read-only resolution does not require the otherwise complete Appium and
+ChromeDriver execution toolchain, nor does it fall back to a system CLI.
+Future verified facts may select an existing
+central ChromeDriver profile only; they never create one.

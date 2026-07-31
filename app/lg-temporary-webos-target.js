@@ -17,21 +17,27 @@ function isHost(value) {
   return !/^[0-9.]+$/u.test(value) && HOSTNAME.test(value);
 }
 
-function targetNames(output) {
+function targetEntries(output) {
   try {
     const entries = JSON.parse(String(output || ""));
     if (Array.isArray(entries)) {
-      return new Set(entries.map((entry) => text(entry?.name)).filter((name) => TARGET_NAME.test(name)));
+      return entries
+        .map((entry) => ({
+          name: text(entry?.name),
+          default: entry?.default === true,
+          privateKey: text(entry?.details?.privatekey),
+        }))
+        .filter((entry) => TARGET_NAME.test(entry.name));
     }
   } catch {
     // Some supported CLI releases use line-oriented --listfull output.
   }
-  const names = new Set();
+  const entries = [];
   for (const line of String(output || "").split(/\r?\n/u)) {
     const match = line.match(/^\s*name\s*:\s*([A-Za-z][A-Za-z0-9_-]{0,63})\s*$/u);
-    if (match) names.add(match[1]);
+    if (match) entries.push({name: match[1], default: false, privateKey: ""});
   }
-  return names.size ? names : null;
+  return entries.length ? entries : null;
 }
 
 function createLgTemporaryWebOsTarget({webosSdkHome, spawnSync = defaultSpawnSync, createTargetName} = {}) {
@@ -67,16 +73,22 @@ function createLgTemporaryWebOsTarget({webosSdkHome, spawnSync = defaultSpawnSyn
 
       const listed = run(["--listfull"]);
       if (!listed.ok) return {ok: false, status: listed.status === "TOOLCHAIN_UNAVAILABLE" ? listed.status : "TARGET_LIST_FAILED"};
-      const names = targetNames(listed.stdout);
-      if (!names) return {ok: false, status: "TARGET_LIST_FAILED"};
+      const entries = targetEntries(listed.stdout);
+      if (!entries) return {ok: false, status: "TARGET_LIST_FAILED"};
+      const names = new Set(entries.map((entry) => entry.name));
       if (names.has(name)) return {ok: false, status: "TARGET_NAME_CONFLICT"};
+
+      const defaultEntry = entries.find((entry) => entry.default && entry.privateKey);
+      const authenticationInfo = defaultEntry
+        ? ["--info", `privatekey=${defaultEntry.privateKey}`, "--info", `passphrase=${safePassphrase}`]
+        : ["--info", `password=${safePassphrase}`];
 
       const added = run([
         "--add", name,
         "--info", `host=${safeHost}`,
         "--info", "port=9922",
         "--info", "username=prisoner",
-        "--info", `passphrase=${safePassphrase}`,
+        ...authenticationInfo,
       ]);
       if (!added.ok) return {ok: false, status: added.status};
 

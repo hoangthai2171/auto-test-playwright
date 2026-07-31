@@ -1,5 +1,78 @@
 # Real-TV Appium Handoff Ledger
 
+## Desktop LG product-gate implementation — pending first GUI pilot
+
+The normal desktop **Run Selected** flow now has an LG-only implementation; it
+uses the same selected server/API cases, serial batch control, compact report,
+and flow-case result submission as Browser. The terminal product gate remains
+an internal proof harness, not a competing user workflow. The renderer sends
+only a saved-device ID, case IDs, optional folder ID, and explicit confirmation.
+The main process alone resolves secrets/tool paths, performs fresh read-only
+identity and installed-MyTV-app preflight, and may then create a loopback-only
+Appium session.
+
+Local tests cover confirmation, narrow IPC, local readiness, MyTV-only reset,
+native remote/virtual-keyboard semantics, genuine PNG preview filtering,
+business continuation, bounded technical recovery, manual pairing recovery,
+Stop, local report handling, and Browser-parity result submission. This is not
+live-TV evidence. The **first desktop GUI batch requires fresh explicit
+operator approval**, the normal physical-TV preflight, and only redacted local
+evidence. Do not deploy, uninstall, pair automatically, expose connection data,
+or use `appium:rcMode: "js"` or `webos: clearApp`.
+
+## LG explicit read-only connection check — 2026-07-30
+
+The selected-device **Check connection** action is an explicit, LG-only
+read-only operation. It accepts only a saved profile ID, requires that profile
+to name an already registered webOS CLI target, and uses only the active
+Advanced CLI or the verified, user-imported app-managed legacy CLI to read
+target identity and installed-app inventory. The latter is intentionally
+available before the full execution toolchain is complete: a connection check
+requires only the verified CLI layout, not Appium or ChromeDriver.
+It returns a fixed redacted `Connected` or unavailable state to the renderer.
+It does not fall back to a shell CLI, create or modify a target, pair, save a
+profile, access a host/passphrase, start Appium, send remote input, reset,
+launch, navigate, deploy, install, uninstall, or alter the MyTV app. Candidate
+**Validate and save** remains separately unavailable pending its own approved
+live-validation design.
+
+After fresh operator approval and a MyTV reinstall, the source-worktree desktop
+UI smoke check returned the redacted **Connected** state for the selected saved
+LG profile. It performed no target registration, pairing, Appium startup, test
+execution, remote input, reset, launch, navigation, deployment, or app change.
+
+## Browser configuration local contracts — 2026-07-29
+
+The desktop runner no longer bundles Chromium. Browser runs require the
+project-pinned Playwright Chromium in app-private per-user storage; when it is
+missing, Browser run controls stay disabled and provide a **Configure Browser**
+shortcut to **Settings → SDK configuration → Browser configuration**. Auto
+configure only checks the local executable and returns a redacted review. A
+separate explicit confirmation installs the host-appropriate pinned Chromium
+through Playwright's CLI, reports only fixed progress milestones, and verifies
+the executable before Browser runs are enabled. This workflow never uses or
+changes a system browser and has no TV/device operation.
+
+## LG SDK auto-configuration local contracts — 2026-07-29
+
+The desktop runner now keeps LG SDK controls in **Settings → SDK
+configuration**. Selecting that tab separately shows redacted selected-source
+status and local managed-bundle state; **Auto configure** returns a managed
+local review and cannot write, download, open an archive picker,
+register/validate a target, or contact a TV. The active toolchain configuration
+persists only a `managed` or `advanced` source; resolved paths stay in the main
+process. An Advanced source explicitly supplies the webOS SDK home, Appium
+home, Appium executable, and ChromeDriver executable; it never falls back to a
+project or system Appium path.
+Legacy LG CLI acquisition stays operator-directed through LG's official page.
+A separately confirmed installation can stage only app-owned Node and the
+audited Appium/LG-driver closure. It cannot download LG's CLI or ChromeDriver,
+open a picker, register or validate a target, or contact a TV. This remains
+local-contract coverage only, not live-TV validation evidence.
+When the detector reports every managed component ready, a separate local
+selection action may persist `managed` as the active source; that action does
+not install, inspect a target, or contact a TV.
+
 ## Phase 3 local-contract status — 2026-07-28
 
 The LG-only target-neutral runner foundation is implemented and verified with
@@ -1160,3 +1233,36 @@ git diff --check
 
 Add target-specific unit commands as phase 2 introduces them. Live TV tests are
 environment-dependent and must be reported separately from local unit results.
+
+## Current LG device dialog
+
+The LG device UI is dialog-based and collects only name, host, and passphrase.
+Saved connection values remain encrypted and renderer-inaccessible. The current
+**Validate and save** action is deliberately deferred with
+`VALIDATION_UNAVAILABLE`; do not attempt a live validation, pairing, target
+registration, or TV operation without fresh approval and preflight.
+
+## Compatibility catalog maintainer workflow
+
+The project source is `DEVICE-COMPATIBILITY.json`; users refresh a redacted
+cached copy through Settings. Maintain it with the repository-local
+`device-compatibility-check` skill. A live candidate validation needs fresh
+approval, a read-only exact model/firmware check, and the approved MyTV product
+gate using a temporary current-platform ChromeDriver. Never retry a failed TV
+operation automatically. On a passed new pair ask **Record this
+compatibility?**; on a passed existing pair ask **Update this compatibility?**.
+Only the respective explicit confirmation permits the separate local catalog
+write. Publishing remains a manual API-maintenance action.
+
+The desktop app also has an **existing-profile verification** route in
+**Settings → SDK configuration → Compatibility catalog → Check device
+compatibility**. Its two separate confirmations cover temporary read-only
+identity inspection and exactly one fixed local MyTV product-gate case. That
+case signs in, opens Home and Search, searches for `VTV1 HD`, and starts the
+matching search result. Its credentials are configured once in SDK configuration
+and stored only through Electron encryption. It holds
+the connection attempt only in memory, never saves a device/profile, never
+retries, and cleans temporary driver and CLI target resources on every result.
+It stops on an unknown model/firmware pair; only the maintainer candidate
+workflow can later create or update a catalog record after its own final record
+confirmation.

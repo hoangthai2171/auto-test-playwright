@@ -6,6 +6,14 @@ const {normalizeDomState} = require("./dom-state");
 const {createWebOsMyTvAutomation} = require("./webos-mytv-automation");
 
 const INSTALLED_APP_ID = "com.mytvb2c.app";
+const SAFE_APPIUM_FAILURE_CODES = new Set([
+  "APPIUM_CAPABILITIES",
+  "APPIUM_CHROMEDRIVER",
+  "APPIUM_DEVICE_CONNECTION",
+  "APPIUM_DRIVER",
+  "APPIUM_SESSION",
+]);
+const SAFE_APPIUM_CAPABILITY_FAILURE = /^APPIUM_CAPABILITY_(?:APP_ID|APP_LAUNCH_PARAMS|AUTO_EXTEND_DEV_MODE|AUTOMATION_NAME|CHROMEDRIVER_EXECUTABLE|DEVICE_HOST|DEVICE_NAME|FULL_RESET|NO_RESET|PLATFORM_NAME|RC_MODE|REMOTE_ONLY|USE_SECURE_WEBSOCKET)$/u;
 const WEBOS_REMOTE_KEYS = Object.freeze({
   ok: "ENTER",
   back: "BACK",
@@ -170,8 +178,10 @@ function createWebOsAppiumSession({client, appId, model, secrets = [], connectio
   let started = false;
   let closed = false;
 
-  function sessionError(code, message) {
-    return new TvSessionError(code, message, {platform: "lg", model: diagnostics.model});
+  function sessionError(code, message, failureCode = "") {
+    const error = new TvSessionError(code, message, {platform: "lg", model: diagnostics.model});
+    if (SAFE_APPIUM_FAILURE_CODES.has(failureCode) || SAFE_APPIUM_CAPABILITY_FAILURE.test(failureCode)) error.failureCode = failureCode;
+    return error;
   }
 
   async function start() {
@@ -192,7 +202,7 @@ function createWebOsAppiumSession({client, appId, model, secrets = [], connectio
             "appium:appId": safeAppId,
             "appium:chromedriverExecutable": runtimeConnection.chromedriverPath,
             "appium:autoExtendDevMode": false,
-            "appium:noReset": false,
+            "appium:noReset": true,
             "appium:fullReset": false,
             "appium:remoteOnly": runtimeConnection.remoteOnly,
             "appium:rcMode": runtimeConnection.rcMode,
@@ -201,8 +211,8 @@ function createWebOsAppiumSession({client, appId, model, secrets = [], connectio
           firstMatch: [{}],
         },
       });
-    } catch {
-      throw sessionError("SESSION_UNAVAILABLE", "The injected Appium client could not create a webOS session.");
+    } catch (error) {
+      throw sessionError("SESSION_UNAVAILABLE", "The injected Appium client could not create a webOS session.", error?.appiumFailureCode);
     }
     started = true;
     diagnostics.started = true;

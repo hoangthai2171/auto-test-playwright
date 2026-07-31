@@ -54,6 +54,29 @@ After every selected API-loaded case has completed, the renderer submits one
 validated `tested`/`testResult` batch through main-process IPC; stopped,
 skipped, local-fixture, and launch-failed batches are never partially sent.
 
+The desktop supports two execution targets: Browser (the default) and LG webOS.
+The Settings dialog owns Browser configuration, LG SDK configuration, the
+saved LG-device list, redacted connection status, managed/advanced toolchain
+selection, and the compatibility catalog. Browser runs require the separately
+confirmed managed Chromium installation. LG runs reuse the same case selection,
+batch control, report, and result-submission flow, but require an explicitly
+confirmed real-TV operation.
+
+The LG renderer may send only a selected saved-device ID, case IDs, optional
+folder ID, and explicit confirmation to the LG IPC boundary. The main process
+alone resolves encrypted connection data and the selected toolchain, performs a
+fresh read-only identity/app preflight, and starts a loopback-only Appium
+session only after confirmation. It uses native remote control,
+virtual-keyboard entry, an installed-app session with `appium:noReset: true`,
+and trusted logout. Never deploy, uninstall, reset, or clear the TV app; never
+use `appium:rcMode: "js"` or `webos:clearApp`.
+
+LG device compatibility validation is separate from normal LG batches. It uses
+one fixed local MyTV product-gate case—login, Home, Search, `VTV1 HD` search,
+and matching-result playback—rather than a selected API case. Its account is
+configured once in SDK configuration and stored only through Electron
+encryption; the renderer receives redacted status only.
+
 Explicit structured `actions` are authoritative. `ACTION-COMPILER.md` is the
 server-side guide for transforming `qaDescription` into validated actions
 before delivery. The app-side deterministic compiler remains a migration
@@ -95,6 +118,13 @@ app/
   preload.js                      Context-isolated IPC bridge
   flow-case-api.js                Flow-case API URLs, fetch, normalization, timeout
   test-case-cache.js              Atomic folder-keyed user-data cache
+  lg-desktop-run-preflight.js     Main-only LG local/read-only preflight
+  lg-desktop-batch-runner.js      Confirmed LG serial batch and recovery policy
+  lg-run-ipc.js                   Narrow renderer-to-main LG run IPC
+  lg-compatibility-*.js           Catalog, encrypted product gate, inspection, and validation
+  lg-toolchain-*.js               Managed/advanced LG SDK detection and installation
+  loopback-appium-client.js       Redacted loopback-only Appium client
+  tv-runner.js                    Target-neutral LG runner orchestration
   renderer/index.html             Case browser and preview markup
   renderer/renderer.js            Case selection, masking, logs, preview UI
   renderer/styles.css             Desktop runner styles
@@ -223,7 +253,9 @@ private fixture data.
 - `MYTV_CASE_RESULT_PATH` — per-case structured result sidecar for the compact user report.
 - `MYTV_INTERACTIVE_CDP_URL` — CDP endpoint for interactive preview.
 - `MYTV_INTERACTIVE_VIEW_SCALE` — interactive preview scale.
-- `PLAYWRIGHT_BROWSERS_PATH` — bundled or local browser directory.
+- `PLAYWRIGHT_BROWSERS_PATH` — app-private per-user Playwright Chromium root,
+  assigned by the Electron main process. It is never a bundled browser cache or
+  system-browser fallback.
 - `PLAYWRIGHT_HTML_REPORT` — report output directory.
 
 ### Legacy terminal specs
@@ -295,6 +327,11 @@ that file for live preview images. Interactive preview connects through CDP and
 uses `MYTV_INTERACTIVE_CDP_URL`; settings and logs modals temporarily suspend
 the BrowserView and restore it afterward.
 
+LG preview frames originate only from genuine Appium screenshots, pass through
+the main-process safe IPC filter as PNG data URLs, and are observation-only.
+The renderer must never use a local file path, synthetic image, or manual TV
+control as an LG preview.
+
 ## Adding or Changing Tests
 
 For a new server-shaped action:
@@ -326,6 +363,10 @@ git diff --check
 
 Live staging and Electron smoke runs are environment-dependent. If they are not
 run, record that separately from local unit and syntax results.
+
+LG compatibility work is currently paused. Before resuming it, read
+`docs/real-tv-appium/LG-COMPATIBILITY-PAUSE-HANDOFF.md`; it records the exact
+safe diagnostic state and the required approval boundary.
 
 ## Maintenance
 

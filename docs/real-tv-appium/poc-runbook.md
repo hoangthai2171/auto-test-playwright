@@ -662,6 +662,30 @@ Run the smallest legal MyTV case:
 
 ## Failure classification
 
+## First desktop LG product-gate pilot (fresh approval required)
+
+The desktop LG flow is a UI route for the same selected MyTV cases used by the
+Browser runner; it is not a separate terminal test. Before any first GUI run,
+obtain fresh approval for that specific batch and confirm the LG-only
+preconditions above, the selected saved device, the verified local toolchain,
+and the centrally maintained compatibility profile. Do not treat a green
+historic **Check connection** dot as authorization or as a substitute for the
+fresh main-process preflight.
+
+In the desktop app: select LG and the saved device, select the intended cases,
+then use **Run Selected**. Review the one batch confirmation carefully. Only
+after confirmation may the app read encrypted runtime connection data, verify
+the device/MyTV app read-only, foreground MyTV, reset MyTV local storage, and
+perform trusted native remote actions. It must not deploy, uninstall, change
+the installed app, pair automatically, use `appium:rcMode: "js"`, or invoke
+`webos: clearApp`.
+
+Observe only redacted lifecycle status and genuine TV frames. If a technical
+failure reaches its third clean-case retry, repair the environment and choose
+**Keep retrying** or **Stop**. A pairing request is always an operator pause.
+Retain only the permitted redacted local evidence; do not retain or share
+connection material, credentials, pairing data, screenshots, or archive paths.
+
 | Failure | Action |
 |---|---|
 | TV not reachable | Stop; repair LAN/developer-mode/SDB or webOS CLI connection. |
@@ -679,3 +703,29 @@ Run the smallest legal MyTV case:
 - First/last genuine screenshots for each platform where visual capture is available.
 - DOM focus/screen/player diagnostics before/after key presses and during playback.
 - A short model compatibility record and unresolved limitations.
+
+## LG compatibility catalog maintenance
+
+`DEVICE-COMPATIBILITY.json` is the project source for the downloadable LG
+ChromeDriver compatibility catalog. A maintainer uses the repository-local
+`device-compatibility-check` skill only after fresh approval for that exact TV.
+The workflow validates both catalog platform records, checks the observed model
+and firmware read-only, uses one temporary current-platform driver for the
+approved MyTV product gate, and cleans it up afterward. It stops on failure and
+never retries a TV operation automatically.
+
+For an already verified pair, the desktop equivalent is **Settings → SDK
+configuration → Compatibility catalog → Check device compatibility**. The first
+dialog confirmation authorizes only temporary-target identity inspection. The
+second confirmation authorizes the fixed local product-gate case: login, Home,
+Search, search for `VTV1 HD`, and start the matching result. Configure its
+account once in SDK configuration; Electron encrypts it locally and never
+returns it to the renderer after save. The route does not save a device or
+catalog data; it removes the temporary driver and target afterward. An unknown
+pair stops before downloading a driver or contacting Appium.
+
+After a successful gate, the maintainer must explicitly approve **Record this
+compatibility?** for a new pair, or **Update this compatibility?** when the
+model/firmware pair already exists. The local record operation makes no TV or
+network request. Publishing the reviewed JSON through the API remains a
+separate manual step.

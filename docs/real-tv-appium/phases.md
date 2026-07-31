@@ -488,7 +488,7 @@ generation passes against each pilot TV from the terminal.
   local operations never accept server selectors or JavaScript. Service/row
   operations remain explicitly unavailable for the live LG adapter rather than
   being inferred from DOM text.
-- [ ] A separately authorized terminal invocation initially ran the Phase 1
+- [x] A separately authorized terminal invocation initially ran the Phase 1
   welcome-screen POC rather than this Phase 3 product gate; it did not invoke
   login and must not be treated as product-flow evidence. A later approved
   credentialed gate correctly reached the Phase 3 runner but failed before its
@@ -511,8 +511,9 @@ generation passes against each pilot TV from the terminal.
   waiting for the requested result. LG search now mirrors the browser's bounded
   result polling and accepts an exact result with missing type metadata; the
   terminal bridge also bounds outstanding loopback Appium requests and records
-  unfinished runs as redacted `RUN_INTERRUPTED` failures. A fresh approved
-  product gate remains required for search, playback, and logout evidence.
+  unfinished runs as redacted `RUN_INTERRUPTED` failures. The subsequent
+  approved product gate passed on 2026-07-29, completing the required search,
+  playback, logout, and cleanup evidence.
 - [x] LG-only Phase 3 terminal product gate passed on 2026-07-29 after fresh
   read-only preflight: login, native Search navigation, `VTV3 HD` channel
   search-result selection, playback assessment, trusted logout cleanup,
@@ -524,6 +525,65 @@ generation passes against each pilot TV from the terminal.
 
 **Outcome:** An operator can choose Browser/Samsung/LG and register or validate
 the real target from the desktop app.
+
+**Current authorized scope:** LG-only. Samsung device management and every
+install/update workflow remain out of scope for this increment.
+
+### Current LG-only increment — 2026-07-29
+
+- [x] Browser/LG target selection, a locally saved LG profile, and main-process
+  read-only validation IPC are available; Browser remains the default and LG
+  execution remains deliberately disabled.
+- [x] Manual Electron validation passed after a fresh read-only LG identity and
+  installed-app preflight. The saved profile validated successfully, the UI
+  cleared its host field, and no pairing, navigation, reset, install, or visual
+  capture occurred. Redacted local-only evidence is retained under the ignored
+  evidence directory.
+- [x] Follow-up local Electron validation confirmed the target-specific safety
+  presentation: selecting LG clears the Browser preview, shows the explicit
+  no-TV-preview state, disables every Browser-only Preview Type option with an
+  explanation, and keeps Run disabled. Returning to Browser restores the
+  Preview Type controls. This check did not validate, pair, run, navigate,
+  reset, install, or capture from a TV.
+- [x] A user-initiated local LG toolchain check now reports the configured
+  webOS CLI, Appium, and LG webOS-driver availability through the main-process
+  IPC boundary. It has no device/profile input, does not contact a TV, and
+  keeps LG execution disabled.
+- [x] An LG help modal documents the local-only toolchain check, manual
+  pairing-prompt approval, and the deliberate direct-IP/TV-operation boundary
+  without invoking inspection, validation, or a test run.
+- [x] Local LG toolchain configuration is atomically persisted in Electron user
+  data and exposed only as redacted component readiness. The configured SDK is
+  the sole Electron source for webOS CLI execution, and project-local Appium
+  metadata inspection receives the configured Appium home without exposing any
+  local path.
+- [x] SDK controls now live in **Settings → SDK configuration**. Selecting the
+  tab separately reports the selected source and fixed managed LG bundle state;
+  **Auto configure** is a separate redacted review and neither action contacts
+  a TV, writes a bundle, downloads an artifact, opens a picker, or
+  registers/validates a target.
+- [x] A separate Settings confirmation can stage only the reviewed app-owned
+  Node and audited Appium/LG-driver closure. It performs no LG CLI or
+  ChromeDriver download, picker action, target registration, validation, or TV
+  operation.
+- [x] Toolchain configuration now persists an explicit `managed` or `advanced`
+  source. Resolved managed paths stay in the main process; Advanced selection
+  explicitly includes its Appium executable and never falls back to a project
+  or system binary. Existing read-only consumers resolve the chosen source only
+  when their separately approved operation is invoked.
+- [x] Settings enables **Use verified managed tools** only after every managed
+  component is ready. Selecting it is a separate local configuration action and
+  does not install, register, validate, or contact a TV.
+- [x] The desktop app can add a webOS vendor target only through an explicit
+  local action: it lists existing local targets, refuses a name conflict, and
+  conditionally adds one new target without pairing, validation, navigation,
+  reset, deployment, installation, uninstallation, or test execution. It does
+  not save a MyTV device profile automatically.
+- [x] Local Electron UI inspection and unit verification completed for the
+  configuration and add-only registration controls. No real host was entered,
+  no local target was written during inspection, and no live TV validation was
+  run. Any later validation remains separately approved and requires the
+  mandatory read-only preflight.
 
 **Files to modify:**
 

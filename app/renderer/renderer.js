@@ -58,7 +58,6 @@ function validateRunValues(values) {
     if (!selectedCaseIds.length) {
         return "Vui lòng chọn một test case trước khi chạy.";
     }
-
     return "";
 }
 
@@ -70,7 +69,43 @@ const DEFAULT_SETTINGS = {
     ENVIRONMENT: "UI",
     API_TIMEOUT_SECONDS: "30",
     PREVIEW_TYPE: "live",
+    RUN_TARGET: "browser",
 };
+
+const LG_INSTALL_PROGRESS_STEPS = Object.freeze([
+    {code: "preparing", label: "Preparing the managed installation"},
+    {code: "downloading-node", label: "Downloading reviewed Node"},
+    {code: "verifying-node", label: "Verifying the reviewed Node archive"},
+    {code: "extracting-node", label: "Extracting reviewed Node"},
+    {code: "installing-appium", label: "Installing reviewed Appium and the LG driver"},
+    {code: "verifying-lg-driver", label: "Registering and verifying the LG driver locally"},
+    {code: "downloading-chromedriver", label: "Downloading the verified ChromeDriver"},
+    {code: "verifying-chromedriver-archive", label: "Verifying the ChromeDriver archive"},
+    {code: "extracting-chromedriver", label: "Extracting the verified ChromeDriver"},
+    {code: "verifying-chromedriver", label: "Verifying ChromeDriver locally"},
+    {code: "activating", label: "Activating verified local tools"},
+    {code: "complete", label: "Installation complete"},
+]);
+
+const LG_INSTALL_FAILURE_STATUSES = new Set([
+    "INSTALL_INPUT_INVALID",
+    "DOWNLOAD_FAILED",
+    "CHECKSUM_MISMATCH",
+    "EXTRACTION_FAILED",
+    "DEPENDENCY_INSTALL_FAILED",
+    "VERIFICATION_FAILED",
+    "ACTIVATION_FAILED",
+    "INSTALL_FAILED",
+]);
+
+const BROWSER_INSTALL_PROGRESS_STEPS = Object.freeze([
+    {code: "preparing", label: "Preparing Browser installation"},
+    {code: "downloading-chromium", label: "Downloading reviewed Chromium"},
+    {code: "verifying-chromium", label: "Verifying Chromium locally"},
+    {code: "complete", label: "Installation complete"},
+]);
+
+const BROWSER_INSTALL_FAILURE_STATUSES = new Set(["DOWNLOAD_FAILED", "VERIFICATION_FAILED", "INSTALL_FAILED"]);
 
 function createRendererController({document, windowRef, runner, storage} = {}) {
     const doc = document || globalThis.document;
@@ -89,6 +124,73 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const projectIdInput = get("project-id-input");
     const environmentSelect = get("environment-select");
     const apiTimeoutInput = get("api-timeout-input");
+    const browserTargetInput = get("run-target-browser");
+    const webosTargetInput = get("run-target-webos");
+    const lgDevicePanel = get("lg-device-panel");
+    const tvDeviceSelect = get("tv-device-select");
+    const tvDeviceAddButton = get("tv-device-add-button");
+    const tvDeviceEditButton = get("tv-device-edit-button");
+    const tvDeviceConnectionStatus = get("tv-device-connection-status");
+    const tvDeviceConnectionDot = get("tv-device-connection-dot");
+    const tvDeviceCheckConnectionButton = get("tv-device-check-connection-button");
+    const lgRunAvailabilityElement = get("lg-run-availability");
+    const configureLgSdkButton = get("configure-lg-sdk-button");
+    const tvDeviceDialog = get("tv-device-dialog");
+    const tvDeviceDialogTitle = get("tv-device-dialog-title");
+    const tvDeviceDialogStatus = get("tv-device-dialog-status");
+    const tvDeviceNameInput = get("tv-device-name-input");
+    const tvDeviceHostInput = get("tv-device-host-input");
+    const tvDevicePassphraseInput = get("tv-device-passphrase-input");
+    const tvDevicePassphraseToggle = get("tv-device-passphrase-toggle");
+    const tvDeviceDialogCancelButton = get("tv-device-dialog-cancel-button");
+    const tvDeviceDialogSubmitButton = get("tv-device-dialog-submit-button");
+    const tvDeviceStatus = get("tv-device-status");
+    const tvToolchainStatus = get("tv-toolchain-status");
+    const sdkAutoConfigureButton = get("sdk-auto-configure-button");
+    const sdkInstallConfirmButton = get("sdk-install-confirm-button");
+    const sdkUseManagedButton = get("sdk-use-managed-button");
+    const sdkManagedToolchainStatus = get("sdk-managed-toolchain-status");
+    const sdkComponentList = get("sdk-component-list");
+    const sdkCompatibilityCatalogStatus = get("sdk-compatibility-catalog-status");
+    const sdkCompatibilityCatalogRefreshButton = get("sdk-compatibility-catalog-refresh-button");
+    const sdkCompatibilityCheckButton = get("sdk-compatibility-check-button");
+    const lgCompatibilityProductGateStatus = get("lg-compatibility-product-gate-status");
+    const lgCompatibilityProductGateUsernameInput = get("lg-compatibility-product-gate-username-input");
+    const lgCompatibilityProductGatePasswordInput = get("lg-compatibility-product-gate-password-input");
+    const lgCompatibilityProductGateSaveButton = get("lg-compatibility-product-gate-save-button");
+    const lgCompatibilityDialog = get("lg-compatibility-dialog");
+    const lgCompatibilityDialogStatus = get("lg-compatibility-dialog-status");
+    const lgCompatibilityNameInput = get("lg-compatibility-name-input");
+    const lgCompatibilityHostInput = get("lg-compatibility-host-input");
+    const lgCompatibilityPassphraseInput = get("lg-compatibility-passphrase-input");
+    const lgCompatibilityInspectionReviewButton = get("lg-compatibility-inspection-review-button");
+    const lgCompatibilityInspectionConfirmButton = get("lg-compatibility-inspection-confirm-button");
+    const lgCompatibilityValidationReviewButton = get("lg-compatibility-validation-review-button");
+    const lgCompatibilityValidationConfirmButton = get("lg-compatibility-validation-confirm-button");
+    const lgCompatibilityCloseButton = get("lg-compatibility-close-button");
+    const sdkInstallReview = get("sdk-install-review");
+    const sdkInstallProgress = get("sdk-install-progress");
+    const sdkInstallProgressText = get("sdk-install-progress-text");
+    const sdkInstallProgressSteps = get("sdk-install-progress-steps");
+    const browserComponentList = get("browser-component-list");
+    const browserAutoConfigureButton = get("browser-auto-configure-button");
+    const browserInstallConfirmButton = get("browser-install-confirm-button");
+    const browserInstallReview = get("browser-install-review");
+    const browserInstallProgress = get("browser-install-progress");
+    const browserInstallProgressText = get("browser-install-progress-text");
+    const browserInstallProgressSteps = get("browser-install-progress-steps");
+    const browserToolchainRunStatus = get("browser-toolchain-run-status");
+    const configureBrowserButton = get("configure-browser-button");
+    const tvToolchainSdkHomeInput = get("tv-toolchain-sdk-home-input");
+    const tvToolchainAppiumHomeInput = get("tv-toolchain-appium-home-input");
+    const tvToolchainAppiumBinInput = get("tv-toolchain-appium-bin-input");
+    const tvToolchainChromedriverInput = get("tv-toolchain-chromedriver-input");
+    const tvToolchainSaveButton = get("tv-toolchain-save-button");
+    const sdkDownloadLgCliButton = get("sdk-download-lg-cli-button");
+    const sdkChooseLgCliButton = get("sdk-choose-lg-cli-button");
+    const tvHelpButton = get("tv-help-button");
+    const tvHelpModal = get("tv-help-modal");
+    const tvHelpCloseButton = get("tv-help-close-button");
     const testCaseList = get("test-case-list");
     const testCaseListBody = get("test-case-list-body") || testCaseList;
     const testCaseSearchInput = get("test-case-search-input");
@@ -97,6 +199,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const testCaseDetails = get("test-case-details");
     const testCaseDetailsModal = get("test-case-details-modal");
     const selectedTestCaseId = get("selected-test-case-id");
+
+    if (sdkInstallConfirmButton) sdkInstallConfirmButton.disabled = true;
+    if (sdkUseManagedButton) sdkUseManagedButton.disabled = true;
+    if (browserInstallConfirmButton) browserInstallConfirmButton.disabled = true;
     const formMessage = get("form-message");
     const runButton = get("run-button");
     const stopButton = get("stop-button");
@@ -107,10 +213,21 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const browserMuteButton = get("browser-mute-button");
     const browserPreviewEmpty = get("browser-preview-empty");
     const browserPreviewImage = get("browser-preview-image");
+    const lgPreviewEmpty = get("lg-preview-empty");
+    const lgPreviewImage = get("lg-preview-image");
+    const lgRunState = get("lg-run-state");
+    const lgRunConfirmationDialog = get("lg-run-confirmation-dialog");
+    const lgRunConfirmationCount = get("lg-run-confirmation-count");
+    const lgRunConfirmButton = get("lg-run-confirm-button");
+    const lgRunCancelButton = get("lg-run-cancel-button");
+    const lgRecoveryDialog = get("lg-recovery-dialog");
+    const lgRecoveryRetryButton = get("lg-recovery-retry-button");
+    const lgRecoveryStopButton = get("lg-recovery-stop-button");
     const interactiveBrowser = get("interactive-browser");
     const settingsModal = get("settings-modal");
     const logsModal = get("logs-modal");
     const settingsMessage = get("settings-message");
+    const previewTargetStatus = get("preview-target-status");
     const settingsNavItems = doc?.querySelectorAll?.("[data-settings-panel]") || [];
     const settingsPanels = doc?.querySelectorAll?.("[data-settings-content]") || [];
     let cases = [];
@@ -129,6 +246,19 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     let apiRequestDepth = 0;
     let activeRunnerLog = null;
     let pendingResultSubmission = null;
+    let runTarget = "browser";
+    let tvDevices = [];
+    let deviceDialogMode = "add";
+    let editingDeviceId = "";
+    let activeLgInstallStepIndex = -1;
+    let sdkInstallProgressDismissed = false;
+    let browserToolchainReady = true;
+    let activeBrowserInstallStepIndex = -1;
+    let browserInstallProgressDismissed = false;
+    let lgRunAvailability = {ok: false, status: "DEVICE_NOT_FOUND"};
+    let pendingLgRunValues = null;
+    let activeLgCompatibilityAttemptId = "";
+    let lgCompatibilityPhase = "editing";
     const blockApiInteraction = (event) => {
         event.preventDefault?.();
         event.stopPropagation?.();
@@ -166,8 +296,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             PREVIEW_TYPE: ["none", "live", "interactive"].includes(saved.PREVIEW_TYPE)
                 ? saved.PREVIEW_TYPE
                 : DEFAULT_SETTINGS.PREVIEW_TYPE,
+            RUN_TARGET: saved.RUN_TARGET === "webos" ? "webos" : DEFAULT_SETTINGS.RUN_TARGET,
         };
         activePreviewType = settings.PREVIEW_TYPE;
+        runTarget = settings.RUN_TARGET;
         if (settingsAppUrlInput) settingsAppUrlInput.value = settings.APP_URL;
         if (apiDomainInput) apiDomainInput.value = settings.API_DOMAIN;
         if (apiAuthorizationInput) apiAuthorizationInput.value = settings.API_AUTHORIZATION;
@@ -177,6 +309,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         doc?.querySelectorAll?.('[name="preview-type"]').forEach((input) => {
             input.checked = input.value === activePreviewType;
         });
+        syncRunTargetControls();
     }
 
     function currentSettings() {
@@ -193,6 +326,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
                 ? String(timeoutSeconds)
                 : settings.API_TIMEOUT_SECONDS,
+            RUN_TARGET: runTarget,
         };
     }
 
@@ -357,13 +491,17 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             .map((testCase) => String(testCase.id));
     }
 
-    function updateSelectionUi() {
+    function canRunLg() {
+        return runTarget === "webos" && lgRunAvailability?.ok === true && lgRunAvailability.status === "READY";
+    }
+
+    function updateSelectionUi({refreshLg = true} = {}) {
         const selectedIds = getSelectedCaseIds();
         const visibleIds = getVisibleCaseIds();
         if (selectedTestCaseCount) selectedTestCaseCount.textContent = `${selectedIds.length} selected`;
         if (runButton) {
             runButton.textContent = `Run Selected (${selectedIds.length})`;
-            runButton.disabled = selectedIds.length === 0;
+            runButton.disabled = selectedIds.length === 0 || (runTarget === "browser" ? !browserToolchainReady : !canRunLg());
         }
         if (selectAllTestCases) {
             selectAllTestCases.checked = visibleIds.length > 0 && visibleIds.every((id) => selectedCaseIds.has(id));
@@ -376,6 +514,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             row.setAttribute("aria-selected", String(isSelected));
         });
         if (selectedTestCaseId) selectedTestCaseId.value = selectedIds.length === 1 ? selectedIds[0] : "";
+        if (refreshLg && runTarget === "webos") void refreshLgRunAvailability();
     }
 
     function applyCaseFilter(query = "") {
@@ -676,13 +815,1028 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         form?.querySelectorAll?.("input, select, textarea").forEach((element) => {
             element.disabled = isRunning;
         });
-        if (runButton) runButton.disabled = isRunning || getSelectedCaseIds().length === 0;
+        if (runButton) runButton.disabled = isRunning || getSelectedCaseIds().length === 0 || (runTarget === "browser" ? !browserToolchainReady : !canRunLg());
         if (stopButton) stopButton.disabled = !isRunning;
+    }
+
+    function syncRunTargetControls() {
+        if (browserTargetInput) browserTargetInput.checked = runTarget === "browser";
+        if (webosTargetInput) webosTargetInput.checked = runTarget === "webos";
+        lgDevicePanel?.classList?.toggle("hidden", runTarget !== "webos");
+        if (tvDeviceSelect) tvDeviceSelect.disabled = runTarget !== "webos" || tvDevices.length === 0;
+        if (tvDeviceAddButton) tvDeviceAddButton.disabled = runTarget !== "webos";
+        if (tvDeviceEditButton) tvDeviceEditButton.disabled = runTarget !== "webos" || !tvDeviceSelect?.value;
+        if (tvDeviceCheckConnectionButton) tvDeviceCheckConnectionButton.disabled = !canCheckTvDeviceConnection();
+        doc?.querySelectorAll?.('[name="preview-type"]').forEach((input) => {
+            input.disabled = runTarget !== "browser";
+        });
+        if (previewTargetStatus) {
+            previewTargetStatus.textContent = runTarget === "webos"
+                ? "Preview type is available for the Browser runner only."
+                : "";
+            previewTargetStatus.classList.toggle("hidden", runTarget === "browser");
+        }
+        if (browserToolchainRunStatus) {
+            browserToolchainRunStatus.textContent = runTarget === "browser" && !browserToolchainReady
+                ? "Browser tests require the project-pinned Chromium. Configure Browser to continue."
+                : "";
+        }
+        configureBrowserButton?.classList?.toggle("hidden", runTarget !== "browser" || browserToolchainReady);
+        configureLgSdkButton?.classList?.toggle("hidden", runTarget !== "webos" || lgRunAvailability?.status === "READY");
+    }
+
+    function lgAvailabilityText(value) {
+        const status = String(value?.status || "DEVICE_NOT_FOUND");
+        const copy = {
+            READY: "LG SDK and selected device are ready.",
+            DEVICE_NOT_FOUND: "Select a saved LG device to review readiness.",
+            LG_BATCH_INVALID: "Select at least one test case to review LG readiness.",
+            TOOLCHAIN_UNAVAILABLE: "Configure SDK before running LG cases.",
+            COMPATIBILITY_PROFILE_UNVERIFIED: "This LG device needs a verified compatibility profile.",
+            REGISTERED_TARGET_REQUIRED: "This LG device needs a registered local target.",
+            SAVED_CONNECTION_REQUIRED: "This LG device needs its saved connection.",
+            ACTION_CAPABILITY_UNSUPPORTED: "A selected case is not supported for LG execution.",
+        };
+        return copy[status] || "LG execution is unavailable for the selected device.";
+    }
+
+    async function refreshLgRunAvailability() {
+        if (runTarget !== "webos") return {ok: false, status: "DEVICE_NOT_FOUND"};
+        const deviceId = String(tvDeviceSelect?.value || "");
+        const selectedCaseIds = getSelectedCaseIds();
+        if (!deviceId) {
+            lgRunAvailability = {ok: false, status: "DEVICE_NOT_FOUND"};
+        } else if (typeof api?.getLgRunAvailability !== "function") {
+            lgRunAvailability = {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        } else {
+            try {
+                lgRunAvailability = await api.getLgRunAvailability({deviceId, selectedCaseIds, ...(activeFolderId ? {folderId: activeFolderId} : {})}) || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+            } catch {
+                lgRunAvailability = {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+            }
+        }
+        if (lgRunAvailabilityElement) lgRunAvailabilityElement.textContent = lgAvailabilityText(lgRunAvailability);
+        syncRunTargetControls();
+        updateSelectionUi({refreshLg: false});
+        return lgRunAvailability;
+    }
+
+    function resetTvDeviceConnectionStatus() {
+        if (tvDeviceConnectionStatus) tvDeviceConnectionStatus.textContent = "Connection not checked";
+        tvDeviceConnectionDot?.classList?.remove("checking", "connected", "unavailable");
+        tvDeviceConnectionDot?.classList?.add("not-checked");
+        if (tvDeviceCheckConnectionButton) tvDeviceCheckConnectionButton.disabled = !canCheckTvDeviceConnection();
+    }
+
+    function canCheckTvDeviceConnection() {
+        return runTarget === "webos"
+            && Boolean(tvDeviceSelect?.value)
+            && typeof api?.checkTvDeviceConnection === "function";
+    }
+
+    function renderTvDeviceConnectionStatus(response) {
+        const connected = response?.ok === true && response?.status === "CONNECTED";
+        if (tvDeviceConnectionStatus) tvDeviceConnectionStatus.textContent = connected ? "Connected" : "Connection unavailable";
+        tvDeviceConnectionDot?.classList?.remove("not-checked", "checking", "connected", "unavailable");
+        tvDeviceConnectionDot?.classList?.add(connected ? "connected" : "unavailable");
+    }
+
+    async function checkTvDeviceConnection() {
+        if (!canCheckTvDeviceConnection()) return {ok: false, status: "DEVICE_NOT_FOUND"};
+        const deviceId = String(tvDeviceSelect.value || "");
+        if (tvDeviceCheckConnectionButton) tvDeviceCheckConnectionButton.disabled = true;
+        if (tvDeviceConnectionStatus) tvDeviceConnectionStatus.textContent = "Checking connection…";
+        tvDeviceConnectionDot?.classList?.remove("not-checked", "connected", "unavailable");
+        tvDeviceConnectionDot?.classList?.add("checking");
+        try {
+            const response = await api.checkTvDeviceConnection(deviceId);
+            if (String(tvDeviceSelect?.value || "") === deviceId) renderTvDeviceConnectionStatus(response);
+            return response || {ok: false, status: "CONNECTION_UNAVAILABLE"};
+        } catch {
+            const response = {ok: false, status: "CONNECTION_UNAVAILABLE"};
+            if (String(tvDeviceSelect?.value || "") === deviceId) renderTvDeviceConnectionStatus(response);
+            return response;
+        } finally {
+            if (String(tvDeviceSelect?.value || "") === deviceId && tvDeviceCheckConnectionButton) {
+                tvDeviceCheckConnectionButton.disabled = !canCheckTvDeviceConnection();
+            }
+        }
+    }
+
+    function renderTvDevices() {
+        if (!tvDeviceSelect || !doc?.createElement) return;
+        const options = tvDevices.map((device) => {
+            const option = doc.createElement("option");
+            option.value = String(device.id || "");
+            option.textContent = String(device.label || device.id || "Saved LG device");
+            return option;
+        });
+        if (!options.length) {
+            const option = doc.createElement("option");
+            option.value = "";
+            option.textContent = "No saved LG device";
+            options.push(option);
+        }
+        const selectedDeviceId = String(tvDeviceSelect.value || "");
+        tvDeviceSelect.replaceChildren(...options);
+        tvDeviceSelect.value = tvDevices.some((device) => String(device.id || "") === selectedDeviceId)
+            ? selectedDeviceId
+            : options[0].value;
+        resetTvDeviceConnectionStatus();
+        syncRunTargetControls();
+    }
+
+    async function loadTvDevices() {
+        if (typeof api.listTvDevices !== "function") {
+            tvDevices = [];
+            renderTvDevices();
+            if (tvDeviceStatus) tvDeviceStatus.textContent = "LG device management is unavailable.";
+            return;
+        }
+        const response = await api.listTvDevices();
+        if (!response?.ok) {
+            tvDevices = [];
+            renderTvDevices();
+            if (tvDeviceStatus) tvDeviceStatus.textContent = response?.message || "Could not load saved LG devices.";
+            return;
+        }
+        tvDevices = Array.isArray(response.devices)
+            ? response.devices.filter((device) => device?.platform === "webos")
+            : [];
+        renderTvDevices();
+        if (tvDeviceStatus) {
+            tvDeviceStatus.textContent = tvDevices.length
+                ? "Select a saved LG device and test case. Run is enabled only after the main-process LG readiness review reports Ready."
+                : "No saved LG device is available.";
+        }
+    }
+
+    function clearTvDeviceDialog() {
+        if (tvDeviceNameInput) tvDeviceNameInput.value = "";
+        if (tvDeviceHostInput) tvDeviceHostInput.value = "";
+        if (tvDevicePassphraseInput) {
+            tvDevicePassphraseInput.value = "";
+            tvDevicePassphraseInput.setAttribute?.("type", "password");
+        }
+        if (tvDevicePassphraseToggle) tvDevicePassphraseToggle.textContent = "Show";
+        if (tvDeviceDialogStatus) tvDeviceDialogStatus.textContent = "";
+    }
+
+    function openTvDeviceDialog(mode) {
+        deviceDialogMode = mode === "edit" ? "edit" : "add";
+        editingDeviceId = deviceDialogMode === "edit" ? String(tvDeviceSelect?.value || "") : "";
+        clearTvDeviceDialog();
+        const selected = tvDevices.find((device) => String(device?.id || "") === editingDeviceId);
+        if (deviceDialogMode === "edit" && selected && tvDeviceNameInput) tvDeviceNameInput.value = String(selected.label || "");
+        if (tvDeviceDialogTitle) tvDeviceDialogTitle.textContent = deviceDialogMode === "edit" ? "Edit LG device" : "Add LG device";
+        openModal(tvDeviceDialog);
+    }
+
+    function closeTvDeviceDialog() {
+        clearTvDeviceDialog();
+        editingDeviceId = "";
+        closeModal(tvDeviceDialog);
+    }
+
+    function toggleTvDevicePassphrase() {
+        if (!tvDevicePassphraseInput) return;
+        const revealed = tvDevicePassphraseInput.getAttribute?.("type") === "text";
+        tvDevicePassphraseInput.setAttribute?.("type", revealed ? "password" : "text");
+        if (tvDevicePassphraseToggle) tvDevicePassphraseToggle.textContent = revealed ? "Show" : "Hide";
+    }
+
+    async function submitTvDeviceDialog() {
+        if (typeof api.validateAndSaveTvDevice !== "function") return {ok: false, status: "VALIDATION_UNAVAILABLE"};
+        const candidate = {
+            ...(editingDeviceId ? {deviceId: editingDeviceId} : {}),
+            label: String(tvDeviceNameInput?.value || "").trim(),
+            host: String(tvDeviceHostInput?.value || "").trim(),
+            passphrase: String(tvDevicePassphraseInput?.value || ""),
+        };
+        if (tvDeviceDialogSubmitButton) tvDeviceDialogSubmitButton.disabled = true;
+        try {
+            const response = await api.validateAndSaveTvDevice(candidate);
+            if (!response?.ok || !response.device) {
+                if (tvDeviceDialogStatus) tvDeviceDialogStatus.textContent = response?.status === "VALIDATION_UNAVAILABLE"
+                    ? "Connection validation is not available in this build."
+                    : "Connection validation did not complete. No device was saved.";
+                return response || {ok: false, status: "VALIDATION_FAILED"};
+            }
+            await loadTvDevices();
+            if (tvDeviceSelect) tvDeviceSelect.value = String(response.device.id || "");
+            if (tvDeviceStatus) tvDeviceStatus.textContent = "LG device saved after verified validation.";
+            closeTvDeviceDialog();
+            return response;
+        } catch {
+            if (tvDeviceDialogStatus) tvDeviceDialogStatus.textContent = "Connection validation did not complete. No device was saved.";
+            return {ok: false, status: "VALIDATION_FAILED"};
+        } finally {
+            if (tvDeviceDialogSubmitButton) tvDeviceDialogSubmitButton.disabled = false;
+        }
+    }
+
+    async function inspectTvToolchain() {
+        if (typeof api.inspectTvToolchain !== "function") {
+            if (tvToolchainStatus) tvToolchainStatus.textContent = "The local LG toolchain inspector is unavailable.";
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+        try {
+            const response = await api.inspectTvToolchain();
+            if (tvToolchainStatus) {
+                tvToolchainStatus.textContent = Array.isArray(response?.tools)
+                    ? toolchainStatusText(response, "The local LG toolchain inspector is unavailable.")
+                    : response?.message || "The local LG toolchain inspector is unavailable.";
+            }
+            return response || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        } catch {
+            if (tvToolchainStatus) tvToolchainStatus.textContent = "The local LG toolchain inspector is unavailable.";
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+    }
+
+    async function planLgToolchainSetup() {
+        if (typeof api.planLgToolchainSetup !== "function") {
+            if (tvToolchainStatus) tvToolchainStatus.textContent = "Local LG setup review is unavailable.";
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+        if (sdkAutoConfigureButton) sdkAutoConfigureButton.disabled = true;
+        try {
+            const response = await api.planLgToolchainSetup();
+            renderSdkComponentList(response);
+            renderSdkInstallReview(response?.ok
+                ? response.state === "ready"
+                    ? "Review complete. All reviewed components are already verified locally."
+                    : "Review complete. Nothing is installed until you confirm."
+                : "Local LG setup review is unavailable.");
+            if (sdkManagedToolchainStatus) sdkManagedToolchainStatus.textContent = "";
+            if (sdkInstallConfirmButton) sdkInstallConfirmButton.disabled = !(response?.ok && response.state !== "ready");
+            return response || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        } catch {
+            renderSdkInstallReview("Local LG setup review is unavailable.");
+            if (sdkInstallConfirmButton) sdkInstallConfirmButton.disabled = true;
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        } finally {
+            if (sdkAutoConfigureButton) sdkAutoConfigureButton.disabled = false;
+        }
+    }
+
+    async function installLgToolchain() {
+        if (typeof api.installLgToolchain !== "function") {
+            if (sdkManagedToolchainStatus) sdkManagedToolchainStatus.textContent = "Local LG installation is unavailable.";
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+        if (sdkInstallConfirmButton) sdkInstallConfirmButton.disabled = true;
+        resetSdkInstallProgress();
+        renderSdkInstallProgress({code: "preparing"});
+        try {
+            const response = await api.installLgToolchain({
+                confirmed: true,
+                deviceId: String(tvDeviceSelect?.value || ""),
+            });
+            if (response?.ok) renderSdkComponentList(response);
+            renderSdkInstallReview(response?.ok ? "Installation completed. Review the component status above." : lgInstallationFailureText(response?.status, response?.verification));
+            renderSdkInstallProgress(response?.ok
+                ? {code: "complete"}
+                : {code: "failed", status: response?.status});
+            if (sdkManagedToolchainStatus) sdkManagedToolchainStatus.textContent = "";
+            return response || {ok: false, status: "INSTALL_FAILED"};
+        } catch {
+            renderSdkInstallProgress({code: "failed", status: "INSTALL_FAILED"});
+            if (sdkManagedToolchainStatus) sdkManagedToolchainStatus.textContent = "Local LG installation did not complete.";
+            return {ok: false, status: "INSTALL_FAILED"};
+        }
+    }
+
+    async function loadLgToolchainStatus() {
+        if (typeof api.getLgToolchainStatus !== "function") {
+            if (sdkManagedToolchainStatus) sdkManagedToolchainStatus.textContent = "Local LG managed availability is unavailable.";
+            if (sdkUseManagedButton) sdkUseManagedButton.disabled = true;
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+        try {
+            const response = await api.getLgToolchainStatus();
+            renderSdkComponentList(response);
+            if (sdkManagedToolchainStatus) sdkManagedToolchainStatus.textContent = response?.ok ? "" : "Local LG managed availability is unavailable.";
+            if (sdkUseManagedButton) sdkUseManagedButton.disabled = !(response?.ok && response.state === "ready");
+            return response || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        } catch {
+            if (sdkManagedToolchainStatus) sdkManagedToolchainStatus.textContent = "Local LG managed availability is unavailable.";
+            if (sdkUseManagedButton) sdkUseManagedButton.disabled = true;
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+    }
+
+    async function activateManagedLgToolchain() {
+        if (typeof api.activateManagedLgToolchain !== "function") {
+            if (tvToolchainStatus) tvToolchainStatus.textContent = "Verified managed LG tools are unavailable.";
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+        if (sdkUseManagedButton) sdkUseManagedButton.disabled = true;
+        try {
+            const response = await api.activateManagedLgToolchain();
+            if (tvToolchainStatus) {
+                tvToolchainStatus.textContent = response?.ok
+                    ? `Selected source: Managed local tools. ${toolchainStatusText(response, "Ready.")}`
+                    : "Verified managed LG tools are unavailable.";
+            }
+            return response || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        } catch {
+            if (tvToolchainStatus) tvToolchainStatus.textContent = "Verified managed LG tools are unavailable.";
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+    }
+
+    async function loadSdkToolchainStatus() {
+        const configuration = await loadTvToolchainConfiguration();
+        const managed = await loadLgToolchainStatus();
+        const catalog = await loadLgCompatibilityCatalogStatus();
+        const productGate = await loadLgCompatibilityProductGateStatus();
+        return {configuration, managed, catalog, productGate};
+    }
+
+    function compatibilityProductGateStatusText(status) {
+        const messages = {
+            LG_COMPATIBILITY_CREDENTIALS_REQUIRED: "Set the local compatibility account before validation.",
+            LG_COMPATIBILITY_CREDENTIALS_INVALID: "Enter both compatibility account fields before saving.",
+            LG_COMPATIBILITY_CREDENTIALS_SAVED: "Compatibility account saved locally with encryption.",
+            LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE: "The encrypted local compatibility account is unavailable.",
+        };
+        return messages[status] || "The encrypted local compatibility account is unavailable.";
+    }
+
+    async function loadLgCompatibilityProductGateStatus() {
+        if (typeof api.getLgCompatibilityProductGateStatus !== "function") {
+            if (lgCompatibilityProductGateStatus) lgCompatibilityProductGateStatus.textContent = compatibilityProductGateStatusText("LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE");
+            return {ok: false, status: "LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE"};
+        }
+        try {
+            const response = await api.getLgCompatibilityProductGateStatus();
+            if (lgCompatibilityProductGateStatus) lgCompatibilityProductGateStatus.textContent = compatibilityProductGateStatusText(response?.status);
+            return response || {ok: false, status: "LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE"};
+        } catch {
+            if (lgCompatibilityProductGateStatus) lgCompatibilityProductGateStatus.textContent = compatibilityProductGateStatusText("LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE");
+            return {ok: false, status: "LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE"};
+        }
+    }
+
+    async function saveLgCompatibilityProductGateCredentials() {
+        if (typeof api.saveLgCompatibilityProductGateCredentials !== "function") {
+            if (lgCompatibilityProductGateStatus) lgCompatibilityProductGateStatus.textContent = compatibilityProductGateStatusText("LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE");
+            return {ok: false, status: "LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE"};
+        }
+        const request = {
+            username: String(lgCompatibilityProductGateUsernameInput?.value || "").trim(),
+            password: String(lgCompatibilityProductGatePasswordInput?.value || ""),
+        };
+        if (lgCompatibilityProductGateSaveButton) lgCompatibilityProductGateSaveButton.disabled = true;
+        try {
+            const response = await api.saveLgCompatibilityProductGateCredentials(request);
+            if (lgCompatibilityProductGateUsernameInput) lgCompatibilityProductGateUsernameInput.value = "";
+            if (lgCompatibilityProductGatePasswordInput) lgCompatibilityProductGatePasswordInput.value = "";
+            if (lgCompatibilityProductGateStatus) lgCompatibilityProductGateStatus.textContent = compatibilityProductGateStatusText(response?.status);
+            return response || {ok: false, status: "LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE"};
+        } catch {
+            if (lgCompatibilityProductGateUsernameInput) lgCompatibilityProductGateUsernameInput.value = "";
+            if (lgCompatibilityProductGatePasswordInput) lgCompatibilityProductGatePasswordInput.value = "";
+            if (lgCompatibilityProductGateStatus) lgCompatibilityProductGateStatus.textContent = compatibilityProductGateStatusText("LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE");
+            return {ok: false, status: "LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE"};
+        } finally {
+            if (lgCompatibilityProductGateSaveButton) lgCompatibilityProductGateSaveButton.disabled = false;
+        }
+    }
+
+    function compatibilityCatalogStatusText(response) {
+        if (response?.ok && response.state === "available") {
+            const count = Number(response.profileCount) || 0;
+            const profileText = `${count} ${count === 1 ? "profile" : "profiles"}`;
+            return response.source === "cached"
+                ? `Compatibility catalog available: ${profileText}. Updated locally.`
+                : `Compatibility catalog available: ${profileText}. Using the bundled catalog.`;
+        }
+        if (response?.status === "CATALOG_REFRESH_UNAVAILABLE") return "Compatibility catalog update needs the configured API authorization.";
+        if (response?.status === "CATALOG_INVALID") return "Compatibility catalog update was not accepted. The existing catalog is unchanged.";
+        return "Compatibility catalog could not be updated. The existing catalog is unchanged.";
+    }
+
+    async function loadLgCompatibilityCatalogStatus() {
+        if (typeof api.getLgCompatibilityCatalogStatus !== "function") {
+            if (sdkCompatibilityCatalogStatus) sdkCompatibilityCatalogStatus.textContent = "Compatibility catalog status is unavailable.";
+            return {ok: false, status: "CATALOG_REFRESH_UNAVAILABLE"};
+        }
+        try {
+            const response = await api.getLgCompatibilityCatalogStatus();
+            if (sdkCompatibilityCatalogStatus) sdkCompatibilityCatalogStatus.textContent = compatibilityCatalogStatusText(response);
+            return response || {ok: false, status: "CATALOG_REFRESH_FAILED"};
+        } catch {
+            if (sdkCompatibilityCatalogStatus) sdkCompatibilityCatalogStatus.textContent = "Compatibility catalog status is unavailable.";
+            return {ok: false, status: "CATALOG_REFRESH_FAILED"};
+        }
+    }
+
+    async function refreshLgCompatibilityCatalog() {
+        if (typeof api.refreshLgCompatibilityCatalog !== "function") {
+            if (sdkCompatibilityCatalogStatus) sdkCompatibilityCatalogStatus.textContent = "Compatibility catalog update is unavailable.";
+            return {ok: false, status: "CATALOG_REFRESH_UNAVAILABLE"};
+        }
+        if (sdkCompatibilityCatalogRefreshButton) sdkCompatibilityCatalogRefreshButton.disabled = true;
+        try {
+            const current = currentSettings();
+            const response = await api.refreshLgCompatibilityCatalog({
+                apiDomain: current.API_DOMAIN,
+                authorization: current.API_AUTHORIZATION,
+                timeoutMs: Number(current.API_TIMEOUT_SECONDS) * 1000,
+            });
+            if (sdkCompatibilityCatalogStatus) sdkCompatibilityCatalogStatus.textContent = compatibilityCatalogStatusText(response);
+            return response || {ok: false, status: "CATALOG_REFRESH_FAILED"};
+        } catch {
+            if (sdkCompatibilityCatalogStatus) sdkCompatibilityCatalogStatus.textContent = "Compatibility catalog could not be updated. The existing catalog is unchanged.";
+            return {ok: false, status: "CATALOG_REFRESH_FAILED"};
+        } finally {
+            if (sdkCompatibilityCatalogRefreshButton) sdkCompatibilityCatalogRefreshButton.disabled = false;
+        }
+    }
+
+    function compatibilityStatusText(value) {
+        const status = typeof value === "string" ? value : value?.status;
+        const failedAction = typeof value === "object" && value ? String(value.failedAction || "").trim() : "";
+        const failureCode = typeof value === "object" && value ? String(value.failureCode || "").trim() : "";
+        const appiumFailureCode = typeof value === "object" && value ? String(value.appiumFailureCode || "").trim() : "";
+        const failureStage = typeof value === "object" && value ? String(value.failureStage || "").trim() : "";
+        const failedActionMessages = {
+            wait_for_ready: "The compatibility readiness step did not pass. The temporary setup was removed.",
+            login: "The compatibility login step did not pass. The temporary setup was removed.",
+            open_home: "The compatibility home step did not pass. The temporary setup was removed.",
+            open_search: "The compatibility search page did not open. The temporary setup was removed.",
+            search_content: "The compatibility search step did not pass. The temporary setup was removed.",
+            play_search_result: "The compatibility playback step did not pass. The temporary setup was removed.",
+            press_ok: "The compatibility OK step did not pass. The temporary setup was removed.",
+            press_back: "The compatibility back step did not pass. The temporary setup was removed.",
+            assert_screen: "The compatibility screen check did not pass. The temporary setup was removed.",
+            logout_cleanup: "The compatibility cleanup step did not pass. The temporary setup was removed.",
+        };
+        const failedCodeMessages = {
+            SESSION_UNAVAILABLE: "The compatibility session could not start. The temporary setup was removed.",
+            DOM_INSPECTION_UNAVAILABLE: "The compatibility session could not inspect the device. The temporary setup was removed.",
+            VISUAL_CAPTURE_UNAVAILABLE: "The compatibility session could not capture a genuine Appium screenshot. The temporary setup was removed.",
+            TV_CLEANUP_FAILED: "The compatibility cleanup did not complete. The temporary setup was removed.",
+        };
+        const appiumFailureMessages = {
+            APPIUM_CAPABILITY_APP_ID: "The compatibility setup rejected the LG appId capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_APP_LAUNCH_PARAMS: "The compatibility setup rejected the LG appLaunchParams capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_AUTO_EXTEND_DEV_MODE: "The compatibility setup rejected the LG autoExtendDevMode capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_AUTOMATION_NAME: "The compatibility setup rejected the LG automationName capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_CHROMEDRIVER_EXECUTABLE: "The compatibility setup rejected the LG chromedriverExecutable capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_DEVICE_HOST: "The compatibility setup rejected the LG deviceHost capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_DEVICE_NAME: "The compatibility setup rejected the LG deviceName capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_FULL_RESET: "The compatibility setup rejected the LG fullReset capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_NO_RESET: "The compatibility setup rejected the LG noReset capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_PLATFORM_NAME: "The compatibility setup rejected the LG platformName capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_RC_MODE: "The compatibility setup rejected the LG rcMode capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_REMOTE_ONLY: "The compatibility setup rejected the LG remoteOnly capability. The temporary setup was removed.",
+            APPIUM_CAPABILITY_USE_SECURE_WEBSOCKET: "The compatibility setup rejected the LG useSecureWebsocket capability. The temporary setup was removed.",
+            APPIUM_CAPABILITIES: "The compatibility setup rejected the LG Appium capabilities. The temporary setup was removed.",
+            APPIUM_CHROMEDRIVER: "The compatibility setup could not start the verified ChromeDriver. The temporary setup was removed.",
+            APPIUM_DEVICE_CONNECTION: "The compatibility setup could not connect the LG Appium session to the device. The temporary setup was removed.",
+            APPIUM_DRIVER: "The compatibility setup could not resolve the LG Appium driver. The temporary setup was removed.",
+            APPIUM_SESSION: "The compatibility setup could not create the LG Appium session. The temporary setup was removed.",
+        };
+        const failedStageMessages = {
+            "attempt-claim": "The compatibility review expired before validation could begin. Start a new inspection.",
+            "temporary-driver-create": "The compatibility check could not create a temporary ChromeDriver workspace. The temporary setup was removed.",
+            "chromedriver-download": "The compatibility check could not download the verified temporary ChromeDriver. The temporary setup was removed.",
+            "chromedriver-archive-verify": "The compatibility check could not verify the downloaded ChromeDriver archive. The temporary setup was removed.",
+            "chromedriver-extract": "The compatibility check could not extract the verified temporary ChromeDriver. The temporary setup was removed.",
+            "chromedriver-binary-verify": "The compatibility check could not verify the extracted ChromeDriver binary. The temporary setup was removed.",
+            "target-acquire": "The compatibility check could not recreate the temporary LG target. The temporary setup was removed.",
+            "identity-check": "The compatibility check could not reread the LG device identity. The temporary setup was removed.",
+            "case-run": "The built-in compatibility case failed before a runner stage was reported. The temporary setup was removed.",
+            "preflight-ready": "The compatibility setup failed before the temporary Appium session started. The temporary setup was removed.",
+            "appium-started": "The compatibility setup failed while starting the temporary Appium session. The temporary setup was removed.",
+            "session-creating": "The compatibility setup failed while creating the temporary Appium session. The temporary setup was removed.",
+            "session-starting": "The compatibility setup failed while starting the temporary Appium session. The temporary setup was removed.",
+            "session-started": "The compatibility setup failed after the session started but before the case began. The temporary setup was removed.",
+            "case-started": "The compatibility case failed before any step was reported. The temporary setup was removed.",
+            "case-finished": "The compatibility case finished but the overall validation still failed. The temporary setup was removed.",
+        };
+        const messages = {
+            INSPECTION_INPUT_INVALID: "Enter a device name, host, and passphrase before reviewing inspection.",
+            CONNECTION_UNAVAILABLE: "The device inspection could not connect. Nothing was saved.",
+            INSPECTION_FAILED: "The device inspection did not complete. Nothing was saved.",
+            COMPATIBILITY_PROFILE_UNVERIFIED: "This device does not have a verified compatibility profile. Ask a maintainer to validate this model and firmware combination.",
+            COMPATIBILITY_VERIFIED: "Compatibility profile verified. Review the built-in product-gate validation.",
+            LG_COMPATIBILITY_CREDENTIALS_REQUIRED: "Set the local compatibility account in SDK configuration before validation.",
+            LG_COMPATIBILITY_CREDENTIALS_UNAVAILABLE: "The encrypted local compatibility account is unavailable.",
+            LG_COMPATIBILITY_CASE_UNSUPPORTED: "The built-in LG compatibility case is not supported by the current adapter.",
+            ATTEMPT_NOT_FOUND: "This compatibility review expired. Start a new inspection.",
+            TEMPORARY_DRIVER_UNAVAILABLE: "The verified temporary ChromeDriver could not be prepared.",
+            DEVICE_IDENTITY_MISMATCH: "The device identity changed after inspection. Start a new inspection.",
+            VALIDATION_PASSED: "Compatibility validation passed for the selected case.",
+            VALIDATION_FAILED: "Compatibility validation did not pass. The temporary setup was removed.",
+        };
+        if (status === "VALIDATION_FAILED" && failedActionMessages[failedAction]) return failedActionMessages[failedAction];
+        if (status === "VALIDATION_FAILED" && appiumFailureMessages[appiumFailureCode]) return appiumFailureMessages[appiumFailureCode];
+        if (status === "VALIDATION_FAILED" && failedCodeMessages[failureCode]) return failedCodeMessages[failureCode];
+        if (status === "VALIDATION_FAILED" && failedStageMessages[failureStage]) return failedStageMessages[failureStage];
+        return messages[status] || "Compatibility check is unavailable. Nothing was saved.";
+    }
+
+    function setLgCompatibilityStatus(status) {
+        if (lgCompatibilityDialogStatus) lgCompatibilityDialogStatus.textContent = compatibilityStatusText(status);
+    }
+
+    function setLgCompatibilityControls() {
+        const inspecting = lgCompatibilityPhase === "inspect-confirmation";
+        const inspected = lgCompatibilityPhase === "inspected";
+        const validating = lgCompatibilityPhase === "validation-confirmation";
+        lgCompatibilityInspectionReviewButton?.classList.toggle("hidden", inspecting || inspected || validating || lgCompatibilityPhase === "result");
+        lgCompatibilityInspectionConfirmButton?.classList.toggle("hidden", !inspecting);
+        lgCompatibilityValidationReviewButton?.classList.toggle("hidden", !inspected);
+        lgCompatibilityValidationConfirmButton?.classList.toggle("hidden", !validating);
+    }
+
+    function clearLgCompatibilityDialog() {
+        activeLgCompatibilityAttemptId = "";
+        lgCompatibilityPhase = "editing";
+        if (lgCompatibilityNameInput) lgCompatibilityNameInput.value = "";
+        if (lgCompatibilityHostInput) lgCompatibilityHostInput.value = "";
+        if (lgCompatibilityPassphraseInput) lgCompatibilityPassphraseInput.value = "";
+        if (lgCompatibilityDialogStatus) lgCompatibilityDialogStatus.textContent = "";
+        setLgCompatibilityControls();
+    }
+
+    function openLgCompatibilityDialog() {
+        clearLgCompatibilityDialog();
+        openModal(lgCompatibilityDialog);
+    }
+
+    function reviewLgCompatibilityInspection() {
+        const label = String(lgCompatibilityNameInput?.value || "").trim();
+        const host = String(lgCompatibilityHostInput?.value || "").trim();
+        const passphrase = String(lgCompatibilityPassphraseInput?.value || "");
+        if (!label || !host || !passphrase) {
+            setLgCompatibilityStatus("INSPECTION_INPUT_INVALID");
+            return false;
+        }
+        lgCompatibilityPhase = "inspect-confirmation";
+        if (lgCompatibilityDialogStatus) lgCompatibilityDialogStatus.textContent = "Confirm inspection to create a temporary local target and read the device model and firmware. This does not run a test.";
+        setLgCompatibilityControls();
+        return true;
+    }
+
+    async function confirmLgCompatibilityInspection() {
+        if (lgCompatibilityPhase !== "inspect-confirmation") return {ok: false, status: "INSPECTION_CONFIRMATION_REQUIRED"};
+        if (typeof api.inspectLgCompatibilityDevice !== "function") {
+            setLgCompatibilityStatus("INSPECTION_FAILED");
+            return {ok: false, status: "INSPECTION_FAILED"};
+        }
+        const request = {
+            confirmed: true,
+            label: String(lgCompatibilityNameInput?.value || "").trim(),
+            host: String(lgCompatibilityHostInput?.value || "").trim(),
+            passphrase: String(lgCompatibilityPassphraseInput?.value || ""),
+        };
+        if (lgCompatibilityInspectionConfirmButton) lgCompatibilityInspectionConfirmButton.disabled = true;
+        try {
+            const response = await api.inspectLgCompatibilityDevice(request);
+            if (lgCompatibilityHostInput) lgCompatibilityHostInput.value = "";
+            if (lgCompatibilityPassphraseInput) lgCompatibilityPassphraseInput.value = "";
+            if (response?.ok && response.status === "COMPATIBILITY_VERIFIED" && typeof response.attemptId === "string") {
+                activeLgCompatibilityAttemptId = response.attemptId;
+                lgCompatibilityPhase = "inspected";
+            } else {
+                lgCompatibilityPhase = "editing";
+            }
+            setLgCompatibilityStatus(response?.status);
+            setLgCompatibilityControls();
+            return response || {ok: false, status: "INSPECTION_FAILED"};
+        } catch {
+            if (lgCompatibilityHostInput) lgCompatibilityHostInput.value = "";
+            if (lgCompatibilityPassphraseInput) lgCompatibilityPassphraseInput.value = "";
+            lgCompatibilityPhase = "editing";
+            setLgCompatibilityStatus("INSPECTION_FAILED");
+            setLgCompatibilityControls();
+            return {ok: false, status: "INSPECTION_FAILED"};
+        } finally {
+            if (lgCompatibilityInspectionConfirmButton) lgCompatibilityInspectionConfirmButton.disabled = false;
+        }
+    }
+
+    function reviewLgCompatibilityValidation() {
+        if (!activeLgCompatibilityAttemptId) {
+            setLgCompatibilityStatus("ATTEMPT_NOT_FOUND");
+            return false;
+        }
+        lgCompatibilityPhase = "validation-confirmation";
+        if (lgCompatibilityDialogStatus) lgCompatibilityDialogStatus.textContent = "Confirm the built-in MyTV product-gate case. It will run once with the verified temporary driver and then remove all temporary resources.";
+        setLgCompatibilityControls();
+        return true;
+    }
+
+    async function confirmLgCompatibilityValidation() {
+        if (lgCompatibilityPhase !== "validation-confirmation") return {ok: false, status: "VALIDATION_CONFIRMATION_REQUIRED"};
+        if (!activeLgCompatibilityAttemptId || typeof api.runLgCompatibilityValidation !== "function") {
+            lgCompatibilityPhase = "inspected";
+            setLgCompatibilityStatus("ATTEMPT_NOT_FOUND");
+            setLgCompatibilityControls();
+            return {ok: false, status: "ATTEMPT_NOT_FOUND"};
+        }
+        if (lgCompatibilityValidationConfirmButton) lgCompatibilityValidationConfirmButton.disabled = true;
+        try {
+            const response = await api.runLgCompatibilityValidation({
+                confirmed: true,
+                attemptId: activeLgCompatibilityAttemptId,
+            });
+            lgCompatibilityPhase = "result";
+            setLgCompatibilityStatus(response);
+            setLgCompatibilityControls();
+            return response || {ok: false, status: "VALIDATION_FAILED"};
+        } catch {
+            lgCompatibilityPhase = "result";
+            setLgCompatibilityStatus("VALIDATION_FAILED");
+            setLgCompatibilityControls();
+            return {ok: false, status: "VALIDATION_FAILED"};
+        } finally {
+            if (lgCompatibilityValidationConfirmButton) lgCompatibilityValidationConfirmButton.disabled = false;
+        }
+    }
+
+    async function closeLgCompatibilityDialog() {
+        const attemptId = activeLgCompatibilityAttemptId;
+        clearLgCompatibilityDialog();
+        closeModal(lgCompatibilityDialog);
+        if (attemptId && typeof api.discardLgCompatibilityAttempt === "function") {
+            try {
+                await api.discardLgCompatibilityAttempt({attemptId});
+            } catch {
+                // Main-process discard is idempotent and no cleanup detail is renderer-visible.
+            }
+        }
+    }
+
+    function renderBrowserComponentList(response) {
+        if (!browserComponentList) return;
+        const component = response?.component;
+        browserComponentList.replaceChildren();
+        if (!component) {
+            const empty = doc.createElement("p");
+            empty.className = "field-note";
+            empty.textContent = "Browser component status is unavailable.";
+            browserComponentList.append(empty);
+            return;
+        }
+        const ready = component.status === "ready";
+        const row = doc.createElement("article");
+        row.className = "sdk-component-row";
+        const identity = doc.createElement("div");
+        identity.className = "sdk-component-identity";
+        const name = doc.createElement("strong");
+        name.textContent = String(component.label || "Playwright Chromium");
+        const version = doc.createElement("span");
+        version.className = "sdk-component-version";
+        version.textContent = component.version ? `Version ${component.version}` : "Project-pinned version";
+        identity.append(name, version);
+        const detail = doc.createElement("div");
+        detail.className = "sdk-component-detail";
+        const badge = doc.createElement("span");
+        badge.className = `sdk-component-badge ${ready ? "ready" : "missing"}`;
+        badge.textContent = ready ? "Ready" : "Missing";
+        const guidance = doc.createElement("span");
+        guidance.className = "sdk-component-guidance";
+        guidance.textContent = ready ? "Verified in private app storage." : "Install the reviewed project-pinned Chromium.";
+        detail.append(badge, guidance);
+        row.append(identity, detail);
+        browserComponentList.append(row);
+    }
+
+    function renderBrowserInstallReview(message) {
+        if (!browserInstallReview) return;
+        browserInstallReview.textContent = String(message || "");
+        browserInstallReview.classList.toggle("hidden", !message);
+    }
+
+    function renderBrowserInstallProgress(event) {
+        if (!browserInstallProgress || !browserInstallProgressText || !browserInstallProgressSteps || !event || browserInstallProgressDismissed) return;
+        const code = typeof event.code === "string" ? event.code : "";
+        const stepIndex = BROWSER_INSTALL_PROGRESS_STEPS.findIndex((step) => step.code === code);
+        const isFailure = code === "failed" && BROWSER_INSTALL_FAILURE_STATUSES.has(event.status);
+        if (stepIndex < 0 && !isFailure) return;
+        browserInstallProgress.classList.remove("hidden", "attention", "complete");
+        if (isFailure) {
+            browserInstallProgress.classList.add("attention");
+            browserInstallProgressText.textContent = "Installation stopped. Chromium was not activated.";
+        } else {
+            activeBrowserInstallStepIndex = stepIndex;
+            if (code === "complete") browserInstallProgress.classList.add("complete");
+            browserInstallProgressText.textContent = BROWSER_INSTALL_PROGRESS_STEPS[stepIndex].label;
+        }
+        const progressBar = browserInstallProgress.querySelector?.(".sdk-install-progress-bar");
+        progressBar?.setAttribute?.("aria-valuetext", browserInstallProgressText.textContent);
+        progressBar?.setAttribute?.("aria-valuenow", String(Math.max(0, activeBrowserInstallStepIndex + 1)));
+        const activeIndex = isFailure ? Math.max(0, activeBrowserInstallStepIndex) : stepIndex;
+        browserInstallProgressSteps.replaceChildren(...BROWSER_INSTALL_PROGRESS_STEPS.map((step, index) => {
+            const row = doc.createElement("li");
+            row.textContent = step.label;
+            row.className = index < activeIndex ? "complete" : index === activeIndex ? "current" : "pending";
+            return row;
+        }));
+    }
+
+    function resetBrowserInstallProgress({dismiss = false} = {}) {
+        browserInstallProgressDismissed = dismiss;
+        activeBrowserInstallStepIndex = -1;
+        if (!browserInstallProgress || !browserInstallProgressText || !browserInstallProgressSteps) return;
+        browserInstallProgress.classList.add("hidden");
+        browserInstallProgress.classList.remove("attention", "complete");
+        browserInstallProgressText.textContent = "";
+        browserInstallProgressSteps.replaceChildren();
+        const progressBar = browserInstallProgress.querySelector?.(".sdk-install-progress-bar");
+        progressBar?.removeAttribute?.("aria-valuenow");
+        progressBar?.setAttribute?.("aria-valuetext", "Preparing");
+    }
+
+    async function loadBrowserToolchainStatus() {
+        if (typeof api.getBrowserToolchainStatus !== "function") {
+            browserToolchainReady = false;
+            renderBrowserComponentList();
+            syncRunTargetControls();
+            updateSelectionUi();
+            return {ok: false, status: "BROWSER_TOOLCHAIN_UNAVAILABLE"};
+        }
+        try {
+            const response = await api.getBrowserToolchainStatus();
+            browserToolchainReady = Boolean(response?.ok && response.state === "ready");
+            renderBrowserComponentList(response);
+            syncRunTargetControls();
+            updateSelectionUi();
+            return response || {ok: false, status: "BROWSER_TOOLCHAIN_UNAVAILABLE"};
+        } catch {
+            browserToolchainReady = false;
+            renderBrowserComponentList();
+            syncRunTargetControls();
+            updateSelectionUi();
+            return {ok: false, status: "BROWSER_TOOLCHAIN_UNAVAILABLE"};
+        }
+    }
+
+    async function planBrowserToolchainSetup() {
+        if (typeof api.planBrowserToolchainSetup !== "function") return {ok: false, status: "BROWSER_TOOLCHAIN_UNAVAILABLE"};
+        if (browserAutoConfigureButton) browserAutoConfigureButton.disabled = true;
+        try {
+            const response = await api.planBrowserToolchainSetup();
+            browserToolchainReady = Boolean(response?.ok && response.state === "ready");
+            renderBrowserComponentList(response);
+            renderBrowserInstallReview(response?.ok
+                ? browserToolchainReady ? "Review complete. The project-pinned Chromium is verified locally." : "Review complete. Nothing is installed until you confirm."
+                : "Browser setup review is unavailable.");
+            if (browserInstallConfirmButton) browserInstallConfirmButton.disabled = !(response?.ok && response.state !== "ready");
+            syncRunTargetControls();
+            updateSelectionUi();
+            return response || {ok: false, status: "BROWSER_TOOLCHAIN_UNAVAILABLE"};
+        } catch {
+            renderBrowserInstallReview("Browser setup review is unavailable.");
+            return {ok: false, status: "BROWSER_TOOLCHAIN_UNAVAILABLE"};
+        } finally {
+            if (browserAutoConfigureButton) browserAutoConfigureButton.disabled = false;
+        }
+    }
+
+    async function installBrowserToolchain() {
+        if (typeof api.installBrowserToolchain !== "function") return {ok: false, status: "BROWSER_TOOLCHAIN_UNAVAILABLE"};
+        if (browserInstallConfirmButton) browserInstallConfirmButton.disabled = true;
+        resetBrowserInstallProgress();
+        renderBrowserInstallProgress({code: "preparing"});
+        try {
+            const response = await api.installBrowserToolchain({confirmed: true});
+            browserToolchainReady = Boolean(response?.ok && response.state === "ready");
+            renderBrowserComponentList(response);
+            renderBrowserInstallReview(response?.ok ? "Installation completed. Browser tests are ready." : "The reviewed Chromium installation did not complete. Nothing was changed.");
+            renderBrowserInstallProgress(response?.ok ? {code: "complete"} : {code: "failed", status: response?.status || "INSTALL_FAILED"});
+            syncRunTargetControls();
+            updateSelectionUi();
+            return response || {ok: false, status: "INSTALL_FAILED"};
+        } catch {
+            renderBrowserInstallProgress({code: "failed", status: "INSTALL_FAILED"});
+            return {ok: false, status: "INSTALL_FAILED"};
+        }
+    }
+
+    function toolchainStatusText(response, fallback) {
+        const components = Array.isArray(response?.components) ? response.components : [];
+        const tools = Array.isArray(response?.tools) ? response.tools : [];
+        const entries = [...components, ...tools];
+        return entries.length
+            ? entries.map((entry) => `${entry.label || entry.id}: ${entry.status || "unknown"}${entry.version ? ` (${entry.version})` : ""}`).join("; ")
+            : fallback;
+    }
+
+    function sdkComponentPresentation(component) {
+        const status = String(component?.status || "unknown").toLowerCase();
+        if (status === "ready") return {label: "Ready", className: "ready", guidance: "Verified locally."};
+        if (status === "missing") {
+            if (component?.id === "webos-cli") return {label: "Missing", className: "missing", guidance: "Download from LG, then choose the original archive."};
+            if (component?.id === "chromedriver") return {label: "Missing", className: "missing", guidance: "Requires a verified compatibility profile."};
+            return {label: "Missing", className: "missing", guidance: "Included in reviewed installation."};
+        }
+        if (status === "downloading") return {label: "Downloading", className: "progress", guidance: "Downloading the reviewed local component."};
+        if (status === "verifying") return {label: "Verifying", className: "progress", guidance: "Verifying the local component."};
+        if (status === "repair-needed") return {label: "Needs attention", className: "attention", guidance: "Review the component before repairing it."};
+        if (status === "unsupported-profile" || status === "compatibility_profile_unverified") {
+            return {label: "Needs attention", className: "attention", guidance: "Requires a verified compatibility profile."};
+        }
+        return {label: "Needs attention", className: "attention", guidance: "Review this component in Advanced paths or LG help."};
+    }
+
+    function renderSdkComponentList(response) {
+        if (!sdkComponentList) return;
+        const components = Array.isArray(response?.components) ? response.components : [];
+        if (!components.length) {
+            sdkComponentList.replaceChildren();
+            const empty = doc.createElement("p");
+            empty.className = "field-note";
+            empty.textContent = response?.ok ? "No local components were found." : "Component status is unavailable.";
+            sdkComponentList.append(empty);
+            return;
+        }
+        const rows = components.map((component) => {
+            const presentation = sdkComponentPresentation(component);
+            const row = doc.createElement("article");
+            row.className = "sdk-component-row";
+            const identity = doc.createElement("div");
+            identity.className = "sdk-component-identity";
+            const name = doc.createElement("strong");
+            name.textContent = String(component.label || component.id || "LG component");
+            const version = doc.createElement("span");
+            version.className = "sdk-component-version";
+            version.textContent = component.version ? `Version ${component.version}` : "Version unavailable";
+            identity.append(name, version);
+            const detail = doc.createElement("div");
+            detail.className = "sdk-component-detail";
+            const badge = doc.createElement("span");
+            badge.className = `sdk-component-badge ${presentation.className}`;
+            badge.textContent = presentation.label;
+            const guidance = doc.createElement("span");
+            guidance.className = "sdk-component-guidance";
+            guidance.textContent = presentation.guidance;
+            detail.append(badge, guidance);
+            row.append(identity, detail);
+            return row;
+        });
+        sdkComponentList.replaceChildren(...rows);
+    }
+
+    function renderSdkInstallReview(message) {
+        if (!sdkInstallReview) return;
+        sdkInstallReview.textContent = String(message || "");
+        sdkInstallReview.classList.toggle("hidden", !message);
+    }
+
+    function renderSdkInstallProgress(event) {
+        if (!sdkInstallProgress || !sdkInstallProgressText || !sdkInstallProgressSteps || !event || typeof event !== "object") return;
+        if (sdkInstallProgressDismissed) return;
+        const code = typeof event.code === "string" ? event.code : "";
+        const stepIndex = LG_INSTALL_PROGRESS_STEPS.findIndex((step) => step.code === code);
+        const isFailure = code === "failed" && LG_INSTALL_FAILURE_STATUSES.has(event.status);
+        if (stepIndex < 0 && !isFailure) return;
+
+        sdkInstallProgress.classList.remove("hidden", "attention", "complete");
+        if (isFailure) {
+            sdkInstallProgress.classList.add("attention");
+            sdkInstallProgressText.textContent = "Installation stopped. No changes were activated.";
+        } else {
+            activeLgInstallStepIndex = stepIndex;
+            if (code === "complete") sdkInstallProgress.classList.add("complete");
+            sdkInstallProgressText.textContent = LG_INSTALL_PROGRESS_STEPS[stepIndex].label;
+        }
+
+        const progressBar = sdkInstallProgress.querySelector?.(".sdk-install-progress-bar");
+        if (progressBar) {
+            progressBar.setAttribute("aria-valuetext", sdkInstallProgressText.textContent);
+            progressBar.setAttribute("aria-valuenow", String(Math.max(0, activeLgInstallStepIndex + 1)));
+        }
+        const activeIndex = isFailure
+            ? Math.max(0, activeLgInstallStepIndex)
+            : stepIndex;
+        const rows = LG_INSTALL_PROGRESS_STEPS.map((step, index) => {
+            const row = doc.createElement("li");
+            row.textContent = step.label;
+            row.className = index < activeIndex ? "complete" : index === activeIndex ? "current" : "pending";
+            return row;
+        });
+        sdkInstallProgressSteps.replaceChildren(...rows);
+    }
+
+    function resetSdkInstallProgress({dismiss = false} = {}) {
+        sdkInstallProgressDismissed = dismiss;
+        activeLgInstallStepIndex = -1;
+        if (!sdkInstallProgress || !sdkInstallProgressText || !sdkInstallProgressSteps) return;
+        sdkInstallProgress.classList.add("hidden");
+        sdkInstallProgress.classList.remove("attention", "complete");
+        sdkInstallProgressText.textContent = "";
+        sdkInstallProgressSteps.replaceChildren();
+        const progressBar = sdkInstallProgress.querySelector?.(".sdk-install-progress-bar");
+        progressBar?.removeAttribute?.("aria-valuenow");
+        progressBar?.setAttribute?.("aria-valuetext", "Preparing");
+    }
+
+    function lgInstallationFailureText(status, verification) {
+        if (status === "DOWNLOAD_FAILED") return "The reviewed Node download could not complete. Nothing was changed.";
+        if (status === "CHECKSUM_MISMATCH") return "The reviewed download did not verify. Nothing was changed.";
+        if (status === "EXTRACTION_FAILED") return "The reviewed Node archive could not be prepared. Nothing was changed.";
+        if (status === "DEPENDENCY_INSTALL_FAILED") return "The reviewed Appium installation could not complete. Nothing was changed.";
+        if (status === "VERIFICATION_FAILED" && verification === "NODE_UNVERIFIED") return "Managed Node.js and npm did not verify. Nothing was changed.";
+        if (status === "VERIFICATION_FAILED" && verification === "APPIUM_UNVERIFIED") return "Managed Appium did not verify. Nothing was changed.";
+        if (status === "VERIFICATION_FAILED" && verification === "LG_DRIVER_UNVERIFIED") return "The LG webOS driver did not verify. Nothing was changed.";
+        if (status === "VERIFICATION_FAILED" && verification === "CHROMEDRIVER_UNVERIFIED") return "ChromeDriver did not verify. Nothing was changed.";
+        if (status === "COMPATIBILITY_PROFILE_UNVERIFIED") return "The selected LG device does not have a verified compatibility profile. Nothing was changed.";
+        if (status === "VERIFICATION_FAILED") return "Installed local tools did not verify. Nothing was changed.";
+        if (status === "ACTIVATION_FAILED") return "Verified local tools could not be activated. Nothing was changed.";
+        return "Local LG installation did not complete. Nothing was changed.";
+    }
+
+    async function loadTvToolchainConfiguration() {
+        if (typeof api.getTvToolchainConfiguration !== "function") {
+            if (tvToolchainStatus) tvToolchainStatus.textContent = "Local LG toolchain configuration is unavailable.";
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+        try {
+            const response = await api.getTvToolchainConfiguration();
+            if (tvToolchainStatus) {
+                const source = response?.source === "managed" ? "Managed local tools" : "Advanced paths";
+                tvToolchainStatus.textContent = response?.configured
+                    ? `Selected source: ${source}. ${toolchainStatusText(response, "Ready.")}`
+                    : "No local LG toolchain source is selected.";
+            }
+            return response || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        } catch {
+            if (tvToolchainStatus) tvToolchainStatus.textContent = "Local LG toolchain configuration is unavailable.";
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+    }
+
+    async function saveTvToolchainConfiguration() {
+        if (typeof api.saveTvToolchainConfiguration !== "function") {
+            if (tvToolchainStatus) tvToolchainStatus.textContent = "Local LG toolchain configuration is unavailable.";
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+        const configuration = {
+            webosSdkHome: String(tvToolchainSdkHomeInput?.value || "").trim(),
+            appiumHome: String(tvToolchainAppiumHomeInput?.value || "").trim(),
+            appiumBin: String(tvToolchainAppiumBinInput?.value || "").trim(),
+            chromedriverPath: String(tvToolchainChromedriverInput?.value || "").trim(),
+        };
+        if (Object.values(configuration).some((value) => !value)) {
+            if (tvToolchainStatus) tvToolchainStatus.textContent = "Complete every local LG toolchain field first.";
+            return {ok: false, status: "TOOLCHAIN_INCOMPLETE"};
+        }
+        if (tvToolchainSaveButton) tvToolchainSaveButton.disabled = true;
+        try {
+            const response = await api.saveTvToolchainConfiguration(configuration);
+            if (!response?.ok) {
+                if (tvToolchainStatus) tvToolchainStatus.textContent = response?.message || "Could not save local LG toolchain configuration.";
+                return response || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+            }
+            if (tvToolchainSdkHomeInput) tvToolchainSdkHomeInput.value = "";
+            if (tvToolchainAppiumHomeInput) tvToolchainAppiumHomeInput.value = "";
+            if (tvToolchainAppiumBinInput) tvToolchainAppiumBinInput.value = "";
+            if (tvToolchainChromedriverInput) tvToolchainChromedriverInput.value = "";
+            if (tvToolchainStatus) tvToolchainStatus.textContent = `Local LG toolchain saved. ${toolchainStatusText(response, "Ready.")}`;
+            return response;
+        } catch {
+            if (tvToolchainStatus) tvToolchainStatus.textContent = "Could not save local LG toolchain configuration.";
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        } finally {
+            if (tvToolchainSaveButton) tvToolchainSaveButton.disabled = false;
+        }
+    }
+
+    async function selectRunTarget(target, {persist = true} = {}) {
+        runTarget = target === "webos" ? "webos" : "browser";
+        settings = {...settings, RUN_TARGET: runTarget};
+        if (persist) store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
+        syncRunTargetControls();
+        resetBrowserPreview();
+        if (browserPreviewEmpty) browserPreviewEmpty.textContent = "Browser preview will appear here when a test starts.";
+        if (runTarget === "webos") {
+            await loadTvDevices();
+            await loadTvToolchainConfiguration();
+            await refreshLgRunAvailability();
+            resetLgPreview();
+            browserPreviewEmpty?.classList.add("hidden");
+        } else if (tvDeviceStatus) {
+            tvDeviceStatus.textContent = "Browser runner is selected.";
+            resetLgPreview();
+            browserPreviewEmpty?.classList.remove("hidden");
+        }
+        updateSelectionUi();
     }
 
     function selectSettingsPanel(name) {
         settingsNavItems.forEach((item) => item.classList.toggle("active", item.dataset.settingsPanel === name));
         settingsPanels.forEach((panel) => panel.classList.toggle("hidden", panel.dataset.settingsContent !== name));
+        if (name === "sdk") {
+            void loadSdkToolchainStatus();
+            void loadBrowserToolchainStatus();
+        }
     }
 
     function openModal(modal) {
@@ -691,6 +1845,13 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     function closeModal(modal) {
         if (modal) modal.classList.add("hidden");
+    }
+
+    function closeSettingsModal() {
+        closeModal(settingsModal);
+        void closeLgCompatibilityDialog();
+        resetSdkInstallProgress({dismiss: true});
+        resetBrowserInstallProgress({dismiss: true});
     }
 
     selectAllTestCases?.addEventListener?.("change", (event) => {
@@ -724,6 +1885,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 ? String(timeoutSeconds)
                 : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
             PREVIEW_TYPE: activePreviewType,
+            RUN_TARGET: runTarget,
         };
         if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
         store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
@@ -804,6 +1966,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (validationMessage) {
             setFormMessage(validationMessage, "error");
             return {completed: 0, failed: 0, skipped: 0, stopped: false};
+        }
+        if (values.target === "webos") {
+            openLgBatchConfirmation({selectedCaseCount: ids.length, values});
+            return {completed: 0, failed: 0, skipped: 0, stopped: false, awaitingConfirmation: true};
         }
 
         const currentBatch = {ids, activeCaseId: null, stopRequested: false};
@@ -932,6 +2098,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const values = {
             APP_URL: runSettings.APP_URL,
             PREVIEW_TYPE: activePreviewType,
+            target: runTarget,
         };
         if (activeFolderId) values.TEST_CASE_FOLDER_ID = activeFolderId;
         if (activeFolderId && activeFolderPath) {
@@ -1000,6 +2167,100 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         browserPreviewEmpty?.classList.remove("hidden");
     }
 
+    function resetLgPreview() {
+        lgPreviewImage?.removeAttribute?.("src");
+        lgPreviewImage?.classList.add("hidden");
+        lgPreviewEmpty?.classList.toggle("hidden", runTarget !== "webos");
+        lgRunState?.classList.add("hidden");
+        if (lgRunState) lgRunState.textContent = "";
+    }
+
+    function renderLgPreview(dataUrl) {
+        if (runTarget !== "webos" || typeof dataUrl !== "string" || !/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/u.test(dataUrl)) return;
+        lgPreviewImage.src = dataUrl;
+        lgPreviewImage.classList.remove("hidden");
+        lgPreviewEmpty?.classList.add("hidden");
+    }
+
+    function renderLgRunStatus(event) {
+        const copy = {
+            preflight: "Checking LG prerequisites",
+            "case-started": "Starting selected case",
+            "case-retry": "Retrying current case",
+            "case-finished": "Selected case finished",
+            "recovery-required": "Waiting for your decision",
+            "batch-finished": "LG batch finished",
+            stopped: "LG batch stopped",
+        };
+        if (!copy[event?.code]) return;
+        if (lgRunState) {
+            lgRunState.textContent = copy[event.code];
+            lgRunState.classList.remove("hidden");
+        }
+        if (event.caseId && event.code === "case-started") renderCaseStatus(event.caseId, "running");
+        if (event.caseId && event.code === "case-finished") renderCaseStatus(event.caseId, "passed");
+        if (event.code === "recovery-required") openModal(lgRecoveryDialog);
+    }
+
+    function openLgBatchConfirmation({selectedCaseCount, values = {}} = {}) {
+        pendingLgRunValues = {selectedCaseCount: Number(selectedCaseCount) || 0, values};
+        if (lgRunConfirmationCount) lgRunConfirmationCount.textContent = `${pendingLgRunValues.selectedCaseCount} selected case${pendingLgRunValues.selectedCaseCount === 1 ? "" : "s"} will run on the selected LG device.`;
+        openModal(lgRunConfirmationDialog);
+    }
+
+    async function runLgSelectedCases(values = {}) {
+        const ids = getSelectedCaseIds();
+        const deviceId = String(tvDeviceSelect?.value || "");
+        if (!deviceId || !canRunLg() || typeof api?.runLgBatch !== "function") return {ok: false, status: "LG_BATCH_INVALID"};
+        closeModal(lgRunConfirmationDialog);
+        pendingLgRunValues = null;
+        batchState = {ids, activeCaseId: null, stopRequested: false, lg: true};
+        setRunActive(true);
+        setFormRunning(true);
+        setStatus("running", "Running");
+        if (typeof api.startReport === "function") await api.startReport();
+        try {
+            const result = await api.runLgBatch({deviceId, selectedCaseIds: ids, ...(values.TEST_CASE_FOLDER_ID ? {folderId: values.TEST_CASE_FOLDER_ID} : {}), confirmed: true});
+            if (!result?.ok) {
+                setStatus("failed", "Failed");
+                setFormMessage("The LG batch could not start. Review the LG SDK configuration and selected device.", "error");
+                return {completed: 0, failed: 0, skipped: 0, stopped: false, status: result?.status || "LG_BATCH_UNAVAILABLE"};
+            }
+            const caseRuns = Array.isArray(result?.caseRuns) ? result.caseRuns : [];
+            caseRuns.forEach(({id, result: caseResult}) => renderCaseStatus(id, caseResult?.stopped ? "skipped" : caseResult?.passed ? "passed" : "failed"));
+            const completed = caseRuns.filter(({result: caseResult}) => caseResult?.passed).length;
+            const failed = caseRuns.filter(({result: caseResult}) => !caseResult?.passed && !caseResult?.stopped).length;
+            const skipped = caseRuns.filter(({result: caseResult}) => caseResult?.stopped).length;
+            const stopped = result?.stopped === true;
+            const summary = `Completed: ${completed}, Failed: ${failed}, Skipped: ${skipped}`;
+            const allSelectedCasesRan = !stopped && skipped === 0 && caseRuns.length === ids.length && caseRuns.every(({result: caseResult}) => caseResult?.started && !caseResult?.stopped);
+            const fullyCompletedCaseRuns = caseRuns.filter(({result: caseResult}) => caseResult?.started && !caseResult?.stopped);
+            let resultSubmission;
+            if ((allSelectedCasesRan || (stopped && fullyCompletedCaseRuns.length > 0)) && values.FLOW_CASE_RESULT_CONTEXT) {
+                const submission = buildFlowCaseResultSubmission(values.FLOW_CASE_RESULT_CONTEXT, fullyCompletedCaseRuns);
+                appendApiRequestLog("Send flow-case results", submission);
+                try {
+                    resultSubmission = await api.submitFlowCaseResults?.(submission);
+                    appendApiResponseLog("Send flow-case results", resultSubmission);
+                    if (!resultSubmission?.ok) throw new Error(resultSubmission?.message || "Failed to send flow-case results.");
+                } catch (error) {
+                    setPendingResultSubmission(submission);
+                    const message = `Failed to send flow-case results: ${error.message}`;
+                    appendLog(`${message}\n`);
+                    setFormMessage(`${summary}. ${message}`, "error");
+                    return {completed, failed, skipped, stopped, caseRuns, resultSubmission: {ok: false, message: error.message}};
+                }
+            }
+            setStatus(failed || stopped ? "failed" : "passed", failed || stopped ? "Failed" : "Passed");
+            setFormMessage(summary, failed || stopped ? "error" : "ok");
+            return {completed, failed, skipped, stopped, caseRuns, resultSubmission};
+        } finally {
+            batchState = null;
+            setRunActive(false);
+            setFormRunning(false);
+        }
+    }
+
     form?.addEventListener?.("submit", handleSubmit);
     async function requestStop() {
         if (batchState) {
@@ -1035,7 +2296,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         win?.requestAnimationFrame?.(refreshLogEntryOverflows);
     });
     get("settings-close-button")?.addEventListener?.("click", async () => {
-        closeModal(settingsModal);
+        closeSettingsModal();
         await resumeInteractiveBrowserAfterModal();
     });
     get("logs-close-button")?.addEventListener?.("click", async () => {
@@ -1051,7 +2312,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         await resumeInteractiveBrowserAfterModal();
     });
     settingsModal?.querySelector?.("[data-close-settings]")?.addEventListener?.("click", async () => {
-        closeModal(settingsModal);
+        closeSettingsModal();
         await resumeInteractiveBrowserAfterModal();
     });
     logsModal?.querySelector?.("[data-close-logs]")?.addEventListener?.("click", async () => {
@@ -1059,6 +2320,90 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         await resumeInteractiveBrowserAfterModal();
     });
     get("gui-settings-save-button")?.addEventListener?.("click", savePreviewSettings);
+    browserTargetInput?.addEventListener?.("change", () => { void selectRunTarget("browser"); });
+    webosTargetInput?.addEventListener?.("change", () => { void selectRunTarget("webos"); });
+    tvDeviceAddButton?.addEventListener?.("click", () => { openTvDeviceDialog("add"); });
+    tvDeviceEditButton?.addEventListener?.("click", () => { openTvDeviceDialog("edit"); });
+    tvDeviceCheckConnectionButton?.addEventListener?.("click", () => { void checkTvDeviceConnection(); });
+    tvDeviceSelect?.addEventListener?.("change", () => {
+        resetTvDeviceConnectionStatus();
+        syncRunTargetControls();
+        void refreshLgRunAvailability();
+    });
+    tvDeviceDialogCancelButton?.addEventListener?.("click", closeTvDeviceDialog);
+    tvDeviceDialog?.querySelector?.("[data-close-tv-device-dialog]")?.addEventListener?.("click", closeTvDeviceDialog);
+    tvDevicePassphraseToggle?.addEventListener?.("click", toggleTvDevicePassphrase);
+    tvDeviceDialogSubmitButton?.addEventListener?.("click", () => { void submitTvDeviceDialog(); });
+    sdkAutoConfigureButton?.addEventListener?.("click", () => { void planLgToolchainSetup(); });
+    sdkCompatibilityCatalogRefreshButton?.addEventListener?.("click", () => { void refreshLgCompatibilityCatalog(); });
+    sdkCompatibilityCheckButton?.addEventListener?.("click", openLgCompatibilityDialog);
+    lgCompatibilityProductGateSaveButton?.addEventListener?.("click", () => { void saveLgCompatibilityProductGateCredentials(); });
+    lgCompatibilityInspectionReviewButton?.addEventListener?.("click", reviewLgCompatibilityInspection);
+    lgCompatibilityInspectionConfirmButton?.addEventListener?.("click", () => { void confirmLgCompatibilityInspection(); });
+    lgCompatibilityValidationReviewButton?.addEventListener?.("click", reviewLgCompatibilityValidation);
+    lgCompatibilityValidationConfirmButton?.addEventListener?.("click", () => { void confirmLgCompatibilityValidation(); });
+    lgCompatibilityCloseButton?.addEventListener?.("click", () => { void closeLgCompatibilityDialog(); });
+    lgCompatibilityDialog?.querySelector?.("[data-close-lg-compatibility-dialog]")?.addEventListener?.("click", () => { void closeLgCompatibilityDialog(); });
+    sdkInstallConfirmButton?.addEventListener?.("click", () => { void installLgToolchain(); });
+    sdkUseManagedButton?.addEventListener?.("click", () => { void activateManagedLgToolchain(); });
+    browserAutoConfigureButton?.addEventListener?.("click", () => { void planBrowserToolchainSetup(); });
+    browserInstallConfirmButton?.addEventListener?.("click", () => { void installBrowserToolchain(); });
+    configureBrowserButton?.addEventListener?.("click", async () => {
+        await suspendInteractiveBrowserForModal();
+        selectSettingsPanel("sdk");
+        openModal(settingsModal);
+    });
+    configureLgSdkButton?.addEventListener?.("click", async () => {
+        await suspendInteractiveBrowserForModal();
+        selectSettingsPanel("sdk");
+        openModal(settingsModal);
+    });
+    lgRunConfirmButton?.addEventListener?.("click", () => {
+        const values = pendingLgRunValues?.values || {
+            target: "webos",
+            ...(activeFolderId ? {TEST_CASE_FOLDER_ID: activeFolderId} : {}),
+        };
+        void runLgSelectedCases(values);
+    });
+    lgRunCancelButton?.addEventListener?.("click", () => {
+        pendingLgRunValues = null;
+        closeModal(lgRunConfirmationDialog);
+    });
+    lgRunConfirmationDialog?.querySelector?.("[data-close-lg-run-confirmation]")?.addEventListener?.("click", () => {
+        pendingLgRunValues = null;
+        closeModal(lgRunConfirmationDialog);
+    });
+    lgRecoveryRetryButton?.addEventListener?.("click", async () => {
+        const result = await api.resolveLgRunRecovery?.({action: "retry"});
+        if (result?.ok) closeModal(lgRecoveryDialog);
+    });
+    lgRecoveryStopButton?.addEventListener?.("click", async () => {
+        const result = await api.resolveLgRunRecovery?.({action: "stop"});
+        if (result?.ok) closeModal(lgRecoveryDialog);
+    });
+    lgRecoveryDialog?.querySelector?.("[data-close-lg-recovery]")?.addEventListener?.("click", () => { void api.resolveLgRunRecovery?.({action: "stop"}); closeModal(lgRecoveryDialog); });
+    tvToolchainSaveButton?.addEventListener?.("click", () => { void saveTvToolchainConfiguration(); });
+    sdkDownloadLgCliButton?.addEventListener?.("click", () => { void api.openLgCliDownloadPage?.(); });
+    sdkChooseLgCliButton?.addEventListener?.("click", async () => {
+        const result = await api.chooseLgCliArchive?.();
+        if (result?.ok) {
+            await loadLgToolchainStatus();
+        } else if (result && sdkManagedToolchainStatus) {
+            sdkManagedToolchainStatus.textContent = "webOS CLI import was not completed.";
+        }
+    });
+    tvHelpButton?.addEventListener?.("click", async () => {
+        await suspendInteractiveBrowserForModal();
+        openModal(tvHelpModal);
+    });
+    tvHelpCloseButton?.addEventListener?.("click", async () => {
+        closeModal(tvHelpModal);
+        await resumeInteractiveBrowserAfterModal();
+    });
+    tvHelpModal?.querySelector?.("[data-close-tv-help]")?.addEventListener?.("click", async () => {
+        closeModal(tvHelpModal);
+        await resumeInteractiveBrowserAfterModal();
+    });
     browserMuteButton?.addEventListener?.("click", () => setBrowserMuted(!browserMuted));
     settingsNavItems.forEach((item) => item.addEventListener("click", () => selectSettingsPanel(item.dataset.settingsPanel)));
     win?.addEventListener?.("resize", () => {
@@ -1093,8 +2438,24 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     api.onDiscardUnsyncedResultSubmission?.(() => {
         setPendingResultSubmission(null);
     });
+    const unsubscribeLgToolchainInstallProgress = api.onLgToolchainInstallProgress?.((event) => {
+        renderSdkInstallProgress(event);
+    });
+    const unsubscribeBrowserToolchainInstallProgress = api.onBrowserToolchainInstallProgress?.((event) => {
+        renderBrowserInstallProgress(event);
+    });
+    const unsubscribeLgRunStatus = api.onLgRunStatus?.((event) => renderLgRunStatus(event));
+    const unsubscribeLgRunPreview = api.onLgRunPreview?.((dataUrl) => renderLgPreview(dataUrl));
+    win?.addEventListener?.("beforeunload", () => {
+        if (typeof unsubscribeLgToolchainInstallProgress === "function") unsubscribeLgToolchainInstallProgress();
+        if (typeof unsubscribeBrowserToolchainInstallProgress === "function") unsubscribeBrowserToolchainInstallProgress();
+        if (typeof unsubscribeLgRunStatus === "function") unsubscribeLgRunStatus();
+        if (typeof unsubscribeLgRunPreview === "function") unsubscribeLgRunPreview();
+    });
 
     loadSettings();
+    void loadBrowserToolchainStatus();
+    if (runTarget === "webos") void selectRunTarget("webos", {persist: false});
     updateFolderControls();
     updateRetrySyncButton();
 
@@ -1111,6 +2472,38 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         getActiveFolderId: () => activeFolderId,
         runSelectedCases,
         retryResultSync,
+        selectRunTarget,
+        refreshLgRunAvailability,
+        openLgBatchConfirmation,
+        runLgSelectedCases,
+        renderLgRunStatus,
+        renderLgPreview,
+        openTvDeviceDialog,
+        closeTvDeviceDialog,
+        submitTvDeviceDialog,
+        checkTvDeviceConnection,
+        toggleTvDevicePassphrase,
+        loadTvToolchainConfiguration,
+        inspectTvToolchain,
+        loadLgToolchainStatus,
+        loadLgCompatibilityCatalogStatus,
+        loadLgCompatibilityProductGateStatus,
+        loadBrowserToolchainStatus,
+        loadSdkToolchainStatus,
+        refreshLgCompatibilityCatalog,
+        saveLgCompatibilityProductGateCredentials,
+        openLgCompatibilityDialog,
+        reviewLgCompatibilityInspection,
+        confirmLgCompatibilityInspection,
+        reviewLgCompatibilityValidation,
+        confirmLgCompatibilityValidation,
+        closeLgCompatibilityDialog,
+        activateManagedLgToolchain,
+        planLgToolchainSetup,
+        installLgToolchain,
+        planBrowserToolchainSetup,
+        installBrowserToolchain,
+        saveTvToolchainConfiguration,
         maskActionForDisplay,
         redactSensitiveText,
         validateRunValues,

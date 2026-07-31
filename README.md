@@ -10,17 +10,48 @@ coverage.
 - Node.js 20+ recommended.
 - npm.
 - Network access to the target MyTV app URL.
-- Network access when installing dependencies or Playwright browser binaries.
+- Network access when installing dependencies. The desktop app requests network access only after a user confirms its reviewed Browser installation.
 
-Install dependencies and the platform-specific browser bundle:
+Install dependencies:
 
 ```bash
 npm install
-npm run browsers:install
 ```
 
-The browser command creates `.playwright-browsers/`, which is bundled into the
-Electron application.
+The desktop app does not bundle Chromium. In **Settings → SDK configuration →
+Browser configuration**, use **Auto configure**, then separately confirm
+**Install reviewed Chromium** when it is missing. The project-pinned Playwright
+Chromium is stored in private per-user app storage and is not a system-browser
+installation.
+
+For LG, **Settings → SDK configuration** first reviews local tools. After the
+user separately confirms installation, the app installs the pinned Node/Appium
+toolchain. It installs ChromeDriver only when the selected saved device exactly
+matches a centrally shipped verified compatibility profile; otherwise it reports
+`COMPATIBILITY_PROFILE_UNVERIFIED` and does not download a guessed driver.
+
+The compatibility catalog is refreshable from the configured API in **SDK
+configuration**. Maintainers validate new exact LG model/firmware mappings with
+the repository-local `device-compatibility-check` workflow; only a passed,
+explicitly confirmed result can add a new record or replace an existing pair in
+`DEVICE-COMPATIBILITY.json`. Publishing that reviewed file to the API is a
+separate manual maintenance action.
+
+For an existing catalog mapping, **Settings → SDK configuration → Compatibility
+catalog → Check device compatibility** provides a temporary, unsaved check. The
+first confirmation creates a short-lived local CLI target only to inspect the
+device identity. If the catalog has an exact mapping, select exactly one
+product-gate validation and separately confirm its one-shot run. The fixed local
+case signs in, opens Home and Search, searches for `VTV1 HD`, and starts the
+matching search result. Its account is configured once in SDK configuration and
+stored only with Electron encryption; it is not part of API-loaded test cases.
+The temporary driver, CLI target, and in-memory connection values are removed afterward. An
+unknown model/firmware pair stops before a driver download or test run; the app
+never guesses a ChromeDriver or adds a catalog record.
+
+LG compatibility investigation is currently paused. Maintainers resuming it
+should read [LG Compatibility Pause Handoff](docs/real-tv-appium/LG-COMPATIBILITY-PAUSE-HANDOFF.md)
+before any live-device work.
 
 ## Project Structure
 
@@ -52,7 +83,7 @@ tests/
 scripts/
   run-headed.js                 Interactive terminal runner for legacy specs
   run-electron-app.js           Starts Electron in development mode
-  install-playwright-browsers.js
+  install-playwright-browsers.js Terminal-only legacy browser-cache helper
 playwright.config.js
 ```
 
@@ -72,7 +103,7 @@ no cached API folder is available.
    npm run app:dev
    ```
 
-3. Open Settings and configure `APP_URL`, API domain, optional API Authorize value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. The authorization value is sent verbatim in the `Authorization` header for all flow-case API requests and is redacted from Logs.
+3. Open Settings and configure `APP_URL`, API domain, optional API Authorize value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. In **SDK configuration → Browser configuration**, review and, when needed, explicitly install the project-pinned Chromium. The authorization value is sent verbatim in the `Authorization` header for all flow-case API requests and is redacted from Logs.
 4. Select a folder in the sidebar and click `Get test cases`; use the refresh icon to reload the folder tree.
 5. Search by case ID substring or name with the instant filter, then check one or more visible cases in the table.
 6. Use `Detail` to review metadata, expected result, and normalized actions.
@@ -247,11 +278,9 @@ npm run test:unit
 
 ## Build the Desktop App
 
-Install browser binaries for the current platform before building:
-
-```bash
-npm run browsers:install
-```
+Browser binaries are not packaged. Each desktop user configures the
+project-pinned Chromium after installation through **Settings → SDK
+configuration → Browser configuration**.
 
 ### macOS
 
@@ -269,27 +298,24 @@ npm run app:build:mac:dmg
 
 ### Windows
 
-Build on Windows or Windows CI so the bundled browser binaries match the
-target platform:
+Build on Windows or Windows CI:
 
 ```bash
 npm install
-npm run browsers:install
 npm run app:build:win
 ```
 
-Do not use macOS browser binaries for a Windows package.
+The app obtains the host-appropriate reviewed Chromium only through the
+post-install Browser configuration flow.
 
-## Browser Bundle Notes
+## Browser Configuration Notes
 
-Electron Builder copies:
-
-```text
-.playwright-browsers -> Contents/Resources/playwright-browsers
-```
-
-Packaged runs set `PLAYWRIGHT_BROWSERS_PATH` to that resource directory.
-Development runs use `.playwright-browsers/` from the project root.
+Electron resolves Playwright Chromium from its private per-user storage. A
+missing browser disables Browser test runs and offers **Configure Browser**;
+the setup screen reviews first and installs only after a separate confirmation.
+No Chromium archive is included in macOS or Windows artifacts. The
+`npm run browsers:install` command remains only for legacy terminal development
+and is not used by the Electron app.
 
 ## Reports and Artifacts
 
@@ -313,11 +339,9 @@ npm install
 
 ### Playwright cannot find a browser
 
-Install the local bundle and rebuild if necessary:
-
-```bash
-npm run browsers:install
-```
+Open **Settings → SDK configuration → Browser configuration**, select **Auto
+configure**, then confirm **Install reviewed Chromium**. The app never falls
+back to a system browser.
 
 ### macOS blocks the app
 
@@ -333,3 +357,45 @@ stabilized:
 ```bash
 npm run app:build:mac
 ```
+
+## LG device setup status
+
+The LG sidebar uses a device list with Add/Edit dialog. It accepts only device
+name, host, and passphrase; saved connection values stay encrypted in app-owned
+storage and are never returned to the renderer. **Validate and save** is
+intentionally unavailable until a separately approved live-TV preflight; it
+does not currently contact or alter a TV.
+
+After a device is already saved and its webOS CLI target is already registered,
+**Check connection** performs a separate read-only identity and MyTV-app
+inventory check. It uses only a verified user-imported LG CLI or an explicitly
+configured Advanced CLI; it does not require Appium or ChromeDriver, and never
+falls back to a system CLI or changes the TV.
+
+### LG Run Selected
+
+LG uses the same folder, case selection, **Run Selected**, report, and result
+sync workflow as Browser. Select a saved LG device, ensure the local SDK review
+shows the required toolchain and verified compatibility profile, then select
+one or more cases. **Run Selected** remains disabled while those local
+prerequisites are unavailable and provides a **Configure SDK** shortcut.
+
+Starting an LG batch always shows a single confirmation for the selected cases.
+The confirmation explains that the run can foreground MyTV, reset only MyTV
+local storage, send native remote input, enter the selected case login through
+MyTV's virtual keyboard, and perform trusted logout cleanup. After confirmation
+the main process performs a new read-only identity and installed-app preflight;
+failure at that point sends no remote input and starts no Appium session.
+
+The workspace displays fixed redacted progress and genuine TV frames when
+available. Business failures continue to the next selected case. Technical
+failures restart the current case from a clean MyTV-only reset up to three
+times, then require **Keep retrying** or **Stop**; pairing always requires a
+manual operator decision. Completed API-loaded cases use the same result-sync
+shape as Browser. No TV artifacts are sent to the API.
+
+This implementation has local contract coverage, but a real GUI LG batch is
+not a routine smoke test: it needs fresh explicit approval and the live-TV
+preflight documented in `docs/real-tv-appium/poc-runbook.md`. It never deploys,
+uninstalls, pairs automatically, or changes a TV app outside an approved run's
+MyTV-only local-storage reset.

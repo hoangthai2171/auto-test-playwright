@@ -1,0 +1,4 @@
+interface:
+  display_name: "Device Compatibility Check"
+  short_description: "Validate and record LG ChromeDriver mappings"
+  default_prompt: "Use $device-compatibility-check to validate an LG ChromeDriver compatibility mapping."

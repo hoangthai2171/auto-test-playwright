@@ -19,14 +19,15 @@
     "tv:poc:tizen:pair": "node scripts/real-tv-appium/tizen-poc.js pair",
     "tv:poc:tizen": "node scripts/real-tv-appium/tizen-poc.js",
     "tv:poc:lg": "node scripts/real-tv-appium/lg-webos-poc.js",
-    "tv:gate:lg": "node scripts/real-tv-appium/lg-webos-case-runner.js"
+    "tv:gate:lg": "node scripts/real-tv-appium/lg-webos-case-runner.js",
+    "tv:compatibility:lg": "node scripts/real-tv-appium/lg-device-compatibility-check.js"
   },
   "keywords": [],
   "author": "",
   "license": "ISC",
   "type": "commonjs",
   "dependencies": {
-    "playwright": "^1.61.1"
+    "playwright": "1.61.1"
   },
   "devDependencies": {
     "appium": "2.19.0",
@@ -40,16 +41,11 @@
     "files": [
       "app/**/*",
       "tests/**/*",
+      "DEVICE-COMPATIBILITY.json",
       "testcased.json",
       "playwright.config.js",
       "package.json",
       "node_modules/**/*"
-    ],
-    "extraResources": [
-      {
-        "from": ".playwright-browsers",
-        "to": "playwright-browsers"
-      }
     ],
     "directories": {
       "output": "dist"

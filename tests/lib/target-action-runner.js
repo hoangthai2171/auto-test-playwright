@@ -22,6 +22,19 @@ const ACTION_CAPABILITIES = Object.freeze({
   play_row: ["targetSemanticActions", "playerInspection"],
 });
 
+function validateTargetCaseCapabilities(testCase, capabilities = {}) {
+  const compiledTestCase = compileTestCase(testCase);
+  const context = {capabilities: Object.freeze({...capabilities})};
+  compiledTestCase.actions.forEach((action, actionIndex) => {
+    requireActionCapabilities(context, action, {
+      caseId: String(compiledTestCase.id),
+      actionIndex,
+      required: ACTION_CAPABILITIES[action.action] || ["targetSemanticActions"],
+    });
+  });
+  return compiledTestCase;
+}
+
 function createTargetActionHandlers(context) {
   return {
     wait_for_ready: ({action}) => {
@@ -40,7 +53,16 @@ function createTargetActionHandlers(context) {
   };
 }
 
-async function runTargetActions(context, testCase, {handlers = createTargetActionHandlers(context), source = "tv"} = {}) {
+async function notifyStep(observer, event) {
+  if (typeof observer !== "function") return;
+  try {
+    await observer(event);
+  } catch {
+    // Status observers are informational and cannot alter trusted execution.
+  }
+}
+
+async function runTargetActions(context, testCase, {handlers = createTargetActionHandlers(context), source = "tv", onStep} = {}) {
   const compiledTestCase = compileTestCase(testCase);
   const result = {
     testCaseId: String(compiledTestCase.id),
@@ -66,6 +88,7 @@ async function runTargetActions(context, testCase, {handlers = createTargetActio
       if (handlerResult !== undefined) step.result = handlerResult;
       step.durationMs = Date.now() - startedAt;
       result.steps.push(step);
+      await notifyStep(onStep, {status: "passed", actionIndex, action: action.action});
     } catch (error) {
       step.status = "failed";
       step.durationMs = Date.now() - startedAt;
@@ -73,6 +96,7 @@ async function runTargetActions(context, testCase, {handlers = createTargetActio
       if (error?.details !== undefined) step.details = error.details;
       result.status = "failed";
       result.steps.push(step);
+      await notifyStep(onStep, {status: "failed", actionIndex, action: action.action});
       if (error && typeof error === "object") error.testCaseResult = result;
       throw error;
     }
@@ -80,4 +104,4 @@ async function runTargetActions(context, testCase, {handlers = createTargetActio
   return result;
 }
 
-module.exports = {ACTION_CAPABILITIES, createTargetActionHandlers, runTargetActions};
+module.exports = {ACTION_CAPABILITIES, createTargetActionHandlers, runTargetActions, validateTargetCaseCapabilities};

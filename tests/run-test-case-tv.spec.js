@@ -31,7 +31,7 @@ async function runTvContractCase(runner) {
 }
 
 function createFakeTvRunner() {
-  const profile = {id: "fake-lg", label: "Fake LG", platform: "lg", appId: "com.mytvb2c.app", model: "fake-model"};
+  const profile = {id: "fake-lg", label: "Fake LG", platform: "webos", appId: "com.mytvb2c.app", model: "fake-model"};
   const sessionFactory = createWebOsSessionFactory({
     async clientFactory({baseUrl}) {
       assert.equal(baseUrl, "http://127.0.0.1:4725");
@@ -131,9 +131,9 @@ test("terminal target-neutral case contract runs every supported action through 
   };
   const semantic = new Proxy({}, {
     get(_target, name) {
-      if (name === "enterVirtualKey") return async (_session, character) => events.push(`virtual:${character}`);
+      if (name === "enterVirtualKey") return async (character) => events.push(`virtual:${character}`);
       if (name === "logout") return async () => events.push("logout");
-      return async (_session, value) => events.push([name, value]);
+      return async (value) => events.push([name, value]);
     },
   });
   const result = await runTvTestCase({

@@ -31,8 +31,9 @@ function createMemoryFs(initialFiles = {}) {
 const livingRoom = {
   id: "living-room",
   label: "Living room LG",
-  platform: "lg",
+  platform: "webos",
   appId: "com.mytvb2c.app",
+  backendEnvironment: "production",
   model: "OLED55C4",
   modelYear: "2024",
 };
@@ -91,4 +92,17 @@ test("never returns a persisted office host field", async () => {
   const registry = createDeviceRegistry({filePath: "/devices.json", fs});
 
   await assert.rejects(registry.list(), /unknown|not allowed/i);
+});
+
+test("migrates a legacy LG profile to the Phase 4 webOS envelope on save", async () => {
+  const legacyProfile = {...livingRoom, platform: "lg"};
+  const fs = createMemoryFs({"/devices.json": JSON.stringify([legacyProfile])});
+  const registry = createDeviceRegistry({filePath: "/devices.json", fs});
+
+  await registry.save({...livingRoom, lastKnownHost: "192.0.2.1", vendorDeviceName: "Lab LG"});
+
+  assert.deepEqual(JSON.parse(await fs.readFile("/devices.json", "utf8")), {
+    version: 1,
+    devices: [{...livingRoom, lastKnownHost: "192.0.2.1", vendorDeviceName: "Lab LG"}],
+  });
 });

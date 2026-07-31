@@ -5,7 +5,7 @@ function secretKey(deviceId, secretName) {
 }
 
 function createDeviceSecretStore({safeStorage, store}) {
-  if (!safeStorage || typeof safeStorage.isEncryptionAvailable !== "function" || typeof safeStorage.encryptString !== "function") {
+  if (!safeStorage || typeof safeStorage.isEncryptionAvailable !== "function" || typeof safeStorage.encryptString !== "function" || typeof safeStorage.decryptString !== "function") {
     throw new Error("Electron safe storage with encryption is required.");
   }
   if (!store || typeof store.get !== "function" || typeof store.set !== "function" || typeof store.delete !== "function") {
@@ -13,10 +13,21 @@ function createDeviceSecretStore({safeStorage, store}) {
   }
 
   return {
-    hasSecret(deviceId, secretName) {
-      return Boolean(store.get(secretKey(deviceId, secretName)));
+    async hasSecret(deviceId, secretName) {
+      return Boolean(await store.get(secretKey(deviceId, secretName)));
     },
-    setSecret(deviceId, secretName, payload) {
+    async getSecret(deviceId, secretName) {
+      if (!safeStorage.isEncryptionAvailable()) throw new Error("Secret encryption is unavailable.");
+      const encryptedPayload = await store.get(secretKey(deviceId, secretName));
+      if (!encryptedPayload) return undefined;
+      if (!Buffer.isBuffer(encryptedPayload)) throw new Error("Could not decrypt device secret: encrypted storage is invalid.");
+      try {
+        return safeStorage.decryptString(encryptedPayload);
+      } catch (error) {
+        throw new Error(`Could not decrypt device secret: ${error.message}`, {cause: error});
+      }
+    },
+    async setSecret(deviceId, secretName, payload) {
       if (typeof payload !== "string") throw new Error("Secret payload must be an opaque string.");
       if (!safeStorage.isEncryptionAvailable()) throw new Error("Secret encryption is unavailable.");
       let encryptedPayload;
@@ -26,13 +37,11 @@ function createDeviceSecretStore({safeStorage, store}) {
         throw new Error(`Could not encrypt device secret: ${error.message}`, {cause: error});
       }
       if (!encryptedPayload) throw new Error("Could not encrypt device secret: safe storage returned no encrypted payload.");
-      store.set(secretKey(deviceId, secretName), encryptedPayload);
+      await store.set(secretKey(deviceId, secretName), encryptedPayload);
     },
-    removeSecret(deviceId, secretName) {
+    async removeSecret(deviceId, secretName) {
       const key = secretKey(deviceId, secretName);
-      const exists = Boolean(store.get(key));
-      if (exists) store.delete(key);
-      return exists;
+      return Boolean(await store.delete(key));
     },
   };
 }

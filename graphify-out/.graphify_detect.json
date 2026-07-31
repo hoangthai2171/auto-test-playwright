@@ -1,4 +1,0 @@
-Traceback (most recent call last):
-  File "<string>", line 2, in <module>
-    from graphify.detect import detect
-ModuleNotFoundError: No module named 'graphify'

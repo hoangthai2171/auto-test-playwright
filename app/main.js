@@ -1,16 +1,55 @@
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const {spawn} = require("node:child_process");
-const {app, BrowserView, BrowserWindow, dialog, ipcMain, shell} = require("electron");
+const {randomUUID} = require("node:crypto");
+const {app, BrowserView, BrowserWindow, dialog, ipcMain, safeStorage, shell} = require("electron");
 const {loadLocalTestCases, loadCachedTestCases, findTestCaseById} = require("../tests/lib/test-case-source");
 const {validateTestCaseList} = require("../tests/lib/test-case-schema");
 const {redactSensitiveText, createLogRedactor} = require("./credential-redaction");
-const {fetchFlowCaseFolders, fetchFlowCases, submitFlowCaseResults, normalizeTimeoutMs} = require("./flow-case-api");
+const {fetchFlowCaseFolders, fetchFlowCases, submitFlowCaseResults, fetchDeviceCompatibilityCatalog, normalizeTimeoutMs} = require("./flow-case-api");
 const {replaceFolderCacheEntry, readMostRecentFolderCacheEntry} = require("./test-case-cache");
 const {createEmptyReport, buildTestReportEntry, upsertTestReport, renderUserReport} = require("./test-report");
 const {buildPlaywrightTestArgs} = require("./playwright-runner");
 const {createRunCloseGuard} = require("./run-close-guard");
 const {createManagedWindowCloseController} = require("./window-close-controller");
+const {createDeviceRegistry} = require("./device-registry");
+const {createDeviceSecretFileStore} = require("./device-secret-file-store");
+const {createDeviceSecretStore} = require("./device-secret-store");
+const {createDeviceProfileService} = require("./device-profile-service");
+const {registerTvDeviceIpc} = require("./tv-device-ipc");
+const {createTvToolchainInspector} = require("./tv-toolchain");
+const {createTvToolchainConfig} = require("./tv-toolchain-config");
+const {createDeviceDiscovery} = require("./device-discovery");
+const {createConfiguredWebOsReadOnlyAdapter} = require("./webos-read-only-adapter");
+const {createLgDeviceConnectionChecker} = require("./lg-device-connection-check");
+const {createLgCliArchiveImporter} = require("./lg-cli-archive-importer");
+const {createLgCliImportOperations} = require("./lg-cli-import-operations");
+const {createLgToolchainDetector} = require("./lg-toolchain-detector");
+const {createLgToolchainInstaller} = require("./lg-toolchain-installer");
+const {createLgManagedInstallDependencies} = require("./lg-managed-install-dependencies");
+const {createLgManagedInstallOperations} = require("./lg-managed-install-operations");
+const {createBrowserToolchain} = require("./browser-toolchain");
+const {createBrowserToolchainInstaller} = require("./browser-toolchain-installer");
+const {createBrowserRunLauncher} = require("./browser-run-launcher");
+const {registerBrowserToolchainIpc} = require("./browser-toolchain-ipc");
+const {trustedLgToolchainManifest} = require("./lg-toolchain-manifest");
+const bundledLgCompatibilityCatalog = require("../DEVICE-COMPATIBILITY.json");
+const {createLgCompatibilityCatalogStore} = require("./lg-compatibility-catalog-store");
+const {createLgCompatibilityCatalogService} = require("./lg-compatibility-catalog-service");
+const {createLgTemporaryWebOsTarget} = require("./lg-temporary-webos-target");
+const {createLgCompatibilityAttemptService} = require("./lg-compatibility-attempt-service");
+const {createLgCompatibilityValidation} = require("./lg-compatibility-validation");
+const {registerLgCompatibilityIpc} = require("./lg-compatibility-ipc");
+const {createLgCompatibilityCredentials, createLgCompatibilityProductGateCase} = require("./lg-compatibility-product-gate");
+const {createLgDesktopRunPreflight} = require("./lg-desktop-run-preflight");
+const {createLgDesktopBatchRunner} = require("./lg-desktop-batch-runner");
+const {registerLgRunIpc} = require("./lg-run-ipc");
+const {createDeviceLock} = require("./device-lock");
+const {createAppiumServerManager} = require("./appium-server-manager");
+const {createLoopbackAppiumClient} = require("./loopback-appium-client");
+const {createTvRunner} = require("./tv-runner");
+const {createWebOsSessionFactory} = require("../tests/lib/tv-session/webos-appium-session");
+const {revealWindowOnFirstPaint} = require("./window-startup");
 
 const INTERACTIVE_BROWSER_DEBUG_PORT = Number(process.env.MYTV_INTERACTIVE_BROWSER_DEBUG_PORT) || 43000 + Math.floor(Math.random() * 1000);
 
@@ -24,6 +63,7 @@ let interactiveViewScale = 1;
 let interactiveAudioMuted = true;
 let rendererRunActive = false;
 let hasUnsyncedResultSubmission = false;
+let activeLgBatchRunner;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -32,6 +72,8 @@ function createWindow() {
         minWidth: 920,
         minHeight: 760,
         title: "MyTV Auto Test",
+        show: false,
+        backgroundColor: "#101318",
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
             contextIsolation: true,
@@ -40,6 +82,7 @@ function createWindow() {
         },
     });
 
+    revealWindowOnFirstPaint(mainWindow);
     mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
     createManagedWindowCloseController({
         window: mainWindow,
@@ -76,6 +119,7 @@ async function confirmWindowClose(reason) {
 }
 
 async function stopActiveTest() {
+    activeLgBatchRunner?.requestStop();
     if (runningProcess) {
         runningProcess.kill();
         runningProcess = null;
@@ -93,6 +137,222 @@ function discardUnsyncedResultSubmission() {
 function testCasesCachePath() {
     return path.join(app.getPath("userData"), "testcases-cache.json");
 }
+
+function tvDevicesPath() {
+    return path.join(app.getPath("userData"), "devices.json");
+}
+
+function tvDeviceSecretsPath() {
+    return path.join(app.getPath("userData"), "device-secrets.json");
+}
+
+function tvToolchainPath() {
+    return path.join(app.getPath("userData"), "tv-toolchain.json");
+}
+
+function lgCliManagedRoot() {
+    return path.join(lgToolchainManagedRoot(), "webos-cli");
+}
+
+function lgToolchainManagedRoot() {
+    return path.join(app.getPath("userData"), "lg-toolchain");
+}
+
+function managedBrowserRoot() {
+    return path.join(app.getPath("userData"), "playwright-browsers");
+}
+
+function lgCompatibilityCatalogPath() {
+    return path.join(app.getPath("userData"), "lg-compatibility-catalog.json");
+}
+
+const toolchainConfig = createTvToolchainConfig({
+    filePath: tvToolchainPath(),
+    fs,
+    platform: process.platform,
+    managedRoot: lgToolchainManagedRoot(),
+});
+const lgCliImportOperations = createLgCliImportOperations({platform: process.platform});
+const lgCliArchiveImporter = createLgCliArchiveImporter({
+    platform: process.platform,
+    managedRoot: lgCliManagedRoot(),
+    fs,
+    hashFile: lgCliImportOperations.hashFile,
+    extract: lgCliImportOperations.extract,
+});
+const lgToolchainDetector = createLgToolchainDetector({
+    platform: process.platform,
+    managedRoot: lgToolchainManagedRoot(),
+    fs,
+});
+const lgManagedInstallDependencies = createLgManagedInstallDependencies({platform: process.platform, fs});
+const lgManagedInstallOperations = createLgManagedInstallOperations({
+    platform: process.platform,
+    managedRoot: lgToolchainManagedRoot(),
+    fs,
+    ...lgManagedInstallDependencies,
+});
+const lgToolchainInstaller = createLgToolchainInstaller({
+    platform: process.platform,
+    detector: lgToolchainDetector,
+    installManagedBundle: lgManagedInstallOperations.install,
+});
+const browserRoot = managedBrowserRoot();
+process.env.PLAYWRIGHT_BROWSERS_PATH = browserRoot;
+const {chromium} = require("playwright");
+const browserToolchain = createBrowserToolchain({
+    fs,
+    resolveExecutablePath: () => chromium.executablePath(),
+    version: require("playwright/package.json").version,
+});
+const browserToolchainInstaller = createBrowserToolchainInstaller({
+    browserToolchain,
+    managedRoot: browserRoot,
+    nodePath: testRunnerBinary(),
+    playwrightCliPath: path.join(path.dirname(require.resolve("playwright/package.json")), "cli.js"),
+    spawn,
+});
+const browserRunLauncher = createBrowserRunLauncher({browserToolchain, managedRoot: browserRoot});
+const deviceRegistry = createDeviceRegistry({filePath: tvDevicesPath(), fs});
+const deviceSecrets = createDeviceSecretStore({
+    safeStorage,
+    store: createDeviceSecretFileStore({filePath: tvDeviceSecretsPath(), fs}),
+});
+const lgCompatibilityCredentials = createLgCompatibilityCredentials({secrets: deviceSecrets});
+const deviceProfiles = createDeviceProfileService({
+    registry: deviceRegistry,
+    secrets: deviceSecrets,
+    validator: {
+        async validate() {
+            return {ok: false, status: "VALIDATION_UNAVAILABLE"};
+        },
+    },
+});
+const webosReadOnlyAdapter = createConfiguredWebOsReadOnlyAdapter({toolchainConfig});
+const connectionChecker = createLgDeviceConnectionChecker({
+    registry: deviceRegistry,
+    adapter: webosReadOnlyAdapter,
+});
+const lgCompatibilityCatalog = createLgCompatibilityCatalogService({
+    bundledCatalog: bundledLgCompatibilityCatalog,
+    store: createLgCompatibilityCatalogStore({filePath: lgCompatibilityCatalogPath(), fs}),
+    fetchCatalog: fetchDeviceCompatibilityCatalog,
+});
+const lgCompatibilityManifest = trustedLgToolchainManifest(process.platform);
+async function resolveLgCompatibilityProfile({deviceId} = {}) {
+    const id = typeof deviceId === "string" ? deviceId.trim() : "";
+    if (!id) return {status: "COMPATIBILITY_PROFILE_UNVERIFIED"};
+    const profiles = await deviceRegistry.list();
+    const profile = Array.isArray(profiles)
+        ? profiles.find((candidate) => candidate?.id === id && candidate?.platform === "webos")
+        : undefined;
+    if (!profile) return {status: "COMPATIBILITY_PROFILE_UNVERIFIED"};
+    return lgCompatibilityCatalog.select({
+        model: profile.model,
+        firmware: profile.firmwareVersion,
+        platform: process.platform,
+    });
+}
+registerTvDeviceIpc({
+    ipcMain,
+    deviceProfiles,
+    connectionChecker,
+    toolchain: createTvToolchainInspector({
+        toolchainConfig,
+    }),
+    toolchainConfig,
+    lgToolchainDetector,
+    lgToolchainInstaller,
+    lgCliArchiveImporter,
+    lgCliPlatform: process.platform,
+    resolveLgCompatibilityProfile,
+    compatibilityCatalog: lgCompatibilityCatalog,
+    dialog,
+    shell,
+    redact: redactSensitiveText,
+});
+registerBrowserToolchainIpc({ipcMain, browserToolchain, browserInstaller: browserToolchainInstaller});
+const lgDeviceLock = createDeviceLock();
+const lgAppiumServerManager = createAppiumServerManager({
+    spawn,
+    fetch,
+    kill: process.kill.bind(process),
+    redact: redactSensitiveText,
+    wait: (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)),
+});
+const lgWebOsSessionFactory = createWebOsSessionFactory({clientFactory: createLoopbackAppiumClient});
+const lgRunPreflight = createLgDesktopRunPreflight({
+    registry: deviceRegistry,
+    secrets: deviceSecrets,
+    toolchainConfig,
+    adapter: webosReadOnlyAdapter,
+    compatibilityCatalog: lgCompatibilityCatalog,
+    detector: lgToolchainDetector,
+    redact: redactSensitiveText,
+});
+const lgTvRunner = createTvRunner({
+    registry: deviceRegistry,
+    discovery: createDeviceDiscovery({webos: webosReadOnlyAdapter, redact: redactSensitiveText}),
+    lock: lgDeviceLock,
+    serverManager: lgAppiumServerManager,
+    sessionFactory: lgWebOsSessionFactory,
+    redact: redactSensitiveText,
+});
+const lgCompatibilityTemporaryTarget = Object.freeze({
+    async acquire(connection) {
+        try {
+            const webosSdkHome = await toolchainConfig.resolveReadOnlyWebOsCli();
+            return createLgTemporaryWebOsTarget({
+                webosSdkHome,
+                createTargetName: () => `lgcompat-${randomUUID().replaceAll("-", "").slice(0, 16)}`,
+            }).acquire(connection);
+        } catch {
+            return {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+        }
+    },
+});
+const lgCompatibilityAttempts = createLgCompatibilityAttemptService({
+    temporaryTarget: lgCompatibilityTemporaryTarget,
+    adapter: webosReadOnlyAdapter,
+    compatibilityCatalog: lgCompatibilityCatalog,
+    platform: process.platform,
+    createId: randomUUID,
+});
+const lgCompatibilityValidation = createLgCompatibilityValidation({
+    attempts: lgCompatibilityAttempts,
+    temporaryTarget: lgCompatibilityTemporaryTarget,
+    adapter: webosReadOnlyAdapter,
+    downloadArtifact: async ({artifact, destination}) => {
+        const approvedArtifact = lgCompatibilityManifest.withChromeDriver(artifact).components.chromedriver;
+        return lgManagedInstallDependencies.downloadChromeDriver({artifact: approvedArtifact, destination});
+    },
+    verifyArchive: async ({archivePath, artifact}) => {
+        const approvedArtifact = lgCompatibilityManifest.withChromeDriver(artifact).components.chromedriver;
+        return String(await lgManagedInstallDependencies.hashFile(archivePath)).toLowerCase() === approvedArtifact.sha256;
+    },
+    extractChromeDriver: lgManagedInstallDependencies.extractChromeDriver,
+    verifyChromeDriver: lgManagedInstallDependencies.verifyChromeDriver,
+    runCase: runLgCompatibilityCase,
+    createTempDir: () => fs.mkdtemp(path.join(app.getPath("temp"), "mytv-lgcompat-")),
+    removeTempDir: (targetPath) => fs.rm(targetPath, {recursive: true, force: true}),
+    platform: process.platform,
+});
+registerLgCompatibilityIpc({
+    ipcMain,
+    attempts: lgCompatibilityAttempts,
+    validation: lgCompatibilityValidation,
+    compatibilityCredentials: lgCompatibilityCredentials,
+    createProductGateCase: createLgCompatibilityProductGateCase,
+    redact: redactSensitiveText,
+});
+const lgDesktopBatchRunner = createLgDesktopBatchRunner({
+    preflight: lgRunPreflight,
+    tvRunner: lgTvRunner,
+    loadCase: loadLgBatchCase,
+    writeReportEntry: writeLgReportEntry,
+});
+activeLgBatchRunner = lgDesktopBatchRunner;
+registerLgRunIpc({ipcMain, batchRunner: lgDesktopBatchRunner, redact: redactSensitiveText});
 
 app.whenReady().then(() => {
     createWindow();
@@ -319,6 +579,11 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         return {ok: false, message: "A test run is already in progress."};
     }
 
+    const browserRun = await browserRunLauncher.prepare();
+    if (!browserRun.ok) {
+        return {ok: false, status: browserRun.status, message: "Configure Browser in Settings before running browser tests."};
+    }
+
     const projectRoot = app.getAppPath();
     const fixturePath = path.join(projectRoot, "testcased.json");
     const outputRoot = app.getPath("userData");
@@ -355,7 +620,7 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         TEST_CASE_CACHE_PATH: values.TEST_CASE_FOLDER_ID ? testCasesCachePath() : "",
         TEST_CASE_FOLDER_ID: values.TEST_CASE_FOLDER_ID ? String(values.TEST_CASE_FOLDER_ID) : "",
         APP_URL: values.APP_URL,
-        PLAYWRIGHT_BROWSERS_PATH: playwrightBrowsersPath(projectRoot),
+        PLAYWRIGHT_BROWSERS_PATH: browserRun.browsersPath,
         PLAYWRIGHT_HTML_REPORT: reportDir,
         MYTV_CASE_RESULT_PATH: caseResultPath,
         MYTV_PREVIEW_PATH: previewType === "live" ? previewPath : "",
@@ -374,7 +639,7 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         `Cwd: ${projectRoot}`,
         "Specs: tests/run-test-case-mytv.spec.js",
         `Test case: ${testCase.id}`,
-        `Browsers: ${env.PLAYWRIGHT_BROWSERS_PATH}`,
+        "Browser: managed Playwright Chromium",
         `User report: ${userReportHtmlFile}`,
         `Playwright debug report: ${reportDir}`,
         `Preview type: ${previewType}`,
@@ -574,20 +839,78 @@ function userReportHtmlPath() {
     return path.join(app.getPath("userData"), "user-report", "test-report.html");
 }
 
+async function loadLgBatchCase(caseId, folderId) {
+    const fixturePath = path.join(app.getAppPath(), "testcased.json");
+    const cases = folderId
+        ? await loadCachedTestCases(testCasesCachePath(), folderId)
+        : await loadLocalTestCases(fixturePath);
+    return findTestCaseById(cases, caseId);
+}
+
+async function runLgCompatibilityCase({testCase, connection, model, firmware}) {
+    const toolchain = await toolchainConfig.resolveCompatibilityRuntime();
+    const profile = Object.freeze({
+        id: "transient-lg-compatibility",
+        label: "Transient LG compatibility validation",
+        platform: "webos",
+        appId: "com.mytvb2c.app",
+        model,
+        firmwareVersion: firmware,
+        vendorDeviceName: connection.deviceName,
+    });
+    const transientRunner = createTvRunner({
+        registry: {async list() { return [profile]; }},
+        discovery: createDeviceDiscovery({webos: webosReadOnlyAdapter, redact: redactSensitiveText}),
+        lock: lgDeviceLock,
+        serverManager: lgAppiumServerManager,
+        sessionFactory: lgWebOsSessionFactory,
+        redact: redactSensitiveText,
+    });
+    return transientRunner.run({
+        profileId: profile.id,
+        host: connection.deviceHost,
+        sharedDeviceAcknowledged: true,
+        secureWebsocket: true,
+        allowSelfSignedTls: true,
+        connection,
+        appium: {
+            port: 4727,
+            appiumHome: toolchain.appiumHome,
+            appiumBin: toolchain.appiumBin,
+        },
+        testCase,
+    });
+}
+
+async function writeLgReportEntry({testCase, executionResult, result}) {
+    const reportJson = userReportJsonPath();
+    const reportHtml = userReportHtmlPath();
+    let report;
+    try {
+        report = JSON.parse(await fs.readFile(reportJson, "utf8"));
+    } catch {
+        report = createEmptyReport();
+    }
+    const caseResult = executionResult?.caseResult || executionResult?.testCaseResult || null;
+    const entry = buildTestReportEntry({
+        testCaseId: testCase.id,
+        testCaseName: testCase.name,
+        exitCode: result?.passed ? 0 : 1,
+        caseResult,
+        errorMessage: result?.failure?.code || "",
+    });
+    const updated = upsertTestReport(report, entry);
+    await fs.mkdir(path.dirname(reportJson), {recursive: true});
+    await fs.writeFile(reportJson, JSON.stringify(updated, null, 2), "utf8");
+    await fs.writeFile(reportHtml, renderUserReport(updated), "utf8");
+}
+
 function safeFileName(value) {
     return (
         String(value || "case")
             .replace(/[^a-z0-9_-]+/giu, "-")
             .replace(/^-+|-+$/g, "") || "case"
     );
-}
-
-function playwrightBrowsersPath(projectRoot) {
-    if (app.isPackaged) {
-        return path.join(process.resourcesPath, "playwright-browsers");
-    }
-
-    return path.join(projectRoot, ".playwright-browsers");
 }
 
 function testRunnerBinary() {

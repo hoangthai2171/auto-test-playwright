@@ -1,5 +1,9 @@
-const ALLOWED_FIELDS = new Set(["id", "label", "platform", "appId", "model", "modelYear"]);
-const REQUIRED_FIELDS = ["id", "label", "platform", "appId", "model"];
+const ALLOWED_FIELDS = new Set([
+  "id", "label", "platform", "appId", "backendEnvironment", "model", "modelYear",
+  "lastKnownHost", "vendorDeviceName", "defaultPackagePath", "defaultPackageVersion",
+  "accessMode", "osVersion", "firmwareVersion", "notes", "createdAt", "updatedAt",
+]);
+const REQUIRED_FIELDS = ["id", "label", "platform", "appId", "backendEnvironment", "model"];
 const LG_APP_ID = "com.mytvb2c.app";
 const SECRET_FIELD_PATTERN = /password|secret|token|authorization|credential|host/i;
 
@@ -13,7 +17,7 @@ function normalizeProfile(profile) {
   }
 
   for (const field of Object.keys(profile)) {
-    if (SECRET_FIELD_PATTERN.test(field)) {
+    if (!ALLOWED_FIELDS.has(field) && SECRET_FIELD_PATTERN.test(field)) {
       throw invalidProfile(`secret field '${field}' is not allowed in device profiles.`);
     }
     if (!ALLOWED_FIELDS.has(field)) {
@@ -25,11 +29,15 @@ function normalizeProfile(profile) {
       throw invalidProfile(`required field '${field}' must be a non-empty string.`);
     }
   }
-  if (profile.platform !== "lg") {
-    throw invalidProfile("only the LG platform is supported.");
+  const platform = profile.platform === "lg" ? "webos" : profile.platform;
+  if (platform !== "webos") {
+    throw invalidProfile("only the webOS LG platform is supported.");
   }
   if (profile.appId !== LG_APP_ID) {
     throw invalidProfile(`appId '${profile.appId}' is unsupported; use '${LG_APP_ID}'.`);
+  }
+  if (profile.backendEnvironment !== "production") {
+    throw invalidProfile("only the production backend environment is supported.");
   }
   if (profile.modelYear !== undefined && (typeof profile.modelYear !== "string" || !profile.modelYear.trim())) {
     throw invalidProfile("optional field 'modelYear' must be a non-empty string when supplied.");
@@ -38,11 +46,15 @@ function normalizeProfile(profile) {
   const normalized = {
     id: profile.id,
     label: profile.label,
-    platform: profile.platform,
+    platform,
     appId: profile.appId,
+    backendEnvironment: profile.backendEnvironment,
     model: profile.model,
   };
-  if (profile.modelYear !== undefined) normalized.modelYear = profile.modelYear;
+  for (const field of ALLOWED_FIELDS) {
+    if (field in normalized || profile[field] === undefined) continue;
+    normalized[field] = profile[field];
+  }
   return normalized;
 }
 
@@ -66,13 +78,18 @@ function createDeviceRegistry({filePath, fs}) {
     } catch (error) {
       throw new Error(`Could not parse device registry ${filePath}: ${error.message}`, {cause: error});
     }
-    if (!Array.isArray(profiles)) throw new Error(`Could not parse device registry ${filePath}: expected an array.`);
-    return profiles.map(normalizeProfile);
+    const devices = Array.isArray(profiles)
+      ? profiles
+      : profiles?.version === 1 && Array.isArray(profiles.devices)
+        ? profiles.devices
+        : null;
+    if (!devices) throw new Error(`Could not parse device registry ${filePath}: expected a version 1 device envelope.`);
+    return devices.map(normalizeProfile);
   }
 
   async function writeProfiles(profiles) {
     const temporaryPath = `${filePath}.tmp`;
-    await fs.writeFile(temporaryPath, `${JSON.stringify(profiles, null, 2)}\n`, "utf8");
+    await fs.writeFile(temporaryPath, `${JSON.stringify({version: 1, devices: profiles}, null, 2)}\n`, "utf8");
     await fs.rename(temporaryPath, filePath);
   }
 

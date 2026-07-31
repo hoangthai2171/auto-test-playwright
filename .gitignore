@@ -22,3 +22,8 @@ pnpm-debug.log*
 .worktrees/
 .superpowers/
 .real-tv-appium/
+graphify-out/20??-??-??/
+graphify-out/cache/
+graphify-out/.graphify_detect.json
+graphify-out/.graphify_python
+graphify-out/.graphify_root

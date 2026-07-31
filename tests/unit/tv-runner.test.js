@@ -9,7 +9,7 @@ const {createDeviceLock} = require("../../app/device-lock");
 const LG_PROFILE = Object.freeze({
   id: "lg-1",
   label: "Living room LG",
-  platform: "lg",
+  platform: "webos",
   appId: "com.mytvb2c.app",
   model: "OLED55C4",
 });
@@ -191,6 +191,7 @@ test("runner verifies injected DOM and genuine Appium screenshot then returns im
   assert.equal(calls.serverOptions.secureWebsocket, true);
   assert.equal(calls.serverOptions.allowSelfSignedTls, false);
   assert.deepEqual(calls.serverOptions, {...APPIUM, secureWebsocket: true, allowSelfSignedTls: false});
+  assert.equal(calls.sessionOptions.profile.platform, "lg");
   assert.deepEqual(calls.sessionOptions.connection, {...CONNECTION, deviceHost: "192.168.1.9", useSecureWebsocket: true});
   assert.equal(calls.sessionOptions.server.baseUrl, "http://127.0.0.1:4725");
   assert.equal(calls.domReads, 1);
@@ -204,6 +205,54 @@ test("runner verifies injected DOM and genuine Appium screenshot then returns im
   assert.ok(Object.isFrozen(result.artifactMetadata));
   assert.doesNotMatch(JSON.stringify(result), /192\.168\.1\.9|pairing-secret|chromedriver/i);
   assert.deepEqual(result.artifactMetadata, {domInspected: true, genuineAppiumScreenshot: true});
+});
+
+test("runner emits fixed lifecycle codes and data-url frames without runtime values", async () => {
+  const events = [];
+  const frames = [];
+  const {runner} = createHarness({
+    session: {
+      async start() {},
+      async getDomState() { return {}; },
+      async screenshot() { return Buffer.from("genuine-appium-png"); },
+      async cleanup() {},
+      async close() {},
+    },
+  });
+
+  await runner.run(validRun({
+    onEvent: (event) => events.push(event),
+    onFrame: (frame) => frames.push(frame),
+  }));
+
+  assert.deepEqual(events.map((event) => event.code), [
+    "preflight-ready",
+    "appium-started",
+    "session-started",
+    "cleanup-complete",
+  ]);
+  assert.equal(frames.length, 1);
+  assert.match(frames[0], /^data:image\/png;base64,/);
+  assert.doesNotMatch(JSON.stringify({events, frames}), /192\.168\.1\.9|pairing-secret|chromedriver/i);
+});
+
+test("runner ignores lifecycle and frame callback failures", async () => {
+  const {runner} = createHarness({
+    session: {
+      async start() {},
+      async getDomState() { return {}; },
+      async screenshot() { return "Z2VudWluZQ=="; },
+      async cleanup() {},
+      async close() {},
+    },
+  });
+
+  const result = await runner.run(validRun({
+    onEvent() { throw new Error("callback failure"); },
+    onFrame() { throw new Error("callback failure"); },
+  }));
+
+  assert.equal(result.status, "passed");
 });
 
 test("runner invokes a trusted injected case executor only after the session preflight", async () => {
@@ -226,14 +275,60 @@ test("runner invokes a trusted injected case executor only after the session pre
   assert.deepEqual(result.caseResult, {testCaseId: "case-1", status: "passed", steps: []});
 });
 
+test("runner preserves only a redacted case step summary when a case action fails", async () => {
+  const actionError = new Error("search failed for 192.168.1.9 with pairing-secret");
+  actionError.testCaseResult = {
+    testCaseId: "case-1",
+    status: "failed",
+    completionScreenshotDataUrl: "data:image/png;base64,PRIVATE_SCREENSHOT",
+    steps: [
+      {action: "login", status: "passed", message: "account included pairing-secret"},
+      {action: "search_content", status: "failed", message: "host 192.168.1.9", screenshot: "data:image/png;base64,PRIVATE_SCREENSHOT"},
+    ],
+  };
+  const {runner, lock} = createHarness({
+    async caseExecutor() {
+      throw actionError;
+    },
+  });
+  const testCase = {id: "case-1", name: "Trusted case", actions: [{action: "search_content", name: "VTV1 HD", type: "channel"}]};
+
+  await assert.rejects(
+    runner.run(validRun({testCase, caseHelpers: {semantic: {}}})),
+    (error) => {
+      assert.equal(error.code, "TV_RUN_FAILED");
+      assert.equal(error.lifecycleStage, "case-started");
+      assert.deepEqual(error.testCaseResult, {
+        status: "failed",
+        steps: [
+          {action: "login", status: "passed"},
+          {action: "search_content", status: "failed"},
+        ],
+      });
+      assert.doesNotMatch(JSON.stringify(error.testCaseResult), /192\.168\.1\.9|pairing-secret|data:image/i);
+      return true;
+    },
+  );
+
+  assert.equal(lock.isLocked("lg-1"), false);
+});
+
 test("runner releases its lock and stops Appium when injected session creation fails", async () => {
   const {runner, calls, lock} = createHarness({
-    sessionFactoryCreate: async () => { throw new Error("session failed for 192.168.1.9 with pairing-secret"); },
+    sessionFactoryCreate: async () => {
+      const error = new Error("session failed for 192.168.1.9 with pairing-secret");
+      error.failureCode = "APPIUM_CHROMEDRIVER";
+      throw error;
+    },
   });
 
   await assert.rejects(
     runner.run(validRun()),
-    (error) => error.code === "TV_RUN_FAILED" && /session failed/.test(error.message) && !/192\.168\.1\.9|pairing-secret/.test(error.message),
+    (error) => error.code === "TV_RUN_FAILED"
+      && error.lifecycleStage === "session-creating"
+      && error.failureCode === "APPIUM_CHROMEDRIVER"
+      && /session failed/.test(error.message)
+      && !/192\.168\.1\.9|pairing-secret/.test(error.message),
   );
 
   assert.equal(calls.serverStops, 1);

@@ -1,6 +1,6 @@
 "use strict";
 
-const LG_PLATFORM = "lg";
+const LG_PLATFORM = "webos";
 const LG_APP_ID = "com.mytvb2c.app";
 
 function classifiedError(code, message) {
@@ -55,20 +55,25 @@ function createDeviceDiscovery({webos, redact}) {
       if (typeof host !== "string" || !host.trim()) {
         throw classifiedError("HOST_REQUIRED", "A runtime LG host is required for validation.");
       }
+      if (typeof profile.vendorDeviceName !== "string" || !profile.vendorDeviceName.trim()) {
+        throw classifiedError("DEVICE_NAME_REQUIRED", "A registered webOS device name is required for validation.");
+      }
 
       const runtimeHost = host.trim();
+      const connection = {deviceName: profile.vendorDeviceName.trim(), host: runtimeHost};
       let info;
       let apps;
       try {
-        [info, apps] = await Promise.all([webos.deviceInfo(runtimeHost), webos.listApps(runtimeHost)]);
+        [info, apps] = await Promise.all([webos.deviceInfo(connection), webos.listApps(connection)]);
       } catch (error) {
+        const code = error?.code === "TOOLCHAIN_UNAVAILABLE" ? "TOOLCHAIN_UNAVAILABLE" : "DISCOVERY_FAILED";
         return {
-          status: "DISCOVERY_FAILED",
+          status: code,
           identity: null,
           installedApp: null,
           diagnostics: {
             host: redactText(redact, runtimeHost),
-            code: "DISCOVERY_FAILED",
+            code,
             message: redactText(redact, error?.message ?? "Unknown webOS discovery failure."),
           },
         };
@@ -85,6 +90,19 @@ function createDeviceDiscovery({webos, redact}) {
             host: redactText(redact, runtimeHost),
             code: "APP_NOT_INSTALLED",
             message: "The required MyTV application is not installed.",
+          },
+        };
+      }
+
+      if (String(info?.model ?? "").trim() !== String(profile.model).trim()) {
+        return {
+          status: "MODEL_MISMATCH",
+          identity,
+          installedApp,
+          diagnostics: {
+            host: redactText(redact, runtimeHost),
+            code: "MODEL_MISMATCH",
+            message: "The observed LG model does not match the saved profile.",
           },
         };
       }

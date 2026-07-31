@@ -47,6 +47,24 @@ test("builds the flow-case result submission URL", () => {
   );
 });
 
+test("fetches the compatibility catalog through the existing Authorization header", async () => {
+  const calls = [];
+  const result = await api.fetchDeviceCompatibilityCatalog({
+    apiDomain: "https://api.example.test",
+    authorization: "Bearer private",
+    timeoutMs: 500,
+    fetchImpl: async (url, options) => {
+      calls.push({url, options});
+      return {ok: true, status: 200, json: async () => ({profiles: []})};
+    },
+  });
+
+  assert.equal(api.buildDeviceCompatibilityUrl({apiDomain: "https://api.example.test/"}), "https://api.example.test/api/v1/device-compatibility");
+  assert.equal(calls[0].url, "https://api.example.test/api/v1/device-compatibility");
+  assert.equal(calls[0].options.headers.Authorization, "Bearer private");
+  assert.deepEqual(result.catalog, {profiles: []});
+});
+
 test("flattens nested folders while retaining each folder identity", () => {
   assert.deepEqual(api.flattenFlowCaseFolders([
     {id: "1", name: "Root", fullPath: "/Root", children: [

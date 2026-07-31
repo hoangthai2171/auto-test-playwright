@@ -1,0 +1,22 @@
+{
+  "profiles": [
+    {
+      "model": "55QNED80SRA",
+      "firmware": "33.31.61",
+      "chromedriver": {
+        "darwin": {
+          "version": "2.36.540469",
+          "url": "https://chromedriver.storage.googleapis.com/2.36/chromedriver_mac64.zip",
+          "archiveName": "chromedriver_mac64.zip",
+          "sha256": "5fdf19698b213df76bdb5b8731b9a3c0394da4a40dc040b0554af64d6b251a86"
+        },
+        "win32": {
+          "version": "2.36.540469",
+          "url": "https://chromedriver.storage.googleapis.com/2.36/chromedriver_win32.zip",
+          "archiveName": "chromedriver_win32.zip",
+          "sha256": "a5992057ceaae52eb9b3f8e1fead7df5ca7e8c366a3cc3243c3dd8e6200c8a74"
+        }
+      }
+    }
+  ]
+}

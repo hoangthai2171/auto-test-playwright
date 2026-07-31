@@ -32,6 +32,10 @@ function buildFlowCaseResultsUrl({apiDomain, projectId}) {
   return `${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/flow-cases/by-folder`;
 }
 
+function buildDeviceCompatibilityUrl({apiDomain}) {
+  return `${normalizeApiDomain(apiDomain)}/api/v1/device-compatibility`;
+}
+
 function flattenFlowCaseFolders(nodes, result = []) {
   if (!Array.isArray(nodes)) return result;
   nodes.forEach((node) => {
@@ -218,6 +222,12 @@ async function submitFlowCaseResults({apiDomain, projectId, folderPath, testcase
   };
 }
 
+async function fetchDeviceCompatibilityCatalog({apiDomain, authorization, timeoutMs, fetchImpl} = {}) {
+  const result = await requestJson(buildDeviceCompatibilityUrl({apiDomain}), {authorization, timeoutMs, fetchImpl});
+  if (!result.ok) return result;
+  return {ok: true, catalog: result.body, request: result.request, response: result.response};
+}
+
 module.exports = {
   DEFAULT_API_DOMAIN,
   DEFAULT_TIMEOUT_SECONDS,
@@ -227,8 +237,10 @@ module.exports = {
   buildFlowCaseFoldersUrl,
   buildFlowCasesUrl,
   buildFlowCaseResultsUrl,
+  buildDeviceCompatibilityUrl,
   flattenFlowCaseFolders,
   fetchFlowCaseFolders,
   fetchFlowCases,
+  fetchDeviceCompatibilityCatalog,
   submitFlowCaseResults,
 };

@@ -25,9 +25,9 @@ test("creates the credentialed LG product gate from runtime values only", () => 
   });
 
   assert.equal(testCase.id, "lg-product-gate");
-  assert.deepEqual(testCase.actions.map((action) => action.action), ["login", "open_search", "search_content", "play_search_result"]);
-  assert.equal(testCase.actions[2].name, "VTV3 HD");
-  assert.equal(testCase.actions[2].type, "channel");
+  assert.deepEqual(testCase.actions.map((action) => action.action), ["login", "open_home", "open_search", "search_content", "play_search_result"]);
+  assert.equal(testCase.actions[3].name, "VTV3 HD");
+  assert.equal(testCase.actions[3].type, "channel");
   assert.equal(Object.hasOwn(testCase, "host"), false);
 });
 

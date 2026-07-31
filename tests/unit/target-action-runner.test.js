@@ -2,7 +2,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const {createTargetActionContext} = require("../lib/target-action-context");
-const {runTargetActions} = require("../lib/target-action-runner");
+const {runTargetActions, validateTargetCaseCapabilities} = require("../lib/target-action-runner");
 
 test("runs basic target-neutral actions through the injected TV session", async () => {
   const calls = [];
@@ -55,4 +55,39 @@ test("fails unsupported target actions before the session receives input", async
     (error) => error.code === "ACTION_CAPABILITY_UNSUPPORTED" && error.caseId === "tv-case-2" && error.actionIndex === 0,
   );
   assert.equal(pressed, false);
+});
+
+test("admits supported TV actions before a session is created", () => {
+  assert.doesNotThrow(() => validateTargetCaseCapabilities({
+    id: "tv-case-admission",
+    name: "admission",
+    actions: [
+      {action: "wait_for_ready", name: "app"},
+      {action: "press_back"},
+      {action: "play_content", name: "item", type: "movie"},
+    ],
+  }, {
+    domInspection: true,
+    visualCapture: true,
+    targetSemanticActions: true,
+    playerInspection: true,
+  }));
+});
+
+test("rejects unsupported TV capabilities before a session is created", () => {
+  assert.throws(
+    () => validateTargetCaseCapabilities({
+      id: "tv-case-unsupported-admission",
+      name: "unsupported admission",
+      actions: [{action: "play_content", name: "item", type: "movie"}],
+    }, {
+      domInspection: true,
+      visualCapture: true,
+      targetSemanticActions: true,
+      playerInspection: false,
+    }),
+    (error) => error.code === "ACTION_CAPABILITY_UNSUPPORTED"
+      && error.caseId === "tv-case-unsupported-admission"
+      && error.actionIndex === 0,
+  );
 });

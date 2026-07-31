@@ -6,6 +6,7 @@ const {spawn, spawnSync} = require("node:child_process");
 const {createTvRunner} = require("../../app/tv-runner");
 const {createDeviceLock} = require("../../app/device-lock");
 const {createAppiumServerManager} = require("../../app/appium-server-manager");
+const {createLoopbackAppiumClient} = require("../../app/loopback-appium-client");
 const {runTvTestCase} = require("../../tests/lib/tv-case-runner");
 const {createWebOsSessionFactory} = require("../../tests/lib/tv-session/webos-appium-session");
 const {EXPECTED_LG_APP_ID, buildLgRuntimeRedactionSecrets} = require("./lg-webos-poc-core");
@@ -14,7 +15,6 @@ const {
   createLgProductGateEvidenceWriter,
   createLgProductGateManifest,
   parseLgCaseRunnerArgs,
-  requestLoopbackAppium,
   runLgProductGateWithEvidence,
   withoutLgProductGateCredentials,
 } = require("./lg-webos-case-runner-core");
@@ -27,28 +27,6 @@ function wait(milliseconds) { return new Promise((resolve) => setTimeout(resolve
 
 function redactFactory(secrets) {
   return (value) => secrets.reduce((text, secret) => String(text).split(String(secret)).join("[REDACTED]"), String(value ?? ""));
-}
-
-function appiumRequest(baseUrl, pathname, method = "GET", body) {
-  return requestLoopbackAppium({fetchImpl: fetch, baseUrl, pathname, method, body});
-}
-
-function createAppiumClient({baseUrl}) {
-  let sessionId = "";
-  function sessionPath(suffix) {
-    if (!sessionId) throw new Error("Appium session is unavailable.");
-    return `/session/${sessionId}${suffix}`;
-  }
-  return {
-    async createSession(capabilities) {
-      const session = await appiumRequest(baseUrl, "/session", "POST", capabilities);
-      sessionId = session?.sessionId || session?.capabilities?.sessionId || "";
-      if (!sessionId) throw new Error("Appium did not return a session ID.");
-    },
-    execute: (script, args) => appiumRequest(baseUrl, sessionPath("/execute/sync"), "POST", {script, args}),
-    screenshot: () => appiumRequest(baseUrl, sessionPath("/screenshot")),
-    deleteSession: () => appiumRequest(baseUrl, sessionPath(""), "DELETE"),
-  };
 }
 
 function runReadOnly(command, args, env) {
@@ -81,7 +59,7 @@ async function main() {
   const redactor = redactFactory([...buildLgRuntimeRedactionSecrets(args.host), username, password]);
   const aresInfo = path.join(runtime.webosSdk, "CLI", "bin", "ares-device-info");
   const aresInstall = path.join(runtime.webosSdk, "CLI", "bin", "ares-install");
-  const profile = {id: "lg-product-gate", label: "LG product gate", platform: "lg", appId: EXPECTED_LG_APP_ID, model: args.model};
+  const profile = {id: "lg-product-gate", label: "LG product gate", platform: "webos", appId: EXPECTED_LG_APP_ID, model: args.model};
   const discovery = {
     async validate() {
       const info = runReadOnly(aresInfo, ["--device", args.device], vendorEnv);
@@ -108,7 +86,7 @@ async function main() {
     discovery,
     lock: createDeviceLock(),
     serverManager,
-    sessionFactory: createWebOsSessionFactory({clientFactory: async (options) => createAppiumClient(options), secrets: [args.host, username, password]}),
+    sessionFactory: createWebOsSessionFactory({clientFactory: async (options) => createLoopbackAppiumClient(options), secrets: [args.host, username, password]}),
     redact: redactor,
     caseExecutor,
   });

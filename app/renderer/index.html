@@ -21,6 +21,46 @@
         <main class="app-shell">
             <section class="sidebar">
                 <form id="test-form" class="form-grid">
+                    <section class="run-target-panel" aria-labelledby="run-target-title">
+                        <h2 id="run-target-title">Run target</h2>
+                        <div class="run-target-options" role="radiogroup" aria-label="Run target">
+                            <label class="run-target-option">
+                                <input id="run-target-browser" type="radio" name="run-target" value="browser" checked />
+                                <span>Browser</span>
+                            </label>
+                            <label class="run-target-option">
+                                <input id="run-target-webos" type="radio" name="run-target" value="webos" />
+                                <span>LG</span>
+                            </label>
+                        </div>
+                        <div id="browser-configuration-cta" class="browser-configuration-cta">
+                            <span id="browser-toolchain-run-status" class="field-note" role="status"></span>
+                            <button type="button" id="configure-browser-button" class="tv-device-text-action hidden">Configure Browser</button>
+                        </div>
+                        <div id="lg-device-panel" class="hidden">
+                            <label for="tv-device-select">
+                                LG device list
+                                <select id="tv-device-select" disabled>
+                                    <option value="">No saved LG device</option>
+                                </select>
+                            </label>
+                            <div class="tv-device-actions">
+                                <button type="button" id="tv-device-add-button" class="tv-device-text-action">+ Add device</button>
+                                <button type="button" id="tv-device-edit-button" class="tv-device-text-action" disabled>Edit device</button>
+                            </div>
+                            <div class="tv-device-connection-row">
+                                <span id="tv-device-connection-dot" class="tv-device-connection-dot not-checked" aria-hidden="true"></span>
+                                <span id="tv-device-connection-status" role="status">Connection not checked</span>
+                                <button type="button" id="tv-device-check-connection-button" class="secondary-button" disabled>Check connection</button>
+                            </div>
+                            <div class="lg-run-availability-row">
+                                <span id="lg-run-availability" class="field-note" role="status">Select an LG device and test case to review readiness.</span>
+                                <button type="button" id="configure-lg-sdk-button" class="tv-device-text-action hidden">Configure SDK</button>
+                            </div>
+                            <p id="tv-device-status" class="tv-device-status" role="status">Browser runner is selected.</p>
+                        </div>
+                    </section>
+
                     <section class="folder-browser">
                         <div class="folder-browser-header">
                             <label for="folder-select">Folders</label>
@@ -91,10 +131,66 @@
                         <div id="browser-preview-empty" class="browser-preview-empty">Browser preview will appear here when a test starts.</div>
                         <img id="browser-preview-image" class="browser-preview-image hidden" alt="Browser preview" />
                         <webview id="interactive-browser" class="interactive-browser hidden" allowpopups></webview>
+                        <div id="lg-preview-empty" class="browser-preview-empty hidden">LG state will appear here when the selected batch starts.</div>
+                        <img id="lg-preview-image" class="browser-preview-image hidden" alt="LG preview" />
                     </div>
+                    <p id="lg-run-state" class="lg-run-state hidden" role="status"></p>
                 </section>
             </section>
         </main>
+
+        <div id="tv-device-dialog" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="tv-device-dialog-title">
+            <div class="modal-backdrop" data-close-tv-device-dialog></div>
+            <section class="tv-device-dialog">
+                <header class="settings-header">
+                    <h2 id="tv-device-dialog-title">Add LG device</h2>
+                    <button type="button" id="tv-device-dialog-cancel-button" class="icon-button" aria-label="Close device editor">×</button>
+                </header>
+                <div class="tv-device-dialog-content">
+                    <p class="muted">Enter the connection details from LG Developer Mode. Port 9922 and user prisoner are applied when live validation is approved.</p>
+                    <div class="tv-device-dialog-fields">
+                        <label>Device name <input id="tv-device-name-input" autocomplete="off" /></label>
+                        <label>Device host <input id="tv-device-host-input" autocomplete="off" /></label>
+                        <label>Passphrase
+                            <span class="tv-device-passphrase-row">
+                                <input id="tv-device-passphrase-input" type="password" autocomplete="new-password" />
+                                <button type="button" id="tv-device-passphrase-toggle" class="secondary-button">Show</button>
+                            </span>
+                        </label>
+                    </div>
+                    <p id="tv-device-dialog-status" class="tv-device-status" role="status"></p>
+                    <footer class="tv-device-dialog-footer">
+                        <button type="button" id="tv-device-dialog-submit-button">Validate and save</button>
+                    </footer>
+                </div>
+            </section>
+        </div>
+
+        <div id="lg-run-confirmation-dialog" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lg-run-confirmation-title">
+            <div class="modal-backdrop" data-close-lg-run-confirmation></div>
+            <section class="lg-run-dialog">
+                <header class="settings-header">
+                    <h2 id="lg-run-confirmation-title">Run selected LG cases</h2>
+                    <button type="button" id="lg-run-cancel-button" class="icon-button" aria-label="Cancel LG run">×</button>
+                </header>
+                <div class="lg-run-dialog-content">
+                    <p id="lg-run-confirmation-count"></p>
+                    <p>This may foreground MyTV, reset only MyTV local storage, use native remote input, sign in through the selected case’s virtual keyboard, and run trusted logout cleanup.</p>
+                    <footer class="tv-device-dialog-footer"><button type="button" id="lg-run-confirm-button">Run selected cases</button></footer>
+                </div>
+            </section>
+        </div>
+
+        <div id="lg-recovery-dialog" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lg-recovery-title">
+            <div class="modal-backdrop" data-close-lg-recovery></div>
+            <section class="lg-run-dialog">
+                <header class="settings-header"><h2 id="lg-recovery-title">LG run needs your decision</h2></header>
+                <div class="lg-run-dialog-content">
+                    <p>The current case stopped after its approved recovery limit. Choose whether to retry the current case from a fresh MyTV-only reset or stop this batch.</p>
+                    <footer class="tv-device-dialog-footer"><button type="button" id="lg-recovery-retry-button">Keep retrying</button><button type="button" id="lg-recovery-stop-button" class="secondary-button">Stop</button></footer>
+                </div>
+            </section>
+        </div>
 
         <div id="test-case-details-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="test-case-details-title">
             <div class="modal-backdrop" data-close-test-case-details></div>
@@ -120,6 +216,23 @@
             </section>
         </div>
 
+        <div id="tv-help-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="tv-help-title">
+            <div class="modal-backdrop" data-close-tv-help></div>
+            <section class="logs-dialog">
+                <header class="settings-header">
+                    <h2 id="tv-help-title">LG read-only help</h2>
+                    <button type="button" id="tv-help-close-button" class="icon-button">×</button>
+                </header>
+                <article class="test-case-details">
+                    <p>Advanced paths stores local paths only. Auto configure reviews the fixed app-managed layout; neither action contacts a TV.</p>
+                    <p>Register local webOS target changes only the vendor CLI target list on this computer. It does not pair with, validate, or operate a TV.</p>
+                    <p>Validate a saved LG profile only after an explicitly approved live preflight. If the TV shows a pairing prompt, approve it manually and do not dismiss or retry it automatically.</p>
+                    <p>One-off direct-IP validation is intentionally unavailable: the current read-only adapter uses a registered webOS device and a safe direct-IP design requires a separate vendor-registration decision.</p>
+                    <p>LG execution remains disabled. This UI does not install, update, reset, uninstall, navigate, or capture from the TV.</p>
+                </article>
+            </section>
+        </div>
+
         <div id="settings-modal" class="modal hidden" role="dialog" aria-modal="true">
             <div class="modal-backdrop" data-close-settings></div>
             <section class="settings-dialog">
@@ -131,6 +244,7 @@
                 <div class="settings-body">
                     <nav class="settings-nav">
                         <button type="button" class="settings-nav-item active" data-settings-panel="gui">GUI</button>
+                        <button type="button" class="settings-nav-item" data-settings-panel="sdk">SDK configuration</button>
                     </nav>
 
                     <section class="settings-content">
@@ -191,6 +305,7 @@
                                         <span>Interactive browser (Not stable)</span>
                                     </label>
                                 </div>
+                                <p id="preview-target-status" class="field-note hidden" role="status"></p>
                             </section>
 
                             <div class="settings-actions">
@@ -198,15 +313,136 @@
                                 <span id="settings-message" class="settings-message" role="status"></span>
                             </div>
                         </div>
+                        <div class="settings-panel hidden" data-settings-content="sdk">
+                            <h3>SDK configuration</h3>
+                            <section class="settings-section">
+                                <h4>Browser configuration</h4>
+                                <p class="field-note">Configure the project-pinned Playwright Chromium locally. It does not use or change a system browser.</p>
+                                <div id="browser-component-list" class="sdk-component-list" role="status" aria-live="polite">
+                                    <p class="field-note">Select this panel to check the local Browser status.</p>
+                                </div>
+                                <section id="browser-install-progress" class="sdk-install-progress hidden" role="status" aria-live="polite">
+                                    <div class="sdk-install-progress-bar" role="progressbar" aria-label="Browser installation progress" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Preparing">
+                                        <span></span>
+                                    </div>
+                                    <p id="browser-install-progress-text" class="sdk-install-progress-text"></p>
+                                    <ol id="browser-install-progress-steps" class="sdk-install-progress-steps"></ol>
+                                </section>
+                                <div class="settings-actions">
+                                    <button type="button" id="browser-auto-configure-button">Auto configure</button>
+                                    <button type="button" id="browser-install-confirm-button" class="secondary-button" disabled>Install reviewed Chromium</button>
+                                </div>
+                                <section id="browser-install-review" class="sdk-install-review hidden" role="status" aria-live="polite"></section>
+                            </section>
+                            <hr class="settings-divider" />
+                            <h3>LG SDK configuration</h3>
+                            <p class="field-note">Configure local tools only. This page does not contact, pair with, validate, or operate a TV.</p>
+                            <section class="settings-section">
+                                <h4>Component status</h4>
+                                <div id="sdk-component-list" class="sdk-component-list" role="status" aria-live="polite">
+                                    <p class="field-note">Select this panel to check local component status.</p>
+                                </div>
+                            </section>
+                            <section class="settings-section sdk-compatibility-catalog" aria-labelledby="sdk-compatibility-catalog-heading">
+                                <h4 id="sdk-compatibility-catalog-heading">Compatibility catalog</h4>
+                                <p id="sdk-compatibility-catalog-status" class="field-note" role="status">Compatibility catalog status is unavailable.</p>
+                                <div class="settings-actions">
+                                    <button type="button" id="sdk-compatibility-catalog-refresh-button" class="secondary-button">Update compatibility catalog</button>
+                                    <button type="button" id="sdk-compatibility-check-button" class="secondary-button">Check device compatibility</button>
+                                </div>
+                            </section>
+                            <section class="settings-section" aria-labelledby="lg-compatibility-product-gate-heading">
+                                <h4 id="lg-compatibility-product-gate-heading">Compatibility test account</h4>
+                                <p class="field-note">Used only by the fixed local LG compatibility case. Credentials are encrypted in private app storage and are never shown again.</p>
+                                <div class="advanced-path-fields">
+                                    <label>Username <input id="lg-compatibility-product-gate-username-input" autocomplete="username" /></label>
+                                    <label>Password <input id="lg-compatibility-product-gate-password-input" type="password" autocomplete="current-password" /></label>
+                                    <button type="button" id="lg-compatibility-product-gate-save-button" class="secondary-button">Save local compatibility account</button>
+                                </div>
+                                <p id="lg-compatibility-product-gate-status" class="field-note" role="status"></p>
+                            </section>
+                            <section class="settings-section">
+                                <h4>Reviewed setup</h4>
+                                <p class="field-note">Auto configure only reviews this computer. Nothing downloads or changes until you confirm installation.</p>
+                                <section id="sdk-install-progress" class="sdk-install-progress hidden" role="status" aria-live="polite">
+                                    <div class="sdk-install-progress-bar" role="progressbar" aria-label="LG tool installation progress" aria-valuemin="0" aria-valuemax="100" aria-valuetext="Preparing">
+                                        <span></span>
+                                    </div>
+                                    <p id="sdk-install-progress-text" class="sdk-install-progress-text"></p>
+                                    <ol id="sdk-install-progress-steps" class="sdk-install-progress-steps"></ol>
+                                </section>
+                                <div class="settings-actions">
+                                    <button type="button" id="sdk-auto-configure-button">Auto configure</button>
+                                    <button type="button" id="sdk-install-confirm-button" class="secondary-button" disabled>Install reviewed Node and Appium</button>
+                                    <button type="button" id="sdk-use-managed-button" class="secondary-button" disabled>Use verified managed tools</button>
+                                </div>
+                                <section id="sdk-install-review" class="sdk-install-review hidden" role="status" aria-live="polite"></section>
+                                <p id="sdk-managed-toolchain-status" class="field-note" role="status"></p>
+                            </section>
+                            <section class="settings-section">
+                                <h4>Configuration source</h4>
+                                <p id="tv-toolchain-status" class="tv-device-status" role="status"></p>
+                            </section>
+                            <section class="settings-section">
+                                <h4>Install legacy webOS TV CLI</h4>
+                                <p class="field-note">Download the approved archive from LG, then choose the original archive without unzipping it.</p>
+                                <div class="settings-actions">
+                                    <button type="button" id="sdk-download-lg-cli-button" class="secondary-button">Download from LG</button>
+                                    <button type="button" id="sdk-choose-lg-cli-button" class="secondary-button">Choose downloaded CLI archive</button>
+                                </div>
+                            </section>
+                            <details class="settings-section advanced-paths">
+                                <summary>Advanced paths</summary>
+                                <div class="advanced-path-fields">
+                                    <label>webOS SDK home <input id="tv-toolchain-sdk-home-input" autocomplete="off" /></label>
+                                    <label>Appium home <input id="tv-toolchain-appium-home-input" autocomplete="off" /></label>
+                                    <label>Appium executable <input id="tv-toolchain-appium-bin-input" autocomplete="off" /></label>
+                                    <label>ChromeDriver executable <input id="tv-toolchain-chromedriver-input" autocomplete="off" /></label>
+                                    <button type="button" id="tv-toolchain-save-button" class="secondary-button">Save advanced paths</button>
+                                </div>
+                            </details>
+                            <section class="settings-section">
+                                <h4>Registered target</h4>
+                                <p class="field-note">This changes only the local webOS CLI target list. Device validation remains a separate explicit action.</p>
+                            </section>
+                            <button type="button" id="tv-help-button" class="secondary-button">LG help</button>
+                        </div>
                     </section>
                 </div>
             </section>
         </div>
 
-        <div id="api-loading-overlay" class="api-loading-overlay hidden" role="status" aria-live="polite" aria-busy="true">
+        <div id="lg-compatibility-dialog" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="lg-compatibility-dialog-title">
+            <div class="modal-backdrop" data-close-lg-compatibility-dialog></div>
+            <section class="lg-compatibility-dialog">
+                <header class="settings-header">
+                    <h2 id="lg-compatibility-dialog-title">Check LG device compatibility</h2>
+                    <button type="button" id="lg-compatibility-close-button" class="icon-button" aria-label="Close compatibility check">×</button>
+                </header>
+                <div class="lg-compatibility-dialog-content">
+                    <p class="muted">This temporary check does not save a device. It adds and removes a local CLI target only after you explicitly confirm inspection.</p>
+                    <div class="lg-compatibility-dialog-fields">
+                        <label>Device name <input id="lg-compatibility-name-input" autocomplete="off" /></label>
+                        <label>Device host <input id="lg-compatibility-host-input" autocomplete="off" /></label>
+                        <label>Passphrase <input id="lg-compatibility-passphrase-input" autocomplete="off" /></label>
+                    </div>
+                    <div class="lg-compatibility-dialog-actions">
+                        <button type="button" id="lg-compatibility-inspection-review-button">Review inspection</button>
+                        <button type="button" id="lg-compatibility-inspection-confirm-button" class="secondary-button hidden">Confirm inspection</button>
+                    </div>
+                    <div class="lg-compatibility-dialog-actions">
+                        <button type="button" id="lg-compatibility-validation-review-button" class="secondary-button hidden">Review product-gate validation</button>
+                        <button type="button" id="lg-compatibility-validation-confirm-button" class="secondary-button hidden">Confirm one-case validation</button>
+                    </div>
+                    <p id="lg-compatibility-dialog-status" class="tv-device-status" role="status"></p>
+                </div>
+            </section>
+        </div>
+
+        <div id="api-loading-overlay" class="api-loading-overlay" role="status" aria-live="polite" aria-busy="true">
             <div class="api-loading-card">
                 <span class="api-loading-spinner" aria-hidden="true"></span>
-                <span>Loading from API...</span>
+                <span>Loading workspace...</span>
             </div>
         </div>
 
