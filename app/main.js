@@ -466,6 +466,8 @@ ipcMain.handle("set-unsynced-result-submission", async (_event, pending) => {
     return {ok: true};
 });
 
+ipcMain.handle("get-app-version", () => app.getVersion());
+
 function normalizeFlowCaseResultsPayload(values) {
     const folderPath = String(values.FOLDER_PATH ?? "").trim();
     if (!/^\/(?:[^/]+(?:\/[^/]+)*)?$/u.test(folderPath)) {

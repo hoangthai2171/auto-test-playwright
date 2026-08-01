@@ -75,4 +75,5 @@ contextBridge.exposeInMainWorld("mytvRunner", {
   },
   onStopRequested: (callback) => ipcRenderer.on("request-stop-run", callback),
   onDiscardUnsyncedResultSubmission: (callback) => ipcRenderer.on("discard-unsynced-result-submission", callback),
+  getAppVersion: () => ipcRenderer.invoke("get-app-version"),
 });

@@ -2511,6 +2511,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     updateFolderControls();
     updateRetrySyncButton();
 
+    api.getAppVersion?.().then((version) => {
+        const versionEl = doc.getElementById("app-version");
+        if (versionEl) versionEl.textContent = `v${version}`;
+    }).catch((err) => console.error("Failed to load app version:", err));
+
     return {
         loadCases,
         loadFolders,

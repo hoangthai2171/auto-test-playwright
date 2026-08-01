@@ -4,6 +4,50 @@
   "graph": {},
   "nodes": [
     {
+      "label": "opencode.json",
+      "file_type": "code",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "opencode_opencode",
+      "community": 87,
+      "community_name": "opencode.json",
+      "norm_label": "opencode.json"
+    },
+    {
+      "label": "$schema",
+      "file_type": "code",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L2",
+      "_origin": "ast",
+      "id": "opencode_opencode_schema",
+      "community": 87,
+      "community_name": "opencode.json",
+      "norm_label": "$schema"
+    },
+    {
+      "label": "plugin",
+      "file_type": "code",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "opencode_opencode_plugin",
+      "community": 87,
+      "community_name": "opencode.json",
+      "norm_label": "plugin"
+    },
+    {
+      "label": ".opencode/plugins/graphify.js",
+      "file_type": "concept",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L3",
+      "_origin": "ast",
+      "id": "ref_opencode_plugins_graphify_js",
+      "community": 87,
+      "community_name": "opencode.json",
+      "norm_label": ".opencode/plugins/graphify.js"
+    },
+    {
       "label": "graphify.js",
       "file_type": "code",
       "source_file": ".opencode/plugins/graphify.js",
@@ -384,8 +428,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_device_lock",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "device-lock.js"
     },
     {
@@ -395,8 +439,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_device_lock_createdevicelock",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "createdevicelock()"
     },
     {
@@ -2551,8 +2595,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer",
-      "community": 84,
-      "community_name": "lg-toolchain-installer.js",
+      "community": 183,
+      "community_name": "lg-toolchain-installer.test.js",
       "norm_label": "lg-toolchain-installer.js"
     },
     {
@@ -2562,8 +2606,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_trustedlgtoolchainbundle_trustedlgtoolchainmanifest",
-      "community": 84,
-      "community_name": "lg-toolchain-installer.js",
+      "community": 183,
+      "community_name": "lg-toolchain-installer.test.js",
       "norm_label": "{trustedlgtoolchainbundle, trustedlgtoolchainmanifest}"
     },
     {
@@ -2573,8 +2617,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_trustedlgtoolchainnpmclosure",
-      "community": 84,
-      "community_name": "lg-toolchain-installer.js",
+      "community": 183,
+      "community_name": "lg-toolchain-installer.test.js",
       "norm_label": "{trustedlgtoolchainnpmclosure}"
     },
     {
@@ -2584,8 +2628,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_safe_install_failures",
-      "community": 84,
-      "community_name": "lg-toolchain-installer.js",
+      "community": 183,
+      "community_name": "lg-toolchain-installer.test.js",
       "norm_label": "safe_install_failures"
     },
     {
@@ -2595,8 +2639,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_safe_verification_results",
-      "community": 84,
-      "community_name": "lg-toolchain-installer.js",
+      "community": 183,
+      "community_name": "lg-toolchain-installer.test.js",
       "norm_label": "safe_verification_results"
     },
     {
@@ -2606,8 +2650,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_publicreview",
-      "community": 84,
-      "community_name": "lg-toolchain-installer.js",
+      "community": 183,
+      "community_name": "lg-toolchain-installer.test.js",
       "norm_label": "publicreview()"
     },
     {
@@ -3530,8 +3574,8 @@
       "source_location": "L69",
       "_origin": "ast",
       "id": "app_main_createwindow",
-      "community": 37,
-      "community_name": "window-close-controller.test.js",
+      "community": 69,
+      "community_name": "window-startup.test.js",
       "norm_label": "createwindow()"
     },
     {
@@ -3541,8 +3585,8 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "app_main_confirmwindowclose",
-      "community": 37,
-      "community_name": "window-close-controller.test.js",
+      "community": 69,
+      "community_name": "window-startup.test.js",
       "norm_label": "confirmwindowclose()"
     },
     {
@@ -3563,8 +3607,8 @@
       "source_location": "L133",
       "_origin": "ast",
       "id": "app_main_discardunsyncedresultsubmission",
-      "community": 37,
-      "community_name": "window-close-controller.test.js",
+      "community": 69,
+      "community_name": "window-startup.test.js",
       "norm_label": "discardunsyncedresultsubmission()"
     },
     {
@@ -4000,7 +4044,7 @@
       "label": "normalizeFlowCaseResultsPayload()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L469",
+      "source_location": "L471",
       "_origin": "ast",
       "id": "app_main_normalizeflowcaseresultspayload",
       "community": 4,
@@ -4011,7 +4055,7 @@
       "label": "normalizeFlowCaseResult()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L485",
+      "source_location": "L487",
       "_origin": "ast",
       "id": "app_main_normalizeflowcaseresult",
       "community": 4,
@@ -4022,7 +4066,7 @@
       "label": "withApiLog()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L534",
+      "source_location": "L536",
       "_origin": "ast",
       "id": "app_main_withapilog",
       "community": 109,
@@ -4033,7 +4077,7 @@
       "label": "sanitizeApiLog()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L539",
+      "source_location": "L541",
       "_origin": "ast",
       "id": "app_main_sanitizeapilog",
       "community": 109,
@@ -4044,7 +4088,7 @@
       "label": "cloneApiLogValue()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L543",
+      "source_location": "L545",
       "_origin": "ast",
       "id": "app_main_cloneapilogvalue",
       "community": 109,
@@ -4055,7 +4099,7 @@
       "label": "sanitizeCaseForUi()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L563",
+      "source_location": "L565",
       "_origin": "ast",
       "id": "app_main_sanitizecaseforui",
       "community": 109,
@@ -4066,7 +4110,7 @@
       "label": "cloneForUi()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L567",
+      "source_location": "L569",
       "_origin": "ast",
       "id": "app_main_cloneforui",
       "community": 109,
@@ -4077,7 +4121,7 @@
       "label": "finishTestProcess()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L712",
+      "source_location": "L714",
       "_origin": "ast",
       "id": "app_main_finishtestprocess",
       "community": 42,
@@ -4088,7 +4132,7 @@
       "label": "reportPath()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L836",
+      "source_location": "L838",
       "_origin": "ast",
       "id": "app_main_reportpath",
       "community": 42,
@@ -4099,7 +4143,7 @@
       "label": "userReportJsonPath()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L840",
+      "source_location": "L842",
       "_origin": "ast",
       "id": "app_main_userreportjsonpath",
       "community": 42,
@@ -4110,7 +4154,7 @@
       "label": "userReportHtmlPath()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L844",
+      "source_location": "L846",
       "_origin": "ast",
       "id": "app_main_userreporthtmlpath",
       "community": 42,
@@ -4121,7 +4165,7 @@
       "label": "loadLgBatchCase()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L848",
+      "source_location": "L850",
       "_origin": "ast",
       "id": "app_main_loadlgbatchcase",
       "community": 105,
@@ -4132,7 +4176,7 @@
       "label": "runLgCompatibilityCase()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L856",
+      "source_location": "L858",
       "_origin": "ast",
       "id": "app_main_runlgcompatibilitycase",
       "community": 109,
@@ -4143,7 +4187,7 @@
       "label": "writeLgReportEntry()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L891",
+      "source_location": "L893",
       "_origin": "ast",
       "id": "app_main_writelgreportentry",
       "community": 42,
@@ -4154,7 +4198,7 @@
       "label": "safeFileName()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L914",
+      "source_location": "L916",
       "_origin": "ast",
       "id": "app_main_safefilename",
       "community": 4,
@@ -4165,7 +4209,7 @@
       "label": "testRunnerBinary()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L922",
+      "source_location": "L924",
       "_origin": "ast",
       "id": "app_main_testrunnerbinary",
       "community": 4,
@@ -4176,7 +4220,7 @@
       "label": "setInteractiveViewBounds()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L930",
+      "source_location": "L932",
       "_origin": "ast",
       "id": "app_main_setinteractiveviewbounds",
       "community": 4,
@@ -4187,7 +4231,7 @@
       "label": "loadInteractiveView()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L954",
+      "source_location": "L956",
       "_origin": "ast",
       "id": "app_main_loadinteractiveview",
       "community": 4,
@@ -4198,7 +4242,7 @@
       "label": "hideInteractiveView()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L974",
+      "source_location": "L976",
       "_origin": "ast",
       "id": "app_main_hideinteractiveview",
       "community": 4,
@@ -4209,7 +4253,7 @@
       "label": "suspendInteractiveView()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L981",
+      "source_location": "L983",
       "_origin": "ast",
       "id": "app_main_suspendinteractiveview",
       "community": 4,
@@ -4220,7 +4264,7 @@
       "label": "applyInteractiveViewZoom()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L988",
+      "source_location": "L990",
       "_origin": "ast",
       "id": "app_main_applyinteractiveviewzoom",
       "community": 4,
@@ -4231,7 +4275,7 @@
       "label": "applyInteractiveViewFitZoom()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L993",
+      "source_location": "L995",
       "_origin": "ast",
       "id": "app_main_applyinteractiveviewfitzoom",
       "community": 42,
@@ -4242,7 +4286,7 @@
       "label": "startPreviewWatcher()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L1001",
+      "source_location": "L1003",
       "_origin": "ast",
       "id": "app_main_startpreviewwatcher",
       "community": 4,
@@ -4253,7 +4297,7 @@
       "label": "stopPreviewWatcher()",
       "file_type": "code",
       "source_file": "app/main.js",
-      "source_location": "L1018",
+      "source_location": "L1020",
       "_origin": "ast",
       "id": "app_main_stoppreviewwatcher",
       "community": 42,
@@ -4506,7 +4550,7 @@
       "label": "bootstrapRenderer()",
       "file_type": "code",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2565",
+      "source_location": "L2570",
       "_origin": "ast",
       "id": "app_renderer_renderer_bootstraprenderer",
       "community": 154,
@@ -4960,8 +5004,8 @@
       "source_location": "L56",
       "_origin": "ast",
       "id": "app_tv_runner_requireddependency",
-      "community": 46,
-      "community_name": "tv-runner.test.js",
+      "community": 44,
+      "community_name": "run-test-case-tv.spec.js",
       "norm_label": "requireddependency()"
     },
     {
@@ -5147,8 +5191,8 @@
       "source_location": "L208",
       "_origin": "ast",
       "id": "app_tv_runner_createtvrunner",
-      "community": 46,
-      "community_name": "tv-runner.test.js",
+      "community": 44,
+      "community_name": "run-test-case-tv.spec.js",
       "norm_label": "createtvrunner()"
     },
     {
@@ -6192,8 +6236,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_properties_defaultpackageversion",
-      "community": 20,
-      "community_name": "ai-row-selection.spec.js",
+      "community": 92,
+      "community_name": "defaultPackageVersion",
       "norm_label": "defaultpackageversion"
     },
     {
@@ -6203,8 +6247,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_defaultpackageversion_type",
-      "community": 20,
-      "community_name": "ai-row-selection.spec.js",
+      "community": 92,
+      "community_name": "defaultPackageVersion",
       "norm_label": "type"
     },
     {
@@ -6214,8 +6258,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_defaultpackageversion_maxlength",
-      "community": 20,
-      "community_name": "ai-row-selection.spec.js",
+      "community": 92,
+      "community_name": "defaultPackageVersion",
       "norm_label": "maxlength"
     },
     {
@@ -6445,8 +6489,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_properties_createdat",
-      "community": 185,
-      "community_name": "createdAt",
+      "community": 20,
+      "community_name": "ai-row-selection.spec.js",
       "norm_label": "createdat"
     },
     {
@@ -6456,8 +6500,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_createdat_type",
-      "community": 185,
-      "community_name": "createdAt",
+      "community": 20,
+      "community_name": "ai-row-selection.spec.js",
       "norm_label": "type"
     },
     {
@@ -6467,8 +6511,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_createdat_format",
-      "community": 185,
-      "community_name": "createdAt",
+      "community": 20,
+      "community_name": "ai-row-selection.spec.js",
       "norm_label": "format"
     },
     {
@@ -7864,8 +7908,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "lg-webos-case-runner.js"
     },
     {
@@ -7875,8 +7919,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_path",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "path"
     },
     {
@@ -7886,8 +7930,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_spawn_spawnsync",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "{spawn, spawnsync}"
     },
     {
@@ -7897,8 +7941,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createtvrunner",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "{createtvrunner}"
     },
     {
@@ -7908,8 +7952,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createdevicelock",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "{createdevicelock}"
     },
     {
@@ -7919,8 +7963,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createappiumservermanager",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "{createappiumservermanager}"
     },
     {
@@ -7930,8 +7974,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createloopbackappiumclient",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "{createloopbackappiumclient}"
     },
     {
@@ -7941,8 +7985,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_runtvtestcase",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "{runtvtestcase}"
     },
     {
@@ -7952,8 +7996,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createwebossessionfactory",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "{createwebossessionfactory}"
     },
     {
@@ -7963,8 +8007,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_expected_lg_app_id_buildlgruntimeredactionsecrets",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "{expected_lg_app_id, buildlgruntimeredactionsecrets}"
     },
     {
@@ -7974,8 +8018,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createlgproductgatecase_createlgproductgateevidencewriter_createlgproductgatemanifest_parselgcaserunnerargs_runlgproductgatewithevidence_withoutlgproductgatecredentials",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "{\n  createlgproductgatecase,\n  createlgproductgateevidencewriter,\n  createlgproductgatemanifest,\n  parselgcaserunnerargs,\n  runlgproductgatewithevidence,\n  withoutlgproductgatecredentials,\n}"
     },
     {
@@ -7996,8 +8040,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_wait",
-      "community": 26,
-      "community_name": "lg-webos-poc.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "wait()"
     },
     {
@@ -8018,8 +8062,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_runreadonly",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 122,
+      "community_name": "lg-toolchain-npm-closure.js",
       "norm_label": "runreadonly()"
     },
     {
@@ -8128,8 +8172,8 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_poc_core_capturegenuinepocevidence",
-      "community": 26,
-      "community_name": "lg-webos-poc.js",
+      "community": 31,
+      "community_name": "tizen-poc-core.js",
       "norm_label": "capturegenuinepocevidence()"
     },
     {
@@ -8579,8 +8623,8 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_tizen_poc_core_redactdomstate",
-      "community": 26,
-      "community_name": "lg-webos-poc.js",
+      "community": 31,
+      "community_name": "tizen-poc-core.js",
       "norm_label": "redactdomstate()"
     },
     {
@@ -8590,8 +8634,8 @@
       "source_location": "L88",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_tizen_poc_core_capturepocevidence",
-      "community": 29,
-      "community_name": "tizen-poc.js",
+      "community": 31,
+      "community_name": "tizen-poc-core.js",
       "norm_label": "capturepocevidence()"
     },
     {
@@ -8634,8 +8678,8 @@
       "source_location": "L143",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_tizen_poc_core_recordpoccleanup",
-      "community": 26,
-      "community_name": "lg-webos-poc.js",
+      "community": 31,
+      "community_name": "tizen-poc-core.js",
       "norm_label": "recordpoccleanup()"
     },
     {
@@ -8722,8 +8766,8 @@
       "source_location": "L248",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_tizen_poc_core_createcredentialsafeappiumlogcapture",
-      "community": 31,
-      "community_name": "tizen-poc-core.js",
+      "community": 26,
+      "community_name": "lg-webos-poc.js",
       "norm_label": "createcredentialsafeappiumlogcapture()"
     },
     {
@@ -13155,8 +13199,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_selectors",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 57,
+      "community_name": "Server-Driven Test Case Runner Implementation Plan",
       "norm_label": "selectors.js"
     },
     {
@@ -13166,8 +13210,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_lib_selectors_popup_focus_dialog_ids",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 57,
+      "community_name": "Server-Driven Test Case Runner Implementation Plan",
       "norm_label": "popup_focus_dialog_ids"
     },
     {
@@ -13177,8 +13221,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_lib_selectors_popup_active_focus_selectors",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 57,
+      "community_name": "Server-Driven Test Case Runner Implementation Plan",
       "norm_label": "popup_active_focus_selectors"
     },
     {
@@ -13188,8 +13232,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_lib_selectors_focus_selectors",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 57,
+      "community_name": "Server-Driven Test Case Runner Implementation Plan",
       "norm_label": "focus_selectors"
     },
     {
@@ -13199,8 +13243,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_lib_selectors_focus_selector",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 57,
+      "community_name": "Server-Driven Test Case Runner Implementation Plan",
       "norm_label": "focus_selector"
     },
     {
@@ -13210,8 +13254,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "tests_lib_selectors_selector_contracts",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 57,
+      "community_name": "Server-Driven Test Case Runner Implementation Plan",
       "norm_label": "selector_contracts"
     },
     {
@@ -13540,8 +13584,8 @@
       "source_location": "L27",
       "_origin": "ast",
       "id": "tests_lib_test_case_action_runner_escaperegexp",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "escaperegexp()"
     },
     {
@@ -13562,8 +13606,8 @@
       "source_location": "L51",
       "_origin": "ast",
       "id": "tests_lib_test_case_action_runner_visiblescreentextpredicate",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "visiblescreentextpredicate()"
     },
     {
@@ -13573,8 +13617,8 @@
       "source_location": "L122",
       "_origin": "ast",
       "id": "tests_lib_test_case_action_runner_assertvisiblescreentext",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "assertvisiblescreentext()"
     },
     {
@@ -13683,8 +13727,8 @@
       "source_location": "L403",
       "_origin": "ast",
       "id": "tests_lib_test_case_action_runner_captureplayercheckscreenshot",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "captureplayercheckscreenshot()"
     },
     {
@@ -13716,8 +13760,8 @@
       "source_location": "L439",
       "_origin": "ast",
       "id": "tests_lib_test_case_action_runner_resolvereadywait",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "resolvereadywait()"
     },
     {
@@ -13727,8 +13771,8 @@
       "source_location": "L464",
       "_origin": "ast",
       "id": "tests_lib_test_case_action_runner_createdefaultactionhandlers",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "createdefaultactionhandlers()"
     },
     {
@@ -13881,8 +13925,8 @@
       "source_location": "L407",
       "_origin": "ast",
       "id": "tests_lib_test_case_compiler_compiletestcase",
-      "community": 66,
-      "community_name": "webos-read-only-adapter.js",
+      "community": 126,
+      "community_name": "target-action-runner.test.js",
       "norm_label": "compiletestcase()"
     },
     {
@@ -14002,8 +14046,8 @@
       "source_location": "L245",
       "_origin": "ast",
       "id": "tests_lib_test_case_schema_validatetestcaselist",
-      "community": 97,
-      "community_name": "createScopedDomScanner",
+      "community": 105,
+      "community_name": "dom-scanning-performance.spec.js",
       "norm_label": "validatetestcaselist()"
     },
     {
@@ -14134,8 +14178,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "tv-batch-runner.js"
     },
     {
@@ -14145,8 +14189,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_tv_failure_kind_classifytvfailure",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "{tv_failure_kind, classifytvfailure}"
     },
     {
@@ -14156,8 +14200,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_assertcases",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "assertcases()"
     },
     {
@@ -14167,8 +14211,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_stoppedcase",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "stoppedcase()"
     },
     {
@@ -14178,8 +14222,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_completedcase",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "completedcase()"
     },
     {
@@ -14189,8 +14233,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_errorresult",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "errorresult()"
     },
     {
@@ -14200,8 +14244,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_requiremethod",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "requiremethod()"
     },
     {
@@ -14211,8 +14255,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_requestoperatordecision",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "requestoperatordecision()"
     },
     {
@@ -14222,8 +14266,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_runtvcasebatch",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "runtvcasebatch()"
     },
     {
@@ -14343,8 +14387,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_tv_failure_classification",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "tv-failure-classification.js"
     },
     {
@@ -14354,8 +14398,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_tv_failure_classification_tv_failure_kind",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "tv_failure_kind"
     },
     {
@@ -14365,8 +14409,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_lib_tv_failure_classification_business_codes",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "business_codes"
     },
     {
@@ -14376,8 +14420,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "tests_lib_tv_failure_classification_technical_codes",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "technical_codes"
     },
     {
@@ -14387,8 +14431,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "tests_lib_tv_failure_classification_classifytvfailure",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "classifytvfailure()"
     },
     {
@@ -14618,8 +14662,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "webos-appium-session.js"
     },
     {
@@ -14629,8 +14673,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_path",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "path"
     },
     {
@@ -14640,8 +14684,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_normalizeremotekey_tvsessionerror",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "{normalizeremotekey, tvsessionerror}"
     },
     {
@@ -14651,8 +14695,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_normalizedomstate",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "{normalizedomstate}"
     },
     {
@@ -14662,8 +14706,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_createwebosmytvautomation",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "{createwebosmytvautomation}"
     },
     {
@@ -14673,8 +14717,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_safe_appium_failure_codes",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "safe_appium_failure_codes"
     },
     {
@@ -14684,8 +14728,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_webos_remote_keys",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "webos_remote_keys"
     },
     {
@@ -14695,8 +14739,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_assertinstalledappid",
-      "community": 120,
-      "community_name": "webos-appium-session.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "assertinstalledappid()"
     },
     {
@@ -14706,8 +14750,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_requiredruntimestring",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "requiredruntimestring()"
     },
     {
@@ -14717,8 +14761,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_normalizeconnection",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "normalizeconnection()"
     },
     {
@@ -14728,8 +14772,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_endpointredactionsecrets",
-      "community": 120,
-      "community_name": "webos-appium-session.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "endpointredactionsecrets()"
     },
     {
@@ -14739,8 +14783,8 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_isnonemptyscreenshot",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "isnonemptyscreenshot()"
     },
     {
@@ -14750,8 +14794,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_defaultwait",
-      "community": 26,
-      "community_name": "lg-webos-poc.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "defaultwait()"
     },
     {
@@ -14761,8 +14805,8 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_redacturlquery",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "redacturlquery()"
     },
     {
@@ -14772,8 +14816,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_factoryerror",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "factoryerror()"
     },
     {
@@ -14783,8 +14827,8 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_assertapprovedprofile",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "assertapprovedprofile()"
     },
     {
@@ -14794,8 +14838,8 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_normalizeloopbackbaseurl",
-      "community": 118,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "normalizeloopbackbaseurl()"
     },
     {
@@ -14816,8 +14860,8 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_createwebosappiumsession",
-      "community": 120,
-      "community_name": "webos-appium-session.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "createwebosappiumsession()"
     },
     {
@@ -15025,8 +15069,8 @@
       "source_location": "L152",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_mytv_automation_createwebosmytvautomation",
-      "community": 57,
-      "community_name": "Server-Driven Test Case Runner Implementation Plan",
+      "community": 54,
+      "community_name": "webos-mytv-automation.js",
       "norm_label": "createwebosmytvautomation()"
     },
     {
@@ -15256,8 +15300,8 @@
       "source_location": "L290",
       "_origin": "ast",
       "id": "tests_lib_waits_waitforcontentvisible",
-      "community": 23,
-      "community_name": "content-rows.js",
+      "community": 27,
+      "community_name": "waits.js",
       "norm_label": "waitforcontentvisible()"
     },
     {
@@ -15465,8 +15509,8 @@
       "source_location": "L129",
       "_origin": "ast",
       "id": "tests_lib_workflows_closehomepopupsandverifyhome",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 24,
+      "community_name": "workflows.js",
       "norm_label": "closehomepopupsandverifyhome()"
     },
     {
@@ -17720,8 +17764,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "tests_unit_device_discovery_test_reset",
-      "community": 120,
-      "community_name": "webos-appium-session.test.js",
+      "community": 50,
+      "community_name": "device-discovery.test.js",
       "norm_label": "reset()"
     },
     {
@@ -17731,8 +17775,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_device_lock_test",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "device-lock.test.js"
     },
     {
@@ -17742,8 +17786,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_device_lock_test_test",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "test"
     },
     {
@@ -17753,8 +17797,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_device_lock_test_assert",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "assert"
     },
     {
@@ -17764,8 +17808,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_device_lock_test_createdevicelock",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "{createdevicelock}"
     },
     {
@@ -20822,8 +20866,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_selectors_test",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 57,
+      "community_name": "Server-Driven Test Case Runner Implementation Plan",
       "norm_label": "selectors.test.js"
     },
     {
@@ -20833,8 +20877,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_selectors_test_test",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 57,
+      "community_name": "Server-Driven Test Case Runner Implementation Plan",
       "norm_label": "test"
     },
     {
@@ -20844,8 +20888,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_selectors_test_assert",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 57,
+      "community_name": "Server-Driven Test Case Runner Implementation Plan",
       "norm_label": "assert"
     },
     {
@@ -20855,8 +20899,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_selectors_test_focus_selectors_popup_focus_dialog_ids_popup_active_focus_selectors_selector_contracts",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 57,
+      "community_name": "Server-Driven Test Case Runner Implementation Plan",
       "norm_label": "{\n  focus_selectors,\n  popup_focus_dialog_ids,\n  popup_active_focus_selectors,\n  selector_contracts,\n}"
     },
     {
@@ -21053,8 +21097,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_test_case_action_runner_test",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "test-case-action-runner.test.js"
     },
     {
@@ -21064,8 +21108,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_test_case_action_runner_test_test",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "test"
     },
     {
@@ -21075,8 +21119,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_test_case_action_runner_test_assert",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "assert"
     },
     {
@@ -21086,8 +21130,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_test_case_action_runner_test_createactionrunner_createdefaultactionhandlers_runtestcase_assertvisiblescreentext",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "{\n  createactionrunner,\n  createdefaultactionhandlers,\n  runtestcase,\n  assertvisiblescreentext,\n}"
     },
     {
@@ -21097,8 +21141,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "tests_unit_test_case_action_runner_test_defaulthelpers",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "defaulthelpers"
     },
     {
@@ -21108,8 +21152,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "tests_unit_test_case_action_runner_test_workflows",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "workflows"
     },
     {
@@ -21119,8 +21163,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_unit_test_case_action_runner_test_createtestinfo",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "createtestinfo()"
     },
     {
@@ -21130,8 +21174,8 @@
       "source_location": "L24",
       "_origin": "ast",
       "id": "tests_unit_test_case_action_runner_test_createhandlerhelpers",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "createhandlerhelpers()"
     },
     {
@@ -21141,8 +21185,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "tests_unit_test_case_action_runner_test_replaceworkflowinternals",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "replaceworkflowinternals()"
     },
     {
@@ -21152,8 +21196,8 @@
       "source_location": "L924",
       "_origin": "ast",
       "id": "tests_unit_test_case_action_runner_test_press",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "press()"
     },
     {
@@ -21163,8 +21207,8 @@
       "source_location": "L984",
       "_origin": "ast",
       "id": "tests_unit_test_case_action_runner_test_evaluate",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "evaluate()"
     },
     {
@@ -21691,8 +21735,8 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "tests_unit_tizen_poc_semantic_test_opensearch",
-      "community": 57,
-      "community_name": "Server-Driven Test Case Runner Implementation Plan",
+      "community": 54,
+      "community_name": "webos-mytv-automation.js",
       "norm_label": "opensearch()"
     },
     {
@@ -21790,8 +21834,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 78,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "tv-batch-runner.test.js"
     },
     {
@@ -21801,8 +21845,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_test",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 78,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "test"
     },
     {
@@ -21812,8 +21856,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_assert",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 78,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "assert"
     },
     {
@@ -21823,8 +21867,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_runtvcasebatch",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 78,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "{runtvcasebatch}"
     },
     {
@@ -21834,8 +21878,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_technicalerror",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 78,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "technicalerror()"
     },
     {
@@ -21845,8 +21889,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_businesserror",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 78,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "businesserror()"
     },
     {
@@ -21856,8 +21900,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_executecase",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 78,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "executecase()"
     },
     {
@@ -21867,8 +21911,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_recover",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 78,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "recover()"
     },
     {
@@ -21878,8 +21922,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_requestdecision",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 78,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "requestdecision()"
     },
     {
@@ -22164,8 +22208,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_tv_failure_classification_test",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "tv-failure-classification.test.js"
     },
     {
@@ -22175,8 +22219,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_unit_tv_failure_classification_test_test",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "test"
     },
     {
@@ -22186,8 +22230,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_tv_failure_classification_test_assert",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "assert"
     },
     {
@@ -22197,8 +22241,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_unit_tv_failure_classification_test_classifytvfailure_tv_failure_kind",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "{classifytvfailure, tv_failure_kind}"
     },
     {
@@ -22384,8 +22428,8 @@
       "source_location": "L215",
       "_origin": "ast",
       "id": "tests_unit_tv_runner_test_start",
-      "community": 120,
-      "community_name": "webos-appium-session.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "start()"
     },
     {
@@ -22417,8 +22461,8 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "tests_unit_tv_runner_test_cleanup",
-      "community": 120,
-      "community_name": "webos-appium-session.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "cleanup()"
     },
     {
@@ -22428,8 +22472,8 @@
       "source_location": "L219",
       "_origin": "ast",
       "id": "tests_unit_tv_runner_test_close",
-      "community": 120,
-      "community_name": "webos-appium-session.test.js",
+      "community": 116,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "close()"
     },
     {
@@ -22659,8 +22703,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "tests_unit_tv_toolchain_test_resolve",
-      "community": 26,
-      "community_name": "lg-webos-poc.js",
+      "community": 29,
+      "community_name": "tizen-poc.js",
       "norm_label": "resolve()"
     },
     {
@@ -22813,8 +22857,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test",
-      "community": 57,
-      "community_name": "Server-Driven Test Case Runner Implementation Plan",
+      "community": 54,
+      "community_name": "webos-mytv-automation.js",
       "norm_label": "webos-mytv-automation.test.js"
     },
     {
@@ -22824,8 +22868,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_test",
-      "community": 57,
-      "community_name": "Server-Driven Test Case Runner Implementation Plan",
+      "community": 54,
+      "community_name": "webos-mytv-automation.js",
       "norm_label": "test"
     },
     {
@@ -22835,8 +22879,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_assert",
-      "community": 57,
-      "community_name": "Server-Driven Test Case Runner Implementation Plan",
+      "community": 54,
+      "community_name": "webos-mytv-automation.js",
       "norm_label": "assert"
     },
     {
@@ -22846,8 +22890,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_createwebosmytvautomation",
-      "community": 57,
-      "community_name": "Server-Driven Test Case Runner Implementation Plan",
+      "community": 54,
+      "community_name": "webos-mytv-automation.js",
       "norm_label": "{createwebosmytvautomation}"
     },
     {
@@ -22857,8 +22901,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_createautomation",
-      "community": 57,
-      "community_name": "Server-Driven Test Case Runner Implementation Plan",
+      "community": 54,
+      "community_name": "webos-mytv-automation.js",
       "norm_label": "createautomation()"
     },
     {
@@ -24160,6 +24204,28 @@
       "norm_label": "7. script testcase"
     },
     {
+      "label": "GEMINI.md",
+      "file_type": "document",
+      "source_file": "GEMINI.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "gemini",
+      "community": 94,
+      "community_name": "GEMINI.md",
+      "norm_label": "gemini.md"
+    },
+    {
+      "label": "graphify",
+      "file_type": "document",
+      "source_file": "GEMINI.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "gemini_graphify",
+      "community": 94,
+      "community_name": "GEMINI.md",
+      "norm_label": "graphify"
+    },
+    {
       "label": "IDEA.md",
       "file_type": "document",
       "source_file": "IDEA.md",
@@ -25376,8 +25442,8 @@
       "source_location": "L30",
       "_origin": "ast",
       "id": "docs_real_tv_appium_architecture_target_selector_and_workspace_behavior",
-      "community": 91,
-      "community_name": "Architecture and Contracts",
+      "community": 80,
+      "community_name": "Target selector and workspace behavior",
       "norm_label": "target selector and workspace behavior"
     },
     {
@@ -25387,8 +25453,8 @@
       "source_location": "L73",
       "_origin": "ast",
       "id": "docs_real_tv_appium_architecture_per_device_package_file_setting",
-      "community": 91,
-      "community_name": "Architecture and Contracts",
+      "community": 80,
+      "community_name": "Target selector and workspace behavior",
       "norm_label": "per-device package-file setting"
     },
     {
@@ -25398,8 +25464,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "docs_real_tv_appium_architecture_deferred_future_feature_manage_samsung_signing_repackage_for_this_tv",
-      "community": 91,
-      "community_name": "Architecture and Contracts",
+      "community": 80,
+      "community_name": "Target selector and workspace behavior",
       "norm_label": "deferred future feature: manage samsung signing / repackage for this tv"
     },
     {
@@ -25409,8 +25475,8 @@
       "source_location": "L222",
       "_origin": "ast",
       "id": "docs_real_tv_appium_architecture_device_discovery_and_direct_ip",
-      "community": 91,
-      "community_name": "Architecture and Contracts",
+      "community": 80,
+      "community_name": "Target selector and workspace behavior",
       "norm_label": "device discovery and direct ip"
     },
     {
@@ -25420,8 +25486,8 @@
       "source_location": "L232",
       "_origin": "ast",
       "id": "docs_real_tv_appium_architecture_browser_configuration",
-      "community": 91,
-      "community_name": "Architecture and Contracts",
+      "community": 80,
+      "community_name": "Target selector and workspace behavior",
       "norm_label": "browser configuration"
     },
     {
@@ -25860,8 +25926,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_physical_tv_appium_poc_runbook",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "physical-tv appium poc runbook"
     },
     {
@@ -25871,8 +25937,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_purpose",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "purpose"
     },
     {
@@ -25882,8 +25948,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_preconditions",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "preconditions"
     },
     {
@@ -25893,8 +25959,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_tooling_to_pin_and_record",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "tooling to pin and record"
     },
     {
@@ -26245,8 +26311,8 @@
       "source_location": "L604",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_poc_sequence",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "poc sequence"
     },
     {
@@ -26256,8 +26322,8 @@
       "source_location": "L606",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_1_verify_vendor_connection_first",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "1. verify vendor connection first"
     },
     {
@@ -26267,8 +26333,8 @@
       "source_location": "L627",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_2_prove_appium_capabilities",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "2. prove appium capabilities"
     },
     {
@@ -26278,8 +26344,8 @@
       "source_location": "L649",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_3_prove_the_product_flow",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "3. prove the product flow"
     },
     {
@@ -26289,8 +26355,8 @@
       "source_location": "L663",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_failure_classification",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "failure classification"
     },
     {
@@ -26300,8 +26366,8 @@
       "source_location": "L665",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_first_desktop_lg_product_gate_pilot_fresh_approval_required",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "first desktop lg product-gate pilot (fresh approval required)"
     },
     {
@@ -26311,8 +26377,8 @@
       "source_location": "L699",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_poc_evidence_to_retain_outside_git",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "poc evidence to retain outside git"
     },
     {
@@ -26322,12 +26388,46 @@
       "source_location": "L707",
       "_origin": "ast",
       "id": "docs_real_tv_appium_poc_runbook_lg_compatibility_catalog_maintenance",
-      "community": 28,
-      "community_name": "Current Samsung macOS command harness",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "lg compatibility catalog maintenance"
     }
   ],
   "links": [
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L3",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "opencode_opencode",
+      "target": "opencode_opencode_plugin",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L2",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "opencode_opencode",
+      "target": "opencode_opencode_schema",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "extends",
+      "confidence": "EXTRACTED",
+      "source_file": ".opencode/opencode.json",
+      "source_location": "L3",
+      "weight": 1.0,
+      "context": "import",
+      "_origin": "ast",
+      "source": "opencode_opencode_plugin",
+      "target": "ref_opencode_plugins_graphify_js",
+      "confidence_score": 1.0
+    },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
@@ -26921,7 +27021,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L553",
+      "source_location": "L555",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_cloneapilogvalue",
@@ -26933,7 +27033,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L573",
+      "source_location": "L575",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_cloneforui",
@@ -26945,7 +27045,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "app/main.js",
-      "source_location": "L873",
+      "source_location": "L875",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_runlgcompatibilitycase",
@@ -27144,7 +27244,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L869",
+      "source_location": "L871",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_runlgcompatibilitycase",
@@ -32870,7 +32970,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L993",
+      "source_location": "L995",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -32881,7 +32981,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L988",
+      "source_location": "L990",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -32969,7 +33069,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L543",
+      "source_location": "L545",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -32980,7 +33080,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L567",
+      "source_location": "L569",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -33464,7 +33564,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L712",
+      "source_location": "L714",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -33486,7 +33586,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L974",
+      "source_location": "L976",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -33739,7 +33839,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L954",
+      "source_location": "L956",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -33784,7 +33884,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L485",
+      "source_location": "L487",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -33795,7 +33895,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L469",
+      "source_location": "L471",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -33894,7 +33994,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L836",
+      "source_location": "L838",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -33940,7 +34040,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L914",
+      "source_location": "L916",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -33951,7 +34051,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L539",
+      "source_location": "L541",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -33962,7 +34062,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L563",
+      "source_location": "L565",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -33973,7 +34073,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L930",
+      "source_location": "L932",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -33995,7 +34095,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L1001",
+      "source_location": "L1003",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -34017,7 +34117,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L1018",
+      "source_location": "L1020",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -34028,7 +34128,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L981",
+      "source_location": "L983",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -34050,7 +34150,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L922",
+      "source_location": "L924",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -34116,7 +34216,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L844",
+      "source_location": "L846",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -34127,7 +34227,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L840",
+      "source_location": "L842",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -34160,7 +34260,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L534",
+      "source_location": "L536",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main",
@@ -34688,7 +34788,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L851",
+      "source_location": "L853",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_loadlgbatchcase",
@@ -34712,7 +34812,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L481",
+      "source_location": "L483",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_normalizeflowcaseresultspayload",
@@ -34724,7 +34824,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L536",
+      "source_location": "L538",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_withapilog",
@@ -34736,7 +34836,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L540",
+      "source_location": "L542",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_sanitizeapilog",
@@ -34748,7 +34848,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L564",
+      "source_location": "L566",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_sanitizecaseforui",
@@ -34760,7 +34860,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L745",
+      "source_location": "L747",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_finishtestprocess",
@@ -34772,7 +34872,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L744",
+      "source_location": "L746",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_finishtestprocess",
@@ -34784,7 +34884,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L717",
+      "source_location": "L719",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_finishtestprocess",
@@ -34796,7 +34896,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L716",
+      "source_location": "L718",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_finishtestprocess",
@@ -34809,11 +34909,23 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L728",
+      "source_location": "L730",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_finishtestprocess",
       "target": "app_test_report_buildtestreportentry"
+    },
+    {
+      "relation": "calls",
+      "context": "call",
+      "confidence": "EXTRACTED",
+      "confidence_score": 1.0,
+      "source_file": "app/main.js",
+      "source_location": "L739",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "app_main_finishtestprocess",
+      "target": "app_test_report_renderuserreport"
     },
     {
       "relation": "calls",
@@ -34825,18 +34937,6 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_finishtestprocess",
-      "target": "app_test_report_renderuserreport"
-    },
-    {
-      "relation": "calls",
-      "context": "call",
-      "confidence": "EXTRACTED",
-      "confidence_score": 1.0,
-      "source_file": "app/main.js",
-      "source_location": "L735",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "app_main_finishtestprocess",
       "target": "app_test_report_upserttestreport"
     },
     {
@@ -34844,7 +34944,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L837",
+      "source_location": "L839",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_reportpath",
@@ -34856,7 +34956,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L892",
+      "source_location": "L894",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_writelgreportentry",
@@ -34868,7 +34968,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L893",
+      "source_location": "L895",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_writelgreportentry",
@@ -34881,7 +34981,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L853",
+      "source_location": "L855",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_loadlgbatchcase",
@@ -34893,7 +34993,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L851",
+      "source_location": "L853",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_loadlgbatchcase",
@@ -34905,7 +35005,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L852",
+      "source_location": "L854",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_loadlgbatchcase",
@@ -34917,7 +35017,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L867",
+      "source_location": "L869",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_runlgcompatibilitycase",
@@ -34929,7 +35029,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L901",
+      "source_location": "L903",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_writelgreportentry",
@@ -34941,7 +35041,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L898",
+      "source_location": "L900",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_writelgreportentry",
@@ -34953,7 +35053,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L911",
+      "source_location": "L913",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_writelgreportentry",
@@ -34965,7 +35065,7 @@
       "confidence": "EXTRACTED",
       "confidence_score": 1.0,
       "source_file": "app/main.js",
-      "source_location": "L908",
+      "source_location": "L910",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_writelgreportentry",
@@ -34976,7 +35076,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L950",
+      "source_location": "L952",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_setinteractiveviewbounds",
@@ -34988,7 +35088,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/main.js",
-      "source_location": "L963",
+      "source_location": "L965",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_main_loadinteractiveview",
@@ -35068,7 +35168,7 @@
       "relation": "indirect_call",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2573",
+      "source_location": "L2578",
       "weight": 1.0,
       "_origin": "ast",
       "context": "argument",
@@ -35113,7 +35213,7 @@
       "relation": "indirect_call",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2581",
+      "source_location": "L2586",
       "weight": 1.0,
       "_origin": "ast",
       "context": "collection",
@@ -35180,7 +35280,7 @@
       "relation": "indirect_call",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2589",
+      "source_location": "L2594",
       "weight": 1.0,
       "_origin": "ast",
       "context": "collection",
@@ -35214,7 +35314,7 @@
       "relation": "indirect_call",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2590",
+      "source_location": "L2595",
       "weight": 1.0,
       "_origin": "ast",
       "context": "collection",
@@ -35226,7 +35326,7 @@
       "relation": "indirect_call",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2591",
+      "source_location": "L2596",
       "weight": 1.0,
       "_origin": "ast",
       "context": "collection",
@@ -35239,7 +35339,7 @@
       "context": "collection",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2559",
+      "source_location": "L2564",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_renderer_renderer_createrenderercontroller",
@@ -35251,7 +35351,7 @@
       "context": "collection",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2560",
+      "source_location": "L2565",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_renderer_renderer_createrenderercontroller",
@@ -35287,7 +35387,7 @@
       "context": "collection",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2561",
+      "source_location": "L2566",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_renderer_renderer_createrenderercontroller",
@@ -35299,7 +35399,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2566",
+      "source_location": "L2571",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_renderer_renderer_bootstraprenderer",
@@ -68728,6 +68828,17 @@
       "confidence_score": 1.0
     },
     {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "GEMINI.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "gemini",
+      "target": "gemini_graphify",
+      "confidence_score": 1.0
+    },
+    {
       "relation": "references",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
@@ -70918,5 +71029,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "87877ff5d4d95f6c1b5136095bdb40024b7fad2c"
+  "built_at_commit": "9a969ed99b60105dd39848bde6379a3ec201b049"
 }
