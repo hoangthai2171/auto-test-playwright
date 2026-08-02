@@ -226,10 +226,12 @@ Di chuyển focus vào poster nội dung thứ 3 của dòng hàng cate "Đề x
 {"action":"focus_row","rowName":"Đề xuất","itemIndex":3}
 ```
 
-`itemIndex` is a positive 1-based index. The runtime finds the named row and
-focuses that visible poster directly; it fails with the row name and available
-item count when the requested position is not visible. The content words
-`kênh`, `phim`, and `nội dung` are descriptive only.
+`itemIndex` is a positive 1-based index across the reachable posters in the
+named row. The runtime focuses a visible row anchor, uses remote horizontal
+navigation to expose the requested position when it is outside the viewport,
+and fails with the row name, requested index, and furthest reachable position
+when the row ends first. The content words `kênh`, `phim`, and `nội dung` are
+descriptive only.
 
 To move to the first item on the currently active row, use:
 

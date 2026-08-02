@@ -169,7 +169,7 @@ The supported action allowlist is:
 
 - `login`: requires `username` and `password`.
 - `open_home`: waits for the ready home state.
-- `focus_row`: requires a row/category name and navigates to it using its first visible item as the TV focus anchor. An optional positive 1-based `itemIndex` focuses that visible item instead. Home rows are matched by visible headings/content and do not depend on dynamic row IDs.
+- `focus_row`: requires a row/category name and navigates to it using its first visible item as the TV focus anchor. An optional positive 1-based `itemIndex` uses remote horizontal navigation to focus that absolute poster position, including items that are initially outside the viewport; it fails only when the row cannot reach the requested position. Home rows are matched by visible headings/content and do not depend on dynamic row IDs.
 - `focus_row_first_item`: focuses the leftmost item in the currently active row, regardless of content type.
 - `focus_text`: focuses a visible control by its human-readable text through remote navigation. Immediately after `focus_row` for the Home `Thể loại` row, it scans every reachable service poster in that carousel, moving right and re-reading the row until it finds the requested service or reaches the end. It never falls back to a same-named left-menu item.
 - `press_ok`: sends the remote OK/Enter key. After a Home `Thể loại` service

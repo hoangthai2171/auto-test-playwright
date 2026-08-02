@@ -137,3 +137,138 @@ test("accepts a category poster when its focused child has the requested service
   assert.deepEqual(focusedService, row.items[1]);
   assert.deepEqual(calls, [["press", "ArrowRight"]]);
 });
+
+test("uses remote navigation to focus an indexed poster beyond the visible row window", async () => {
+  const virtualRow = createVirtualizedRowPage({
+    totalItems: 10,
+    initialFocusedIndex: 3,
+  });
+  const {page, calls, state} = virtualRow;
+
+  contentRows.configureContentRows({
+    getFocusedState: async () => state(),
+    remotePress: async (_page, key, _delay, options = {}) => {
+      calls.push(["press", key]);
+      if (key === "ArrowLeft") {
+        virtualRow.focusedIndex = Math.max(0, virtualRow.focusedIndex - 1);
+      } else if (key === "ArrowRight") {
+        virtualRow.focusedIndex = Math.min(9, virtualRow.focusedIndex + 1);
+      }
+      options.snapshotCache?.invalidate();
+    },
+    remoteFocusById: async (_page, id) => {
+      calls.push(["focus", id]);
+      virtualRow.focusedIndex = Number(id.replace("item-", ""));
+    },
+  });
+
+  const focusedRow = await contentRows.focusRequestedContentRow(page, {
+    rowName: "Thịnh hành",
+    itemIndex: 7,
+  });
+
+  assert.equal(virtualRow.focusedIndex, 6);
+  assert.equal(focusedRow.title, "Thịnh hành");
+  assert.deepEqual(
+    calls.filter(([type, key]) => type === "press" && key === "ArrowRight"),
+    Array.from({length: 6}, () => ["press", "ArrowRight"])
+  );
+});
+
+test("reports the furthest reachable index when a row ends before the request", async () => {
+  const virtualRow = createVirtualizedRowPage({
+    totalItems: 3,
+    initialFocusedIndex: 0,
+  });
+  const {page, calls, state} = virtualRow;
+
+  contentRows.configureContentRows({
+    getFocusedState: async () => state(),
+    remotePress: async (_page, key, _delay, options = {}) => {
+      calls.push(["press", key]);
+      if (key === "ArrowRight") virtualRow.focusedIndex = Math.min(2, virtualRow.focusedIndex + 1);
+      options.snapshotCache?.invalidate();
+    },
+    remoteFocusById: async (_page, id) => {
+      virtualRow.focusedIndex = Number(id.replace("item-", ""));
+    },
+  });
+
+  await assert.rejects(
+    contentRows.focusRequestedContentRow(page, {
+      rowName: "Thịnh hành",
+      itemIndex: 7,
+    }),
+    /Hàng\/cate "Thịnh hành" chỉ có thể focus đến nội dung thứ 3; không thể focus nội dung thứ 7/u
+  );
+
+  assert.equal(virtualRow.focusedIndex, 2);
+  assert.ok(calls.some(([type, key]) => type === "press" && key === "ArrowRight"));
+});
+
+function createVirtualizedRowPage({totalItems, initialFocusedIndex}) {
+  let focusedIndex = initialFocusedIndex;
+  const calls = [];
+  const page = {
+    evaluate: async (callback, argument) => {
+      if (Array.isArray(argument)) return {route: "/", container: "content"};
+      if (argument && typeof argument === "object" && Array.isArray(argument.rootSelectors)) {
+        const firstVisibleIndex = Math.max(0, focusedIndex - 4);
+        const records = Array.from({length: Math.min(5, totalItems - firstVisibleIndex)}, (_, offset) => {
+          const index = firstVisibleIndex + offset;
+          return {
+            id: `item-${index}`,
+            text: `Poster ${index + 1}`,
+            attrs: {title: `Poster ${index + 1}`},
+            poster: `poster-${index}`,
+            backgroundImage: "",
+            rect: {x: 100 + offset * 180, y: 200, width: 150, height: 200},
+            visible: true,
+          };
+        });
+        return {
+          records,
+          headings: [{
+            id: "row-heading",
+            text: "Thịnh hành",
+            rect: {x: 100, y: 100, width: 240, height: 30},
+            visible: true,
+          }],
+          metrics: {
+            rootFound: true,
+            usedFallback: false,
+            fallbackBlocked: false,
+            rootSelector: ".content-area",
+            rootCount: 1,
+            candidateCount: records.length,
+            headingCount: 1,
+          },
+        };
+      }
+      if (typeof argument === "string") return argument === `item-${focusedIndex}`;
+      if (typeof argument === "number") return Math.abs(200 - argument) <= 80;
+
+      const source = String(callback);
+      if (source.includes(".row_service")) return [];
+      if (source.includes('document.querySelector(".focused")')) return true;
+      return undefined;
+    },
+  };
+
+  return {
+    page,
+    calls,
+    state: () => ({
+      id: `item-${focusedIndex}`,
+      text: `Poster ${focusedIndex + 1}`,
+      label: `Poster ${focusedIndex + 1}`,
+      rect: {x: 100, y: 200, width: 150, height: 200},
+    }),
+    get focusedIndex() {
+      return focusedIndex;
+    },
+    set focusedIndex(value) {
+      focusedIndex = value;
+    },
+  };
+}

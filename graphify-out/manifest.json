@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1785659550.0053675,
-    "ast_hash": "40874d10581074e67c0caf51c6b0173b",
+    "mtime": 1785686171.2766757,
+    "ast_hash": "f0ef938107ef3b153cf276486c4e67f7",
     "semantic_hash": ""
   },
   "IDEA.md": {
@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1785659549.8748727,
-    "ast_hash": "6da47b32264438a252c044a1803b750a",
+    "mtime": 1785686171.4102995,
+    "ast_hash": "3a41369dc4bc693bb4e55ebf88e81b85",
     "semantic_hash": ""
   },
   "app/renderer/index.html": {
@@ -345,8 +345,8 @@
     "semantic_hash": ""
   },
   "tests/lib/content-rows.js": {
-    "mtime": 1785605436.5489357,
-    "ast_hash": "3afc636e3d4365c025b3c33bf7b325b9",
+    "mtime": 1785686005.903984,
+    "ast_hash": "fc929cff815182598286445e370c1606",
     "semantic_hash": ""
   },
   "tests/lib/dom-scan.js": {
@@ -550,8 +550,8 @@
     "semantic_hash": ""
   },
   "tests/unit/content-rows.test.js": {
-    "mtime": 1785062189.8765848,
-    "ast_hash": "d44769f4257e9cbef430a3514eb3994a",
+    "mtime": 1785686140.7507477,
+    "ast_hash": "eec041ca661fde6b61c3036eccecd902",
     "semantic_hash": ""
   },
   "tests/unit/credential-redaction.test.js": {
@@ -805,8 +805,8 @@
     "semantic_hash": ""
   },
   "ACTION-COMPILER.md": {
-    "mtime": 1785055758.7452805,
-    "ast_hash": "80506dd91f37f40dc7a94889dcd0c84e",
+    "mtime": 1785686171.5450456,
+    "ast_hash": "b66db4dd1bca5856c9e011f1236bbf63",
     "semantic_hash": ""
   },
   "API-SPEC.md": {
@@ -1160,8 +1160,13 @@
     "semantic_hash": ""
   },
   "docs/tinyworkers/player-save-toast_20260802.md": {
-    "mtime": 1785659597.8358934,
-    "ast_hash": "61b1e8a0c797ea786491f80e14db5675",
+    "mtime": 1785659656.090567,
+    "ast_hash": "603327822d1263454ab01d51f8f6e5c0",
+    "semantic_hash": ""
+  },
+  "docs/tinyworkers/20260802_224614_focus-row-offscreen-index.md": {
+    "mtime": 1785686158.6316123,
+    "ast_hash": "fe9482e9e675331f004555c1b6e3e779",
     "semantic_hash": ""
   }
 }

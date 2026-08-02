@@ -188,7 +188,9 @@ popup fails the action; an Enter press alone is not a successful service open.
 
 `focus_row` requires a `rowName` and normally focuses its first visible item.
 For a numbered poster, provide a positive 1-based `itemIndex`, for example
-`{"action":"focus_row","rowName":"HTV","itemIndex":4}`.
+`{"action":"focus_row","rowName":"HTV","itemIndex":4}`. The helper uses
+remote horizontal navigation to reach that position even when the poster is
+initially outside the viewport.
 
 Server responses should transpile `qaDescription` into explicit `actions`
 before they reach the app. See [ACTION-COMPILER.md](ACTION-COMPILER.md) for the

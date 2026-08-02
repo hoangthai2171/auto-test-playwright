@@ -19,6 +19,8 @@ const CONTENT_ITEM_CONTRACT = getSelectorContract("contentItem");
 const NAMED_ROW_MAX_ATTEMPTS = 45;
 const NAMED_ROW_SCROLL_DELAY = 1500;
 const SERVICE_CATEGORY_MAX_SCAN_STEPS = 40;
+const ROW_HORIZONTAL_NAV_DELAY = 500;
+const ROW_HORIZONTAL_NAV_MAX_STEPS = 100;
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
 function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
@@ -49,11 +51,20 @@ async function focusRequestedContentRow(page, rowSelector = {}) {
           itemIndex: Number.isInteger(rowSelector.itemIndex) ? rowSelector.itemIndex : 1,
         };
 
+  const hasItemIndex = typeof rowSelector === "object" && rowSelector !== null &&
+    Number.isInteger(rowSelector.itemIndex);
   const { rowName, rowIndex, rowPosition, itemIndex } = selector;
   if (!rowName) {
     const row = await findContentRowByPosition(page, { rowIndex, rowPosition, snapshotCache });
     const items = row.items;
-    await focusFirstRowStart(page, focusRowItem(row, itemIndex), {snapshotCache});
+    if (hasItemIndex) {
+      return focusIndexedContentRow(page, row, itemIndex, {
+        snapshotCache,
+        rowName: row.title || "hiện tại",
+      });
+    }
+
+    await focusFirstRowStart(page, items[0], {snapshotCache});
     return {
       title: row.title || "",
       rowY: row.rowY || items[0]?.rect.y || 0,
@@ -74,13 +85,30 @@ async function focusRequestedContentRow(page, rowSelector = {}) {
     });
     const serviceCategoryRow = await findServiceCategoryRow(page, targetPattern);
     if (serviceCategoryRow) {
-      await focusFirstRowStart(page, focusRowItem(serviceCategoryRow, itemIndex), {snapshotCache, allowServiceFocus: true});
+      if (hasItemIndex) {
+        return focusIndexedContentRow(page, serviceCategoryRow, itemIndex, {
+          snapshotCache,
+          rowName,
+          rowPattern: targetPattern,
+          allowServiceFocus: true,
+        });
+      }
+
+      await focusFirstRowStart(page, serviceCategoryRow.items[0], {snapshotCache, allowServiceFocus: true});
       await expect.poll(() => isFocusedOnRowItems(page, serviceCategoryRow.items), { timeout: 6000 }).toBe(true);
       return serviceCategoryRow;
     }
     const matchedRow = findBestContentRowMatch(rows, targetPattern);
     if (matchedRow) {
-      await focusFirstRowStart(page, focusRowItem(matchedRow, itemIndex), {snapshotCache});
+      if (hasItemIndex) {
+        return focusIndexedContentRow(page, matchedRow, itemIndex, {
+          snapshotCache,
+          rowName,
+          rowPattern: targetPattern,
+        });
+      }
+
+      await focusFirstRowStart(page, matchedRow.items[0], {snapshotCache});
       await expect.poll(() => isFocusedOnRowItems(page, matchedRow.items), { timeout: 6000 }).toBe(true);
       return matchedRow;
     }
@@ -95,16 +123,112 @@ async function focusRequestedContentRow(page, rowSelector = {}) {
       .map((row) => row.title || `y=${row.rowY}`)
       .join(", ")}`
   );
+}
 
-  function focusRowItem(row, requestedItemIndex) {
-    const item = row.items[requestedItemIndex - 1];
-    if (item) return item;
-
+async function focusIndexedContentRow(page, row, requestedItemIndex, options = {}) {
+  const rowLabel = row.title || options.rowName || "hiện tại";
+  const firstItem = row.items?.[0];
+  if (!firstItem) {
     throw new Error(
-      `Hàng/cate "${row.title || rowName || "hiện tại"}" chỉ có ${row.items.length} nội dung đang hiển thị; ` +
+      `Hàng/cate "${rowLabel}" không có nội dung hiển thị để bắt đầu; ` +
       `không thể focus nội dung thứ ${requestedItemIndex}`
     );
   }
+
+  await focusFirstRowStart(page, firstItem, options);
+  const rowY = row.rowY || firstItem.rect?.y || 0;
+  let focusedState = await getFocusedState(page);
+  if (!isFocusedStateOnRow(focusedState, rowY)) {
+    throw new Error(
+      `Hàng/cate "${rowLabel}" không giữ được focus trong hàng trước khi ` +
+      `focus nội dung thứ ${requestedItemIndex}`
+    );
+  }
+
+  focusedState = await moveFocusedRowToStart(page, focusedState, rowY, rowLabel, options);
+  let reachedIndex = 1;
+  for (let index = 1; index < requestedItemIndex; index += 1) {
+    const beforeSignature = focusStateSignature(focusedState);
+    await remotePress(page, "ArrowRight", ROW_HORIZONTAL_NAV_DELAY, {snapshotCache: options.snapshotCache});
+    const nextState = await getFocusedState(page);
+
+    if (!isFocusedStateOnRow(nextState, rowY)) {
+      throw indexedRowFocusError(rowLabel, requestedItemIndex, reachedIndex, "remote focus left the row");
+    }
+    if (focusStateSignature(nextState) === beforeSignature) {
+      throw indexedRowFocusError(rowLabel, requestedItemIndex, reachedIndex, "remote focus stopped advancing");
+    }
+
+    focusedState = nextState;
+    reachedIndex = index + 1;
+  }
+
+  if (options.rowPattern) {
+    if (options.rowPattern === "the loai") {
+      return (await findServiceCategoryRow(page, options.rowPattern)) || row;
+    }
+
+    const refreshedRows = await collectVisibleContentRows(page, {snapshotCache: options.snapshotCache});
+    return findBestContentRowMatch(refreshedRows, options.rowPattern) || row;
+  }
+
+  return row;
+}
+
+async function moveFocusedRowToStart(page, focusedState, rowY, rowLabel, options = {}) {
+  let currentState = focusedState;
+  for (let attempt = 0; attempt < ROW_HORIZONTAL_NAV_MAX_STEPS; attempt += 1) {
+    const beforeSignature = focusStateSignature(currentState);
+    await remotePress(page, "ArrowLeft", ROW_HORIZONTAL_NAV_DELAY, {snapshotCache: options.snapshotCache});
+    const nextState = await getFocusedState(page);
+
+    if (!isFocusedStateOnRow(nextState, rowY)) {
+      await remotePress(page, "ArrowRight", ROW_HORIZONTAL_NAV_DELAY, {snapshotCache: options.snapshotCache});
+      const restoredState = await getFocusedState(page);
+      if (!isFocusedStateOnRow(restoredState, rowY)) {
+        throw new Error(
+          `Hàng/cate "${rowLabel}" không thể khôi phục focus sau khi tìm điểm bắt đầu của hàng`
+        );
+      }
+      return restoredState;
+    }
+
+    if (focusStateSignature(nextState) === beforeSignature) return nextState;
+    currentState = nextState;
+  }
+
+  throw new Error(
+    `Hàng/cate "${rowLabel}" không tìm được điểm bắt đầu bằng phím điều hướng ` +
+    `sau ${ROW_HORIZONTAL_NAV_MAX_STEPS} lần di chuyển`
+  );
+}
+
+function isFocusedStateOnRow(state, rowY) {
+  const rect = state?.rect;
+  return Boolean(
+    rect &&
+    rect.width >= 100 &&
+    rect.height >= 80 &&
+    rect.x >= 80 &&
+    (rowY <= 0 || Math.abs(rect.y - rowY) <= 80)
+  );
+}
+
+function focusStateSignature(state) {
+  return [
+    state?.id || "",
+    state?.text || "",
+    state?.label || "",
+    Math.round(state?.rect?.x || 0),
+    Math.round(state?.rect?.y || 0),
+  ].join("|");
+}
+
+function indexedRowFocusError(rowLabel, requestedItemIndex, reachedIndex, reason) {
+  return new Error(
+    `Hàng/cate "${rowLabel}" chỉ có thể focus đến nội dung thứ ${reachedIndex}; ` +
+    `không thể focus nội dung thứ ${requestedItemIndex}${reason ? ` (${reason})` : ""}`
+  );
 }
 
 async function findServiceCategoryRow(page, targetPattern) {
