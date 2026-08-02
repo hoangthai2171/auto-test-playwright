@@ -275,6 +275,35 @@ test("runner invokes a trusted injected case executor only after the session pre
   assert.deepEqual(result.caseResult, {testCaseId: "case-1", status: "passed", steps: []});
 });
 
+test("runner forwards the configured player timeout into trusted LG helpers", async () => {
+  const helperOptions = [];
+  const session = {
+    async start() {},
+    async getDomState() { return {}; },
+    async screenshot() { return "genuine-appium-png"; },
+    async cleanup() {},
+    async close() {},
+    createMyTvAutomation(options) {
+      helperOptions.push(options);
+      return {waitForReady: async () => {}};
+    },
+  };
+  const {runner} = createHarness({
+    session,
+    async caseExecutor(context) {
+      assert.equal(typeof context.helpers.waitForReady, "function");
+      return {testCaseId: context.testCase.id, status: "passed", steps: []};
+    },
+  });
+
+  await runner.run(validRun({
+    testCase: {id: "case-1", name: "Configured case", actions: [{action: "wait_for_ready", name: "player"}]},
+    playerCheckTimeoutSeconds: 9,
+  }));
+
+  assert.deepEqual(helperOptions, [{playerCheckTimeoutSeconds: 9}]);
+});
+
 test("runner preserves only a redacted case step summary when a case action fails", async () => {
   const actionError = new Error("search failed for 192.168.1.9 with pairing-secret");
   actionError.testCaseResult = {

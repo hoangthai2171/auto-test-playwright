@@ -51,6 +51,7 @@ const {createTvRunner} = require("./tv-runner");
 const {createWebOsSessionFactory} = require("../tests/lib/tv-session/webos-appium-session");
 const {revealWindowOnFirstPaint} = require("./window-startup");
 const {createHostsFileService} = require("./hosts-file");
+const {DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS, normalizePlayerCheckTimeoutSeconds} = require("./test-configuration");
 
 const INTERACTIVE_BROWSER_DEBUG_PORT = Number(process.env.MYTV_INTERACTIVE_BROWSER_DEBUG_PORT) || 43000 + Math.floor(Math.random() * 1000);
 
@@ -65,6 +66,7 @@ let interactiveAudioMuted = true;
 let rendererRunActive = false;
 let hasUnsyncedResultSubmission = false;
 let activeLgBatchRunner;
+let playerCheckTimeoutSeconds = DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -352,6 +354,7 @@ const lgDesktopBatchRunner = createLgDesktopBatchRunner({
     tvRunner: lgTvRunner,
     loadCase: loadLgBatchCase,
     writeReportEntry: writeLgReportEntry,
+    getPlayerCheckTimeoutSeconds: () => playerCheckTimeoutSeconds,
 });
 activeLgBatchRunner = lgDesktopBatchRunner;
 registerLgRunIpc({ipcMain, batchRunner: lgDesktopBatchRunner, redact: redactSensitiveText});
@@ -582,6 +585,15 @@ function cloneForUi(value) {
     return Object.fromEntries(Object.entries(value).map(([key, nestedValue]) => [key, value.action === "login" && key === "password" ? "••••••" : cloneForUi(nestedValue)]));
 }
 
+ipcMain.handle("set-test-configuration", async (_event, values = {}) => {
+    const configuration = values && typeof values === "object" && !Array.isArray(values) ? values : {};
+    playerCheckTimeoutSeconds = normalizePlayerCheckTimeoutSeconds(
+        configuration.PLAYER_CHECK_TIMEOUT_SECONDS,
+        playerCheckTimeoutSeconds,
+    );
+    return {ok: true, PLAYER_CHECK_TIMEOUT_SECONDS: String(playerCheckTimeoutSeconds)};
+});
+
 ipcMain.handle("run-test", async (event, values = {}) => {
     if (runningProcess) {
         return {ok: false, message: "A test run is already in progress."};
@@ -601,6 +613,10 @@ ipcMain.handle("run-test", async (event, values = {}) => {
     const caseResultPath = path.join(userReportDir, "case-" + safeFileName(values.TEST_CASE_ID) + ".json");
     const testResultsDir = path.join(outputRoot, "test-results");
     let testCase;
+    playerCheckTimeoutSeconds = normalizePlayerCheckTimeoutSeconds(
+        values.PLAYER_CHECK_TIMEOUT_SECONDS,
+        playerCheckTimeoutSeconds,
+    );
 
     try {
         const cases = values.TEST_CASE_FOLDER_ID ? await loadCachedTestCases(testCasesCachePath(), values.TEST_CASE_FOLDER_ID) : await loadLocalTestCases(fixturePath);
@@ -634,6 +650,7 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         MYTV_PREVIEW_PATH: previewType === "live" ? previewPath : "",
         MYTV_INTERACTIVE_CDP_URL: interactiveCdpUrl,
         MYTV_INTERACTIVE_VIEW_SCALE: interactiveCdpUrl ? String(interactiveViewScale) : "",
+        MYTV_PLAYER_CHECK_TIMEOUT_SECONDS: String(playerCheckTimeoutSeconds),
     };
 
     if (usesElectronAsNode) {

@@ -1,6 +1,7 @@
 "use strict";
 
 const {normalizeVietnameseText} = require("../text-utils");
+const {normalizePlayerCheckTimeoutSeconds} = require("../../../app/test-configuration");
 
 const FOCUS_SELECTORS = [".focused", '[data-focused="true"]', ".active"];
 const CONTENT_TYPES = new Set(["channel", "movie", "content"]);
@@ -149,10 +150,12 @@ function bestSearchCandidate(candidates, {name, type}) {
     .sort((left, right) => right.score - left.score || left.label.length - right.label.length)[0] || null;
 }
 
-function createWebOsMyTvAutomation({execute, pressKey, wait} = {}) {
+function createWebOsMyTvAutomation({execute, pressKey, wait, playerCheckTimeoutSeconds} = {}) {
   if (typeof execute !== "function" || typeof pressKey !== "function" || typeof wait !== "function") {
     throw new TypeError("Trusted LG MyTV automation requires execute(), pressKey(), and wait().");
   }
+  const timeoutSeconds = normalizePlayerCheckTimeoutSeconds(playerCheckTimeoutSeconds);
+  const timeoutMs = timeoutSeconds * 1000;
   let selectedSearchResult = null;
 
   async function readFocus() { return execute(focusProbeScript(), []); }
@@ -254,7 +257,7 @@ function createWebOsMyTvAutomation({execute, pressKey, wait} = {}) {
     return {name: candidate.label, type: candidate.type};
   }
   async function assessPlayback() {
-    const before = await execute(playerStateScript(), []); await wait(6_000); const after = await execute(playerStateScript(), []);
+    const before = await execute(playerStateScript(), []); await wait(timeoutMs); const after = await execute(playerStateScript(), []);
     if (!after.hasVideo || after.paused || after.ended || after.readyState < 2 || after.currentTime <= before.currentTime + 0.25) {
       throw semanticError("PLAYBACK_FAILED", "MyTV player did not reach a healthy playing state.");
     }
@@ -275,7 +278,8 @@ function createWebOsMyTvAutomation({execute, pressKey, wait} = {}) {
     if (name === "home") return waitForBody((text) => !text.includes("Nhập mật khẩu") && !text.includes("Tìm kiếm"), 15_000, "MyTV home readiness did not appear.");
     if (name === "content") return waitForBody((text) => !text.includes("Nhập mật khẩu") && Boolean(text.trim()), 15_000, "MyTV content readiness did not appear.");
     if (name === "player") {
-      for (let attempt = 0; attempt < 60; attempt += 1) {
+      const attempts = Math.max(1, Math.floor(timeoutMs / 250) + 1);
+      for (let attempt = 0; attempt < attempts; attempt += 1) {
         const player = await execute(playerStateScript(), []);
         if (player?.hasVideo && !player.paused && !player.ended && player.readyState >= 2) return player;
         await wait(250);

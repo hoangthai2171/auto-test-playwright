@@ -1074,6 +1074,53 @@ button:disabled {
   font-size: 14px;
 }
 
+.settings-label-with-help {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tooltip-trigger {
+  position: relative;
+  display: inline-grid;
+  width: 18px;
+  height: 18px;
+  place-items: center;
+  border: 1px solid #687386;
+  border-radius: 50%;
+  color: #d9dee8;
+  cursor: help;
+  font-size: 12px;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.tooltip-trigger::after {
+  position: absolute;
+  z-index: 10;
+  top: calc(100% + 8px);
+  left: 0;
+  display: none;
+  width: max-content;
+  max-width: 280px;
+  padding: 8px 10px;
+  border: 1px solid #3d4655;
+  border-radius: 6px;
+  background: #1b2029;
+  box-shadow: 0 6px 18px rgb(0 0 0 / 28%);
+  color: #f0f3f8;
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 400;
+  line-height: 1.4;
+  white-space: normal;
+}
+
+.tooltip-trigger:hover::after,
+.tooltip-trigger:focus-visible::after {
+  display: block;
+}
+
 .sdk-component-list {
   display: grid;
   gap: 8px;
@@ -1312,6 +1359,34 @@ button:disabled {
 .settings-actions button {
   width: auto;
   padding: 0 18px;
+}
+
+.app-toast {
+  position: fixed;
+  right: 24px;
+  bottom: 24px;
+  z-index: 1100;
+  max-width: min(380px, calc(100vw - 48px));
+  padding: 12px 16px;
+  border: 1px solid #4b5568;
+  border-radius: 8px;
+  background: #202631;
+  box-shadow: 0 10px 28px rgba(0, 0, 0, 0.35);
+  color: #f2f4f8;
+  font-size: 13px;
+  line-height: 1.45;
+}
+
+.app-toast.ok {
+  border-color: #2f9d61;
+  background: #173525;
+  color: #9af0ba;
+}
+
+.app-toast.error {
+  border-color: #b64d58;
+  background: #3a1d24;
+  color: #ffb3b3;
 }
 
 .app-version {

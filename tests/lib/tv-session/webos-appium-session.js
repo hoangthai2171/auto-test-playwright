@@ -298,10 +298,11 @@ function createWebOsAppiumSession({client, appId, model, secrets = [], connectio
     }
   }
 
-  const myTvAutomation = createWebOsMyTvAutomation({
+  const createMyTvAutomation = (options = {}) => createWebOsMyTvAutomation({
     execute: executeTrustedMyTv,
     pressKey,
     wait,
+    ...options,
   });
 
   async function reset() {
@@ -351,7 +352,7 @@ function createWebOsAppiumSession({client, appId, model, secrets = [], connectio
     captureScreenshot,
     screenshot: captureScreenshot,
     pressKey,
-    createMyTvAutomation: () => myTvAutomation,
+    createMyTvAutomation,
     reset,
     resetAppState: reset,
     cleanup,

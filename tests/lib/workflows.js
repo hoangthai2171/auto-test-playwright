@@ -596,6 +596,7 @@ async function playVisibleContentByName(page, testInfo, options = {}) {
     name: match.item.title || name,
     type,
     poster: match.item.poster || "",
+    waitSeconds: options.waitSeconds,
   });
 }
 
@@ -606,14 +607,18 @@ async function playFocusedSearchResult(page, testInfo, options = {}) {
     type: options.type || "content",
     poster: focused.poster || "",
     artifactPrefix: "search-content",
+    waitSeconds: options.waitSeconds,
   });
 }
 
-async function playFocusedContent(page, testInfo, {name, type = "content", poster = "", artifactPrefix = "content"} = {}) {
+async function playFocusedContent(page, testInfo, {name, type = "content", poster = "", artifactPrefix = "content", waitSeconds} = {}) {
   const itemName = String(name || "focused content").trim();
   await openFocusedContentForPlayback(page, testInfo);
 
-  const playback = await inspectPlaybackAfterWait(page, PLAYER_PLAYBACK_WAIT_SECONDS);
+  const playback = await inspectPlaybackAfterWait(
+    page,
+    Number(waitSeconds) > 0 ? Number(waitSeconds) : PLAYER_PLAYBACK_WAIT_SECONDS,
+  );
   const result = {
     name: itemName,
     title: itemName,

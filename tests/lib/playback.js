@@ -1,8 +1,9 @@
 const {expect}=require("playwright/test");
 const {waitForPlayerReady}=require("./waits");
+const {DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS}=require("../../app/test-configuration");
 
 const CLOSE_POPUP_TEXT=/^(Đóng|Huỷ|Hủy|Quay về|Quay về trang chủ)$/i;
-const PLAYER_PLAYBACK_WAIT_SECONDS=6;
+const PLAYER_PLAYBACK_WAIT_SECONDS=DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS;
 function safeArtifactName(value){return String(value).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"artifact";}
 async function assertChannelPlayback(page, testInfo, options) {
   await assertPlayback(page, testInfo, {

@@ -49,13 +49,14 @@ uses the fixture only when no cached folder is available. `app/main.js` also
 owns flow-case API IPC, sanitizes passwords and authorization headers for the renderer, validates the
 selected case ID from either the fixture or the user-data cache, and starts the
 generic `tests/run-test-case-mytv.spec.js` entry point. The renderer sends the
-selected case ID, `APP_URL`, preview settings, and active folder ID for a run.
+selected case ID, `APP_URL`, player-check timeout, preview settings, and active
+folder ID for a run.
 After every selected API-loaded case has completed, the renderer submits one
 validated `tested`/`testResult` batch through main-process IPC; stopped,
 skipped, local-fixture, and launch-failed batches are never partially sent.
 
 The desktop supports two execution targets: Browser (the default) and LG webOS.
-The Settings dialog owns Browser configuration, LG SDK configuration, the
+The Settings dialog owns Browser configuration, Test configuration, LG SDK configuration, the
 saved LG-device list, redacted connection status, managed/advanced toolchain
 selection, and the compatibility catalog. Browser runs require the separately
 confirmed managed Chromium installation. LG runs reuse the same case selection,
@@ -113,6 +114,7 @@ workers without redesigning session ownership.
 ```text
 testcased.json
 app/
+  test-configuration.js          Shared player-check timeout default and validation
   main.js                         Electron process, case loading, run IPC
   test-report.js                  Compact user report HTML/data generation
   preload.js                      Context-isolated IPC bridge
@@ -209,8 +211,9 @@ case, dispatches actions in order, wraps each step with the existing artifact
 mechanism, and returns structured per-step results.
 
 After all action steps pass, recognized `expectedResult` values add a final
-`expected_result` check. Playback-success wording waits six seconds, then waits
-for a healthy playing player; service-success wording (`Vào`/`Mở` a service or
+`expected_result` check. Playback-success wording waits for the configured
+player-check timeout (6 seconds by default), then waits for a healthy playing
+player; service-success wording (`Vào`/`Mở` a service or
 category `bình thường`/`thành công`) requires the activation check to have
 observed a non-Home destination with visible content rows. A visible
 auto-hide toast/tooltip or no-data/error popup fails service access. Player
@@ -219,6 +222,10 @@ remotely return to the prior screen, then wait two seconds when final so
 watching-session teardown API calls can complete, unless the next action
 explicitly waits for the player or performs its own Back action.
 Failed player checks retain that player-screen capture in the compact report.
+
+The retained terminal channel/movie/search workflows use separate
+post-activation settle delays in `activateVerifiedTarget`; those delays wait for
+the destination screen after `Enter` and do not inspect player health.
 
 After each generic selected-case run, `run-test-case-mytv.spec.js` invokes the
 trusted app cleanup function `window.processLogOut` in a `finally` path and
@@ -253,6 +260,7 @@ private fixture data.
 - `MYTV_CASE_RESULT_PATH` — per-case structured result sidecar for the compact user report.
 - `MYTV_INTERACTIVE_CDP_URL` — CDP endpoint for interactive preview.
 - `MYTV_INTERACTIVE_VIEW_SCALE` — interactive preview scale.
+- `MYTV_PLAYER_CHECK_TIMEOUT_SECONDS` — sanitized positive-integer player-check wait used by the generic Browser runner; defaults to 6 seconds.
 - `PLAYWRIGHT_BROWSERS_PATH` — app-private per-user Playwright Chromium root,
   assigned by the Electron main process. It is never a bundled browser cache or
   system-browser fallback.

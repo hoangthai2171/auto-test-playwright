@@ -3,6 +3,7 @@
 const path = require("node:path");
 const {runTvTestCase} = require("../tests/lib/tv-case-runner");
 const {createLgMyTvCaseHelpers} = require("../tests/lib/lg-mytv-case-helpers");
+const {normalizePlayerCheckTimeoutSeconds} = require("./test-configuration");
 
 const LG_PLATFORM = "webos";
 const LG_SESSION_PLATFORM = "lg";
@@ -214,7 +215,7 @@ function createTvRunner({registry, discovery, lock, serverManager, sessionFactor
   if (typeof redact !== "function") throw new Error("An injected redaction function is required.");
 
   return {
-    async run({profileId, host, sharedDeviceAcknowledged, secureWebsocket, allowSelfSignedTls, connection, appium, testCase, caseHelpers, testInfo, onEvent, onFrame} = {}) {
+    async run({profileId, host, sharedDeviceAcknowledged, secureWebsocket, allowSelfSignedTls, connection, appium, testCase, caseHelpers, playerCheckTimeoutSeconds, testInfo, onEvent, onFrame} = {}) {
       const emitEvent = async (event) => {
         if (!SAFE_LIFECYCLE_CODES.has(event?.code)) return;
         const safeEvent = {code: event.code};
@@ -304,10 +305,14 @@ function createTvRunner({registry, discovery, lock, serverManager, sessionFactor
         if (testCase !== undefined) {
           lifecycleStage = "case-started";
           await emitEvent({code: "case-started"});
+          const configuredCaseHelpers = caseHelpers || createLgMyTvCaseHelpers({
+            tvSession: session,
+            playerCheckTimeoutSeconds: normalizePlayerCheckTimeoutSeconds(playerCheckTimeoutSeconds),
+          });
           caseResult = await caseExecutor({
             tvSession: session,
             testCase,
-            helpers: caseHelpers || createLgMyTvCaseHelpers({tvSession: session}),
+            helpers: configuredCaseHelpers,
             testInfo,
             capabilities: Object.freeze({
               domInspection: true,

@@ -440,3 +440,11 @@ test("webOS session exposes only named trusted MyTV semantic operations", () => 
   assert.equal("execute" in session.createMyTvAutomation(), false);
   assert.equal("evaluate" in session.createMyTvAutomation(), false);
 });
+
+test("webOS session accepts a per-case player timeout for trusted automation", () => {
+  const session = createSession(createFakeClient());
+  const automation = session.createMyTvAutomation({playerCheckTimeoutSeconds: 12});
+
+  assert.equal(typeof automation.playSearchResult, "function");
+  assert.equal("execute" in automation, false);
+});

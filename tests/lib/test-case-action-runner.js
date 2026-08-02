@@ -2,8 +2,8 @@ const { compileTestCase } = require("./test-case-compiler");
 const { expect } = require("playwright/test");
 const workflows = require("./workflows");
 const { normalizeVietnameseText } = require("./text-utils");
-const { PLAYER_PLAYBACK_WAIT_SECONDS } = require("./playback");
 const { captureCurrentAppScreenshot } = require("./artifacts");
+const { normalizePlayerCheckTimeoutSeconds } = require("../../app/test-configuration");
 
 const PLAYER_RETURN_DELAY_MS = 2000;
 
@@ -290,15 +290,16 @@ function createActionRunner({ handlers = {}, stepRunner, afterAction, onActionEr
   };
 }
 
-async function verifyExpectedResult({page, testInfo, testCase, steps, helpers}) {
+async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, playerCheckTimeoutSeconds}) {
   const kind = classifyExpectedResult(testCase.expectedResult);
   if (!kind) return undefined;
 
   if (kind === "player") {
+    const timeoutSeconds = normalizePlayerCheckTimeoutSeconds(playerCheckTimeoutSeconds);
     let playerScreenshotDataUrl = "";
     try {
-      await page.waitForTimeout(PLAYER_PLAYBACK_WAIT_SECONDS * 1000);
-      await assertPlayerReadyAfterDefaultWait(helpers, page);
+      await page.waitForTimeout(timeoutSeconds * 1000);
+      await assertPlayerReadyAfterWait(helpers, page, timeoutSeconds);
       playerScreenshotDataUrl = await capturePlayerCheckScreenshot(page, testInfo);
       await finishPlayerCheck(page, helpers);
       return {
@@ -333,7 +334,7 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers}) 
   };
 }
 
-async function assertPlayerReadyAfterDefaultWait(helpers, page) {
+async function assertPlayerReadyAfterWait(helpers, page, timeoutSeconds) {
   const [popup, playerState] = await Promise.all([
     helpers.__internal.getVisiblePopup(page),
     helpers.getPlayerState(page),
@@ -349,7 +350,7 @@ async function assertPlayerReadyAfterDefaultWait(helpers, page) {
     ? `popup remained visible${popupText ? `: ${popupText}` : ""}`
     : `player state was not healthy${playerReason ? `: ${playerReason}` : ""}`;
   const error = new Error(
-    `Player check failed after ${PLAYER_PLAYBACK_WAIT_SECONDS} seconds: ${reason}`
+    `Player check failed after ${timeoutSeconds} seconds: ${reason}`
   );
   error.details = {popup: popup || null, playerState: playerState || null};
   throw error;
@@ -461,9 +462,12 @@ async function resolveReadyWait(helpers, page, testInfo, name) {
   }
 }
 
-function createDefaultActionHandlers({ helpers }) {
+function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}) {
   let mostRecentlyFocusedRow = null;
   let pendingServiceName = "";
+  const playbackWaitOptions = playerCheckTimeoutSeconds === undefined
+    ? {}
+    : {waitSeconds: playerCheckTimeoutSeconds};
 
   return {
     login: async ({ page, testInfo, action, options }) => {
@@ -538,14 +542,19 @@ function createDefaultActionHandlers({ helpers }) {
       helpers.playVisibleContentByName(page, testInfo, {
         name: action.name,
         type: action.type,
+        ...playbackWaitOptions,
       }),
     play_search_result: ({ page, testInfo, action }) =>
-      helpers.playFocusedSearchResult(page, testInfo, {type: action.type}),
+      helpers.playFocusedSearchResult(page, testInfo, {
+        type: action.type,
+        ...playbackWaitOptions,
+      }),
     play_row: ({ page, testInfo, action }) =>
       helpers.playItemsInRow(page, testInfo, {
         rowIndex: action.rowIndex,
         rowName: action.rowName,
         count: action.count,
+        ...playbackWaitOptions,
       }),
     press_back: async ({ page, action }) => {
       for (let index = 0; index < (action.count ?? 1); index += 1) {
@@ -562,7 +571,8 @@ function createDefaultActionHandlers({ helpers }) {
 
 async function runTestCase(page, testInfo, testCase, options = {}) {
   const helpers = options.helpers || require("./mytv-helpers");
-  const handlers = options.handlers || createDefaultActionHandlers({ helpers });
+  const playerCheckTimeoutSeconds = normalizePlayerCheckTimeoutSeconds(options.playerCheckTimeoutSeconds);
+  const handlers = options.handlers || createDefaultActionHandlers({helpers, playerCheckTimeoutSeconds});
   const stepRunner = options.stepRunner || helpers.runStep;
 
   return createActionRunner({
@@ -583,6 +593,7 @@ async function runTestCase(page, testInfo, testCase, options = {}) {
           testCase: compiledTestCase,
           steps,
           helpers,
+          playerCheckTimeoutSeconds,
         }),
     }
   );

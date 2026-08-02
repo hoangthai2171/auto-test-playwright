@@ -43,6 +43,7 @@ contextBridge.exposeInMainWorld("mytvRunner", {
   stopTest: () => ipcRenderer.invoke("stop-test"),
   setRunActive: (active) => ipcRenderer.invoke("set-run-active", Boolean(active)),
   setUnsyncedResultSubmission: (pending) => ipcRenderer.invoke("set-unsynced-result-submission", Boolean(pending)),
+  setTestConfiguration: (configuration) => ipcRenderer.invoke("set-test-configuration", configuration),
   openReport: () => ipcRenderer.invoke("open-report"),
   showReportFolder: () => ipcRenderer.invoke("show-report-folder"),
   onStarted: (callback) => ipcRenderer.on("test-started", callback),
