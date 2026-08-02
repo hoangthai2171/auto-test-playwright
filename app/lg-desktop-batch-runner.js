@@ -2,6 +2,7 @@
 
 const {validateTargetCaseCapabilities} = require("../tests/lib/target-action-runner");
 const {TV_FAILURE_KIND, classifyTvFailure} = require("../tests/lib/tv-failure-classification");
+const {DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS, normalizePlayerCheckTimeoutSeconds} = require("./test-configuration");
 
 const SAFE_EVENT_CODES = new Set([
   "preflight",
@@ -56,7 +57,7 @@ function caseRun(testCase, {passed = false, stopped = false, executionResult, fa
   });
 }
 
-function createLgDesktopBatchRunner({preflight, tvRunner, loadCase, writeReportEntry = async () => {}, classifyFailure = classifyTvFailure} = {}) {
+function createLgDesktopBatchRunner({preflight, tvRunner, loadCase, writeReportEntry = async () => {}, classifyFailure = classifyTvFailure, getPlayerCheckTimeoutSeconds = () => DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS} = {}) {
   requireMethod(preflight, "LG run preflight", "availability");
   requireMethod(preflight, "LG run preflight", "prepare");
   requireMethod(tvRunner, "LG TV runner", "run");
@@ -103,6 +104,7 @@ function createLgDesktopBatchRunner({preflight, tvRunner, loadCase, writeReportE
           connection: runtime.connection,
           appium: runtime.appium,
           testCase,
+          playerCheckTimeoutSeconds: normalizePlayerCheckTimeoutSeconds(getPlayerCheckTimeoutSeconds()),
           onFrame,
         });
         const result = caseRun(testCase, {passed: true, executionResult});

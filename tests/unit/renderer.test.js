@@ -193,6 +193,7 @@ function createRendererFixture() {
     "project-id-input",
     "environment-select",
     "api-timeout-input",
+    "player-check-timeout-input",
     "dns-host-input",
     "dns-host-add-button",
     "dns-host-remove-button",
@@ -285,7 +286,8 @@ function createRendererFixture() {
     "settings-close-button",
     "logs-close-button",
     "gui-settings-save-button",
-    "settings-message",
+    "test-configuration-save-button",
+    "app-toast",
     "preview-target-status",
     "form-message",
     "status-dot",
@@ -328,6 +330,7 @@ function createRendererFixture() {
   elements["lg-recovery-dialog"].className = "modal hidden";
   elements["tv-device-passphrase-input"].setAttribute("type", "password");
   elements["api-loading-overlay"].className = "api-loading-overlay";
+  elements["app-toast"].className = "app-toast hidden";
 
   const stage = new FakeElement("div");
   stage.className = "browser-preview-stage";
@@ -356,6 +359,16 @@ function createRendererFixture() {
   const guiPanel = new FakeElement("section");
   guiPanel.setAttribute("data-settings-content", "gui");
   root.append(guiPanel);
+
+  const testConfigurationNav = new FakeElement("button");
+  testConfigurationNav.setAttribute("data-settings-panel", "test-configuration");
+  elements["test-configuration-nav"] = testConfigurationNav;
+  root.append(testConfigurationNav);
+
+  const testConfigurationPanel = new FakeElement("section");
+  testConfigurationPanel.setAttribute("data-settings-content", "test-configuration");
+  testConfigurationPanel.className = "hidden";
+  root.append(testConfigurationPanel);
 
   const sdkNav = new FakeElement("button");
   sdkNav.setAttribute("data-settings-panel", "sdk");
@@ -386,6 +399,7 @@ function createRendererFixture() {
     loadTestCases: async () => ({ ok: true, cases: [] }),
     loadFlowCaseFolders: async () => ({ok: true, folders: []}),
     loadFlowCases: async () => ({ok: true, folder: null, cases: []}),
+    setTestConfiguration: async (configuration) => ({ok: true, ...configuration}),
     listTvDevices: async () => ({ok: true, devices: [{
       id: "lab-lg",
       label: "Lab LG",
@@ -443,6 +457,21 @@ function createRendererFixture() {
     },
   };
 
+  const timers = new Map();
+  let nextTimerId = 0;
+  const windowRef = {
+    addEventListener: () => {},
+    alert: () => {},
+    setTimeout(callback, delay) {
+      const id = ++nextTimerId;
+      timers.set(id, {callback, delay});
+      return id;
+    },
+    clearTimeout(id) {
+      timers.delete(id);
+    },
+  };
+
   return {
     document,
     elements,
@@ -451,8 +480,13 @@ function createRendererFixture() {
       getItem: () => null,
       setItem: () => {},
     },
-    windowRef: { addEventListener: () => {}, alert: () => {} },
+    windowRef,
+    timers,
   };
+}
+
+async function flushRendererPromises() {
+  await new Promise((resolve) => setImmediate(resolve));
 }
 
 test("renderer entry is available to lightweight UI tests", () => {
@@ -965,6 +999,7 @@ test("loads and saves connection and network settings", () => {
     PROJECT_ID: "7",
     ENVIRONMENT: "API",
     API_TIMEOUT_SECONDS: "45",
+    PLAYER_CHECK_TIMEOUT_SECONDS: "12",
     PREVIEW_TYPE: "none",
   });
   fixture.storage.setItem = (_key, value) => {
@@ -978,10 +1013,70 @@ test("loads and saves connection and network settings", () => {
   assert.equal(fixture.elements["project-id-input"].value, "7");
   assert.equal(fixture.elements["environment-select"].value, "API");
   assert.equal(fixture.elements["api-timeout-input"].value, "45");
+  assert.equal(fixture.elements["player-check-timeout-input"].value, "12");
   fixture.elements["gui-settings-save-button"].dispatchEvent("click");
   assert.equal(stored.API_TIMEOUT_SECONDS, "45");
+  assert.equal(stored.PLAYER_CHECK_TIMEOUT_SECONDS, "12");
   assert.equal(stored.API_AUTHORIZATION, "Bearer saved-token");
   assert.equal(stored.ENVIRONMENT, "API");
+});
+
+test("saves and sanitizes the Test configuration player timeout with an auto-hide success toast", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let stored;
+  fixture.storage.setItem = (_key, value) => { stored = JSON.parse(value); };
+  renderer.createRendererController(fixture);
+
+  fixture.elements["player-check-timeout-input"].value = "15e2";
+  fixture.elements["player-check-timeout-input"].dispatchEvent("input");
+  assert.equal(fixture.elements["player-check-timeout-input"].value, "152");
+
+  fixture.elements["player-check-timeout-input"].value = "0";
+  fixture.elements["test-configuration-save-button"].dispatchEvent("click");
+  await flushRendererPromises();
+
+  assert.equal(fixture.elements["player-check-timeout-input"].value, "6");
+  assert.equal(stored.PLAYER_CHECK_TIMEOUT_SECONDS, "6");
+  assert.equal(fixture.elements["app-toast"].textContent, "Player check timeout saved successfully.");
+  assert.equal(fixture.elements["app-toast"].className, "app-toast ok");
+  assert.deepEqual([...fixture.timers.values()].map(({delay}) => delay), [3000]);
+  [...fixture.timers.values()][0].callback();
+  assert.equal(fixture.elements["app-toast"].textContent, "");
+  assert.equal(fixture.elements["app-toast"].className, "app-toast hidden");
+  assert.equal(fixture.elements["test-configuration-nav"].dataset.settingsPanel, "test-configuration");
+});
+
+test("shows an error toast when test configuration synchronization fails", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  fixture.runner.setTestConfiguration = async () => ({ok: false});
+  renderer.createRendererController(fixture);
+
+  fixture.elements["player-check-timeout-input"].value = "9";
+  fixture.elements["test-configuration-save-button"].dispatchEvent("click");
+  await flushRendererPromises();
+
+  assert.equal(fixture.elements["app-toast"].textContent, "Could not save player check timeout.");
+  assert.equal(fixture.elements["app-toast"].className, "app-toast error");
+});
+
+test("replaces the previous save toast timer when saving again", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  renderer.createRendererController(fixture);
+
+  fixture.elements["test-configuration-save-button"].dispatchEvent("click");
+  await flushRendererPromises();
+  const firstTimerId = [...fixture.timers.keys()][0];
+
+  fixture.elements["player-check-timeout-input"].value = "11";
+  fixture.elements["test-configuration-save-button"].dispatchEvent("click");
+  await flushRendererPromises();
+
+  assert.equal(fixture.timers.has(firstTimerId), false);
+  assert.equal(fixture.timers.size, 1);
+  assert.equal(fixture.elements["app-toast"].className, "app-toast ok");
 });
 
 test("does not fetch folders during startup; Refresh remains manual", async () => {
@@ -1206,6 +1301,7 @@ test("submits only the generic test-run payload", async () => {
   };
   const controller = renderer.createRendererController(fixture);
   fixture.elements["settings-app-url-input"].value = "  https://example.test/  ";
+  fixture.elements["player-check-timeout-input"].value = "14";
   controller.renderCaseList([{ id: "case-1", name: "Case", actions: [] }]);
   controller.selectCase("case-1");
 
@@ -1216,6 +1312,7 @@ test("submits only the generic test-run payload", async () => {
     APP_URL: "https://example.test/",
     TEST_CASE_ID: "case-1",
     PREVIEW_TYPE: "live",
+    PLAYER_CHECK_TIMEOUT_SECONDS: "14",
   });
 });
 
@@ -1244,6 +1341,7 @@ test("runs selected cases sequentially and preserves the generic IPC payload", a
     APP_URL: "https://example.test/",
     TEST_CASE_ID: "case-1",
     PREVIEW_TYPE: "live",
+    PLAYER_CHECK_TIMEOUT_SECONDS: "6",
   });
   assert.equal(fixture.elements["test-case-list-body"].querySelector('[data-test-case-status="case-1"]').textContent, "Running");
 
@@ -2203,11 +2301,16 @@ test("index markup contains the case browser and no API-key or mode controls", (
   assert.match(html, /id="test-case-details-modal"/);
   assert.match(html, /id="test-case-details"/);
   assert.match(html, /id="selected-test-case-id"/);
-  assert.match(html, /id="settings-message"/);
+  assert.doesNotMatch(html, /id="settings-message"/);
+  assert.match(html, /id="app-toast"/);
+  assert.match(html, /data-settings-panel="test-configuration"/);
+  assert.match(html, /Test configuration/);
+  assert.match(html, /Player check timeout \(second\)/);
+  assert.match(html, /Thời gian chờ trước khi check trạng thái player/);
   [
     "folder-select", "refresh-folders-button", "get-test-cases-button",
     "settings-app-url-input", "api-domain-input", "api-authorization-input", "project-id-input",
-    "environment-select", "api-timeout-input", "dns-host-input", "dns-host-add-button", "dns-host-remove-button", "dns-host-status", "api-loading-overlay",
+    "environment-select", "api-timeout-input", "player-check-timeout-input", "test-configuration-save-button", "app-toast", "dns-host-input", "dns-host-add-button", "dns-host-remove-button", "dns-host-status", "api-loading-overlay",
     "retry-sync-button", "run-target-browser", "run-target-webos", "tv-device-select", "tv-device-status", "tv-device-connection-status", "tv-device-connection-dot", "tv-device-check-connection-button", "tv-device-add-button", "tv-device-edit-button", "tv-device-dialog", "tv-device-name-input", "tv-device-host-input", "tv-device-passphrase-input", "tv-device-passphrase-toggle", "tv-device-dialog-submit-button",
     "sdk-managed-toolchain-status", "sdk-component-list", "sdk-install-review", "sdk-install-progress", "sdk-install-progress-text", "sdk-install-progress-steps", "tv-toolchain-sdk-home-input", "tv-toolchain-appium-home-input", "tv-toolchain-appium-bin-input", "tv-toolchain-chromedriver-input", "tv-toolchain-save-button",
     "lg-run-availability", "configure-lg-sdk-button", "lg-run-confirmation-dialog", "lg-run-confirm-button", "lg-run-cancel-button", "lg-run-state", "lg-preview-image", "lg-preview-empty", "lg-recovery-dialog", "lg-recovery-retry-button", "lg-recovery-stop-button",

@@ -1,3 +1,7 @@
+const TEST_CONFIGURATION = typeof require === "function"
+    ? require("../test-configuration")
+    : globalThis.MYTV_TEST_CONFIGURATION;
+
 function maskActionForDisplay(action) {
     const displayAction = {...action};
     if (displayAction.action === "login" && Object.prototype.hasOwnProperty.call(displayAction, "password")) {
@@ -68,10 +72,13 @@ const DEFAULT_SETTINGS = {
     PROJECT_ID: "1",
     ENVIRONMENT: "UI",
     API_TIMEOUT_SECONDS: "30",
+    PLAYER_CHECK_TIMEOUT_SECONDS: String(TEST_CONFIGURATION.DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS),
     DNS_HOST: "172.16.240.254 html5stage.mytv.vn",
     PREVIEW_TYPE: "live",
     RUN_TARGET: "browser",
 };
+
+const SAVE_TOAST_DURATION_MS = 3000;
 
 const LG_INSTALL_PROGRESS_STEPS = Object.freeze([
     {code: "preparing", label: "Preparing the managed installation"},
@@ -125,6 +132,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const projectIdInput = get("project-id-input");
     const environmentSelect = get("environment-select");
     const apiTimeoutInput = get("api-timeout-input");
+    const playerCheckTimeoutInput = get("player-check-timeout-input");
     const dnsHostInput = get("dns-host-input");
     const dnsHostAddButton = get("dns-host-add-button");
     const dnsHostRemoveButton = get("dns-host-remove-button");
@@ -233,7 +241,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const interactiveBrowser = get("interactive-browser");
     const settingsModal = get("settings-modal");
     const logsModal = get("logs-modal");
-    const settingsMessage = get("settings-message");
+    const appToast = get("app-toast");
     const previewTargetStatus = get("preview-target-status");
     const settingsNavItems = doc?.querySelectorAll?.("[data-settings-panel]") || [];
     const settingsPanels = doc?.querySelectorAll?.("[data-settings-content]") || [];
@@ -246,6 +254,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     let activeCompletion = null;
     let activePreviewType = "live";
     let browserMuted = true;
+    let appToastTimer = null;
     let settings = {...DEFAULT_SETTINGS};
     let activeFolderId = "";
     let activeFolderPath = "";
@@ -258,6 +267,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     let deviceDialogMode = "add";
     let editingDeviceId = "";
     let activeLgInstallStepIndex = -1;
+    let testConfigurationSync = Promise.resolve();
     let sdkInstallProgressDismissed = false;
     let browserToolchainReady = true;
     let activeBrowserInstallStepIndex = -1;
@@ -300,6 +310,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             API_TIMEOUT_SECONDS: Number(saved.API_TIMEOUT_SECONDS) > 0
                 ? String(saved.API_TIMEOUT_SECONDS)
                 : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
+            PLAYER_CHECK_TIMEOUT_SECONDS: String(TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
+                saved.PLAYER_CHECK_TIMEOUT_SECONDS,
+                TEST_CONFIGURATION.DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS,
+            )),
             PREVIEW_TYPE: ["none", "live", "interactive"].includes(saved.PREVIEW_TYPE)
                 ? saved.PREVIEW_TYPE
                 : DEFAULT_SETTINGS.PREVIEW_TYPE,
@@ -313,15 +327,34 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (projectIdInput) projectIdInput.value = settings.PROJECT_ID;
         if (environmentSelect) environmentSelect.value = settings.ENVIRONMENT;
         if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
+        if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
         if (dnsHostInput) dnsHostInput.value = settings.DNS_HOST;
         doc?.querySelectorAll?.('[name="preview-type"]').forEach((input) => {
             input.checked = input.value === activePreviewType;
         });
         syncRunTargetControls();
+        syncTestConfiguration();
+    }
+
+    function syncTestConfiguration(playerTimeoutSeconds = settings.PLAYER_CHECK_TIMEOUT_SECONDS) {
+        testConfigurationSync = Promise.resolve()
+            .then(() => api.setTestConfiguration?.({
+                PLAYER_CHECK_TIMEOUT_SECONDS: playerTimeoutSeconds,
+            }))
+            .then((response) => response === undefined ? {ok: true} : response)
+            .catch((error) => ({
+                ok: false,
+                message: error?.message || "Could not synchronize test configuration.",
+            }));
+        return testConfigurationSync;
     }
 
     function currentSettings() {
         const timeoutSeconds = Number(apiTimeoutInput?.value);
+        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
+            playerCheckTimeoutInput?.value,
+            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
+        );
         return {
             ...settings,
             APP_URL: settingsAppUrlInput?.value?.trim() || settings.APP_URL,
@@ -334,6 +367,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
                 ? String(timeoutSeconds)
                 : settings.API_TIMEOUT_SECONDS,
+            PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
             DNS_HOST: dnsHostInput?.value?.trim() || settings.DNS_HOST,
             RUN_TARGET: runTarget,
         };
@@ -370,6 +404,22 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         formMessage.textContent = message;
         formMessage.className = `form-message ${type}`.trim();
         formMessage.classList.toggle("hidden", !message);
+    }
+
+    function showAppToast(message, type = "") {
+        if (!appToast) return;
+        if (appToastTimer !== null) {
+            if (typeof win?.clearTimeout === "function") win.clearTimeout(appToastTimer);
+            else clearTimeout(appToastTimer);
+        }
+        appToast.textContent = message;
+        appToast.className = `app-toast ${type}`.trim();
+        const schedule = typeof win?.setTimeout === "function" ? win.setTimeout.bind(win) : setTimeout;
+        appToastTimer = schedule(() => {
+            appToast.textContent = "";
+            appToast.className = "app-toast hidden";
+            appToastTimer = null;
+        }, SAVE_TOAST_DURATION_MS);
     }
 
     function updateLogEntryOverflow(entry, content) {
@@ -1918,10 +1968,15 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     refreshFoldersButton?.addEventListener?.("click", () => loadFolders());
     getTestCasesButton?.addEventListener?.("click", () => loadCasesFromFolder());
 
-    function savePreviewSettings() {
+    async function savePreviewSettings() {
         activePreviewType = readPreviewType();
         const timeoutSeconds = Number(apiTimeoutInput?.value);
+        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
+            playerCheckTimeoutInput?.value,
+            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
+        );
         settings = {
+            ...settings,
             APP_URL: settingsAppUrlInput?.value?.trim() || DEFAULT_SETTINGS.APP_URL,
             API_DOMAIN: apiDomainInput?.value?.trim() || DEFAULT_SETTINGS.API_DOMAIN,
             API_AUTHORIZATION: apiAuthorizationInput?.value?.trim() || "",
@@ -1930,13 +1985,34 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
                 ? String(timeoutSeconds)
                 : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
+            PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
             DNS_HOST: dnsHostInput?.value?.trim() || DEFAULT_SETTINGS.DNS_HOST,
             PREVIEW_TYPE: activePreviewType,
             RUN_TARGET: runTarget,
         };
         if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
+        if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
         store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
-        if (settingsMessage) settingsMessage.textContent = "Saved";
+        const response = await syncTestConfiguration();
+        showAppToast(
+            response?.ok === false ? "Could not save settings." : "Settings saved successfully.",
+            response?.ok === false ? "error" : "ok",
+        );
+    }
+
+    async function saveTestConfiguration() {
+        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
+            playerCheckTimeoutInput?.value,
+            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
+        );
+        settings = {...settings, PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds)};
+        if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
+        store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
+        const response = await syncTestConfiguration();
+        showAppToast(
+            response?.ok === false ? "Could not save player check timeout." : "Player check timeout saved successfully.",
+            response?.ok === false ? "error" : "ok",
+        );
     }
 
     async function suspendInteractiveBrowserForModal() {
@@ -1960,10 +2036,15 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     }
 
     async function runSingleCase(testCaseId, values, currentBatch) {
+        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
+            values.PLAYER_CHECK_TIMEOUT_SECONDS,
+            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
+        );
         const payload = {
             APP_URL: values.APP_URL,
             TEST_CASE_ID: String(testCaseId),
             PREVIEW_TYPE: values.PREVIEW_TYPE,
+            PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
         };
         if (values.TEST_CASE_FOLDER_ID) payload.TEST_CASE_FOLDER_ID = String(values.TEST_CASE_FOLDER_ID);
         currentBatch.activeCaseId = String(testCaseId);
@@ -2145,6 +2226,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const values = {
             APP_URL: runSettings.APP_URL,
             PREVIEW_TYPE: activePreviewType,
+            PLAYER_CHECK_TIMEOUT_SECONDS: runSettings.PLAYER_CHECK_TIMEOUT_SECONDS,
             target: runTarget,
         };
         if (activeFolderId) values.TEST_CASE_FOLDER_ID = activeFolderId;
@@ -2259,6 +2341,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const ids = getSelectedCaseIds();
         const deviceId = String(tvDeviceSelect?.value || "");
         if (!deviceId || !canRunLg() || typeof api?.runLgBatch !== "function") return {ok: false, status: "LG_BATCH_INVALID"};
+        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
+            values.PLAYER_CHECK_TIMEOUT_SECONDS,
+            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
+        );
+        syncTestConfiguration(String(playerTimeoutSeconds));
         closeModal(lgRunConfirmationDialog);
         pendingLgRunValues = null;
         batchState = {ids, activeCaseId: null, stopRequested: false, lg: true};
@@ -2267,6 +2354,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         setStatus("running", "Running");
         if (typeof api.startReport === "function") await api.startReport();
         try {
+            await testConfigurationSync;
             const result = await api.runLgBatch({deviceId, selectedCaseIds: ids, ...(values.TEST_CASE_FOLDER_ID ? {folderId: values.TEST_CASE_FOLDER_ID} : {}), confirmed: true});
             if (!result?.ok) {
                 setStatus("failed", "Failed");
@@ -2367,7 +2455,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         closeModal(logsModal);
         await resumeInteractiveBrowserAfterModal();
     });
-    get("gui-settings-save-button")?.addEventListener?.("click", savePreviewSettings);
+    get("gui-settings-save-button")?.addEventListener?.("click", () => { void savePreviewSettings(); });
+    get("test-configuration-save-button")?.addEventListener?.("click", () => { void saveTestConfiguration(); });
+    playerCheckTimeoutInput?.addEventListener?.("input", () => {
+        playerCheckTimeoutInput.value = String(playerCheckTimeoutInput.value || "").replace(/[^0-9]/g, "");
+    });
     dnsHostInput?.addEventListener?.("input", () => { void refreshDnsHostStatus(); });
     dnsHostAddButton?.addEventListener?.("click", () => { void updateDnsHost("addHostEntry"); });
     dnsHostRemoveButton?.addEventListener?.("click", () => { void updateDnsHost("removeHostEntry"); });
@@ -2510,6 +2602,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     if (runTarget === "webos") void selectRunTarget("webos", {persist: false});
     updateFolderControls();
     updateRetrySyncButton();
+
+    api.getAppVersion?.().then((version) => {
+        const versionEl = doc.getElementById("app-version");
+        if (versionEl) versionEl.textContent = `v${version}`;
+    }).catch((err) => console.error("Failed to load app version:", err));
 
     return {
         loadCases,

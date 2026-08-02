@@ -399,6 +399,27 @@ test("verifies a playback expectedResult after all actions complete", async () =
   });
 });
 
+test("uses a configured timeout for a playback expectedResult", async () => {
+  const waits = [];
+  const page = {
+    waitForTimeout: async (durationMs) => waits.push(durationMs),
+  };
+  const result = await runTestCase(page, createTestInfo(), {
+    id: "configured-player",
+    name: "Configured player",
+    expectedResult: "Phát phim thành công",
+    actions: [{action: "open_home"}],
+  }, {
+    playerCheckTimeoutSeconds: 9,
+    helpers: createHandlerHelpers(),
+    handlers: {open_home: async () => {}},
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  assert.deepEqual(waits, [9000, 2000]);
+  assert.equal(result.steps.at(-1).status, "passed");
+});
+
 test("captures the player before returning after a player expected-result check", async () => {
   const events = [];
   const page = {
@@ -911,6 +932,30 @@ test("plays a requested row using either its 1-based index or name", async () =>
   assert.deepEqual(calls, [
     [page, testInfo, {rowIndex: 2, rowName: undefined, count: 3}],
     [page, testInfo, {rowIndex: undefined, rowName: "VTV", count: undefined}],
+  ]);
+});
+
+test("passes the configured player timeout to every Browser playback action", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    playerCheckTimeoutSeconds: 11,
+    helpers: createHandlerHelpers({
+      playFocusedSearchResult: async (...args) => calls.push(["search", ...args]),
+      playVisibleContentByName: async (...args) => calls.push(["content", ...args]),
+      playItemsInRow: async (...args) => calls.push(["row", ...args]),
+    }),
+  });
+  const page = {id: "page"};
+  const testInfo = {id: "test-info"};
+
+  await handlers.play_search_result({page, testInfo, action: {action: "play_search_result", type: "movie"}});
+  await handlers.play_content({page, testInfo, action: {action: "play_content", name: "VTV1 HD", type: "channel"}});
+  await handlers.play_row({page, testInfo, action: {action: "play_row", rowIndex: 1}});
+
+  assert.deepEqual(calls, [
+    ["search", page, testInfo, {type: "movie", waitSeconds: 11}],
+    ["content", page, testInfo, {name: "VTV1 HD", type: "channel", waitSeconds: 11}],
+    ["row", page, testInfo, {rowIndex: 1, rowName: undefined, count: undefined, waitSeconds: 11}],
   ]);
 });
 

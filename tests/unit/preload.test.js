@@ -76,6 +76,14 @@ test("exposes hosts-file status and update calls", () => {
   ]);
 });
 
+test("exposes the test configuration synchronization call", () => {
+  const {bridge, invokes} = loadPreload();
+
+  bridge.setTestConfiguration({PLAYER_CHECK_TIMEOUT_SECONDS: "12"});
+
+  assert.deepEqual(invokes, [["set-test-configuration", {PLAYER_CHECK_TIMEOUT_SECONDS: "12"}]]);
+});
+
 test("exposes the selected-device connection check without a host or passphrase argument", () => {
   const {bridge, invokes} = loadPreload();
 

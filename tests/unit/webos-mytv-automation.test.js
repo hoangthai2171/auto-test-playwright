@@ -4,7 +4,7 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {createWebOsMyTvAutomation} = require("../lib/tv-session/webos-mytv-automation");
 
-function createAutomation({playerStates = [], visibleAfter = {}, bodyText = "Search", searchCandidates = [{id: "result-1", label: "Mẫu phim", type: "movie"}], searchCandidatesAfter = 1} = {}) {
+function createAutomation({playerStates = [], visibleAfter = {}, bodyText = "Search", searchCandidates = [{id: "result-1", label: "Mẫu phim", type: "movie"}], searchCandidatesAfter = 1, playerCheckTimeoutSeconds} = {}) {
   let focusedId = "";
   let playerIndex = 0;
   let searchCandidateReads = 0;
@@ -32,6 +32,7 @@ function createAutomation({playerStates = [], visibleAfter = {}, bodyText = "Sea
     },
     async pressKey(key) { remoteKeys.push(key); },
     async wait(milliseconds) { waits.push(milliseconds); },
+    playerCheckTimeoutSeconds,
   });
   return {automation, remoteKeys, waits};
 }
@@ -82,4 +83,18 @@ test("LG MyTV playback rejects a visible video whose time does not advance", asy
   await automation.searchContent({name: "Mẫu phim", type: "movie"});
   await assert.rejects(automation.playSearchResult({type: "movie"}), (error) => error.code === "PLAYBACK_FAILED");
   assert.deepEqual(remoteKeys, ["Enter", "Enter"]);
+});
+
+test("LG MyTV playback uses the configured player-check timeout", async () => {
+  const before = {hasVideo: true, currentTime: 12, paused: false, ended: false, readyState: 4, width: 1920, height: 1080};
+  const after = {...before, currentTime: 13};
+  const {automation, waits} = createAutomation({
+    playerCheckTimeoutSeconds: 3,
+    playerStates: [before, after],
+  });
+
+  await automation.searchContent({name: "Mẫu phim", type: "movie"});
+  await automation.playSearchResult({type: "movie"});
+
+  assert.deepEqual(waits, [3_000, 3_500, 3_000]);
 });

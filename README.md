@@ -103,7 +103,7 @@ no cached API folder is available.
    npm run app:dev
    ```
 
-3. Open Settings and configure `APP_URL`, API domain, optional API Authorize value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. In **SDK configuration → Browser configuration**, review and, when needed, explicitly install the project-pinned Chromium. The authorization value is sent verbatim in the `Authorization` header for all flow-case API requests and is redacted from Logs.
+3. Open Settings and configure `APP_URL`, API domain, optional API Authorize value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. In **Test configuration**, set `Player check timeout (second)` to a positive integer; it defaults to 6 seconds and controls the wait before Browser and LG player health checks. In **SDK configuration → Browser configuration**, review and, when needed, explicitly install the project-pinned Chromium. The authorization value is sent verbatim in the `Authorization` header for all flow-case API requests and is redacted from Logs.
 4. Select a folder in the sidebar and click `Get test cases`; use the refresh icon to reload the folder tree.
 5. Search by case ID substring or name with the instant filter, then check one or more visible cases in the table.
 6. Use `Detail` to review metadata, expected result, and normalized actions.
@@ -113,7 +113,7 @@ no cached API folder is available.
    screenshot, while failed tests show the failed item name, poster, and screenshot.
 
 The renderer captures checked case IDs in table order and sends one
-`TEST_CASE_ID`, `APP_URL`, preview-settings, and active folder ID at a time to
+`TEST_CASE_ID`, `APP_URL`, player-check timeout, preview-settings, and active folder ID at a time to
 the main process. Folder and case API calls run through main-process IPC. A
 full-screen spinner blocks interaction while an API call is active; timeout
 failures show an alert and leave the existing list/cache untouched. The main
@@ -126,9 +126,10 @@ selected folder path and each case's `tested` lifecycle status plus its
 `testResult`. A stopped, skipped, local-fixture, or failed-to-launch batch is
 not submitted partially.
 
-Player checks wait for normal playback using the configured default, capture the
-player screen for the report, then return with Back before the next non-player
-step or test completion. A final player check waits two seconds after Back so
+Player checks wait for normal playback using the value from **Settings → Test
+configuration** (6 seconds by default), capture the player screen for the
+report, then return with Back before the next non-player step or test
+completion. A final player check waits two seconds after Back so
 watching-session teardown API calls can finish; player-check failures retain the
 player-screen capture in the compact report.
 
@@ -143,10 +144,16 @@ supported dialog families (`#dialog_confirm_v2`, `#dialog_alert_v2`,
 with `.active`; normal controls report focus with `.focused`.
 
 Recognized `expectedResult` values are checked after all declared actions. Play
-or Phát success wording waits six seconds, then verifies a healthy playing player; service-screen
+or Phát success wording waits for the configured player-check timeout (6 seconds
+by default), then verifies a healthy playing player; service-screen
 success wording verifies either left-menu/all-services navigation or the Home
 “Thể loại” row route (`focus_row`, `focus_text`, `press_ok`) without requiring
 the service name to appear on the destination screen.
+
+The retained terminal channel/movie/search workflows have separate post-Enter
+activation-settle delays in `activateVerifiedTarget`. Those delays only give the
+application time to render the destination screen; they do not replace or
+perform the player-health check.
 
 ### Case execution contract
 

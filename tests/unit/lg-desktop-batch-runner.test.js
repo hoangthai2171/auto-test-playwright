@@ -18,7 +18,7 @@ function failure(code) {
 }
 
 function createHarness({runs = new Map()} = {}) {
-  const calls = {prepare: 0, load: [], run: [], report: []};
+  const calls = {prepare: 0, load: [], run: [], playerTimeouts: [], report: []};
   const runtime = Object.freeze({profile: {id: "lg-1"}, host: "private-host", connection: {}, appium: {}, transport: {secureWebsocket: true, allowSelfSignedTls: true}});
   const batch = createLgDesktopBatchRunner({
     preflight: {
@@ -32,6 +32,7 @@ function createHarness({runs = new Map()} = {}) {
     tvRunner: {
       async run(input) {
         calls.run.push(String(input.testCase.id));
+        calls.playerTimeouts.push(input.playerCheckTimeoutSeconds);
         const queue = runs.get(String(input.testCase.id)) || [];
         const result = queue.shift();
         if (result instanceof Error) throw result;
@@ -125,4 +126,34 @@ test("requestStop prevents the next selected case from starting", async () => {
     ["one", false],
     ["two", true],
   ]);
+});
+
+test("forwards the current player timeout to each LG case", async () => {
+  const {batch, calls} = createHarness();
+  const result = await batch.start({deviceId: "lg-1", selectedCaseIds: ["one"], confirmed: true});
+
+  assert.equal(result.ok, true);
+  assert.deepEqual(calls.playerTimeouts, [6]);
+});
+
+test("normalizes a custom player timeout before starting an LG case", async () => {
+  const {calls} = createHarness();
+  const batch = createLgDesktopBatchRunner({
+    preflight: {
+      async availability() { return {ok: true, status: "READY"}; },
+      async prepare() { return {runtime: {profile: {id: "lg-1"}, host: "host", connection: {}, appium: {}, transport: {secureWebsocket: true, allowSelfSignedTls: true}}}; },
+    },
+    loadCase: async (id) => ({id: String(id), name: "Case", actions: [{action: "assert_screen", text: "Ready"}]}),
+    tvRunner: {
+      async run(input) {
+        calls.playerTimeouts.push(input.playerCheckTimeoutSeconds);
+        return {caseResult: {testCaseId: String(input.testCase.id), status: "passed", steps: []}};
+      },
+    },
+    getPlayerCheckTimeoutSeconds: () => "13",
+  });
+
+  await batch.start({deviceId: "lg-1", selectedCaseIds: ["one"], confirmed: true});
+
+  assert.deepEqual(calls.playerTimeouts, [13]);
 });

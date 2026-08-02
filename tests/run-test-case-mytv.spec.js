@@ -6,6 +6,7 @@ const {runTestCase} = require("./lib/test-case-action-runner");
 const {logoutApp} = require("./lib/app-cleanup");
 const {captureCurrentAppScreenshot} = require("./lib/artifacts");
 const {waitForServiceScreenImages} = require("./lib/service-screenshot");
+const {normalizePlayerCheckTimeoutSeconds} = require("../app/test-configuration");
 
 async function writeCaseResult(resultPath, result) {
   if (!resultPath) return;
@@ -26,7 +27,11 @@ test("run server-driven MyTV test case", async ({page, options}, testInfo) => {
   let testError;
 
   try {
-    result = await runTestCase(page, testInfo, testCase, {source, APP_URL: options.APP_URL});
+    result = await runTestCase(page, testInfo, testCase, {
+      source,
+      APP_URL: options.APP_URL,
+      playerCheckTimeoutSeconds: normalizePlayerCheckTimeoutSeconds(process.env.MYTV_PLAYER_CHECK_TIMEOUT_SECONDS),
+    });
     await capturePassedTestScreenshot(page, testInfo, result);
   } catch (error) {
     testError = error;

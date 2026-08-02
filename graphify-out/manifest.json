@@ -1,22 +1,22 @@
 {
   "app/main.js": {
-    "mtime": 1785492620.4582098,
-    "ast_hash": "87e0ad4be7c74340899a03fdbba466e1",
+    "mtime": 1785655065.4945266,
+    "ast_hash": "511b088931aae588079067416e8cc6e6",
     "semantic_hash": ""
   },
   "app/preload.js": {
-    "mtime": 1785491744.620188,
-    "ast_hash": "64450b9cf3621e0b04057918d2296c76",
+    "mtime": 1785654562.6294754,
+    "ast_hash": "7c28c080133888bdb88db69e39f81abe",
     "semantic_hash": ""
   },
   "app/renderer/renderer.js": {
-    "mtime": 1785492903.101178,
-    "ast_hash": "ef22a3c396b8c1ad6b2400514c70cdf6",
+    "mtime": 1785659289.6106784,
+    "ast_hash": "d59183b8aeec9d864913948adb786ea9",
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1785489641.7178319,
-    "ast_hash": "37dab2a4a883ee26b5f51b9fa08df26f",
+    "mtime": 1785597962.7362049,
+    "ast_hash": "6ce9fca5a20cf2878637d7739aa7e2d8",
     "semantic_hash": ""
   },
   "playwright.config.js": {
@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1785490019.1423373,
-    "ast_hash": "e9468f5baebcfe74523e86f87131e211",
+    "mtime": 1785659550.0053675,
+    "ast_hash": "40874d10581074e67c0caf51c6b0173b",
     "semantic_hash": ""
   },
   "IDEA.md": {
@@ -110,13 +110,13 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1785489641.6841402,
-    "ast_hash": "cc815e59cc0e5bb8a4ad4bc203cfa1da",
+    "mtime": 1785659549.8748727,
+    "ast_hash": "6da47b32264438a252c044a1803b750a",
     "semantic_hash": ""
   },
   "app/renderer/index.html": {
-    "mtime": 1785493007.066153,
-    "ast_hash": "557b9cb3e991622d5e51e846a028a09a",
+    "mtime": 1785659258.101371,
+    "ast_hash": "d760aee40090a80ded5708871e23ca38",
     "semantic_hash": ""
   },
   ".codex/skills/playwright-interactive/assets/playwright-small.svg": {
@@ -225,8 +225,8 @@
     "semantic_hash": ""
   },
   "app/tv-runner.js": {
-    "mtime": 1785489641.6989412,
-    "ast_hash": "f91b005e97475e766c79a3a4f5605af9",
+    "mtime": 1785654585.1174564,
+    "ast_hash": "c322850f5259398cfdef11561d8e609f",
     "semantic_hash": ""
   },
   "app/tv-toolchain-config.js": {
@@ -345,7 +345,7 @@
     "semantic_hash": ""
   },
   "tests/lib/content-rows.js": {
-    "mtime": 1785062227.9999783,
+    "mtime": 1785605436.5489357,
     "ast_hash": "3afc636e3d4365c025b3c33bf7b325b9",
     "semantic_hash": ""
   },
@@ -365,8 +365,8 @@
     "semantic_hash": ""
   },
   "tests/lib/lg-mytv-case-helpers.js": {
-    "mtime": 1785489641.7186,
-    "ast_hash": "2177c0c9cddc6576ecf8a2d1341bc931",
+    "mtime": 1785654562.0385594,
+    "ast_hash": "9005c31281a195b03910b9a22dab66b6",
     "semantic_hash": ""
   },
   "tests/lib/login-popups.js": {
@@ -385,8 +385,8 @@
     "semantic_hash": ""
   },
   "tests/lib/playback.js": {
-    "mtime": 1784687145.763964,
-    "ast_hash": "23a79376971a1dfb2e1b374d21a9bf9b",
+    "mtime": 1785654561.570611,
+    "ast_hash": "b48f400138640c29ea3932a1e08da7bb",
     "semantic_hash": ""
   },
   "tests/lib/selector-validation.js": {
@@ -415,8 +415,8 @@
     "semantic_hash": ""
   },
   "tests/lib/test-case-action-runner.js": {
-    "mtime": 1785056307.3354971,
-    "ast_hash": "adb5dd03fb400707909cc0991b6cab3f",
+    "mtime": 1785654812.0238235,
+    "ast_hash": "af7e2010b62e9cb04d53f31e3da12c1c",
     "semantic_hash": ""
   },
   "tests/lib/test-case-compiler.js": {
@@ -475,13 +475,13 @@
     "semantic_hash": ""
   },
   "tests/lib/tv-session/webos-appium-session.js": {
-    "mtime": 1785489641.7201715,
-    "ast_hash": "c85c7be765f23187c6aeff433e372367",
+    "mtime": 1785654562.1569638,
+    "ast_hash": "f331664a33c10e7f18593ce806810631",
     "semantic_hash": ""
   },
   "tests/lib/tv-session/webos-mytv-automation.js": {
-    "mtime": 1785489641.720409,
-    "ast_hash": "6e7bf548e5277b5995b66700a8d12f3b",
+    "mtime": 1785654562.2744155,
+    "ast_hash": "a9a15e714de8ac7e64c4179503a383fd",
     "semantic_hash": ""
   },
   "tests/lib/waits.js": {
@@ -490,8 +490,8 @@
     "semantic_hash": ""
   },
   "tests/lib/workflows.js": {
-    "mtime": 1785062228.1319995,
-    "ast_hash": "1aff48120e3e61b36bfc94f680268d3e",
+    "mtime": 1785654561.8039515,
+    "ast_hash": "ea580fceeb2cbf97850974854b3c67ff",
     "semantic_hash": ""
   },
   "tests/locator-contracts.spec.js": {
@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "tests/run-test-case-mytv.spec.js": {
-    "mtime": 1785062905.1737971,
-    "ast_hash": "8937445ff4113a0f32dae8b43fae6be4",
+    "mtime": 1785654561.9207287,
+    "ast_hash": "7e6ef2110cc12ba1660fd52f949e7bb3",
     "semantic_hash": ""
   },
   "tests/run-test-case-tv.spec.js": {
@@ -655,8 +655,8 @@
     "semantic_hash": ""
   },
   "tests/unit/renderer.test.js": {
-    "mtime": 1785493011.0820248,
-    "ast_hash": "69dc2fc15b60f2a551bfbaf7053bac3b",
+    "mtime": 1785659534.779394,
+    "ast_hash": "f67c45ac7a80491fb4efb7702311a05a",
     "semantic_hash": ""
   },
   "tests/unit/run-close-guard.test.js": {
@@ -685,8 +685,8 @@
     "semantic_hash": ""
   },
   "tests/unit/test-case-action-runner.test.js": {
-    "mtime": 1785056297.2221565,
-    "ast_hash": "9a3960b1bd34a85c2be55bb9881981f3",
+    "mtime": 1785654940.2086618,
+    "ast_hash": "1599cf190f1ef86df0f0587db2b328c8",
     "semantic_hash": ""
   },
   "tests/unit/test-case-cache.test.js": {
@@ -760,8 +760,8 @@
     "semantic_hash": ""
   },
   "tests/unit/tv-runner.test.js": {
-    "mtime": 1785489641.7271743,
-    "ast_hash": "88ec8ed3b4513ab3860b89e7c2c9f289",
+    "mtime": 1785654984.2177126,
+    "ast_hash": "4c72714360ceb6c7f234d1d83c21bbe3",
     "semantic_hash": ""
   },
   "tests/unit/tv-session.test.js": {
@@ -780,13 +780,13 @@
     "semantic_hash": ""
   },
   "tests/unit/webos-appium-session.test.js": {
-    "mtime": 1785489641.7276728,
-    "ast_hash": "a0ef7d5a88348e3c402115251037a85b",
+    "mtime": 1785655060.4733956,
+    "ast_hash": "c982143d21d7ca60699fbe960e488785",
     "semantic_hash": ""
   },
   "tests/unit/webos-mytv-automation.test.js": {
-    "mtime": 1785489641.7277887,
-    "ast_hash": "9fa90875a570a970cbefc60b6cc8a24c",
+    "mtime": 1785654955.9816859,
+    "ast_hash": "957e5c89d774a7d1cd72624dda2b4ac5",
     "semantic_hash": ""
   },
   "tests/unit/webos-read-only-adapter.test.js": {
@@ -849,156 +849,6 @@
     "ast_hash": "b05fdc3c25794b78cab7007e8248fac9",
     "semantic_hash": ""
   },
-  "docs/superpowers/plans/2026-07-17-server-driven-test-case-runner.md": {
-    "mtime": 1784274450.431191,
-    "ast_hash": "201ba15f8c64b4af0a73bf3a281f4de1",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-18-flow-case-api-browser.md": {
-    "mtime": 1784344644.2270098,
-    "ast_hash": "53d81bc00675f87131a0be5ac52983e3",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-18-header-brand-window.md": {
-    "mtime": 1784347271.7894776,
-    "ast_hash": "bf116b713f4fcb2a63717915ac071a43",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-18-test-case-details-actions-block.md": {
-    "mtime": 1784352117.2161303,
-    "ast_hash": "555b560ce9cbd52889e7c0bacef093d0",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-18-test-case-details-value-blocks.md": {
-    "mtime": 1784352117.216259,
-    "ast_hash": "a7ee2a22e3272debfdb97ae37b0f95d8",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-18-test-case-table-batch.md": {
-    "mtime": 1784309218.906293,
-    "ast_hash": "8507827300aec4787e87054a415527bc",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-26-real-tv-phase-2-gated.md": {
-    "mtime": 1785049250.261445,
-    "ast_hash": "4b8e37ca8c69b32639e5ad0a699e1c4e",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-26-tizen-dom-semantic-poc.md": {
-    "mtime": 1785049250.2616577,
-    "ast_hash": "e6516e256cd8a38b2d7e96c207ebfc9a",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-26-tizen-no-screenshot-poc.md": {
-    "mtime": 1785049250.2618506,
-    "ast_hash": "9cf54d159abe91ed30d0cdcbcac68609",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-26-tizen-partial-cleanup-status.md": {
-    "mtime": 1785049250.2620175,
-    "ast_hash": "e9ddbc3497c599bbff75d7ae297ac2dc",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-26-tizen-screenshot-gate.md": {
-    "mtime": 1785049250.2621832,
-    "ast_hash": "acc147e78d3ef3dfa445b2a470ef61bb",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-28-lg-only-phase-2-foundation.md": {
-    "mtime": 1785214613.8048384,
-    "ast_hash": "865f69e5eecaf182100a9389d0bd7adc",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-28-phase-3-target-neutral-actions.md": {
-    "mtime": 1785489641.7015817,
-    "ast_hash": "2ce65422a65a2c33577e2e5b0676f113",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-29-lg-local-toolchain-registration.md": {
-    "mtime": 1785489641.7023416,
-    "ast_hash": "8d975bebe67cdb7e7bb053d133922b60",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-29-lg-sdk-auto-configuration.md": {
-    "mtime": 1785489641.7024975,
-    "ast_hash": "862d38fc3db98a28c2ac22525ee23601",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-29-phase4-lg-safety-closeout.md": {
-    "mtime": 1785489641.7026381,
-    "ast_hash": "52d0fbd6251438cceff7737b29328c69",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-17-server-test-case-runner-design.md": {
-    "mtime": 1784273714.3649225,
-    "ast_hash": "771806d25c8055f6980df18cfe387369",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-18-flow-case-api-browser-design.md": {
-    "mtime": 1784344344.4079406,
-    "ast_hash": "6194a9cd2ff2d60985528a2aacb4f6c7",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-18-header-brand-window-design.md": {
-    "mtime": 1784347271.7898562,
-    "ast_hash": "ca5e4920fd7f52837148376628dd4ca3",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-18-service-open-success-design.md": {
-    "mtime": 1784307704.2131233,
-    "ast_hash": "f6678c24ca9ebddc47a9cefc075fb023",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-18-test-case-details-actions-block-design.md": {
-    "mtime": 1784352117.2163842,
-    "ast_hash": "3efd4fec45c1f9f9bb2a19655bbdcf17",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-18-test-case-details-value-blocks-design.md": {
-    "mtime": 1784352117.2165127,
-    "ast_hash": "620e47385098d6dc5833c8eb68a95e6a",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-18-test-case-table-batch-design.md": {
-    "mtime": 1784308318.0365453,
-    "ast_hash": "9ad31e0361420c0824530ebbd7781076",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-26-real-tv-phase-2-gated-design.md": {
-    "mtime": 1785049250.262354,
-    "ast_hash": "64cb2f0e1c99f2bec92046b3e49395de",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-26-tizen-dom-semantic-poc-design.md": {
-    "mtime": 1785049250.262526,
-    "ast_hash": "76b0355f0d2ab4b16d082647af514aea",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-26-tizen-no-screenshot-poc-design.md": {
-    "mtime": 1785049250.2626846,
-    "ast_hash": "833559d0755e2f9520931adbb552ae01",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-28-lg-only-phase-2-foundation-design.md": {
-    "mtime": 1785214613.683957,
-    "ast_hash": "7b62d3ad150db9f5687ba7dff1cced92",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-28-phase-3-target-neutral-actions-design.md": {
-    "mtime": 1785489641.7036192,
-    "ast_hash": "26f4635971b5dfb42eec3dd9af56c87e",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-29-lg-local-registration-design.md": {
-    "mtime": 1785489641.7046416,
-    "ast_hash": "0877f4a4e6cff2a93bfeb2a5fcf8485d",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-29-lg-sdk-auto-configuration-design.md": {
-    "mtime": 1785489641.7049155,
-    "ast_hash": "d6bf9e0f6dc0fdf80c8b8c2a0ee40d46",
-    "semantic_hash": ""
-  },
   "app/lg-managed-install-dependencies.js": {
     "mtime": 1785489641.6880496,
     "ast_hash": "09a9eaa4b07dbc51afd6a8518f38e7e2",
@@ -1039,39 +889,9 @@
     "ast_hash": "23d66074a64b0ed4592e9f23a4bbcd87",
     "semantic_hash": ""
   },
-  "docs/superpowers/plans/2026-07-29-lg-device-dialog-and-deferred-validation.md": {
-    "mtime": 1785489641.7020438,
-    "ast_hash": "1f78aa185ccd905da1f673e8093d603e",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-29-lg-device-dialog-and-validation-design.md": {
-    "mtime": 1785489641.7042377,
-    "ast_hash": "4215ecc00e6c58b54cffb840946b831f",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-29-lg-installer-progress-and-driver-registration-design.md": {
-    "mtime": 1785489641.7044518,
-    "ast_hash": "4029d36661a4922948e904b9dff43a18",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-29-lg-device-connection-status-design.md": {
-    "mtime": 1785489641.7040224,
-    "ast_hash": "f0e97c883a2314b813b9b4dd37da4b83",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-29-lg-device-connection-status.md": {
-    "mtime": 1785489641.7019033,
-    "ast_hash": "ccb3d6e0f06ba126c19d44055d8c714e",
-    "semantic_hash": ""
-  },
   "tests/unit/preload.test.js": {
-    "mtime": 1785491848.6812587,
-    "ast_hash": "3a2b9bea05232439ac1bfa15bf68fa00",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-29-lg-installer-progress-and-driver-registration.md": {
-    "mtime": 1785489641.702209,
-    "ast_hash": "b52149939b6d18cd87edfd83bed70da6",
+    "mtime": 1785655045.845523,
+    "ast_hash": "3f644e31f36cebef1f0522a267f48237",
     "semantic_hash": ""
   },
   "app/browser-run-launcher.js": {
@@ -1114,16 +934,6 @@
     "ast_hash": "951a6c6c34fe01428e7f05c0a74727a1",
     "semantic_hash": ""
   },
-  "docs/superpowers/plans/2026-07-29-browser-configuration.md": {
-    "mtime": 1785489641.7017395,
-    "ast_hash": "c665b18c4b8932c6ac1b878b491ad06b",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-29-browser-configuration-design.md": {
-    "mtime": 1785489641.70383,
-    "ast_hash": "fd765d6c7f2a8d586e90b3ba5dc4a55f",
-    "semantic_hash": ""
-  },
   "app/lg-device-connection-check.js": {
     "mtime": 1785489641.687925,
     "ast_hash": "fe80a1991302d0993c2e0a16b200bb91",
@@ -1134,11 +944,6 @@
     "ast_hash": "c5ee51bc0b66f45e8c9c6ab281b16041",
     "semantic_hash": ""
   },
-  "docs/superpowers/plans/2026-07-30-lg-read-only-connection-check.md": {
-    "mtime": 1785489641.7032883,
-    "ast_hash": "35d4a6b7a3622348b67e84d20cec58d7",
-    "semantic_hash": ""
-  },
   "app/lg-desktop-run-preflight.js": {
     "mtime": 1785489641.6878362,
     "ast_hash": "2ca354e12aca01c5e9da23d7f6bc300a",
@@ -1147,16 +952,6 @@
   "tests/unit/lg-desktop-run-preflight.test.js": {
     "mtime": 1785489641.7238338,
     "ast_hash": "9da35cef69734d6e0db93c2fd44b939f",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-30-desktop-lg-product-gate-flow.md": {
-    "mtime": 1785489641.702816,
-    "ast_hash": "9810357c9bc71dea848fe9ac7acc256f",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-30-desktop-lg-product-gate-flow-design.md": {
-    "mtime": 1785489641.7051134,
-    "ast_hash": "712e95126a0e5b7e99cbee1b2bf5a572",
     "semantic_hash": ""
   },
   "app/loopback-appium-client.js": {
@@ -1170,8 +965,8 @@
     "semantic_hash": ""
   },
   "app/lg-desktop-batch-runner.js": {
-    "mtime": 1785489641.6877337,
-    "ast_hash": "6383e296375ec404a0178c8e781c5e46",
+    "mtime": 1785654562.5101252,
+    "ast_hash": "cc7657ac6b8d7e409cb445a3aaf01422",
     "semantic_hash": ""
   },
   "app/lg-run-ipc.js": {
@@ -1180,28 +975,13 @@
     "semantic_hash": ""
   },
   "tests/unit/lg-desktop-batch-runner.test.js": {
-    "mtime": 1785489641.723709,
-    "ast_hash": "5f38d9b44055e117dc018b34694e7fae",
+    "mtime": 1785655006.4402306,
+    "ast_hash": "17bf6cd57bf16ab5f35cfbdddfb344b5",
     "semantic_hash": ""
   },
   "tests/unit/lg-run-ipc.test.js": {
     "mtime": 1785489641.7244887,
     "ast_hash": "dbadaad2150c9db2a2ae517a6935b041",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-30-lg-compatibility-catalog-design.md": {
-    "mtime": 1785489641.7052398,
-    "ast_hash": "4a671868cd1d956fc859f7d56b3e998e",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-30-device-compatibility-check-skill.md": {
-    "mtime": 1785489641.7030137,
-    "ast_hash": "e50034ce31733a5a7734768ab4ca640e",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/plans/2026-07-30-lg-compatibility-catalog.md": {
-    "mtime": 1785489641.703147,
-    "ast_hash": "07d0bfd616295e1f9a359ba56209a28c",
     "semantic_hash": ""
   },
   "DEVICE-COMPATIBILITY.json": {
@@ -1274,16 +1054,6 @@
     "ast_hash": "28fc7bdb93e4fc541ceb1b31934b2490",
     "semantic_hash": ""
   },
-  "docs/superpowers/plans/2026-07-30-transient-lg-compatibility-connection.md": {
-    "mtime": 1785489641.7034106,
-    "ast_hash": "f17b80bef9708ea5876957ee68fd9b2d",
-    "semantic_hash": ""
-  },
-  "docs/superpowers/specs/2026-07-30-transient-lg-compatibility-connection-design.md": {
-    "mtime": 1785489641.705366,
-    "ast_hash": "8ab3be83c5ceb4e548798afe0ac4c4f6",
-    "semantic_hash": ""
-  },
   "app/lg-compatibility-attempt-service.js": {
     "mtime": 1785489641.6868322,
     "ast_hash": "88a5756b209579ecf8b63057c850bfc8",
@@ -1352,6 +1122,46 @@
   "tests/unit/hosts-file.test.js": {
     "mtime": 1785492654.583949,
     "ast_hash": "1f46c45cd6e09b6f2282b2b8f54d30cc",
+    "semantic_hash": ""
+  },
+  ".opencode/opencode.json": {
+    "mtime": 1785596924.7798698,
+    "ast_hash": "e5f74d14a81702b55bdf53b33ec991d7",
+    "semantic_hash": ""
+  },
+  ".opencode/plugins/graphify.js": {
+    "mtime": 1785596629.0890794,
+    "ast_hash": "3ea725724bc8ebe483c9f13d6aa1124f",
+    "semantic_hash": ""
+  },
+  ".gemini/settings.json": {
+    "mtime": 1785597778.506027,
+    "ast_hash": "06bfde396838c5093d5951023182855c",
+    "semantic_hash": ""
+  },
+  "GEMINI.md": {
+    "mtime": 1785597778.5057387,
+    "ast_hash": "82efb97a359f5c7290bf2513d14686be",
+    "semantic_hash": ""
+  },
+  "app/test-configuration.js": {
+    "mtime": 1785654678.5419755,
+    "ast_hash": "aa850037c6a1a24d8370ea1844f23ddf",
+    "semantic_hash": ""
+  },
+  "tests/unit/test-configuration.test.js": {
+    "mtime": 1785655053.9815428,
+    "ast_hash": "bcc71df259ae995c3f38dd9c87cefa1f",
+    "semantic_hash": ""
+  },
+  "docs/tinyworkers/player-check-timeout_20260802.md": {
+    "mtime": 1785655422.3032386,
+    "ast_hash": "d52fb094961854efe0c5354057968b39",
+    "semantic_hash": ""
+  },
+  "docs/tinyworkers/player-save-toast_20260802.md": {
+    "mtime": 1785659597.8358934,
+    "ast_hash": "61b1e8a0c797ea786491f80e14db5675",
     "semantic_hash": ""
   }
 }
