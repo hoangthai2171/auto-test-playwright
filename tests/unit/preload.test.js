@@ -84,6 +84,14 @@ test("exposes the test configuration synchronization call", () => {
   assert.deepEqual(invokes, [["set-test-configuration", {PLAYER_CHECK_TIMEOUT_SECONDS: "12"}]]);
 });
 
+test("exposes the running campaign loader through the narrow IPC bridge", () => {
+  const {bridge, invokes} = loadPreload();
+
+  bridge.loadFlowCaseCampaigns({API_DOMAIN: "https://api.example.test", PROJECT_ID: "1"});
+
+  assert.deepEqual(invokes, [["load-flow-case-campaigns", {API_DOMAIN: "https://api.example.test", PROJECT_ID: "1"}]]);
+});
+
 test("exposes the selected-device connection check without a host or passphrase argument", () => {
   const {bridge, invokes} = loadPreload();
 

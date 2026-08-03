@@ -6,8 +6,8 @@ const {app, BrowserView, BrowserWindow, dialog, ipcMain, safeStorage, shell} = r
 const {loadLocalTestCases, loadCachedTestCases, findTestCaseById} = require("../tests/lib/test-case-source");
 const {validateTestCaseList} = require("../tests/lib/test-case-schema");
 const {redactSensitiveText, createLogRedactor} = require("./credential-redaction");
-const {fetchFlowCaseFolders, fetchFlowCases, submitFlowCaseResults, fetchDeviceCompatibilityCatalog, normalizeTimeoutMs} = require("./flow-case-api");
-const {replaceFolderCacheEntry, readMostRecentFolderCacheEntry} = require("./test-case-cache");
+const {fetchFlowCaseFolders, fetchFlowCases, fetchRunningFlowCaseCampaigns, submitFlowCaseResults, fetchDeviceCompatibilityCatalog, normalizeTimeoutMs} = require("./flow-case-api");
+const {replaceFolderCacheEntry, replaceCampaignCacheEntry, readMostRecentFolderCacheEntry} = require("./test-case-cache");
 const {createEmptyReport, buildTestReportEntry, upsertTestReport, renderUserReport} = require("./test-report");
 const {buildPlaywrightTestArgs} = require("./playwright-runner");
 const {createRunCloseGuard} = require("./run-close-guard");
@@ -406,7 +406,35 @@ ipcMain.handle("load-flow-case-folders", async (_event, settings = {}) => {
     return withApiLog(result);
 });
 
+ipcMain.handle("load-flow-case-campaigns", async (_event, settings = {}) => {
+    const result = await fetchRunningFlowCaseCampaigns({
+        apiDomain: settings.API_DOMAIN,
+        authorization: settings.API_AUTHORIZATION,
+        projectId: settings.PROJECT_ID,
+        timeoutMs: normalizeTimeoutMs(settings.API_TIMEOUT_SECONDS),
+    });
+    if (!result.ok) return withApiLog(result);
+
+    try {
+        return {
+            ok: true,
+            campaigns: result.campaigns.map((entry, index) => summarizeRunningCampaign(entry, index)),
+            apiLog: sanitizeApiLog({request: result.request, response: result.response}),
+        };
+    } catch (error) {
+        return {
+            ok: false,
+            message: error.message,
+            timeout: false,
+            apiLog: sanitizeApiLog({request: result.request, response: result.response}),
+        };
+    }
+});
+
 ipcMain.handle("load-flow-cases", async (_event, settings = {}) => {
+    const campaignId = String(settings.CAMPAIGN_ID ?? "").trim();
+    if (campaignId) return loadCampaignCases(settings, campaignId);
+
     const result = await fetchFlowCases({
         apiDomain: settings.API_DOMAIN,
         authorization: settings.API_AUTHORIZATION,
@@ -441,6 +469,166 @@ ipcMain.handle("load-flow-cases", async (_event, settings = {}) => {
         };
     }
 });
+
+async function loadCampaignCases(settings, campaignId) {
+    const campaignListResult = await fetchRunningFlowCaseCampaigns({
+        apiDomain: settings.API_DOMAIN,
+        authorization: settings.API_AUTHORIZATION,
+        projectId: settings.PROJECT_ID,
+        timeoutMs: normalizeTimeoutMs(settings.API_TIMEOUT_SECONDS),
+    });
+    const apiLog = () => sanitizeApiLog({request: campaignListResult.request, response: campaignListResult.response});
+    if (!campaignListResult.ok) return {...withApiLog(campaignListResult), apiLog: apiLog()};
+
+    try {
+        const campaignEntry = campaignListResult.campaigns.find(
+            (entry) => String(entry?.campaign?.id ?? "").trim() === campaignId
+        );
+        if (!campaignEntry?.campaign) {
+            throw new Error(`Running campaign "${campaignId}" was not found.`);
+        }
+
+        const campaign = campaignEntry.campaign;
+        const copies = await loadCampaignCopies(settings, campaign);
+        const cases = validateTestCaseList(copies, "running campaign API");
+        const folder = resolveCampaignFolder(settings, campaign, cases);
+        const campaignSummary = summarizeRunningCampaign(campaignEntry);
+        await replaceCampaignCacheEntry({
+            cachePath: testCasesCachePath(),
+            campaignId,
+            campaign: campaignSummary.campaign,
+            folder,
+            cases,
+        });
+
+        return {
+            ok: true,
+            campaign: campaignSummary.campaign,
+            run: campaignSummary.run,
+            folder,
+            cacheKey: `campaign:${campaignId}`,
+            cases: cases.map(sanitizeCaseForUi),
+            source: "api",
+            apiLog: apiLog(),
+        };
+    } catch (error) {
+        return {ok: false, message: error.message, timeout: false, apiLog: apiLog()};
+    }
+}
+
+async function loadCampaignCopies(settings, campaign) {
+    if (!Array.isArray(campaign?.testcases) || campaign.testcases.length === 0) {
+        throw new Error("The selected running campaign does not contain any testcases.");
+    }
+
+    return Promise.all(campaign.testcases.map(async (copy, index) => {
+        const copyId = String(copy?.id ?? "").trim();
+        if (!copyId) throw new Error(`running campaign testcase ${index + 1} is missing its copy id.`);
+
+        if (isRunnableCaseShape(copy)) return {...copy, id: copyId};
+
+        const result = await fetchFlowCases({
+            apiDomain: settings.API_DOMAIN,
+            authorization: settings.API_AUTHORIZATION,
+            projectId: settings.PROJECT_ID,
+            testcaseId: copyId,
+            environment: settings.ENVIRONMENT,
+            timeoutMs: normalizeTimeoutMs(settings.API_TIMEOUT_SECONDS),
+        });
+        if (!result.ok) {
+            throw new Error(`Could not hydrate campaign testcase "${copyId}": ${result.message}`);
+        }
+
+        const hydrated = result.cases.find((candidate) => String(candidate?.id ?? "").trim() === copyId);
+        if (!hydrated) {
+            throw new Error(`Campaign testcase copy "${copyId}" was not returned by testcaseId lookup.`);
+        }
+        return {...hydrated, id: copyId};
+    }));
+}
+
+function isRunnableCaseShape(testCase) {
+    return Boolean(
+        testCase &&
+        typeof testCase === "object" &&
+        String(testCase.name ?? "").trim() &&
+        ((Array.isArray(testCase.actions) && testCase.actions.length > 0) || String(testCase.qaDescription ?? "").trim())
+    );
+}
+
+function summarizeRunningCampaign(entry, index = 0) {
+    const campaign = entry?.campaign || entry;
+    if (!campaign || typeof campaign !== "object") {
+        throw new Error(`running campaign ${index + 1} must contain a campaign object.`);
+    }
+
+    const id = String(campaign.id ?? "").trim();
+    const name = String(campaign.name ?? "").trim();
+    if (!id || !name) throw new Error(`running campaign ${index + 1} requires id and name.`);
+
+    const testcases = Array.isArray(campaign.testcases)
+        ? campaign.testcases.map((testCase, testCaseIndex) => {
+            const testCaseId = String(testCase?.id ?? "").trim();
+            if (!testCaseId) throw new Error(`running campaign ${id} testcase ${testCaseIndex + 1} is missing its copy id.`);
+            return {
+                id: testCaseId,
+                ...(String(testCase?.name ?? "").trim() ? {name: String(testCase.name).trim()} : {}),
+                ...(String(testCase?.status ?? "").trim() ? {status: String(testCase.status).trim()} : {}),
+                ...(String(testCase?.platform ?? "").trim() ? {platform: String(testCase.platform).trim()} : {}),
+            };
+        })
+        : [];
+
+    const safeRun = entry?.run && typeof entry.run === "object"
+        ? Object.fromEntries(["id", "testCampaignId", "status", "startedAt", "finishedAt"]
+            .filter((key) => entry.run[key] !== undefined && entry.run[key] !== null)
+            .map((key) => [key, entry.run[key]]))
+        : {};
+
+    return {
+        campaign: {
+            id,
+            name,
+            ...(String(campaign.status ?? "").trim() ? {status: String(campaign.status).trim()} : {}),
+            testcases,
+        },
+        run: safeRun,
+    };
+}
+
+function resolveCampaignFolder(settings, campaign, cases) {
+    const configuredPath = String(settings.FOLDER_NAME ?? "").trim();
+    if (configuredPath) {
+        return {
+            id: settings.FOLDER_ID,
+            name: String(settings.FOLDER_NAME_LABEL ?? "").trim() || configuredPath.split("/").filter(Boolean).at(-1) || configuredPath,
+            fullPath: configuredPath,
+        };
+    }
+
+    const paths = new Set();
+    const addPath = (value) => {
+        const pathValue = String(value ?? "").trim();
+        if (/^\/(?:[^/]+(?:\/[^/]+)*)?$/u.test(pathValue)) paths.add(pathValue);
+    };
+    const collectPath = (value) => {
+        if (!value || typeof value !== "object") return;
+        addPath(value.folderPath);
+        addPath(value.folderName);
+        addPath(value.fullPath);
+        addPath(value.folder?.fullPath);
+    };
+    collectPath(campaign);
+    (campaign?.testcases || []).forEach(collectPath);
+    cases.forEach(collectPath);
+    if (paths.size !== 1) return null;
+
+    const fullPath = [...paths][0];
+    return {
+        name: fullPath.split("/").filter(Boolean).at(-1) || fullPath,
+        fullPath,
+    };
+}
 
 ipcMain.handle("submit-flow-case-results", async (_event, values = {}) => {
     try {
@@ -533,7 +721,13 @@ function normalizeFlowCaseResult(testCase, index) {
         normalizedResult.finishedAt = String(result.finishedAt);
     }
 
-    return {id: testCase.id, status: "tested", testResult: normalizedResult};
+    const normalized = {id: testCase.id, status: "tested", testResult: normalizedResult};
+    if (Object.prototype.hasOwnProperty.call(testCase, "campaignId")) {
+        const campaignId = String(testCase.campaignId ?? "").trim();
+        if (!campaignId) throw new Error(`${path}.campaignId must be a non-empty value when provided.`);
+        normalized.campaignId = campaignId;
+    }
+    return normalized;
 }
 
 function withApiLog(result) {
@@ -546,7 +740,7 @@ function sanitizeApiLog(value) {
 }
 
 function cloneApiLogValue(value, key = "") {
-    if (/^(?:password|token|authorization|cookie|secret)$/iu.test(key)) {
+    if (/^(?:password|token|authorization|cookie|secret|x-flowtest-service-token)$/iu.test(key)) {
         return "••••••";
     }
 
@@ -619,7 +813,8 @@ ipcMain.handle("run-test", async (event, values = {}) => {
     );
 
     try {
-        const cases = values.TEST_CASE_FOLDER_ID ? await loadCachedTestCases(testCasesCachePath(), values.TEST_CASE_FOLDER_ID) : await loadLocalTestCases(fixturePath);
+        const cacheKey = String(values.TEST_CASE_CACHE_KEY || values.TEST_CASE_FOLDER_ID || "").trim();
+        const cases = cacheKey ? await loadCachedTestCases(testCasesCachePath(), cacheKey) : await loadLocalTestCases(fixturePath);
         testCase = findTestCaseById(cases, values.TEST_CASE_ID);
     } catch (error) {
         return {ok: false, message: error.message};
@@ -641,7 +836,8 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         ...process.env,
         TEST_CASE_PATH: fixturePath,
         TEST_CASE_ID: String(testCase.id),
-        TEST_CASE_CACHE_PATH: values.TEST_CASE_FOLDER_ID ? testCasesCachePath() : "",
+        TEST_CASE_CACHE_PATH: values.TEST_CASE_CACHE_KEY || values.TEST_CASE_FOLDER_ID ? testCasesCachePath() : "",
+        TEST_CASE_CACHE_KEY: values.TEST_CASE_CACHE_KEY ? String(values.TEST_CASE_CACHE_KEY) : "",
         TEST_CASE_FOLDER_ID: values.TEST_CASE_FOLDER_ID ? String(values.TEST_CASE_FOLDER_ID) : "",
         APP_URL: values.APP_URL,
         PLAYWRIGHT_BROWSERS_PATH: browserRun.browsersPath,
@@ -864,10 +1060,10 @@ function userReportHtmlPath() {
     return path.join(app.getPath("userData"), "user-report", "test-report.html");
 }
 
-async function loadLgBatchCase(caseId, folderId) {
+async function loadLgBatchCase(caseId, cacheKey) {
     const fixturePath = path.join(app.getAppPath(), "testcased.json");
-    const cases = folderId
-        ? await loadCachedTestCases(testCasesCachePath(), folderId)
+    const cases = cacheKey
+        ? await loadCachedTestCases(testCasesCachePath(), cacheKey)
         : await loadLocalTestCases(fixturePath);
     return findTestCaseById(cases, caseId);
 }

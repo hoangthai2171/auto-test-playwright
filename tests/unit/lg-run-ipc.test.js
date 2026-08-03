@@ -31,11 +31,11 @@ test("forwards only the narrow batch payload and filters renderer events", async
   const sent = [];
   const sender = {send(channel, payload) { sent.push([channel, payload]); }};
   const result = await handlers.get("run-lg-batch")({sender}, {
-    deviceId: "lg-1", selectedCaseIds: ["1", "1", "2"], folderId: "folder-1", confirmed: true,
+    deviceId: "lg-1", selectedCaseIds: ["1", "1", "2"], folderId: "folder-1", cacheKey: "campaign:12", confirmed: true,
     host: "private-host", passphrase: "private-passphrase", chromedriverPath: "/private/path", appium: {port: 1}, password: "private-password",
   });
 
-  assert.deepEqual(calls[0], ["start", {deviceId: "lg-1", selectedCaseIds: ["1", "2"], folderId: "folder-1", confirmed: true, onEvent: calls[0][1].onEvent, onFrame: calls[0][1].onFrame}]);
+  assert.deepEqual(calls[0], ["start", {deviceId: "lg-1", selectedCaseIds: ["1", "2"], folderId: "folder-1", cacheKey: "campaign:12", confirmed: true, onEvent: calls[0][1].onEvent, onFrame: calls[0][1].onFrame}]);
   assert.deepEqual(sent, [
     ["lg-run-status", {code: "preflight"}],
     ["lg-run-preview", "data:image/png;base64,ZmFrZQ=="],

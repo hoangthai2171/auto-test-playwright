@@ -3,6 +3,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 contextBridge.exposeInMainWorld("mytvRunner", {
   loadTestCases: () => ipcRenderer.invoke("load-test-cases"),
   loadFlowCaseFolders: (settings) => ipcRenderer.invoke("load-flow-case-folders", settings),
+  loadFlowCaseCampaigns: (settings) => ipcRenderer.invoke("load-flow-case-campaigns", settings),
   loadFlowCases: (settings) => ipcRenderer.invoke("load-flow-cases", settings),
   getHostEntryStatus: (entry) => ipcRenderer.invoke("get-host-entry-status", {entry}),
   addHostEntry: (entry) => ipcRenderer.invoke("add-host-entry", {entry}),

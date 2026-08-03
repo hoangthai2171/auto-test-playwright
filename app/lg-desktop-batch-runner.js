@@ -69,11 +69,12 @@ function createLgDesktopBatchRunner({preflight, tvRunner, loadCase, writeReportE
   let stopRequested = false;
   let pendingRecovery;
 
-  async function admit({selectedCaseIds, folderId}) {
+  async function admit({selectedCaseIds, folderId, cacheKey}) {
     const ids = uniqueCaseIds(selectedCaseIds);
     if (!ids.length) throw batchError("LG_BATCH_INVALID", "Select at least one LG test case.");
+    const selectedCacheKey = text(cacheKey) || text(folderId);
     const cases = await Promise.all(ids.map(async (id) => {
-      const testCase = await loadCase(id, folderId);
+      const testCase = await loadCase(id, selectedCacheKey);
       if (!testCase) throw batchError("LG_BATCH_INVALID", "The selected LG test case is unavailable.");
       validateTargetCaseCapabilities(testCase, TV_CAPABILITIES);
       return testCase;
@@ -136,19 +137,19 @@ function createLgDesktopBatchRunner({preflight, tvRunner, loadCase, writeReportE
   }
 
   return Object.freeze({
-    async availability({deviceId, selectedCaseIds, folderId} = {}) {
+    async availability({deviceId, selectedCaseIds, folderId, cacheKey} = {}) {
       try {
-        await admit({selectedCaseIds, folderId});
+        await admit({selectedCaseIds, folderId, cacheKey});
       } catch (error) {
         return {ok: false, status: error?.code === "ACTION_CAPABILITY_UNSUPPORTED" ? error.code : "LG_BATCH_INVALID"};
       }
       return preflight.availability({deviceId});
     },
 
-    async start({deviceId, selectedCaseIds, folderId, confirmed, onEvent, onFrame} = {}) {
+    async start({deviceId, selectedCaseIds, folderId, cacheKey, confirmed, onEvent, onFrame} = {}) {
       if (confirmed !== true) throw batchError("LG_CONFIRMATION_REQUIRED", "Confirm the LG batch before it starts.");
       if (active) throw batchError("LG_BATCH_ACTIVE", "An LG batch is already active.");
-      const cases = await admit({selectedCaseIds, folderId});
+      const cases = await admit({selectedCaseIds, folderId, cacheKey});
       active = true;
       stopRequested = false;
       try {

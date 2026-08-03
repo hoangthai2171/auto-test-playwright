@@ -7,7 +7,9 @@ const path = require("node:path");
 const {
   readTestCaseCache,
   replaceFolderCacheEntry,
+  replaceCampaignCacheEntry,
   readFolderCacheEntry,
+  readCampaignCacheEntry,
   readMostRecentFolderCacheEntry,
 } = require("../../app/test-case-cache");
 
@@ -77,5 +79,32 @@ test("reads the most recently downloaded folder cache entry", async () => {
       cases: [{id: "new-case", name: "New case", actions: []}],
       updatedAt: "2026-07-22T09:00:00.000Z",
     });
+  });
+});
+
+test("isolates campaign cache entries and excludes them from folder startup restoration", async () => {
+  await withTempCache(async (cachePath) => {
+    await replaceFolderCacheEntry({
+      cachePath,
+      folder: {id: "folder-1", name: "Folder", fullPath: "/Folder"},
+      cases: [{id: "folder-case", name: "Folder case", actions: []}],
+      updatedAt: "2026-07-22T08:00:00.000Z",
+    });
+    await replaceCampaignCacheEntry({
+      cachePath,
+      campaignId: "12",
+      campaign: {id: "12", name: "Campaign"},
+      cases: [{id: "1842", name: "Campaign case", actions: []}],
+      updatedAt: "2026-07-22T10:00:00.000Z",
+    });
+
+    assert.deepEqual(await readCampaignCacheEntry({cachePath, campaignId: "12"}), {
+      source: "campaign",
+      campaign: {id: "12", name: "Campaign"},
+      cases: [{id: "1842", name: "Campaign case", actions: []}],
+      updatedAt: "2026-07-22T10:00:00.000Z",
+    });
+    assert.equal((await readMostRecentFolderCacheEntry({cachePath})).folder.id, "folder-1");
+    assert.equal((await readFolderCacheEntry({cachePath, folderId: "folder-1"})).cases[0].id, "folder-case");
   });
 });

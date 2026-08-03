@@ -25,8 +25,8 @@ function createHarness({runs = new Map()} = {}) {
       async availability() { return {ok: true, status: "READY"}; },
       async prepare() { calls.prepare += 1; return {runtime, redactionSecrets: ["private-host"]}; },
     },
-    async loadCase(id) {
-      calls.load.push(String(id));
+    async loadCase(id, cacheKey) {
+      calls.load.push([String(id), cacheKey]);
       return {id: String(id), name: `Case ${id}`, actions: [{action: "assert_screen", text: "Ready"}]};
     },
     tvRunner: {
@@ -134,6 +134,20 @@ test("forwards the current player timeout to each LG case", async () => {
 
   assert.equal(result.ok, true);
   assert.deepEqual(calls.playerTimeouts, [6]);
+});
+
+test("loads LG cases from the campaign cache key when both keys are present", async () => {
+  const {batch, calls} = createHarness();
+
+  await batch.start({
+    deviceId: "lg-1",
+    selectedCaseIds: ["one"],
+    folderId: "folder-1",
+    cacheKey: "campaign:12",
+    confirmed: true,
+  });
+
+  assert.deepEqual(calls.load, [["one", "campaign:12"]]);
 });
 
 test("normalizes a custom player timeout before starting an LG case", async () => {

@@ -62,7 +62,7 @@ app/
   main.js                       Electron main process and test-case runner IPC
   preload.js                    Safe IPC bridge
   flow-case-api.js              Flow-case API calls and timeout handling
-  test-case-cache.js            Folder-keyed user-data cache
+  test-case-cache.js            Folder/campaign-keyed user-data cache
   renderer/                     Case browser, preview, logs, and settings UI
 tests/
   run-test-case-mytv.spec.js    Generic Playwright entry point
@@ -90,11 +90,12 @@ playwright.config.js
 ## Run With the Electron Case Browser
 
 The app restores the most recently downloaded API folder at startup. API-loaded
-cases are downloaded from the configured flow-case folder, validated, and stored
-in the Electron user-data cache at `<userData>/testcases-cache.json`, keyed by
-folder ID and timestamped. Downloading the same folder again replaces only that
-folder's cache entry. `testcased.json` is used only as the local fallback when
-no cached API folder is available.
+cases are downloaded from the configured flow-case folder or a selected running
+campaign, validated, and stored in the Electron user-data cache at
+`<userData>/testcases-cache.json`. Folder entries use their folder ID; campaign
+entries use `campaign:<campaignId>` and never replace or become the startup
+folder entry. `testcased.json` is used only as the local fallback when no cached
+API folder is available.
 
 1. Add or update server-shaped cases in `testcased.json`.
 2. Start the desktop runner:
@@ -103,8 +104,8 @@ no cached API folder is available.
    npm run app:dev
    ```
 
-3. Open Settings and configure `APP_URL`, API domain, optional API Authorize value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. In **Test configuration**, set `Player check timeout (second)` to a positive integer; it defaults to 6 seconds and controls the wait before Browser and LG player health checks. In **SDK configuration → Browser configuration**, review and, when needed, explicitly install the project-pinned Chromium. The authorization value is sent verbatim in the `Authorization` header for all flow-case API requests and is redacted from Logs.
-4. Select a folder in the sidebar and click `Get test cases`; use the refresh icon to reload the folder tree.
+3. Open Settings and configure `APP_URL`, API domain, API authorization/service-token value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. The configured value is sent verbatim in the `X-FlowTest-Service-Token` header and is redacted from Logs. In **Test configuration**, set `Player check timeout (second)` to a positive integer; it defaults to 6 seconds and controls the wait before Browser and LG player health checks. In **SDK configuration → Browser configuration**, review and, when needed, explicitly install the project-pinned Chromium.
+4. Use the refresh icon beside **Chiến dịch** to load running campaigns or the refresh icon beside **Folders** to load folders; each refreshes only its own list. Select a campaign in **Chiến dịch** above the folder selector to run campaign testcase copies, or select a folder for the existing folder workflow; click `Get test cases`.
 5. Search by case ID substring or name with the instant filter, then check one or more visible cases in the table.
 6. Use `Detail` to review metadata, expected result, and normalized actions.
 7. Click `Run Selected (N)` and watch the cases execute sequentially in the logs and optional browser preview.
@@ -113,18 +114,22 @@ no cached API folder is available.
    screenshot, while failed tests show the failed item name, poster, and screenshot.
 
 The renderer captures checked case IDs in table order and sends one
-`TEST_CASE_ID`, `APP_URL`, player-check timeout, preview-settings, and active folder ID at a time to
-the main process. Folder and case API calls run through main-process IPC. A
+`TEST_CASE_ID`, `APP_URL`, player-check timeout, preview-settings, and the
+active cache key at a time to the main process. Folder and campaign API calls
+run through main-process IPC. A
 full-screen spinner blocks interaction while an API call is active; timeout
 failures show an alert and leave the existing list/cache untouched. The main
-process validates each ID from the selected folder cache, then starts the
-generic spec `tests/run-test-case-mytv.spec.js`. The renderer waits for each
-process to finish, records its row status, and continues after a pass or
-failure. When every checked API-loaded case has completed, it sends one
+process validates each ID from the selected folder or campaign cache, then
+starts the generic spec `tests/run-test-case-mytv.spec.js`. Campaign loading
+uses each copied testcase's own `id`; `sourceFlowCaseId` is never used as the
+execution ID. The renderer waits for each process to finish, records its row
+status, and continues after a pass or failure. When every checked API-loaded
+case has completed, it sends one
 `PATCH /api/v1/projects/{projectId}/flow-cases/by-folder` request with the
 selected folder path and each case's `tested` lifecycle status plus its
-`testResult`. A stopped, skipped, local-fixture, or failed-to-launch batch is
-not submitted partially.
+`testResult`. Campaign batches also include the selected `campaignId` on every
+testcase result item. A stopped, skipped, local-fixture, or failed-to-launch
+batch is not submitted partially.
 
 Player checks wait for normal playback using the value from **Settings → Test
 configuration** (6 seconds by default), capture the player screen for the

@@ -15,7 +15,8 @@ function requestPayload(value) {
   const deviceId = text(value?.deviceId);
   const selectedCaseIds = caseIds(value?.selectedCaseIds);
   const folderId = text(value?.folderId);
-  return {deviceId, selectedCaseIds, ...(folderId ? {folderId} : {})};
+  const cacheKey = text(value?.cacheKey);
+  return {deviceId, selectedCaseIds, ...(folderId ? {folderId} : {}), ...(cacheKey ? {cacheKey} : {})};
 }
 
 function safeResult(redact, value) {

@@ -47,7 +47,30 @@ test("builds the flow-case result submission URL", () => {
   );
 });
 
-test("fetches the compatibility catalog through the existing Authorization header", async () => {
+test("builds the running-campaign URL", () => {
+  assert.equal(
+    api.buildRunningFlowCaseCampaignsUrl({apiDomain: "http://api.test/", projectId: "1"}),
+    "http://api.test/api/v1/projects/1/test-campaigns/running"
+  );
+});
+
+test("builds a testcaseId lookup without also sending folderName", () => {
+  assert.equal(
+    api.buildFlowCasesUrl({
+      apiDomain: "http://api.test/",
+      projectId: "1",
+      testcaseId: "1842",
+      environment: "UI",
+    }),
+    "http://api.test/api/v1/projects/1/flow-cases/by-folder?testcaseId=1842&environment=UI"
+  );
+  assert.throws(
+    () => api.buildFlowCasesUrl({projectId: "1", folderName: "/Root", testcaseId: "1842", environment: "UI"}),
+    /either folderName or testcaseId/
+  );
+});
+
+test("fetches the compatibility catalog through the X-FlowTest-Service-Token header", async () => {
   const calls = [];
   const result = await api.fetchDeviceCompatibilityCatalog({
     apiDomain: "https://api.example.test",
@@ -61,7 +84,8 @@ test("fetches the compatibility catalog through the existing Authorization heade
 
   assert.equal(api.buildDeviceCompatibilityUrl({apiDomain: "https://api.example.test/"}), "https://api.example.test/api/v1/device-compatibility");
   assert.equal(calls[0].url, "https://api.example.test/api/v1/device-compatibility");
-  assert.equal(calls[0].options.headers.Authorization, "Bearer private");
+  assert.equal(calls[0].options.headers["X-FlowTest-Service-Token"], "Bearer private");
+  assert.equal(calls[0].options.headers.Authorization, undefined);
   assert.deepEqual(result.catalog, {profiles: []});
 });
 
@@ -106,7 +130,7 @@ test("loads data-envelope folder responses", async () => {
   });
 });
 
-test("sends the configured API authorization value as the Authorization header", async () => {
+test("sends the configured API authorization value as the X-FlowTest-Service-Token header", async () => {
   let receivedHeaders;
   const result = await api.fetchFlowCaseFolders({
     apiDomain: "http://api.test",
@@ -118,8 +142,32 @@ test("sends the configured API authorization value as the Authorization header",
     },
   });
 
-  assert.equal(receivedHeaders.Authorization, "Bearer private-token");
-  assert.equal(result.request.headers.Authorization, "Bearer private-token");
+  assert.equal(receivedHeaders["X-FlowTest-Service-Token"], "Bearer private-token");
+  assert.equal(receivedHeaders.Authorization, undefined);
+  assert.equal(result.request.headers["X-FlowTest-Service-Token"], "Bearer private-token");
+  assert.equal(result.request.headers.Authorization, undefined);
+});
+
+test("loads running campaigns from the data envelope with the configured X-FlowTest-Service-Token header", async () => {
+  let request;
+  const result = await api.fetchRunningFlowCaseCampaigns({
+    apiDomain: "https://api.example.test",
+    projectId: "1",
+    authorization: "Bearer private-token",
+    fetchImpl: async (url, options) => {
+      request = {url, options};
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({data: [{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]}),
+      };
+    },
+  });
+
+  assert.equal(request.url, "https://api.example.test/api/v1/projects/1/test-campaigns/running");
+  assert.equal(request.options.headers["X-FlowTest-Service-Token"], "Bearer private-token");
+  assert.equal(request.options.headers.Authorization, undefined);
+  assert.deepEqual(result.campaigns, [{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]);
 });
 
 test("reports an HTTP error without treating it as a timeout", async () => {
@@ -198,4 +246,26 @@ test("submits tested results with the required PATCH payload", async () => {
   assert.deepEqual(JSON.parse(request.options.body), {folderPath: "/Boundary", testcases});
   assert.deepEqual(result.request.body, {folderPath: "/Boundary", testcases});
   assert.equal(result.response.status, 200);
+});
+
+test("preserves campaignId on each result item in the PATCH body", async () => {
+  let request;
+  const testcases = [{
+    id: "1842",
+    campaignId: "12",
+    status: "tested",
+    testResult: {status: "success", message: "Testcase chạy thành công.", passed: 1, failed: 0},
+  }];
+  await api.submitFlowCaseResults({
+    apiDomain: "http://api.test",
+    projectId: "1",
+    folderPath: "/Thai-test",
+    testcases,
+    fetchImpl: async (url, options) => {
+      request = {url, options};
+      return {ok: true, status: 200, json: async () => ({data: []})};
+    },
+  });
+
+  assert.deepEqual(JSON.parse(request.options.body), {folderPath: "/Thai-test", testcases});
 });

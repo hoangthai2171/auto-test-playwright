@@ -19,11 +19,12 @@ async function writeCaseResult(resultPath, result) {
 
 test("run server-driven MyTV test case", async ({page, options}, testInfo) => {
   const fixturePath = process.env.TEST_CASE_PATH || path.resolve(__dirname, "../testcased.json");
-  const cases = process.env.TEST_CASE_FOLDER_ID
-    ? await loadCachedTestCases(process.env.TEST_CASE_CACHE_PATH, process.env.TEST_CASE_FOLDER_ID)
+  const cacheKey = process.env.TEST_CASE_CACHE_KEY || process.env.TEST_CASE_FOLDER_ID;
+  const cases = cacheKey
+    ? await loadCachedTestCases(process.env.TEST_CASE_CACHE_PATH, cacheKey)
     : await loadLocalTestCases(fixturePath);
   const testCase = findTestCaseById(cases, process.env.TEST_CASE_ID);
-  const source = process.env.TEST_CASE_FOLDER_ID ? "api-cache" : "local";
+  const source = cacheKey ? "api-cache" : "local";
   const resultPath = process.env.MYTV_CASE_RESULT_PATH;
   let result;
   let testError;

@@ -183,7 +183,9 @@ function createRendererFixture() {
 
   const ids = [
     "test-form",
+    "campaign-select",
     "folder-select",
+    "refresh-campaigns-button",
     "refresh-folders-button",
     "get-test-cases-button",
     "api-loading-overlay",
@@ -397,6 +399,7 @@ function createRendererFixture() {
 
   const runner = {
     loadTestCases: async () => ({ ok: true, cases: [] }),
+    loadFlowCaseCampaigns: async () => ({ok: true, campaigns: []}),
     loadFlowCaseFolders: async () => ({ok: true, folders: []}),
     loadFlowCases: async () => ({ok: true, folder: null, cases: []}),
     setTestConfiguration: async (configuration) => ({ok: true, ...configuration}),
@@ -914,6 +917,67 @@ test("loads and renders folders by name with fullPath values", async () => {
   assert.equal(option.dataset.folderId, "12");
 });
 
+test("loads and renders running campaigns in the campaign selector", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  fixture.runner.loadFlowCaseCampaigns = async () => ({ok: true, campaigns: [
+    {campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}},
+  ]});
+  const controller = renderer.createRendererController(fixture);
+
+  await controller.loadCampaigns();
+
+  const option = fixture.elements["campaign-select"].querySelectorAll("option")[1];
+  assert.equal(option.textContent, "Regression tháng 8");
+  assert.equal(option.value, "12");
+  assert.equal(option.dataset.campaignId, "12");
+  fixture.elements["campaign-select"].value = "12";
+  fixture.elements["campaign-select"].dispatchEvent("change", {target: fixture.elements["campaign-select"]});
+  assert.equal(fixture.elements["get-test-cases-button"].disabled, false);
+});
+
+test("loads campaign copies by campaign ID and carries the campaign cache key into Browser results", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let loadRequest;
+  let runRequest;
+  const submissions = [];
+  fixture.runner.loadFlowCases = async (values) => {
+    loadRequest = values;
+    return {
+      ok: true,
+      campaign: {id: "12", name: "Regression tháng 8"},
+      folder: {id: "folder-1", name: "Campaign folder", fullPath: "/Campaign"},
+      cacheKey: "campaign:12",
+      cases: [{id: "1842", name: "Campaign copy", actions: []}],
+    };
+  };
+  fixture.runner.runTest = async (values) => {
+    runRequest = values;
+    queueMicrotask(() => fixture.runner.finishedCallback({code: 0}));
+    return {ok: true};
+  };
+  fixture.runner.submitFlowCaseResults = async (payload) => {
+    submissions.push(payload);
+    return {ok: true};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCampaigns([{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]);
+  fixture.elements["campaign-select"].value = "12";
+
+  await controller.loadCasesFromFolder();
+  assert.equal(loadRequest.CAMPAIGN_ID, "12");
+  assert.equal(controller.getActiveCampaignId(), "12");
+  assert.equal(controller.getActiveCacheKey(), "campaign:12");
+  controller.selectCase("1842");
+  await fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+
+  assert.equal(runRequest.TEST_CASE_CACHE_KEY, "campaign:12");
+  assert.equal(submissions.length, 1);
+  assert.equal(submissions[0].testcases[0].id, "1842");
+  assert.equal(submissions[0].testcases[0].campaignId, "12");
+});
+
 test("logs API request and redacted response details while loading folders", async () => {
   assert.equal(loadError, undefined, loadError?.message);
   const fixture = createRendererFixture();
@@ -1079,13 +1143,18 @@ test("replaces the previous save toast timer when saving again", async () => {
   assert.equal(fixture.elements["app-toast"].className, "app-toast ok");
 });
 
-test("does not fetch folders during startup; Refresh remains manual", async () => {
+test("does not fetch workspace lists during startup; each Refresh remains manual", async () => {
   assert.equal(loadError, undefined, loadError?.message);
   const fixture = createRendererFixture();
   let folderRequests = 0;
+  let campaignRequests = 0;
   fixture.runner.loadFlowCaseFolders = async () => {
     folderRequests += 1;
     return {ok: true, folders: []};
+  };
+  fixture.runner.loadFlowCaseCampaigns = async () => {
+    campaignRequests += 1;
+    return {ok: true, campaigns: []};
   };
   renderer.bootstrapRenderer(fixture);
   await new Promise((resolve) => setImmediate(resolve));
@@ -1094,6 +1163,12 @@ test("does not fetch folders during startup; Refresh remains manual", async () =
   fixture.elements["refresh-folders-button"].dispatchEvent("click");
   await new Promise((resolve) => setImmediate(resolve));
   assert.equal(folderRequests, 1);
+  assert.equal(campaignRequests, 0);
+
+  fixture.elements["refresh-campaigns-button"].dispatchEvent("click");
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.equal(folderRequests, 1);
+  assert.equal(campaignRequests, 1);
 });
 
 test("enables DNS host actions from hosts-file presence", async () => {
@@ -1461,6 +1536,8 @@ test("redacts credential-shaped descriptions and log text", () => {
 
   const punctuationRedacted = renderer.redactSensitiveText("password=p.a$$-word");
   assert.equal(punctuationRedacted, "password=••••••");
+  const serviceTokenRedacted = renderer.redactSensitiveText('{"X-FlowTest-Service-Token":"private-service-token"}');
+  assert.equal(serviceTokenRedacted, '{"X-FlowTest-Service-Token":"••••••"}');
 });
 
 test("refuses to run until a test case id is selected", () => {
@@ -2228,6 +2305,48 @@ test("LG readiness includes the active cache folder for selected API cases", asy
   assert.deepEqual(requests.at(-1), {deviceId: "lab-lg", selectedCaseIds: ["42"], folderId: "folder-1"});
 });
 
+test("LG campaign runs use the campaign cache key and submit campaignId", async () => {
+  const fixture = createRendererFixture();
+  const availabilityRequests = [];
+  const runRequests = [];
+  const submissions = [];
+  fixture.runner.loadFlowCases = async () => ({
+    ok: true,
+    campaign: {id: "12", name: "Regression tháng 8"},
+    folder: {id: "folder-1", name: "Campaign folder", fullPath: "/Campaign"},
+    cacheKey: "campaign:12",
+    cases: [{id: "1842", name: "Campaign LG copy", actions: [{action: "assert_screen", text: "Ready"}]}],
+  });
+  fixture.runner.getLgRunAvailability = async (request) => {
+    availabilityRequests.push(request);
+    return {ok: true, status: "READY"};
+  };
+  fixture.runner.runLgBatch = async (request) => {
+    runRequests.push(request);
+    return {ok: true, caseRuns: [{id: "1842", result: {passed: true, started: true, stopped: false, executionResult: {status: "passed"}}}], stopped: false};
+  };
+  fixture.runner.submitFlowCaseResults = async (payload) => {
+    submissions.push(payload);
+    return {ok: true};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCampaigns([{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]);
+  fixture.elements["campaign-select"].value = "12";
+  await controller.loadCasesFromFolder();
+  controller.selectCase("1842");
+  await controller.selectRunTarget("webos");
+
+  assert.equal(availabilityRequests.at(-1).cacheKey, "campaign:12");
+  await controller.runSelectedCases({target: "webos", TEST_CASE_CACHE_KEY: "campaign:12", FLOW_CASE_RESULT_CONTEXT: {
+    API_DOMAIN: "https://api.example", API_AUTHORIZATION: "authorization-value", PROJECT_ID: "1", API_TIMEOUT_SECONDS: "30", FOLDER_PATH: "/Campaign", CAMPAIGN_ID: "12",
+  }});
+  fixture.elements["lg-run-confirm-button"].dispatchEvent("click");
+  await new Promise((resolve) => setImmediate(resolve));
+
+  assert.deepEqual(runRequests[0], {deviceId: "lab-lg", selectedCaseIds: ["1842"], cacheKey: "campaign:12", confirmed: true});
+  assert.equal(submissions[0].testcases[0].campaignId, "12");
+});
+
 test("LG Run Selected requires confirmation and renders only safe status and PNG preview events", async () => {
   const fixture = createRendererFixture();
   fixture.runner.loadTestCases = async () => ({ok: true, source: "cache", folder: {id: "folder-1"}, cases: [{id: "42", name: "LG case", actions: [{action: "assert_screen", text: "Ready"}]}]});
@@ -2301,6 +2420,9 @@ test("index markup contains the case browser and no API-key or mode controls", (
   assert.match(html, /id="test-case-details-modal"/);
   assert.match(html, /id="test-case-details"/);
   assert.match(html, /id="selected-test-case-id"/);
+  assert.match(html, /<label for="campaign-select">Chiến dịch<\/label>/);
+  assert.match(html, /id="refresh-campaigns-button"/);
+  assert.ok(html.indexOf('id="campaign-select"') < html.indexOf('id="folder-select"'));
   assert.doesNotMatch(html, /id="settings-message"/);
   assert.match(html, /id="app-toast"/);
   assert.match(html, /data-settings-panel="test-configuration"/);
@@ -2308,7 +2430,7 @@ test("index markup contains the case browser and no API-key or mode controls", (
   assert.match(html, /Player check timeout \(second\)/);
   assert.match(html, /Thời gian chờ trước khi check trạng thái player/);
   [
-    "folder-select", "refresh-folders-button", "get-test-cases-button",
+    "campaign-select", "folder-select", "refresh-campaigns-button", "refresh-folders-button", "get-test-cases-button",
     "settings-app-url-input", "api-domain-input", "api-authorization-input", "project-id-input",
     "environment-select", "api-timeout-input", "player-check-timeout-input", "test-configuration-save-button", "app-toast", "dns-host-input", "dns-host-add-button", "dns-host-remove-button", "dns-host-status", "api-loading-overlay",
     "retry-sync-button", "run-target-browser", "run-target-webos", "tv-device-select", "tv-device-status", "tv-device-connection-status", "tv-device-connection-dot", "tv-device-check-connection-button", "tv-device-add-button", "tv-device-edit-button", "tv-device-dialog", "tv-device-name-input", "tv-device-host-input", "tv-device-passphrase-input", "tv-device-passphrase-toggle", "tv-device-dialog-submit-button",

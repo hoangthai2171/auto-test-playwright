@@ -12,7 +12,7 @@ function maskActionForDisplay(action) {
 
 function redactSensitiveText(value) {
     return String(value ?? "")
-        .replace(/("(?:password|api_authorization|authorization|token|secret)"\s*:\s*")[^"]*(")/gi, "$1••••••$2")
+        .replace(/("(?:password|api_authorization|authorization|token|secret|x-flowtest-service-token)"\s*:\s*")[^"]*(")/gi, "$1••••••$2")
         .replace(/((?:tài khoản|tai khoan|username|user)\s*[=:]?\s*[^\/\s,;:]+)\s*\/\s*([^\s]+)/gi, "$1/••••••")
         .replace(/((?:mật khẩu|mat khau|password)\s*[=:]?\s*)([^\s]+)/gi, "$1••••••");
 }
@@ -122,7 +122,9 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const store = storage || win?.localStorage;
     const get = (id) => doc?.querySelector(`#${id}`);
     const form = get("test-form");
+    const campaignSelect = get("campaign-select");
     const folderSelect = get("folder-select");
+    const refreshCampaignsButton = get("refresh-campaigns-button");
     const refreshFoldersButton = get("refresh-folders-button");
     const getTestCasesButton = get("get-test-cases-button");
     const apiLoadingOverlay = get("api-loading-overlay");
@@ -256,8 +258,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     let browserMuted = true;
     let appToastTimer = null;
     let settings = {...DEFAULT_SETTINGS};
+    let activeCampaignId = "";
+    let activeCacheKey = "";
     let activeFolderId = "";
     let activeFolderPath = "";
+    const campaignsById = new Map();
     const foldersByPath = new Map();
     let apiRequestDepth = 0;
     let activeRunnerLog = null;
@@ -743,9 +748,13 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             const response = await api.loadTestCases();
             if (!response?.ok) throw new Error(response?.message || "Không thể tải test cases.");
             if (response.source === "cache" && response.folder?.id !== undefined) {
+                activeCampaignId = "";
+                activeCacheKey = String(response.cacheKey || response.folder.id);
                 activeFolderId = String(response.folder.id);
                 activeFolderPath = String(response.folder.fullPath || "");
             } else {
+                activeCampaignId = "";
+                activeCacheKey = "";
                 activeFolderId = "";
                 activeFolderPath = "";
             }
@@ -760,10 +769,41 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     function updateFolderControls() {
         if (getTestCasesButton) {
-            getTestCasesButton.disabled = !folderSelect?.value || apiRequestDepth > 0;
+            getTestCasesButton.disabled = (!campaignSelect?.value && !folderSelect?.value) || apiRequestDepth > 0;
         }
+        if (refreshCampaignsButton) refreshCampaignsButton.disabled = apiRequestDepth > 0;
         if (refreshFoldersButton) refreshFoldersButton.disabled = apiRequestDepth > 0;
+        if (campaignSelect) campaignSelect.disabled = apiRequestDepth > 0;
         if (folderSelect) folderSelect.disabled = apiRequestDepth > 0;
+    }
+
+    function renderCampaigns(nextCampaigns = []) {
+        campaignsById.clear();
+        const selectedId = activeCampaignId || campaignSelect?.value || "";
+        if (!campaignSelect) return;
+        campaignSelect.replaceChildren();
+        const placeholder = doc.createElement("option");
+        placeholder.value = "";
+        placeholder.textContent = "Select a campaign...";
+        campaignSelect.append(placeholder);
+        nextCampaigns.forEach((entry) => {
+            const campaign = entry?.campaign || entry;
+            const id = String(campaign?.id ?? "").trim();
+            const name = String(campaign?.name ?? "").trim();
+            if (!id || !name) return;
+            const normalizedEntry = {
+                ...entry,
+                campaign: {...campaign, id, name},
+            };
+            campaignsById.set(id, normalizedEntry);
+            const option = doc.createElement("option");
+            option.value = id;
+            option.textContent = name;
+            option.dataset.campaignId = id;
+            campaignSelect.append(option);
+        });
+        campaignSelect.value = campaignsById.has(selectedId) ? selectedId : "";
+        updateFolderControls();
     }
 
     function renderFolders(nextFolders = []) {
@@ -819,18 +859,56 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         }
     }
 
-    async function loadCasesFromFolder() {
+    async function loadCampaigns() {
+        const requestSettings = currentSettings();
+        appendApiRequestLog("Load running campaigns", {
+            apiDomain: requestSettings.API_DOMAIN,
+            projectId: requestSettings.PROJECT_ID,
+            timeoutSeconds: requestSettings.API_TIMEOUT_SECONDS,
+        });
+        beginApiRequest();
+        try {
+            if (typeof api.loadFlowCaseCampaigns !== "function") {
+                const response = {ok: false, message: "Running campaign loading is unavailable."};
+                appendApiResponseLog("Load running campaigns", response);
+                showApiError(response);
+                return response;
+            }
+            const response = await api.loadFlowCaseCampaigns(requestSettings);
+            appendApiResponseLog("Load running campaigns", response);
+            if (!response?.ok) {
+                showApiError(response);
+                return response;
+            }
+            renderCampaigns(response.campaigns || []);
+            return response;
+        } catch (error) {
+            const response = {ok: false, message: error.message, timeout: Boolean(error.timeout)};
+            appendApiResponseLog("Load running campaigns", response);
+            showApiError(response);
+            return response;
+        } finally {
+            endApiRequest();
+            updateFolderControls();
+        }
+    }
+
+    async function loadCasesFromSelection() {
+        const selectedCampaign = campaignsById.get(campaignSelect?.value || "");
         const selectedFolder = foldersByPath.get(folderSelect?.value || "");
-        if (!selectedFolder) {
-            setFormMessage("Please select a folder first.", "error");
-            return {ok: false, message: "Please select a folder first."};
+        if (!selectedCampaign && !selectedFolder) {
+            setFormMessage("Please select a campaign or folder first.", "error");
+            return {ok: false, message: "Please select a campaign or folder first."};
         }
 
         const request = {
             ...currentSettings(),
-            FOLDER_ID: String(selectedFolder.id),
-            FOLDER_NAME: selectedFolder.fullPath,
-            FOLDER_NAME_LABEL: selectedFolder.name,
+            ...(selectedCampaign ? {CAMPAIGN_ID: String(selectedCampaign.campaign.id)} : {}),
+            ...(selectedFolder ? {
+                FOLDER_ID: String(selectedFolder.id),
+                FOLDER_NAME: selectedFolder.fullPath,
+                FOLDER_NAME_LABEL: selectedFolder.name,
+            } : {}),
         };
         appendApiRequestLog("Load flow cases", request);
         beginApiRequest();
@@ -841,8 +919,14 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 showApiError(response);
                 return response;
             }
-            activeFolderId = String(response.folder?.id ?? selectedFolder.id);
-            activeFolderPath = String(response.folder?.fullPath ?? selectedFolder.fullPath);
+            activeCampaignId = selectedCampaign
+                ? String(response.campaign?.id ?? selectedCampaign.campaign.id)
+                : "";
+            activeCacheKey = String(response.cacheKey || (activeCampaignId ? `campaign:${activeCampaignId}` : response.folder?.id || selectedFolder?.id || ""));
+            activeFolderId = response.folder?.id !== undefined && response.folder?.id !== null
+                ? String(response.folder.id)
+                : String(selectedFolder?.id ?? "");
+            activeFolderPath = String(response.folder?.fullPath || selectedFolder?.fullPath || "");
             renderCaseList(response.cases || []);
             setFormMessage(`Loaded ${response.cases?.length || 0} test cases.`, "ok");
             return response;
@@ -856,6 +940,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             updateFolderControls();
         }
     }
+
+    const loadCasesFromFolder = loadCasesFromSelection;
 
     function formatAction(action) {
         const values = Object.entries(action)
@@ -929,7 +1015,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             lgRunAvailability = {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
         } else {
             try {
-                lgRunAvailability = await api.getLgRunAvailability({deviceId, selectedCaseIds, ...(activeFolderId ? {folderId: activeFolderId} : {})}) || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+                const sourceRequest = activeCampaignId && activeCacheKey
+                    ? {cacheKey: activeCacheKey}
+                    : activeFolderId
+                        ? {folderId: activeFolderId}
+                        : {};
+                lgRunAvailability = await api.getLgRunAvailability({deviceId, selectedCaseIds, ...sourceRequest}) || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
             } catch {
                 lgRunAvailability = {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
             }
@@ -1965,6 +2056,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     folderSelect?.addEventListener?.("change", () => {
         updateFolderControls();
     });
+    campaignSelect?.addEventListener?.("change", () => {
+        updateFolderControls();
+    });
+    refreshCampaignsButton?.addEventListener?.("click", () => loadCampaigns());
     refreshFoldersButton?.addEventListener?.("click", () => loadFolders());
     getTestCasesButton?.addEventListener?.("click", () => loadCasesFromFolder());
 
@@ -2046,6 +2141,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             PREVIEW_TYPE: values.PREVIEW_TYPE,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
         };
+        if (values.TEST_CASE_CACHE_KEY) payload.TEST_CASE_CACHE_KEY = String(values.TEST_CASE_CACHE_KEY);
         if (values.TEST_CASE_FOLDER_ID) payload.TEST_CASE_FOLDER_ID = String(values.TEST_CASE_FOLDER_ID);
         currentBatch.activeCaseId = String(testCaseId);
         renderCaseStatus(testCaseId, "running");
@@ -2186,17 +2282,18 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     }
 
     function buildFlowCaseResultSubmission(context, caseRuns) {
+        const campaignId = String(context.CAMPAIGN_ID ?? "").trim();
         return {
             API_DOMAIN: context.API_DOMAIN,
             API_AUTHORIZATION: context.API_AUTHORIZATION,
             PROJECT_ID: context.PROJECT_ID,
             API_TIMEOUT_SECONDS: context.API_TIMEOUT_SECONDS,
             FOLDER_PATH: context.FOLDER_PATH,
-            testcases: caseRuns.map(({id, result}) => buildFlowCaseResult(id, result)),
+            testcases: caseRuns.map(({id, result}) => buildFlowCaseResult(id, result, campaignId)),
         };
     }
 
-    function buildFlowCaseResult(testCaseId, run) {
+    function buildFlowCaseResult(testCaseId, run, campaignId = "") {
         const passed = Boolean(run.passed);
         const failedStepMessage = run.executionResult?.caseResult?.steps
             ?.find((step) => step?.status === "failed" && step.message)
@@ -2207,6 +2304,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
         return {
             id: testCaseId,
+            ...(campaignId ? {campaignId} : {}),
             status: "tested",
             testResult: {
                 status: passed ? "success" : "failed",
@@ -2229,14 +2327,20 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             PLAYER_CHECK_TIMEOUT_SECONDS: runSettings.PLAYER_CHECK_TIMEOUT_SECONDS,
             target: runTarget,
         };
+        if (activeCacheKey) values.TEST_CASE_CACHE_KEY = activeCacheKey;
         if (activeFolderId) values.TEST_CASE_FOLDER_ID = activeFolderId;
-        if (activeFolderId && activeFolderPath) {
+        if (activeCampaignId && !activeFolderPath) {
+            setFormMessage("The selected campaign has no result folder path. Select a folder and reload its cases before running.", "error");
+            return;
+        }
+        if (activeFolderPath) {
             values.FLOW_CASE_RESULT_CONTEXT = {
                 API_DOMAIN: runSettings.API_DOMAIN,
                 API_AUTHORIZATION: runSettings.API_AUTHORIZATION,
                 PROJECT_ID: runSettings.PROJECT_ID,
                 API_TIMEOUT_SECONDS: runSettings.API_TIMEOUT_SECONDS,
                 FOLDER_PATH: activeFolderPath,
+                ...(activeCampaignId ? {CAMPAIGN_ID: activeCampaignId} : {}),
             };
         }
         await runSelectedCases(values);
@@ -2355,7 +2459,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (typeof api.startReport === "function") await api.startReport();
         try {
             await testConfigurationSync;
-            const result = await api.runLgBatch({deviceId, selectedCaseIds: ids, ...(values.TEST_CASE_FOLDER_ID ? {folderId: values.TEST_CASE_FOLDER_ID} : {}), confirmed: true});
+            const sourceRequest = values.TEST_CASE_CACHE_KEY && activeCampaignId
+                ? {cacheKey: values.TEST_CASE_CACHE_KEY}
+                : values.TEST_CASE_FOLDER_ID
+                    ? {folderId: values.TEST_CASE_FOLDER_ID}
+                    : {};
+            const result = await api.runLgBatch({deviceId, selectedCaseIds: ids, ...sourceRequest, confirmed: true});
             if (!result?.ok) {
                 setStatus("failed", "Failed");
                 setFormMessage("The LG batch could not start. Review the LG SDK configuration and selected device.", "error");
@@ -2504,6 +2613,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     lgRunConfirmButton?.addEventListener?.("click", () => {
         const values = pendingLgRunValues?.values || {
             target: "webos",
+            ...(activeCacheKey ? {TEST_CASE_CACHE_KEY: activeCacheKey} : {}),
             ...(activeFolderId ? {TEST_CASE_FOLDER_ID: activeFolderId} : {}),
         };
         void runLgSelectedCases(values);
@@ -2611,6 +2721,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     return {
         loadCases,
         loadFolders,
+        loadCampaigns,
+        renderCampaigns,
         renderFolders,
         loadCasesFromFolder,
         renderCaseList,
@@ -2618,6 +2730,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         openCaseDetails,
         selectCase,
         getSelectedCaseIds,
+        getActiveCampaignId: () => activeCampaignId,
+        getActiveCacheKey: () => activeCacheKey,
         getActiveFolderId: () => activeFolderId,
         runSelectedCases,
         retryResultSync,

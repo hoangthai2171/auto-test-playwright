@@ -51,14 +51,15 @@ test-case-schema.js
 `testcased.json` is the read-only local fallback fixture. On startup, the app
 restores the most recently downloaded API folder from the user-data cache; it
 uses the fixture only when no cached folder is available. `app/main.js` also
-owns flow-case API IPC, sanitizes passwords and authorization headers for the renderer, validates the
+owns flow-case API IPC, sanitizes passwords and service-token header values for the renderer, validates the
 selected case ID from either the fixture or the user-data cache, and starts the
 generic `tests/run-test-case-mytv.spec.js` entry point. The renderer sends the
-selected case ID, `APP_URL`, player-check timeout, preview settings, and active
-folder ID for a run.
+selected case ID, `APP_URL`, player-check timeout, preview settings, and an
+active folder or campaign cache key for a run.
 After every selected API-loaded case has completed, the renderer submits one
-validated `tested`/`testResult` batch through main-process IPC; stopped,
-skipped, local-fixture, and launch-failed batches are never partially sent.
+validated `tested`/`testResult` batch through main-process IPC; campaign batches
+include `campaignId` per testcase. Stopped, skipped, local-fixture, and
+launch-failed batches are never partially sent.
 
 The desktop supports two execution targets: Browser (the default) and LG webOS.
 The Settings dialog owns Browser configuration, Test configuration, LG SDK configuration, the
@@ -68,8 +69,8 @@ confirmed managed Chromium installation. LG runs reuse the same case selection,
 batch control, report, and result-submission flow, but require an explicitly
 confirmed real-TV operation.
 
-The LG renderer may send only a selected saved-device ID, case IDs, optional
-folder ID, and explicit confirmation to the LG IPC boundary. The main process
+The LG renderer may send only a selected saved-device ID, case IDs, an optional
+folder ID or campaign cache key, and explicit confirmation to the LG IPC boundary. The main process
 alone resolves encrypted connection data and the selected toolchain, performs a
 fresh read-only identity/app preflight, and starts a loopback-only Appium
 session only after confirmation. It uses native remote control,
@@ -91,14 +92,16 @@ navigation, named/search-result/row playback, back, and readiness waits.
 Unsupported or ambiguous lines must fail with the case ID and original line;
 never guess arbitrary behavior or evaluate server-provided code.
 
-API folder and case retrieval runs in the main process through the preload IPC
-bridge. Successful case responses are validated and atomically replace the
-matching folder-ID entry in `<userData>/testcases-cache.json`, timestamped for
-startup restoration. The generic
+API folder, running-campaign, and case retrieval runs in the main process
+through the preload IPC bridge. Successful folder responses atomically replace
+their folder-ID cache entry; campaign responses use `campaign:<campaignId>` and
+are kept separate from startup folder restoration. Campaign copies are validated
+using their own `id`; `sourceFlowCaseId` is never substituted. The generic
 action executor receives either the local fixture source or a validated cache
 source and does not contain API or cache logic. Result submission uses
-`PATCH /api/v1/projects/{projectId}/flow-cases/by-folder` with a `folderPath`
-and per-case `tested` lifecycle/test-result records.
+`PATCH /api/v1/projects/{projectId}/flow-cases/by-folder` with a `folderPath`,
+per-case `tested`/`testResult` records, and `campaignId` on each item for
+campaign runs.
 
 ### Terminal regression runner
 
@@ -124,7 +127,7 @@ app/
   test-report.js                  Compact user report HTML/data generation
   preload.js                      Context-isolated IPC bridge
   flow-case-api.js                Flow-case API URLs, fetch, normalization, timeout
-  test-case-cache.js              Atomic folder-keyed user-data cache
+  test-case-cache.js              Atomic folder/campaign-keyed user-data cache
   lg-desktop-run-preflight.js     Main-only LG local/read-only preflight
   lg-desktop-batch-runner.js      Confirmed LG serial batch and recovery policy
   lg-run-ipc.js                   Narrow renderer-to-main LG run IPC
@@ -221,9 +224,9 @@ the run to release the account.
 Every action is validated before browser interaction. Server data must not
 provide JavaScript, module paths, selectors, or function names.
 
-`run-test-case-mytv.spec.js` reads the folder-keyed cache when
-`TEST_CASE_FOLDER_ID` and `TEST_CASE_CACHE_PATH` are present; otherwise it
-reads `TEST_CASE_PATH` (defaulting to the project fixture). It selects
+`run-test-case-mytv.spec.js` reads the cache key in `TEST_CASE_CACHE_KEY` (or
+the legacy `TEST_CASE_FOLDER_ID`) when `TEST_CASE_CACHE_PATH` is present;
+otherwise it reads `TEST_CASE_PATH` (defaulting to the project fixture). It selects
 `TEST_CASE_ID` and calls `runTestCase`. The runner compiles or validates the
 case, dispatches actions in order, wraps each step with the existing artifact
 mechanism, and returns structured per-step results.
@@ -273,7 +276,8 @@ private fixture data.
 - `TEST_CASE_PATH` — fixture path used by the child Playwright process.
 - `TEST_CASE_ID` — selected case ID.
 - `TEST_CASE_CACHE_PATH` — user-data cache path for API-downloaded cases.
-- `TEST_CASE_FOLDER_ID` — folder cache key for the selected API case.
+- `TEST_CASE_CACHE_KEY` — selected folder ID or `campaign:<campaignId>` cache key.
+- `TEST_CASE_FOLDER_ID` — legacy/compatibility folder cache key for the selected API case.
 - `MYTV_PREVIEW_PATH` — live screenshot output path.
 - `MYTV_CASE_RESULT_PATH` — per-case structured result sidecar for the compact user report.
 - `MYTV_INTERACTIVE_CDP_URL` — CDP endpoint for interactive preview.

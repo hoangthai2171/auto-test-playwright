@@ -21,15 +21,26 @@ function buildFlowCaseFoldersUrl({apiDomain, projectId}) {
   return `${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/flow-case-folders`;
 }
 
-function buildFlowCasesUrl({apiDomain, projectId, folderName, environment}) {
+function buildFlowCasesUrl({apiDomain, projectId, folderName, testcaseId, environment, platform, status}) {
   const url = new URL(`${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/flow-cases/by-folder`);
-  url.searchParams.set("folderName", String(folderName ?? "").trim());
+  const normalizedFolderName = String(folderName ?? "").trim();
+  const normalizedTestcaseId = String(testcaseId ?? "").trim();
+  if (normalizedFolderName && normalizedTestcaseId) {
+    throw new Error("Flow-case API requests accept either folderName or testcaseId, not both.");
+  }
+  url.searchParams.set(normalizedTestcaseId ? "testcaseId" : "folderName", normalizedTestcaseId || normalizedFolderName);
   url.searchParams.set("environment", String(environment ?? "").trim());
+  if (String(platform ?? "").trim()) url.searchParams.set("platform", String(platform).trim());
+  if (String(status ?? "").trim()) url.searchParams.set("status", String(status).trim());
   return url.toString();
 }
 
 function buildFlowCaseResultsUrl({apiDomain, projectId}) {
   return `${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/flow-cases/by-folder`;
+}
+
+function buildRunningFlowCaseCampaignsUrl({apiDomain, projectId}) {
+  return `${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/test-campaigns/running`;
 }
 
 function buildDeviceCompatibilityUrl({apiDomain}) {
@@ -91,7 +102,7 @@ async function requestJson(url, {
     headers: {
       Accept: "application/json",
       ...(hasBody ? {"Content-Type": "application/json"} : {}),
-      ...(authorizationValue ? {Authorization: authorizationValue} : {}),
+      ...(authorizationValue ? {"X-FlowTest-Service-Token": authorizationValue} : {}),
     },
     timeoutMs: duration,
     ...(hasBody ? {body} : {}),
@@ -177,9 +188,9 @@ async function fetchFlowCaseFolders({apiDomain, projectId, authorization, timeou
   }
 }
 
-async function fetchFlowCases({apiDomain, projectId, folderName, environment, authorization, timeoutMs, fetchImpl} = {}) {
+async function fetchFlowCases({apiDomain, projectId, folderName, testcaseId, environment, platform, status, authorization, timeoutMs, fetchImpl} = {}) {
   const result = await requestJson(
-    buildFlowCasesUrl({apiDomain, projectId, folderName, environment}),
+    buildFlowCasesUrl({apiDomain, projectId, folderName, testcaseId, environment, platform, status}),
     {authorization, timeoutMs, fetchImpl}
   );
   if (!result.ok) return result;
@@ -188,6 +199,31 @@ async function fetchFlowCases({apiDomain, projectId, folderName, environment, au
     return {
       ok: true,
       cases: extractList(result.body, ["cases", "data"]),
+      request: result.request,
+      response: result.response,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.message,
+      timeout: false,
+      request: result.request,
+      response: result.response,
+    };
+  }
+}
+
+async function fetchRunningFlowCaseCampaigns({apiDomain, projectId, authorization, timeoutMs, fetchImpl} = {}) {
+  const result = await requestJson(
+    buildRunningFlowCaseCampaignsUrl({apiDomain, projectId}),
+    {authorization, timeoutMs, fetchImpl}
+  );
+  if (!result.ok) return result;
+
+  try {
+    return {
+      ok: true,
+      campaigns: extractList(result.body, ["data", "campaigns"]),
       request: result.request,
       response: result.response,
     };
@@ -237,10 +273,12 @@ module.exports = {
   buildFlowCaseFoldersUrl,
   buildFlowCasesUrl,
   buildFlowCaseResultsUrl,
+  buildRunningFlowCaseCampaignsUrl,
   buildDeviceCompatibilityUrl,
   flattenFlowCaseFolders,
   fetchFlowCaseFolders,
   fetchFlowCases,
+  fetchRunningFlowCaseCampaigns,
   fetchDeviceCompatibilityCatalog,
   submitFlowCaseResults,
 };
