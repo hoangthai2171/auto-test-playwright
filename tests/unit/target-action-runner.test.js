@@ -91,3 +91,22 @@ test("rejects unsupported TV capabilities before a session is created", () => {
       && error.actionIndex === 0,
   );
 });
+
+test("rejects Browser-only Home-trailer action before a TV session is created", () => {
+  assert.throws(
+    () => validateTargetCaseCapabilities({
+      id: "home-trailer-browser-only",
+      name: "Home trailers",
+      actions: [{action: "play_home_trailers"}],
+    }, {
+      domInspection: true,
+      visualCapture: true,
+      targetSemanticActions: true,
+      playerInspection: true,
+    }),
+    (error) => error.code === "ACTION_CAPABILITY_UNSUPPORTED"
+      && error.caseId === "home-trailer-browser-only"
+      && error.actionIndex === 0
+      && /browserHomeTrailers/u.test(error.message)
+  );
+});

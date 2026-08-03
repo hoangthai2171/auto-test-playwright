@@ -394,6 +394,11 @@ async function finishPlayerCheck(page, helpers) {
 }
 
 async function returnFromPlayer(page, helpers) {
+  if (typeof helpers.closePlayerOrDetail === "function") {
+    return helpers.closePlayerOrDetail(page, {
+      remotePress: helpers.remotePress,
+    });
+  }
   if (typeof helpers.remotePress === "function") {
     await helpers.remotePress(page, "Backspace");
     return;
@@ -554,6 +559,10 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
         rowIndex: action.rowIndex,
         rowName: action.rowName,
         count: action.count,
+        ...playbackWaitOptions,
+      }),
+    play_home_trailers: ({ page, testInfo }) =>
+      helpers.playAllHomeTrailers(page, testInfo, {
         ...playbackWaitOptions,
       }),
     press_back: async ({ page, action }) => {

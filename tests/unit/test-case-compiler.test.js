@@ -172,6 +172,32 @@ test("compiles all and limited row playback steps with 1-based row indexes", () 
   );
 });
 
+test("compiles all Home-trailer wording variants to one action", () => {
+  const verbs = ["Chạy", "Phát", "Play"];
+  const quantities = ["toàn bộ", "tất cả", "các"];
+  const spellings = ["trailer", "trailler"];
+  const locations = ["ở trang chủ", "trên trang chủ", "tại Home"];
+  const lines = verbs.flatMap((verb) => quantities.flatMap((quantity) =>
+    spellings.map((spelling, index) =>
+      `${verb} ${quantity} ${spelling} ${locations[index % locations.length]}.`
+    )
+  ));
+
+  assert.deepEqual(
+    compileQaDescription(lines.join("\n")),
+    lines.map(() => ({action: "play_home_trailers"}))
+  );
+});
+
+test("preserves the original line when Home-trailer wording is incomplete", () => {
+  const originalLine = "B1. Play tất cả phim ở trang chủ";
+
+  assert.throws(
+    () => compileQaDescription(originalLine, {caseId: "home-trailer-near-miss"}),
+    /Không thể parse được bước: B1\. Play tất cả phim ở trang chủ/i
+  );
+});
+
 test("compiles the description when actions is an empty array", () => {
   const result = compileTestCase({
     id: "2",

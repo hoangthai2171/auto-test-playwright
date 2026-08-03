@@ -33,6 +33,10 @@ function createHandlerHelpers(overrides = {}) {
     remoteFocusById: async () => {},
     remoteFocusByText: async () => {},
     remotePress: async () => {},
+    closePlayerOrDetail: async (page, options = {}) => {
+      const press = options.remotePress || (async () => {});
+      await press(page, "Backspace");
+    },
     openServiceFromLeftMenuOrAllServices: async () => {},
     assertServiceOpened: async () => ({
       type: "service",
@@ -47,6 +51,7 @@ function createHandlerHelpers(overrides = {}) {
     playVisibleContentByName: async () => {},
     playFocusedSearchResult: async () => {},
     playItemsInRow: async () => {},
+    playAllHomeTrailers: async () => {},
     waitForContentVisible: async () => {},
     waitForPlayerReady: async () => {},
     getFocusedState: async () => ({ id: "focused" }),
@@ -347,6 +352,7 @@ test("creates exactly the default handlers and logs in with action credentials i
     "open_search",
     "open_service",
     "play_content",
+    "play_home_trailers",
     "play_row",
     "play_search_result",
     "press_back",
@@ -935,6 +941,26 @@ test("plays a requested row using either its 1-based index or name", async () =>
   ]);
 });
 
+test("plays every Home trailer through the helper and preserves its result", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    playerCheckTimeoutSeconds: 9,
+    helpers: createHandlerHelpers({
+      playAllHomeTrailers: async (...args) => {
+        calls.push(args);
+        return {results: [{name: "Trailer A", status: "playable"}]};
+      },
+    }),
+  });
+  const page = {id: "page"};
+  const testInfo = {id: "test-info"};
+
+  const stepResult = await handlers.play_home_trailers({page, testInfo, action: {action: "play_home_trailers"}});
+
+  assert.deepEqual(calls, [[page, testInfo, {waitSeconds: 9}]]);
+  assert.deepEqual(stepResult, {results: [{name: "Trailer A", status: "playable"}]});
+});
+
 test("passes the configured player timeout to every Browser playback action", async () => {
   const calls = [];
   const handlers = createDefaultActionHandlers({
@@ -943,6 +969,7 @@ test("passes the configured player timeout to every Browser playback action", as
       playFocusedSearchResult: async (...args) => calls.push(["search", ...args]),
       playVisibleContentByName: async (...args) => calls.push(["content", ...args]),
       playItemsInRow: async (...args) => calls.push(["row", ...args]),
+      playAllHomeTrailers: async (...args) => calls.push(["home-trailers", ...args]),
     }),
   });
   const page = {id: "page"};
@@ -951,11 +978,13 @@ test("passes the configured player timeout to every Browser playback action", as
   await handlers.play_search_result({page, testInfo, action: {action: "play_search_result", type: "movie"}});
   await handlers.play_content({page, testInfo, action: {action: "play_content", name: "VTV1 HD", type: "channel"}});
   await handlers.play_row({page, testInfo, action: {action: "play_row", rowIndex: 1}});
+  await handlers.play_home_trailers({page, testInfo, action: {action: "play_home_trailers"}});
 
   assert.deepEqual(calls, [
     ["search", page, testInfo, {type: "movie", waitSeconds: 11}],
     ["content", page, testInfo, {name: "VTV1 HD", type: "channel", waitSeconds: 11}],
     ["row", page, testInfo, {rowIndex: 1, rowName: undefined, count: undefined, waitSeconds: 11}],
+    ["home-trailers", page, testInfo, {waitSeconds: 11}],
   ]);
 });
 

@@ -1,4 +1,5 @@
 const { test, expect } = require("playwright/test");
+const sharedPlayback = require("./playback");
 
 const DEFAULT_OPTIONS = {
   APP_URL: "https://html5stage.mytv.vn/",
@@ -194,7 +195,6 @@ async function openFirstMovieContent(page) {
 
 async function playAllItemsInFirstRow(page, testInfo, options = {}) {
   const waitSeconds = Number(options.waitSeconds || 6);
-  const backPresses = Number(options.backPresses || 2);
   const rowName = options.rowName || "";
   const rowIndex = Number.isInteger(options.rowIndex) ? options.rowIndex : undefined;
   const rowPosition = options.rowPosition || "";
@@ -276,7 +276,6 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
       } finally {
         results.push(result);
         await returnToFirstRowContent(page, {
-          backPresses,
           item,
           rowY: firstRowY,
         });
@@ -2130,22 +2129,24 @@ async function inspectPlaybackAfterWait(page, waitSeconds) {
   };
 }
 
-async function returnFromPlayerOrDetail(page, backPresses) {
-  for (let attempt = 0; attempt < backPresses; attempt++) {
-    await remotePress(page, "Backspace", 2500);
-  }
+async function returnFromPlayerOrDetail(page) {
+  return sharedPlayback.closePlayerOrDetail(page, {
+    remotePress,
+    maxBackPresses: 2,
+    backDelayMs: 2500,
+  });
 }
 
-async function returnToFirstRowContent(page, { backPresses, item, rowY }) {
-  const maxBackPresses = Math.max(backPresses, 1) + 4;
-
-  for (let attempt = 0; attempt < maxBackPresses; attempt++) {
-    if ((await isFocusedContentItem(page)) && (await isFocusedNearRow(page, rowY))) {
-      return;
-    }
-
-    await remotePress(page, "Backspace", 1800);
-  }
+async function returnToFirstRowContent(page, { item, rowY }) {
+  await sharedPlayback.closePlayerOrDetail(page, {
+    remotePress,
+    isClosed: async (candidatePage) => (
+      (await isFocusedContentItem(candidatePage)) &&
+      (await isFocusedNearRow(candidatePage, rowY))
+    ),
+    maxBackPresses: 2,
+    backDelayMs: 1800,
+  });
 
   if (item?.id) {
     await remoteFocusById(page, item.id, 20).catch(() => {});

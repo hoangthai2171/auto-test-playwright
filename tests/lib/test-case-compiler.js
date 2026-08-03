@@ -112,6 +112,18 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
+      return /^(?:chay|phat|play)\s+(?:toan bo|tat ca|cac)\s+(?:trailer|trailler)\s+(?:o|tren|tai)\s+(?:trang chu|home)[.!?…。！？]*$/u.test(normalizedLine);
+    },
+    compile(_preparedLine, normalizedLine) {
+      if (!/^(?:chay|phat|play)\s+(?:toan bo|tat ca|cac)\s+(?:trailer|trailler)\s+(?:o|tren|tai)\s+(?:trang chu|home)[.!?…。！？]*$/u.test(normalizedLine)) {
+        return null;
+      }
+
+      return {action: "play_home_trailers"};
+    },
+  },
+  {
+    matches(normalizedLine) {
       return /^di chuyen focus vao poster\s+(?:kenh|phim|noi dung|channel|movie|content)\s+thu\s+\d+\s+cua dong\s+(?:subcate|cate|hang cate|row)\s+["“].+?["”][.!?…。！？]*$/u.test(normalizedLine);
     },
     compile(preparedLine, normalizedLine) {

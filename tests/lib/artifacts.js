@@ -116,19 +116,37 @@ async function attachFailureArtifacts(page, testInfo, title, error) {
   });
 }
 
-async function attachFirstRowPlaybackReport(testInfo, results) {
-  await testInfo.attach("first-row-playback-results.json", {
+async function attachPlaybackBatchReport(testInfo, results, options = {}) {
+  const prefix = safeArtifactName(options.prefix || "playback");
+  const heading = String(options.heading || "Playback results");
+  const includeScreenshot = options.includeScreenshot === true;
+
+  await testInfo.attach(`${prefix}-results.json`, {
     body: JSON.stringify(results, null, 2),
     contentType: "application/json",
   });
 
-  await testInfo.attach("first-row-playback-results.html", {
-    body: renderPlaybackResultsHtml(results),
+  await testInfo.attach(`${prefix}-results.html`, {
+    body: renderPlaybackResultsHtml(results, {
+      heading,
+      includeScreenshot,
+      screenshotHeading: options.screenshotHeading,
+    }),
     contentType: "text/html",
   });
 }
 
-function renderPlaybackResultsHtml(results) {
+async function attachFirstRowPlaybackReport(testInfo, results) {
+  return attachPlaybackBatchReport(testInfo, results, {
+    prefix: "first-row-playback",
+    heading: "First-row playback results",
+  });
+}
+
+function renderPlaybackResultsHtml(results, options = {}) {
+  const heading = String(options.heading || "First-row playback results");
+  const includeScreenshot = options.includeScreenshot === true;
+  const screenshotHeading = String(options.screenshotHeading || "Ảnh kiểm tra player");
   const rows = results
     .map(
       (item) => `
@@ -136,7 +154,8 @@ function renderPlaybackResultsHtml(results) {
           <td>${escapeHtml(String(item.index))}</td>
           <td>${item.poster ? `<img class="poster" src="${escapeHtml(item.poster)}" alt="" />` : ""}</td>
           <td>${escapeHtml(item.name || item.title)}</td>
-          <td class="${item.status === "playable" ? "ok" : "failed"}">${escapeHtml(item.status)}</td>
+          <td class="${isSuccessfulPlaybackStatus(item.status) ? "ok" : "failed"}">${escapeHtml(item.status)}</td>
+          ${includeScreenshot ? `<td>${renderPlaybackScreenshotCell(item)}</td>` : ""}
           <td>${renderPlaybackErrorCell(item)}</td>
         </tr>`
     )
@@ -161,7 +180,7 @@ function renderPlaybackResultsHtml(results) {
   </style>
 </head>
 <body>
-  <h1>First-row playback results</h1>
+  <h1>${escapeHtml(heading)}</h1>
   <table>
     <thead>
       <tr>
@@ -169,6 +188,7 @@ function renderPlaybackResultsHtml(results) {
         <th>Poster</th>
         <th>Tên nội dung</th>
         <th>Trạng thái</th>
+        ${includeScreenshot ? `<th>${escapeHtml(screenshotHeading)}</th>` : ""}
         <th>Lỗi</th>
       </tr>
     </thead>
@@ -176,6 +196,22 @@ function renderPlaybackResultsHtml(results) {
   </table>
 </body>
 </html>`;
+}
+
+function renderPlaybackScreenshotCell(item) {
+  const screenshot = item.screenshotDataUrl || "";
+  const screenshotName = item.screenshot || "";
+  if (!screenshot && !screenshotName) return "";
+
+  return `
+    <div class="error-cell">
+      ${
+        screenshot
+          ? `<img class="error-screenshot" src="${escapeHtml(screenshot)}" alt="${escapeHtml(`Player screenshot ${item.name || item.title || "item"}`)}" />`
+          : ""
+      }
+      ${screenshotName ? `<div class="error-screenshot-caption">${escapeHtml(screenshotName)}</div>` : ""}
+    </div>`;
 }
 
 function renderPlaybackErrorCell(item) {
@@ -197,6 +233,10 @@ function renderPlaybackErrorCell(item) {
     </div>`;
 }
 
+function isSuccessfulPlaybackStatus(status) {
+  return status === "playable" || status === "album_opened";
+}
+
 function imageDataUrl(buffer) {
   return `data:image/png;base64,${Buffer.from(buffer).toString("base64")}`;
 }
@@ -211,4 +251,4 @@ function escapeHtml(value) {
 }
 
 
-module.exports={configureArtifacts,runStep,attachCurrentAppScreenshot,captureCurrentAppScreenshot,attachMovieSearchFailureArtifacts,attachSearchNoResultArtifacts,attachFailureArtifacts,attachFirstRowPlaybackReport,renderPlaybackResultsHtml,renderPlaybackErrorCell,imageDataUrl,escapeHtml,safeArtifactName};
+module.exports={configureArtifacts,runStep,attachCurrentAppScreenshot,captureCurrentAppScreenshot,attachMovieSearchFailureArtifacts,attachSearchNoResultArtifacts,attachFailureArtifacts,attachPlaybackBatchReport,attachFirstRowPlaybackReport,renderPlaybackResultsHtml,renderPlaybackErrorCell,renderPlaybackScreenshotCell,imageDataUrl,escapeHtml,safeArtifactName,isSuccessfulPlaybackStatus};

@@ -431,6 +431,40 @@ action is failed if one or more requested items fail or if no item plays
 successfully; the report retains each failed item's name, poster, and
 screenshot when available.
 
+### Play all Home promotional trailers
+
+Supported forms:
+
+```text
+Chạy toàn bộ trailer ở trang chủ
+Phát tất cả trailer trên trang chủ
+Play các trailler tại Home
+```
+
+Output:
+
+```json
+{"action":"play_home_trailers"}
+```
+
+This is a Browser-only action. The runtime reads the trusted Home promo title,
+focuses `Xem ngay` through remote navigation, checks the destination, captures
+the post-activation player/Album-detail screenshot for every trailer, returns
+Home, and continues until the promo carousel ends or cycles. A healthy video is
+reported as `playable`; a destination with a visible Album detail content list
+is reported as `album_opened`; only neither destination is `failed`. The action
+retains every trailer name, status, activation type, and screenshot in the
+local user report, including failed results. `#promo-video-next` is an internal
+trusted DOM marker; it must not be supplied by case data, and the server must
+not emit selectors or executable fields. The bounded Home-trailer run is large
+enough for the reported 16-item carousel and does not impose a fixed count, so
+newly available trailers are also tested. It uses the shared adaptive
+player/detail-close helper used by generic Browser player checks and row
+playback; Home supplies only its Home-promo readiness predicate. The helper
+sends one remote Back at a time, permits a second Back only when the first
+destination is not ready, and dismisses a detected exit-confirmation dialog
+without issuing another close press.
+
 ### Back navigation
 
 ```text
@@ -489,6 +523,7 @@ search_content
 play_content
 play_search_result
 play_row
+play_home_trailers
 assert_screen
 press_back
 wait_for_ready
@@ -514,6 +549,7 @@ Required fields:
 | `play_content` | `name`, `type` | — |
 | `play_search_result` | — | `type` |
 | `play_row` | exactly one of `rowIndex`, `rowName` | `count` |
+| `play_home_trailers` | — | — |
 | `assert_screen` | `text` | — |
 | `press_back` | — | `count` |
 | `wait_for_ready` | `name` | — |

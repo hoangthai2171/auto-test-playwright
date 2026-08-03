@@ -414,7 +414,6 @@ async function openFirstMovieContent(page, testInfo) {
 
 async function playAllItemsInFirstRow(page, testInfo, options = {}) {
   const waitSeconds = Number(options.waitSeconds || PLAYER_PLAYBACK_WAIT_SECONDS);
-  const backPresses = Number(options.backPresses || 2);
   const rowName = options.rowName || "";
   const rowIndex = Number.isInteger(options.rowIndex) ? options.rowIndex : undefined;
   const rowPosition = options.rowPosition || "";
@@ -521,7 +520,6 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
       } finally {
         results.push(result);
         await returnToFirstRowContent(page, {
-          backPresses,
           item,
           rowY: firstRowY,
         });

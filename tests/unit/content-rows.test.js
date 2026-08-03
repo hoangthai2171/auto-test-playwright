@@ -272,3 +272,24 @@ function createVirtualizedRowPage({totalItems, initialFocusedIndex}) {
     },
   };
 }
+
+test("returns from playback through the shared adaptive close helper", async () => {
+  let closeOptions;
+  const page = {evaluate: async () => true};
+
+  contentRows.configureContentRows({
+    closePlayerOrDetail: async (_page, options) => {
+      closeOptions = options;
+      assert.equal(await options.isClosed(page), true);
+    },
+  });
+
+  await contentRows.returnToFirstRowContent(page, {
+    item: null,
+    rowY: 200,
+  });
+
+  assert.equal(typeof closeOptions.isClosed, "function");
+  assert.equal(closeOptions.maxBackPresses, 2);
+  assert.equal(closeOptions.backDelayMs, 1800);
+});

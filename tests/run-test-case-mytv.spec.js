@@ -8,6 +8,8 @@ const {captureCurrentAppScreenshot} = require("./lib/artifacts");
 const {waitForServiceScreenImages} = require("./lib/service-screenshot");
 const {normalizePlayerCheckTimeoutSeconds} = require("../app/test-configuration");
 
+const HOME_TRAILER_CASE_TIMEOUT_MS = 10 * 60 * 1000;
+
 async function writeCaseResult(resultPath, result) {
   if (!resultPath) return;
 
@@ -25,6 +27,10 @@ test("run server-driven MyTV test case", async ({page, options}, testInfo) => {
   const resultPath = process.env.MYTV_CASE_RESULT_PATH;
   let result;
   let testError;
+
+  if (isHomeTrailerCase(testCase)) {
+    test.setTimeout(HOME_TRAILER_CASE_TIMEOUT_MS);
+  }
 
   try {
     result = await runTestCase(page, testInfo, testCase, {
@@ -79,6 +85,15 @@ test("run server-driven MyTV test case", async ({page, options}, testInfo) => {
     if (result) await writeCaseResult(resultPath, result);
   }
 });
+
+function isHomeTrailerCase(testCase) {
+  if (testCase?.actions?.some((action) => action?.action === "play_home_trailers")) {
+    return true;
+  }
+  return /(?:chạy|phát|play)\s+(?:toàn bộ|tất cả|các)\s+(?:tra(?:iler|iller))\b[\s\S]*\b(?:trang chủ|home)\b/iu.test(
+    String(testCase?.qaDescription || "")
+  );
+}
 
 async function capturePassedTestScreenshot(page, testInfo, result) {
   const startedAt = Date.now();

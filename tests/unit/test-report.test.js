@@ -30,6 +30,7 @@ test("builds a compact passed test entry", () => {
     expectedResult: "Home is visible",
     completionScreenshot: "data:image/png;base64,passed",
     failedItems: [],
+    homeTrailerItems: [],
     error: "",
   });
 });
@@ -62,6 +63,113 @@ test("extracts failed row items with poster and screenshot", () => {
     poster: "https://example.test/poster.jpg",
     screenshot: "data:image/png;base64,abc",
   }]);
+});
+
+test("keeps every Home trailer name, status, and player screenshot on success", () => {
+  const entry = buildTestReportEntry({
+    testCaseId: "home-trailers-passed",
+    testCaseName: "Play Home trailers",
+    exitCode: 0,
+    caseResult: {
+      testCaseId: "home-trailers-passed",
+      name: "Play Home trailers",
+      status: "passed",
+      steps: [{
+        action: "play_home_trailers",
+        result: {
+          results: [
+            {
+              index: 1,
+      name: "Trailer A",
+      status: "playable",
+      activationType: "player",
+      screenshotDataUrl: "data:image/png;base64,trailer-a",
+            },
+            {
+              index: 2,
+              name: "Trailer B",
+              status: "album_opened",
+              activationType: "album_detail",
+              screenshotDataUrl: "data:image/png;base64,trailer-b",
+            },
+          ],
+        },
+      }],
+    },
+  });
+
+  assert.deepEqual(entry.homeTrailerItems, [
+    {
+      index: 1,
+      name: "Trailer A",
+      status: "playable",
+      activationType: "player",
+      screenshot: "data:image/png;base64,trailer-a",
+      screenshotName: "",
+      error: "",
+    },
+    {
+      index: 2,
+      name: "Trailer B",
+      status: "album_opened",
+      activationType: "album_detail",
+      screenshot: "data:image/png;base64,trailer-b",
+      screenshotName: "",
+      error: "",
+    },
+  ]);
+  const html = renderUserReport(upsertTestReport(createEmptyReport(), entry));
+  assert.match(html, /Home Trailer Results/);
+  assert.match(html, /Trailer A/);
+  assert.match(html, /Trailer B/);
+  assert.match(html, /data:image\/png;base64,trailer-a/);
+  assert.match(html, /data:image\/png;base64,trailer-b/);
+  assert.match(html, /album_detail/);
+  assert.match(html, /Player\/Album Check Screenshot/);
+});
+
+test("keeps all accumulated Home trailer evidence when the action fails", () => {
+  const entry = buildTestReportEntry({
+    testCaseId: "home-trailers-failed",
+    testCaseName: "Play Home trailers",
+    exitCode: 1,
+    caseResult: {
+      testCaseId: "home-trailers-failed",
+      name: "Play Home trailers",
+      status: "failed",
+      steps: [{
+        action: "play_home_trailers",
+        status: "failed",
+        details: {
+          results: [
+            {
+              index: 1,
+              name: "Trailer A",
+              status: "playable",
+              activationType: "player",
+              screenshotDataUrl: "data:image/png;base64,failed-case-a",
+            },
+            {
+              index: 2,
+              name: "Trailer B",
+              status: "failed",
+              activationType: "player",
+              screenshotDataUrl: "data:image/png;base64,failed-case-b",
+              errorPopup: "Video did not start",
+            },
+          ],
+        },
+      }],
+    },
+  });
+
+  const html = renderUserReport(upsertTestReport(createEmptyReport(), entry));
+  assert.equal(entry.homeTrailerItems.length, 2);
+  assert.match(html, /Trailer A/);
+  assert.match(html, /Trailer B/);
+  assert.match(html, /data:image\/png;base64,failed-case-a/);
+  assert.match(html, /data:image\/png;base64,failed-case-b/);
+  assert.match(html, /Video did not start/);
 });
 
 test("uses a failed step message when no failed item is available", () => {

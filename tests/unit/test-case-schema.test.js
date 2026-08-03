@@ -155,6 +155,14 @@ test("validates named playback actions", () => {
     validateAction({action: "play_row", rowName: "Phim song song"}),
     {action: "play_row", rowName: "Phim song song"}
   );
+  assert.deepEqual(
+    validateAction({action: "play_home_trailers"}),
+    {action: "play_home_trailers"}
+  );
+  assert.throws(
+    () => validateAction({action: "play_home_trailers", count: 2}),
+    /unknown field.*count/i
+  );
 });
 
 test("validates global search actions", () => {

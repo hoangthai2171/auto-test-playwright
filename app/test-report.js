@@ -31,6 +31,47 @@ function collectFailedItems(caseResult) {
   }
 }
 
+function collectHomeTrailerItems(caseResult) {
+  const items = [];
+  const seen = new Set();
+
+  for (const step of caseResult?.steps || []) {
+    if (step?.action !== "play_home_trailers") continue;
+    collect(step?.result);
+    collect(step?.details);
+  }
+
+  return items;
+
+  function collect(value) {
+    if (!Array.isArray(value?.results)) return;
+    value.results.forEach(add);
+  }
+
+  function add(item) {
+    const normalized = {
+      index: Number.isInteger(item?.index) ? item.index : items.length + 1,
+      name: String(item?.name || item?.title || "Unknown trailer"),
+      status: String(item?.status || "unknown"),
+      activationType: String(item?.activationType || ""),
+      screenshot: String(item?.screenshotDataUrl || ""),
+      screenshotName: String(item?.screenshot || ""),
+      error: String(item?.errorPopup || item?.error || ""),
+    };
+    const key = [
+      normalized.index,
+      normalized.name,
+      normalized.status,
+      normalized.activationType,
+      normalized.screenshot,
+      normalized.screenshotName,
+    ].join("|");
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push(normalized);
+  }
+}
+
 function buildTestReportEntry({testCaseId, testCaseName, exitCode, caseResult, errorMessage = ""}) {
   const status = exitCode === 0 && caseResult?.status !== "failed" ? "passed" : "failed";
   const failedStepMessage = (caseResult?.steps || [])
@@ -43,6 +84,7 @@ function buildTestReportEntry({testCaseId, testCaseName, exitCode, caseResult, e
     expectedResult: String(caseResult?.expectedResult || ""),
     completionScreenshot: String(caseResult?.completionScreenshotDataUrl || ""),
     failedItems: collectFailedItems(caseResult),
+    homeTrailerItems: collectHomeTrailerItems(caseResult),
     error: status === "failed"
       ? String(errorMessage || failedStepMessage || (!caseResult ? "Test failed" : ""))
       : "",
@@ -109,7 +151,7 @@ function renderUserReport(report) {
     "table{width:100%;border-collapse:collapse;background:#17191f}th,td{padding:12px;border:1px solid #303541;text-align:left;vertical-align:middle}",
     "th{background:#222631;color:#cbd1dc}.status-passed{color:#46d083;font-weight:700;text-transform:capitalize}.status-failed{color:#ff7a7a;font-weight:700;text-transform:capitalize}",
     ".details-button{padding:6px 12px;border:1px solid #596579;border-radius:4px;background:#2a3140;color:#fff;cursor:pointer}",
-    ".hidden{display:none}.details-row td{background:#0f1117;padding:18px}.detail-section+.detail-section{margin-top:18px}.detail-section h2{font-size:14px;margin:0 0 8px}.expected-result{margin:0;white-space:pre-wrap;word-break:break-word}.failure-table{background:#14161b}.failure-table th,.failure-table td{padding:10px}",
+    ".hidden{display:none}.details-row td{background:#0f1117;padding:18px}.detail-section+.detail-section{margin-top:18px}.detail-section h2{font-size:14px;margin:0 0 8px}.expected-result{margin:0;white-space:pre-wrap;word-break:break-word}.failure-table,.trailer-table{background:#14161b}.failure-table th,.failure-table td,.trailer-table th,.trailer-table td{padding:10px}",
     ".poster{max-width:100px;max-height:120px;object-fit:contain}.screenshot{max-width:360px;max-height:220px;object-fit:contain;background:#050608}.completion-screenshot{max-width:560px;max-height:315px;object-fit:contain;background:#050608}.empty{color:#9aa3b2}",
     "</style></head><body><main><h1>MyTV Test Report</h1>",
     '<p class="muted">Generated ' + escapeHtml(report?.generatedAt || "") + "</p>",
@@ -125,14 +167,15 @@ function renderTestDetails(entry) {
   const expectedResult = '<section class="detail-section"><h2>Expected Result</h2><p class="expected-result">' +
     escapeHtml(entry.expectedResult || "Not provided") +
     "</p></section>";
+  const homeTrailerResults = renderHomeTrailerItems(entry);
 
   if (entry.status !== "passed") {
     return expectedResult + '<section class="detail-section"><h2>Failure Details</h2>' +
       renderFailedItems(entry) +
-      "</section>" + renderCompletionScreenshot(entry, "Player Check Screenshot");
+      "</section>" + homeTrailerResults + renderCompletionScreenshot(entry, "Player Check Screenshot");
   }
 
-  return expectedResult + renderCompletionScreenshot(entry, "Completion Screenshot");
+  return expectedResult + homeTrailerResults + renderCompletionScreenshot(entry, "Completion Screenshot");
 }
 
 function renderCompletionScreenshot(entry, heading) {
@@ -164,10 +207,30 @@ function renderFailedItems(entry) {
   return '<table class="failure-table"><thead><tr><th>Failed Item Name</th><th>Poster</th><th>Screenshot</th></tr></thead><tbody>' + rows + "</tbody></table>";
 }
 
+function renderHomeTrailerItems(entry) {
+  const items = Array.isArray(entry?.homeTrailerItems) ? entry.homeTrailerItems : [];
+  if (!items.length) return "";
+
+  const rows = items.map((item) => (
+    "<tr><td>" + escapeHtml(item.name) +
+    "</td><td class=\"status-" + (isSuccessfulHomeTrailerStatus(item.status) ? "passed" : "failed") + "\">" + escapeHtml(item.status) +
+    "</td><td>" + escapeHtml(item.activationType || "") +
+    "</td><td>" + renderImage(item.screenshot, `${item.activationType === "album_detail" ? "Album detail" : "Player"} screenshot for ${item.name}`, "screenshot") +
+    "</td><td>" + escapeHtml(item.error || "") + "</td></tr>"
+  )).join("");
+
+  return '<section class="detail-section"><h2>Home Trailer Results</h2><table class="trailer-table"><thead><tr><th>Trailer Name</th><th>Status</th><th>Activation Check</th><th>Player/Album Check Screenshot</th><th>Error</th></tr></thead><tbody>' + rows + "</tbody></table></section>";
+}
+
+function isSuccessfulHomeTrailerStatus(status) {
+  return status === "playable" || status === "album_opened";
+}
+
 module.exports = {
   createEmptyReport,
   buildTestReportEntry,
   upsertTestReport,
   renderUserReport,
   collectFailedItems,
+  collectHomeTrailerItems,
 };

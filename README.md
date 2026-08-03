@@ -128,10 +128,13 @@ not submitted partially.
 
 Player checks wait for normal playback using the value from **Settings → Test
 configuration** (6 seconds by default), capture the player screen for the
-report, then return with Back before the next non-player step or test
-completion. A final player check waits two seconds after Back so
-watching-session teardown API calls can finish; player-check failures retain the
-player-screen capture in the compact report.
+report, then use the shared adaptive player/detail-close helper before the next
+non-player step or test completion. It observes the destination after each
+Back, sends a second Back only when the first did not close the player, and
+dismisses a recognized exit-confirmation popup without issuing an extra close
+press. A final player check waits two seconds after closing so watching-session
+teardown API calls can finish; player-check failures retain the player-screen
+capture in the compact report.
 
 Each generic case invokes the trusted app global `window.processLogOut` after
 execution, including failed cases. The cleanup is awaited and is isolated from
@@ -172,6 +175,7 @@ initial action vocabulary is:
 - `play_content`
 - `play_search_result`
 - `play_row`
+- `play_home_trailers`
 - `assert_screen`
 - `press_back`
 - `wait_for_ready`
@@ -223,13 +227,28 @@ Playback actions use only content currently visible in the TV page's rows:
 {"action":"play_search_result","type":"movie"}
 {"action":"play_row","rowIndex":2,"count":3}
 {"action":"play_row","rowName":"Phim song song"}
+{"action":"play_home_trailers"}
 ```
 
 `play_content` verifies the selected item is playing. `play_row` opens each
-item, waits for playback, returns to the row, and continues after individual
-failures. Its `rowIndex` is 1-based; omit `count` to request all items. The
-row playback JSON/HTML report includes the name and poster of each attempted item,
-including failed items.
+item, waits for playback, uses the shared adaptive player/detail-close helper to
+return to the row, and continues after individual failures. Its `rowIndex` is
+1-based; omit `count` to request all items. The row playback JSON/HTML report
+includes the name and poster of each attempted item, including failed items.
+
+`play_home_trailers` tests every distinct promotional trailer shown on Home. It
+uses remote `Xem ngay` → player/Album-detail check → Back navigation so
+returning Home lets the carousel advance. A healthy video is `playable`; an
+Album detail screen with a visible content list is `album_opened`; otherwise the
+item is `failed`. The local user report lists each trailer name, activation
+status/type, and post-activation screenshot, including failed trailers. The
+bounded run is large enough for the reported 16-trailer Home carousel and does
+not cap the number of discovered trailers. This action is currently Browser-only because its trusted DOM contract uses Home's
+`#promo-video-next` and trailer-title elements. It uses the same shared adaptive
+player/detail-close helper as generic player checks and row playback; Home only
+adds its Home-promo readiness predicate. The helper sends one remote Back at a
+time, permits a second Back only when the first destination is not ready, and
+dismisses a detected exit-confirmation popup without another close press.
 
 search_content uses the on-screen virtual keyboard, activates #callSearch,
 waits three seconds, then focuses the best fuzzy match in the visible

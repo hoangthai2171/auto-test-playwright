@@ -2,6 +2,11 @@
 
 Agent context for the MyTV Auto Test project.
 
+## AgentMemory
+
+Before a non-trivial task, use AgentMemory recall/smart-search for relevant decisions, affected files, test history, and failed approaches. Treat recalled items as leads and verify them against the current code.
+Save durable decisions, non-obvious fixes, and reusable test lessons. Never save secrets, credentials, production dumps, or private customer data.
+
 ## Project Overview
 
 MyTV Auto Test is a Playwright test-automation suite for the MyTV HTML5 TV web
@@ -188,6 +193,19 @@ The supported action allowlist is:
 - `play_row`: requires either a 1-based `rowIndex` or a `rowName`; optional
   positive `count` limits the number of items, and omitted `count` requests all
   items within the existing batch runtime budget.
+- `play_home_trailers`: Browser-only parameterless action that tests every
+  distinct Home promotional trailer through remote `Xem ngay` → player or
+  Album-detail check → Back navigation. It reads the trailer name from the
+  trusted promo title, captures a post-activation screenshot for every trailer,
+  reports healthy video as `playable`, visible Album detail content as
+  `album_opened`, and retains all names/statuses/types/screenshots in the
+  selected test's user report. The bounded run is large enough for the reported
+  16-item Home carousel and does not impose a fixed trailer count. Its return
+  cleanup delegates to the shared adaptive player/detail-close helper used by
+  generic Browser player checks and row playback; Home supplies only the Home
+  promo boundary. The helper supports destinations requiring one or two Back
+  presses and dismisses a recognized exit-confirmation dialog without another
+  close press.
 - `assert_screen`: checks visible body text.
 - `press_back`: sends Backspace; optional `count` repeats it.
 - `wait_for_ready`: accepts `app`, `home`, `content`, or `player`.
@@ -217,8 +235,8 @@ player; service-success wording (`Vào`/`Mở` a service or
 category `bình thường`/`thành công`) requires the activation check to have
 observed a non-Home destination with visible content rows. A visible
 auto-hide toast/tooltip or no-data/error popup fails service access. Player
-checks capture the player screen before cleanup,
-remotely return to the prior screen, then wait two seconds when final so
+checks capture the player screen before cleanup, use the shared adaptive
+player/detail-close helper to return to the prior screen, then wait two seconds when final so
 watching-session teardown API calls can complete, unless the next action
 explicitly waits for the player or performs its own Back action.
 Failed player checks retain that player-screen capture in the compact report.
@@ -390,6 +408,7 @@ This project has a knowledge graph at graphify-out/ with god nodes, community st
 When the user types `/graphify`, use the installed graphify skill or instructions before doing anything else.
 
 Rules:
+
 - For codebase questions, first run `graphify query "<question>"` when graphify-out/graph.json exists. Use `graphify path "<A>" "<B>"` for relationships and `graphify explain "<concept>"` for focused concepts. These return a scoped subgraph, usually much smaller than GRAPH_REPORT.md or raw grep output.
 - Dirty graphify-out/ files are expected after hooks or incremental updates; dirty graph files are not a reason to skip graphify. Only skip graphify if the task is about stale or incorrect graph output, or the user explicitly says not to use it.
 - If graphify-out/wiki/index.md exists, use it for broad navigation instead of raw source browsing.

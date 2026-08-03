@@ -20,6 +20,7 @@ const ACTION_CAPABILITIES = Object.freeze({
   play_content: ["targetSemanticActions", "playerInspection"],
   play_search_result: ["targetSemanticActions", "playerInspection"],
   play_row: ["targetSemanticActions", "playerInspection"],
+  play_home_trailers: ["browserHomeTrailers"],
 });
 
 function validateTargetCaseCapabilities(testCase, capabilities = {}) {

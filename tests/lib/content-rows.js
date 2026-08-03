@@ -3,6 +3,7 @@ const {getSelectorContract}=require("./selectors");
 const {createScopedDomScanner}=require("./dom-scan");
 const {createDomSnapshotCache,getDomSnapshotIdentity}=require("./dom-snapshots");
 const {normalizeVietnameseText}=require("./text-utils");
+const playback=require("./playback");
 
 const dependencies={
   remotePress:async(page,key,delay=250)=>{await page.keyboard.press(key);await page.waitForTimeout(delay);},
@@ -13,6 +14,7 @@ const dependencies={
   hasVisibleText:async()=>false,
   expectFocusedText:async()=>{},
   activateVerifiedTarget:async()=>{throw new Error("Content-row activation dependency is not configured");},
+  closePlayerOrDetail:playback.closePlayerOrDetail,
 };
 
 const CONTENT_ITEM_CONTRACT = getSelectorContract("contentItem");
@@ -902,22 +904,24 @@ async function inspectPlaybackAfterWait(page, waitSeconds) {
   };
 }
 
-async function returnFromPlayerOrDetail(page, backPresses) {
-  for (let attempt = 0; attempt < backPresses; attempt++) {
-    await remotePress(page, "Backspace", 2500);
-  }
+async function returnFromPlayerOrDetail(page) {
+  return dependencies.closePlayerOrDetail(page, {
+    remotePress,
+    maxBackPresses: 2,
+    backDelayMs: 2500,
+  });
 }
 
-async function returnToFirstRowContent(page, { backPresses, item, rowY }) {
-  const maxBackPresses = Math.max(backPresses, 1) + 4;
-
-  for (let attempt = 0; attempt < maxBackPresses; attempt++) {
-    if ((await isFocusedContentItem(page)) && (await isFocusedNearRow(page, rowY))) {
-      return;
-    }
-
-    await remotePress(page, "Backspace", 1800);
-  }
+async function returnToFirstRowContent(page, { item, rowY }) {
+  await dependencies.closePlayerOrDetail(page, {
+    remotePress,
+    isClosed: async (candidatePage) => (
+      (await isFocusedContentItem(candidatePage)) &&
+      (await isFocusedNearRow(candidatePage, rowY))
+    ),
+    maxBackPresses: 2,
+    backDelayMs: 1800,
+  });
 
   if (item?.id) {
     await remoteFocusById(page, item.id, 20).catch(() => {});
