@@ -920,6 +920,11 @@ test("loads and renders folders by name with fullPath values", async () => {
 test("loads and renders running campaigns in the campaign selector", async () => {
   assert.equal(loadError, undefined, loadError?.message);
   const fixture = createRendererFixture();
+  const folderRequests = [];
+  fixture.runner.loadFlowCaseFolders = async (values) => {
+    folderRequests.push(values);
+    return {ok: true, folders: [{id: "folder-1", name: "Campaign folder", fullPath: "/Campaign"}]};
+  };
   fixture.runner.loadFlowCaseCampaigns = async () => ({ok: true, campaigns: [
     {campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}},
   ]});
@@ -933,6 +938,11 @@ test("loads and renders running campaigns in the campaign selector", async () =>
   assert.equal(option.dataset.campaignId, "12");
   fixture.elements["campaign-select"].value = "12";
   fixture.elements["campaign-select"].dispatchEvent("change", {target: fixture.elements["campaign-select"]});
+  await flushRendererPromises();
+  assert.equal(folderRequests.length, 1);
+  assert.equal(folderRequests[0].CAMPAIGN_ID, "12");
+  fixture.elements["folder-select"].value = "/Campaign";
+  fixture.elements["folder-select"].dispatchEvent("change", {target: fixture.elements["folder-select"]});
   assert.equal(fixture.elements["get-test-cases-button"].disabled, false);
 });
 
@@ -963,10 +973,15 @@ test("loads campaign copies by campaign ID and carries the campaign cache key in
   };
   const controller = renderer.createRendererController(fixture);
   controller.renderCampaigns([{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]);
+  controller.renderFolders([{id: "folder-1", name: "Campaign folder", fullPath: "/Campaign"}]);
   fixture.elements["campaign-select"].value = "12";
+  fixture.elements["folder-select"].value = "/Campaign";
 
   await controller.loadCasesFromFolder();
   assert.equal(loadRequest.CAMPAIGN_ID, "12");
+  assert.equal(loadRequest.CAMPAIGN_NAME, "Regression tháng 8");
+  assert.equal(loadRequest.FOLDER_ID, "folder-1");
+  assert.equal(loadRequest.FOLDER_NAME, "/Campaign");
   assert.equal(controller.getActiveCampaignId(), "12");
   assert.equal(controller.getActiveCacheKey(), "campaign:12");
   controller.selectCase("1842");
@@ -976,6 +991,51 @@ test("loads campaign copies by campaign ID and carries the campaign cache key in
   assert.equal(submissions.length, 1);
   assert.equal(submissions[0].testcases[0].id, "1842");
   assert.equal(submissions[0].testcases[0].campaignId, "12");
+});
+
+test("clearing the campaign refreshes the folder list without a campaign filter", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  const folderRequests = [];
+  fixture.runner.loadFlowCaseFolders = async (values) => {
+    folderRequests.push(values);
+    return {ok: true, folders: [{id: "folder-1", name: "Folder", fullPath: "/Folder"}]};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderCampaigns([{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]);
+
+  fixture.elements["campaign-select"].value = "12";
+  fixture.elements["campaign-select"].dispatchEvent("change", {target: fixture.elements["campaign-select"]});
+  await flushRendererPromises();
+  assert.equal(folderRequests.at(-1).CAMPAIGN_ID, "12");
+
+  controller.renderCaseList([{id: "stale", name: "Stale case", actions: []}]);
+  fixture.elements["campaign-select"].value = "";
+  fixture.elements["campaign-select"].dispatchEvent("change", {target: fixture.elements["campaign-select"]});
+  await flushRendererPromises();
+
+  assert.equal(folderRequests.at(-1).CAMPAIGN_ID, undefined);
+  assert.equal(fixture.elements["test-case-list-body"].children.length, 0);
+  assert.equal(controller.getActiveCacheKey(), "");
+});
+
+test("folder-only case loading omits campaign context", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let loadRequest;
+  fixture.runner.loadFlowCases = async (values) => {
+    loadRequest = values;
+    return {ok: true, folder: {id: "folder-1", name: "Folder", fullPath: "/Folder"}, cases: [{id: "case-1", name: "Folder case", actions: []}]};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderFolders([{id: "folder-1", name: "Folder", fullPath: "/Folder"}]);
+  fixture.elements["folder-select"].value = "/Folder";
+
+  await controller.loadCasesFromFolder();
+
+  assert.equal(loadRequest.CAMPAIGN_ID, undefined);
+  assert.equal(loadRequest.CAMPAIGN_NAME, undefined);
+  assert.equal(loadRequest.FOLDER_NAME, "/Folder");
 });
 
 test("logs API request and redacted response details while loading folders", async () => {
@@ -2331,7 +2391,9 @@ test("LG campaign runs use the campaign cache key and submit campaignId", async 
   };
   const controller = renderer.createRendererController(fixture);
   controller.renderCampaigns([{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]);
+  controller.renderFolders([{id: "folder-1", name: "Campaign folder", fullPath: "/Campaign"}]);
   fixture.elements["campaign-select"].value = "12";
+  fixture.elements["folder-select"].value = "/Campaign";
   await controller.loadCasesFromFolder();
   controller.selectCase("1842");
   await controller.selectRunTarget("webos");

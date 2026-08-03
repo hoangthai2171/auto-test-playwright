@@ -17,18 +17,37 @@ function encodePathPart(value) {
   return encodeURIComponent(String(value ?? "").trim());
 }
 
-function buildFlowCaseFoldersUrl({apiDomain, projectId}) {
-  return `${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/flow-case-folders`;
+function normalizeOptionalPositiveInteger(value, label) {
+  const normalized = String(value ?? "").trim();
+  if (!normalized) return "";
+  if (!/^[1-9]\d*$/u.test(normalized)) {
+    throw new Error(`${label} must be a positive integer.`);
+  }
+  return normalized;
 }
 
-function buildFlowCasesUrl({apiDomain, projectId, folderName, testcaseId, environment, platform, status}) {
+function buildFlowCaseFoldersUrl({apiDomain, projectId, campaignId}) {
+  const url = new URL(`${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/flow-case-folders`);
+  const normalizedCampaignId = normalizeOptionalPositiveInteger(campaignId, "campaignId");
+  if (normalizedCampaignId) url.searchParams.set("campaignId", normalizedCampaignId);
+  return url.toString();
+}
+
+function buildFlowCasesUrl({apiDomain, projectId, folderName, testcaseId, campaignId, environment, platform, status}) {
   const url = new URL(`${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/flow-cases/by-folder`);
   const normalizedFolderName = String(folderName ?? "").trim();
   const normalizedTestcaseId = String(testcaseId ?? "").trim();
-  if (normalizedFolderName && normalizedTestcaseId) {
-    throw new Error("Flow-case API requests accept either folderName or testcaseId, not both.");
+  const normalizedCampaignId = normalizeOptionalPositiveInteger(campaignId, "campaignId");
+  const sources = [
+    ["folderName", normalizedFolderName],
+    ["testcaseId", normalizedTestcaseId],
+    ["campaignId", normalizedCampaignId],
+  ].filter(([, value]) => value);
+  if (sources.length !== 1) {
+    throw new Error("Flow-case API requests require exactly one of folderName, testcaseId, or campaignId.");
   }
-  url.searchParams.set(normalizedTestcaseId ? "testcaseId" : "folderName", normalizedTestcaseId || normalizedFolderName);
+  const [sourceKey, sourceValue] = sources[0];
+  url.searchParams.set(sourceKey, sourceValue);
   url.searchParams.set("environment", String(environment ?? "").trim());
   if (String(platform ?? "").trim()) url.searchParams.set("platform", String(platform).trim());
   if (String(status ?? "").trim()) url.searchParams.set("status", String(status).trim());
@@ -166,8 +185,8 @@ async function requestJson(url, {
   }
 }
 
-async function fetchFlowCaseFolders({apiDomain, projectId, authorization, timeoutMs, fetchImpl} = {}) {
-  const result = await requestJson(buildFlowCaseFoldersUrl({apiDomain, projectId}), {authorization, timeoutMs, fetchImpl});
+async function fetchFlowCaseFolders({apiDomain, projectId, campaignId, authorization, timeoutMs, fetchImpl} = {}) {
+  const result = await requestJson(buildFlowCaseFoldersUrl({apiDomain, projectId, campaignId}), {authorization, timeoutMs, fetchImpl});
   if (!result.ok) return result;
 
   try {
@@ -188,9 +207,9 @@ async function fetchFlowCaseFolders({apiDomain, projectId, authorization, timeou
   }
 }
 
-async function fetchFlowCases({apiDomain, projectId, folderName, testcaseId, environment, platform, status, authorization, timeoutMs, fetchImpl} = {}) {
+async function fetchFlowCases({apiDomain, projectId, folderName, testcaseId, campaignId, environment, platform, status, authorization, timeoutMs, fetchImpl} = {}) {
   const result = await requestJson(
-    buildFlowCasesUrl({apiDomain, projectId, folderName, testcaseId, environment, platform, status}),
+    buildFlowCasesUrl({apiDomain, projectId, folderName, testcaseId, campaignId, environment, platform, status}),
     {authorization, timeoutMs, fetchImpl}
   );
   if (!result.ok) return result;

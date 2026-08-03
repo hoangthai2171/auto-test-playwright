@@ -28,6 +28,17 @@ test("builds the flow-case folders URL", () => {
   );
 });
 
+test("builds a campaign-scoped flow-case folders URL", () => {
+  assert.equal(
+    api.buildFlowCaseFoldersUrl({apiDomain: "http://api.test/", projectId: "1", campaignId: "12"}),
+    "http://api.test/api/v1/projects/1/flow-case-folders?campaignId=12"
+  );
+  assert.throws(
+    () => api.buildFlowCaseFoldersUrl({projectId: "1", campaignId: "campaign-12"}),
+    /campaignId must be a positive integer/
+  );
+});
+
 test("builds encoded folder-case URL and uses the configured environment", () => {
   assert.equal(
     api.buildFlowCasesUrl({
@@ -66,7 +77,27 @@ test("builds a testcaseId lookup without also sending folderName", () => {
   );
   assert.throws(
     () => api.buildFlowCasesUrl({projectId: "1", folderName: "/Root", testcaseId: "1842", environment: "UI"}),
-    /either folderName or testcaseId/
+    /exactly one of folderName, testcaseId, or campaignId/
+  );
+});
+
+test("builds a campaign testcase lookup without also sending folderName", () => {
+  assert.equal(
+    api.buildFlowCasesUrl({
+      apiDomain: "http://api.test/",
+      projectId: "1",
+      campaignId: "12",
+      environment: "UI",
+    }),
+    "http://api.test/api/v1/projects/1/flow-cases/by-folder?campaignId=12&environment=UI"
+  );
+  assert.throws(
+    () => api.buildFlowCasesUrl({projectId: "1", folderName: "/Root", campaignId: "12", environment: "UI"}),
+    /exactly one of folderName, testcaseId, or campaignId/
+  );
+  assert.throws(
+    () => api.buildFlowCasesUrl({projectId: "1", campaignId: "0", environment: "UI"}),
+    /campaignId must be a positive integer/
   );
 });
 
@@ -130,6 +161,22 @@ test("loads data-envelope folder responses", async () => {
   });
 });
 
+test("forwards a campaign ID when loading the folder tree", async () => {
+  let requestUrl;
+  const result = await api.fetchFlowCaseFolders({
+    apiDomain: "http://api.test",
+    projectId: "1",
+    campaignId: "12",
+    fetchImpl: async (url) => {
+      requestUrl = url;
+      return {ok: true, status: 200, json: async () => ({data: []})};
+    },
+  });
+
+  assert.equal(requestUrl, "http://api.test/api/v1/projects/1/flow-case-folders?campaignId=12");
+  assert.deepEqual(result.folders, []);
+});
+
 test("sends the configured API authorization value as the X-FlowTest-Service-Token header", async () => {
   let receivedHeaders;
   const result = await api.fetchFlowCaseFolders({
@@ -168,6 +215,23 @@ test("loads running campaigns from the data envelope with the configured X-FlowT
   assert.equal(request.options.headers["X-FlowTest-Service-Token"], "Bearer private-token");
   assert.equal(request.options.headers.Authorization, undefined);
   assert.deepEqual(result.campaigns, [{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]);
+});
+
+test("loads campaign-scoped cases through the campaignId query", async () => {
+  let requestUrl;
+  const result = await api.fetchFlowCases({
+    apiDomain: "http://api.test",
+    projectId: "1",
+    campaignId: "12",
+    environment: "UI",
+    fetchImpl: async (url) => {
+      requestUrl = url;
+      return {ok: true, status: 200, json: async () => ({data: [{id: "1842", name: "Campaign copy", actions: []}]})};
+    },
+  });
+
+  assert.equal(requestUrl, "http://api.test/api/v1/projects/1/flow-cases/by-folder?campaignId=12&environment=UI");
+  assert.deepEqual(result.cases, [{id: "1842", name: "Campaign copy", actions: []}]);
 });
 
 test("reports an HTTP error without treating it as a timeout", async () => {

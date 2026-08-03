@@ -105,7 +105,7 @@ API folder is available.
    ```
 
 3. Open Settings and configure `APP_URL`, API domain, API authorization/service-token value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. The configured value is sent verbatim in the `X-FlowTest-Service-Token` header and is redacted from Logs. In **Test configuration**, set `Player check timeout (second)` to a positive integer; it defaults to 6 seconds and controls the wait before Browser and LG player health checks. In **SDK configuration → Browser configuration**, review and, when needed, explicitly install the project-pinned Chromium.
-4. Use the refresh icon beside **Chiến dịch** to load running campaigns or the refresh icon beside **Folders** to load folders; each refreshes only its own list. Select a campaign in **Chiến dịch** above the folder selector to run campaign testcase copies, or select a folder for the existing folder workflow; click `Get test cases`.
+4. Use the refresh icon beside **Chiến dịch** to load running campaigns or the refresh icon beside **Folders** to load folders. Selecting a campaign automatically refreshes **Folders** with only that campaign's folders; clearing the campaign refreshes the unfiltered project folders. Choose a folder before clicking `Get test cases`: with a campaign selected, cases come from that campaign and the folder supplies the result context; with no campaign selected, cases come only from the selected folder.
 5. Search by case ID substring or name with the instant filter, then check one or more visible cases in the table.
 6. Use `Detail` to review metadata, expected result, and normalized actions.
 7. Click `Run Selected (N)` and watch the cases execute sequentially in the logs and optional browser preview.
@@ -116,13 +116,16 @@ API folder is available.
 The renderer captures checked case IDs in table order and sends one
 `TEST_CASE_ID`, `APP_URL`, player-check timeout, preview-settings, and the
 active cache key at a time to the main process. Folder and campaign API calls
-run through main-process IPC. A
+run through main-process IPC. A selected campaign scopes both the folder-tree
+request and the direct testcase request with `campaignId`; the selected folder
+path remains the result context. With no campaign selected, neither request
+contains a campaign filter. A
 full-screen spinner blocks interaction while an API call is active; timeout
 failures show an alert and leave the existing list/cache untouched. The main
 process validates each ID from the selected folder or campaign cache, then
 starts the generic spec `tests/run-test-case-mytv.spec.js`. Campaign loading
-uses each copied testcase's own `id`; `sourceFlowCaseId` is never used as the
-execution ID. The renderer waits for each process to finish, records its row
+uses each returned campaign copy's own `id`; `sourceFlowCaseId` is never used as
+the execution ID. The renderer waits for each process to finish, records its row
 status, and continues after a pass or failure. When every checked API-loaded
 case has completed, it sends one
 `PATCH /api/v1/projects/{projectId}/flow-cases/by-folder` request with the

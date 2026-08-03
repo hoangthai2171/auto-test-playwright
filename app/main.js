@@ -401,6 +401,7 @@ ipcMain.handle("load-flow-case-folders", async (_event, settings = {}) => {
         apiDomain: settings.API_DOMAIN,
         authorization: settings.API_AUTHORIZATION,
         projectId: settings.PROJECT_ID,
+        campaignId: settings.CAMPAIGN_ID,
         timeoutMs: normalizeTimeoutMs(settings.API_TIMEOUT_SECONDS),
     });
     return withApiLog(result);
@@ -471,89 +472,43 @@ ipcMain.handle("load-flow-cases", async (_event, settings = {}) => {
 });
 
 async function loadCampaignCases(settings, campaignId) {
-    const campaignListResult = await fetchRunningFlowCaseCampaigns({
+    const result = await fetchFlowCases({
         apiDomain: settings.API_DOMAIN,
         authorization: settings.API_AUTHORIZATION,
         projectId: settings.PROJECT_ID,
+        campaignId,
+        environment: settings.ENVIRONMENT,
         timeoutMs: normalizeTimeoutMs(settings.API_TIMEOUT_SECONDS),
     });
-    const apiLog = () => sanitizeApiLog({request: campaignListResult.request, response: campaignListResult.response});
-    if (!campaignListResult.ok) return {...withApiLog(campaignListResult), apiLog: apiLog()};
+    if (!result.ok) return withApiLog(result);
 
     try {
-        const campaignEntry = campaignListResult.campaigns.find(
-            (entry) => String(entry?.campaign?.id ?? "").trim() === campaignId
-        );
-        if (!campaignEntry?.campaign) {
-            throw new Error(`Running campaign "${campaignId}" was not found.`);
-        }
-
-        const campaign = campaignEntry.campaign;
-        const copies = await loadCampaignCopies(settings, campaign);
-        const cases = validateTestCaseList(copies, "running campaign API");
-        const folder = resolveCampaignFolder(settings, campaign, cases);
-        const campaignSummary = summarizeRunningCampaign(campaignEntry);
+        const cases = validateTestCaseList(result.cases, "running campaign API");
+        const folder = resolveCampaignFolder(settings, null, cases);
+        const campaign = {
+            id: campaignId,
+            ...(String(settings.CAMPAIGN_NAME ?? "").trim() ? {name: String(settings.CAMPAIGN_NAME).trim()} : {}),
+        };
         await replaceCampaignCacheEntry({
             cachePath: testCasesCachePath(),
             campaignId,
-            campaign: campaignSummary.campaign,
+            campaign,
             folder,
             cases,
         });
 
         return {
             ok: true,
-            campaign: campaignSummary.campaign,
-            run: campaignSummary.run,
+            campaign,
             folder,
             cacheKey: `campaign:${campaignId}`,
             cases: cases.map(sanitizeCaseForUi),
             source: "api",
-            apiLog: apiLog(),
+            apiLog: sanitizeApiLog(result),
         };
     } catch (error) {
-        return {ok: false, message: error.message, timeout: false, apiLog: apiLog()};
+        return {ok: false, message: error.message, timeout: false, apiLog: sanitizeApiLog(result)};
     }
-}
-
-async function loadCampaignCopies(settings, campaign) {
-    if (!Array.isArray(campaign?.testcases) || campaign.testcases.length === 0) {
-        throw new Error("The selected running campaign does not contain any testcases.");
-    }
-
-    return Promise.all(campaign.testcases.map(async (copy, index) => {
-        const copyId = String(copy?.id ?? "").trim();
-        if (!copyId) throw new Error(`running campaign testcase ${index + 1} is missing its copy id.`);
-
-        if (isRunnableCaseShape(copy)) return {...copy, id: copyId};
-
-        const result = await fetchFlowCases({
-            apiDomain: settings.API_DOMAIN,
-            authorization: settings.API_AUTHORIZATION,
-            projectId: settings.PROJECT_ID,
-            testcaseId: copyId,
-            environment: settings.ENVIRONMENT,
-            timeoutMs: normalizeTimeoutMs(settings.API_TIMEOUT_SECONDS),
-        });
-        if (!result.ok) {
-            throw new Error(`Could not hydrate campaign testcase "${copyId}": ${result.message}`);
-        }
-
-        const hydrated = result.cases.find((candidate) => String(candidate?.id ?? "").trim() === copyId);
-        if (!hydrated) {
-            throw new Error(`Campaign testcase copy "${copyId}" was not returned by testcaseId lookup.`);
-        }
-        return {...hydrated, id: copyId};
-    }));
-}
-
-function isRunnableCaseShape(testCase) {
-    return Boolean(
-        testCase &&
-        typeof testCase === "object" &&
-        String(testCase.name ?? "").trim() &&
-        ((Array.isArray(testCase.actions) && testCase.actions.length > 0) || String(testCase.qaDescription ?? "").trim())
-    );
 }
 
 function summarizeRunningCampaign(entry, index = 0) {

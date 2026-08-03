@@ -769,12 +769,20 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     function updateFolderControls() {
         if (getTestCasesButton) {
-            getTestCasesButton.disabled = (!campaignSelect?.value && !folderSelect?.value) || apiRequestDepth > 0;
+            getTestCasesButton.disabled = !folderSelect?.value || apiRequestDepth > 0;
         }
         if (refreshCampaignsButton) refreshCampaignsButton.disabled = apiRequestDepth > 0;
         if (refreshFoldersButton) refreshFoldersButton.disabled = apiRequestDepth > 0;
         if (campaignSelect) campaignSelect.disabled = apiRequestDepth > 0;
         if (folderSelect) folderSelect.disabled = apiRequestDepth > 0;
+    }
+
+    function resetLoadedCaseSource() {
+        activeCampaignId = "";
+        activeCacheKey = "";
+        activeFolderId = "";
+        activeFolderPath = "";
+        renderCaseList([]);
     }
 
     function renderCampaigns(nextCampaigns = []) {
@@ -832,15 +840,24 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         updateFolderControls();
     }
 
-    async function loadFolders() {
+    async function loadFolders({campaignId = String(campaignSelect?.value || "").trim(), resetSelection = false} = {}) {
+        const normalizedCampaignId = String(campaignId ?? "").trim();
+        const requestSettings = currentSettings();
+        if (normalizedCampaignId) requestSettings.CAMPAIGN_ID = normalizedCampaignId;
+        else delete requestSettings.CAMPAIGN_ID;
+        if (resetSelection) {
+            if (folderSelect) folderSelect.value = "";
+            renderFolders([]);
+        }
         appendApiRequestLog("Load flow-case folders", {
-            apiDomain: currentSettings().API_DOMAIN,
-            projectId: currentSettings().PROJECT_ID,
-            timeoutSeconds: currentSettings().API_TIMEOUT_SECONDS,
+            apiDomain: requestSettings.API_DOMAIN,
+            projectId: requestSettings.PROJECT_ID,
+            timeoutSeconds: requestSettings.API_TIMEOUT_SECONDS,
+            ...(normalizedCampaignId ? {CAMPAIGN_ID: normalizedCampaignId} : {}),
         });
         beginApiRequest();
         try {
-            const response = await api.loadFlowCaseFolders(currentSettings());
+            const response = await api.loadFlowCaseFolders(requestSettings);
             appendApiResponseLog("Load flow-case folders", response);
             if (!response?.ok) {
                 showApiError(response);
@@ -861,6 +878,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     async function loadCampaigns() {
         const requestSettings = currentSettings();
+        const previousCampaignId = String(campaignSelect?.value || "").trim();
         appendApiRequestLog("Load running campaigns", {
             apiDomain: requestSettings.API_DOMAIN,
             projectId: requestSettings.PROJECT_ID,
@@ -881,6 +899,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 return response;
             }
             renderCampaigns(response.campaigns || []);
+            if (previousCampaignId && !campaignSelect?.value) {
+                resetLoadedCaseSource();
+                if (folderSelect) folderSelect.value = "";
+                void loadFolders({campaignId: "", resetSelection: true});
+            }
             return response;
         } catch (error) {
             const response = {ok: false, message: error.message, timeout: Boolean(error.timeout)};
@@ -896,20 +919,26 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     async function loadCasesFromSelection() {
         const selectedCampaign = campaignsById.get(campaignSelect?.value || "");
         const selectedFolder = foldersByPath.get(folderSelect?.value || "");
-        if (!selectedCampaign && !selectedFolder) {
-            setFormMessage("Please select a campaign or folder first.", "error");
-            return {ok: false, message: "Please select a campaign or folder first."};
+        if (!selectedFolder) {
+            const message = selectedCampaign
+                ? "Please select a folder from the selected campaign first."
+                : "Please select a folder first.";
+            setFormMessage(message, "error");
+            return {ok: false, message};
         }
 
-        const request = {
-            ...currentSettings(),
-            ...(selectedCampaign ? {CAMPAIGN_ID: String(selectedCampaign.campaign.id)} : {}),
-            ...(selectedFolder ? {
-                FOLDER_ID: String(selectedFolder.id),
-                FOLDER_NAME: selectedFolder.fullPath,
-                FOLDER_NAME_LABEL: selectedFolder.name,
-            } : {}),
-        };
+        const request = {...currentSettings()};
+        delete request.CAMPAIGN_ID;
+        delete request.CAMPAIGN_NAME;
+        Object.assign(request, selectedCampaign ? {
+            CAMPAIGN_ID: String(selectedCampaign.campaign.id),
+            CAMPAIGN_NAME: String(selectedCampaign.campaign.name || ""),
+        } : {}, {
+            FOLDER_ID: String(selectedFolder.id),
+            FOLDER_NAME: selectedFolder.fullPath,
+            FOLDER_NAME_LABEL: selectedFolder.name,
+        });
+        resetLoadedCaseSource();
         appendApiRequestLog("Load flow cases", request);
         beginApiRequest();
         try {
@@ -2054,9 +2083,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         applyCaseFilter(event.target?.value ?? testCaseSearchInput.value);
     });
     folderSelect?.addEventListener?.("change", () => {
+        resetLoadedCaseSource();
         updateFolderControls();
     });
     campaignSelect?.addEventListener?.("change", () => {
+        resetLoadedCaseSource();
+        void loadFolders({campaignId: String(campaignSelect?.value || "").trim(), resetSelection: true});
         updateFolderControls();
     });
     refreshCampaignsButton?.addEventListener?.("click", () => loadCampaigns());

@@ -14,10 +14,9 @@ Giá trị `platform` không phân biệt chữ hoa/thường ở request và đ
 | Nền tảng | `platform` | Dữ liệu thực thi dành cho bên thứ ba |
 | --- | --- | --- |
 | TV | `tv` | Ưu tiên `actions` (JSON actions của MyTV Auto Test); vẫn có thể dùng `script` nếu runner TV chạy script. |
-| Phone | `phone` | Dùng contract testcase chung và nội dung `script`. |
+| Phone | `phone` | Dùng chung cho Android và iOS; dùng contract testcase chung và nội dung `script`. |
 | Web | `web` | Dùng contract testcase chung và nội dung `script`. |
 | CMS | `cms` | Dùng contract testcase chung và nội dung `script`. |
-| iOS | `ios` | Dùng contract testcase chung và nội dung `script`. |
 
 `environment` là chiều phân loại độc lập với nền tảng và nhận `API` hoặc `UI`.
 
@@ -38,7 +37,10 @@ GET /api/v1/projects/1/flow-cases/by-folder?folderName=%2FAutomation%20testing&e
 ### 1.2. Phone
 
 - Lọc bằng `platform=phone`.
+- Bao gồm cả thiết bị Android và iOS; không còn platform `ios` riêng.
 - Không có field riêng ngoài contract chung. Runner nhận `script`, thực thi trên thiết bị/emulator và gửi `testResult` về FlowTest.
+- Request cũ gửi `ios`, `iphone` hoặc `ipad` được chuẩn hóa thành `phone`; dữ liệu
+  `flow_cases` cũ cũng được migration sang `phone` khi backend khởi động.
 
 ```http
 GET /api/v1/projects/1/flow-cases/by-folder?folderName=%2FMobile&environment=UI&platform=phone&status=active
@@ -60,15 +62,6 @@ GET /api/v1/projects/1/flow-cases/by-folder?folderName=%2FBoundary&environment=U
 
 ```http
 GET /api/v1/projects/1/flow-cases/by-folder?folderName=%2FCMS&environment=UI&platform=cms&status=active
-```
-
-### 1.5. iOS
-
-- Lọc bằng `platform=ios`.
-- Dùng cùng contract `script` và `testResult`; công cụ chạy iOS tự diễn giải nội dung script theo runner đã tích hợp.
-
-```http
-GET /api/v1/projects/1/flow-cases/by-folder?folderName=%2FMobile&environment=UI&platform=ios&status=active
 ```
 
 ## 2. Xác thực service-to-service
@@ -116,7 +109,21 @@ GET /api/v1/projects/{projectId}/flow-case-folders
 
 Mỗi node gồm `id`, `parentId`, `name`, `fullPath`, `children`. `fullPath` bắt đầu bằng `/` và được dùng lại làm `folderName`, `folderPath` hoặc `folderLink`.
 
-### 3.2. Lấy testcase theo thư mục hoặc ID
+Có thể truyền `campaignId` để chỉ lấy các thư mục chứa testcase bản sao thuộc chiến
+dịch và các thư mục cha cần thiết để giữ cấu trúc cây:
+
+```http
+GET /api/v1/projects/1/flow-case-folders?campaignId=12
+```
+
+| Query | Bắt buộc | Mô tả |
+| --- | --- | --- |
+| `campaignId` | Không | ID chiến dịch trong project hiện tại; phải là số nguyên dương. |
+
+Các nhánh không chứa testcase của chiến dịch bị loại khỏi response. Campaign không
+tồn tại hoặc sai project trả `404 Test campaign not found`.
+
+### 3.2. Lấy testcase theo thư mục, ID hoặc chiến dịch
 
 ```http
 GET /api/v1/projects/{projectId}/flow-cases/by-folder
@@ -125,12 +132,13 @@ GET /api/v1/projects/{projectId}/flow-cases/by-folder
 | Query | Bắt buộc | Mô tả |
 | --- | --- | --- |
 | `environment` | Có | `API` hoặc `UI`. |
-| `folderName` | Một trong hai | Full path thư mục; kết quả gồm cả các thư mục con. |
-| `testcaseId` | Một trong hai | ID testcase cần lấy. |
-| `platform` | Không | `tv`, `phone`, `web`, `cms`, `ios`. |
+| `folderName` | Một trong ba | Full path thư mục; kết quả gồm cả các thư mục con. |
+| `testcaseId` | Một trong ba | ID testcase cần lấy. |
+| `campaignId` | Một trong ba | ID chiến dịch; chỉ trả các testcase bản sao thuộc chiến dịch trong project hiện tại. |
+| `platform` | Không | `tv`, `phone`, `web`, `cms`; dùng `phone` cho cả Android và iOS. |
 | `status` | Không | `created`, `designing`, `scripting`, `active`, `tested`, `inactive`. |
 
-Chỉ truyền một trong `folderName` hoặc `testcaseId`. Kết quả luôn được sắp xếp theo ID testcase tăng dần và trả `script`, không trả graph `nodes`/`edges`.
+Chỉ truyền đúng một trong `folderName`, `testcaseId` hoặc `campaignId`. Kết quả luôn được sắp xếp theo ID testcase tăng dần và trả `script`, không trả graph `nodes`/`edges`.
 
 Ví dụ lấy các testcase đã mô tả để hệ thống thứ ba biên dịch hoặc chuẩn bị chạy:
 
@@ -143,6 +151,14 @@ Ví dụ lấy một testcase:
 ```http
 GET /api/v1/projects/1/flow-cases/by-folder?testcaseId=1713&environment=UI
 ```
+
+Ví dụ lấy toàn bộ testcase bản sao trong chiến dịch đã chọn, đồng thời lọc theo nền tảng và trạng thái:
+
+```http
+GET /api/v1/projects/1/flow-cases/by-folder?campaignId=12&environment=UI&platform=phone&status=active
+```
+
+`campaignId` có thể lấy từ `GET /test-campaigns/running`. Nếu chiến dịch không tồn tại trong project hiện tại, API trả `404 Test campaign not found`.
 
 Các field response quan trọng:
 
@@ -186,11 +202,11 @@ Các field tích hợp chính:
 | `preCondition` | Bắt buộc có key | Điều kiện; gửi `""` nếu chưa có. |
 | `qaDescription` | Bắt buộc có key | Mô tả QA; gửi `""` nếu chưa có. |
 | `expectedResult` | Bắt buộc có key | Kết quả mong đợi; gửi `""` nếu chưa có. |
-| `platform` | Bắt buộc | Một trong năm nền tảng ở mục 1. |
+| `platform` | Bắt buộc | Một trong bốn nền tảng ở mục 1. |
 | `environment` | Bắt buộc | `API` hoặc `UI`. |
 | `mode` | Khuyến nghị | `script` cho runner chạy script; mặc định là `visual`. |
 | `script` | Theo mode/status | Bắt buộc khi testcase ở `mode: script`, `status: active`. |
-| `actions` | Không | Danh sách JSON actions, chủ yếu dùng cho TV. |
+| `actions` | Không | Mảng JSON object mô tả các bước chạy, chủ yếu dùng cho TV; hỗ trợ cả tạo mới và cập nhật. |
 | `status` | Không | Mặc định `created`; khi tạo nhận đến `active`, không tạo trực tiếp với `tested`. |
 | `slug` | Không | Backend tự sinh slug duy nhất nếu bỏ trống. |
 
@@ -488,7 +504,7 @@ GET /api/v1/projects/{projectId}/flow-cases/{caseId}/debug-runs
 | --- | --- |
 | `400` | Giá trị folder/query không hợp lệ hoặc chức năng không hỗ trợ nền tảng. |
 | `403` | Thiếu/sai service token hoặc Bearer token. |
-| `404` | Không tìm thấy project, folder hoặc testcase. |
+| `404` | Không tìm thấy project, folder, testcase hoặc chiến dịch. |
 | `409` | Testcase chiến dịch chưa được chạy/đã kết thúc, sai `campaignId`, hoặc xung đột dữ liệu. |
 | `422` | Sai schema, thiếu `environment`, thiếu `testResult`, Pass/Fail không hợp lệ, script mode Active nhưng không có script, hoặc batch vượt 500 case. |
 
@@ -496,8 +512,10 @@ GET /api/v1/projects/{projectId}/flow-cases/{caseId}/debug-runs
 
 1. Gọi API cây thư mục để lấy `fullPath`.
 2. Gọi `GET /test-campaigns/running` và cho người dùng chọn chiến dịch cần test.
-3. Lấy testcase bản sao trong chiến dịch đã chọn, hoặc lấy testcase độc lập theo thư
-   mục, `environment`, `platform` và `status`.
+3. Có thể gọi `GET /flow-case-folders?campaignId={campaignId}` để lấy riêng cây thư
+   mục của chiến dịch; sau đó lấy testcase bản sao bằng
+   `GET /flow-cases/by-folder?campaignId={campaignId}&environment={API|UI}`. Với testcase
+   độc lập, tiếp tục lấy theo thư mục, `environment`, `platform` và `status`.
 4. Nếu hệ thống thứ ba tạo script, PATCH `mode`, `script`, `status: "active"`.
 5. Thực thi testcase bằng `script` hoặc `actions` theo nền tảng.
 6. Gửi `status: "tested"`, `testResult` và `campaignId` đã chọn; có thể bỏ

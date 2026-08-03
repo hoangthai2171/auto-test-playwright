@@ -93,12 +93,16 @@ Unsupported or ambiguous lines must fail with the case ID and original line;
 never guess arbitrary behavior or evaluate server-provided code.
 
 API folder, running-campaign, and case retrieval runs in the main process
-through the preload IPC bridge. Successful folder responses atomically replace
-their folder-ID cache entry; campaign responses use `campaign:<campaignId>` and
-are kept separate from startup folder restoration. Campaign copies are validated
-using their own `id`; `sourceFlowCaseId` is never substituted. The generic
-action executor receives either the local fixture source or a validated cache
-source and does not contain API or cache logic. Result submission uses
+through the preload IPC bridge. When a campaign is selected, folder retrieval
+passes `campaignId` to return only campaign-related folders and case retrieval
+uses the direct `campaignId` query; the selected folder remains the result
+context. When the campaign selector is empty, folder and case retrieval omit the
+campaign filter. Successful folder responses atomically replace their folder-ID
+cache entry; campaign responses use `campaign:<campaignId>` and are kept separate
+from startup folder restoration. Campaign copies are validated using their own
+`id`; `sourceFlowCaseId` is never substituted. The generic action executor
+receives either the local fixture source or a validated cache source and does not
+contain API or cache logic. Result submission uses
 `PATCH /api/v1/projects/{projectId}/flow-cases/by-folder` with a `folderPath`,
 per-case `tested`/`testResult` records, and `campaignId` on each item for
 campaign runs.
