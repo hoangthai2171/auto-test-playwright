@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1785597962.7362049,
-    "ast_hash": "6ce9fca5a20cf2878637d7739aa7e2d8",
+    "mtime": 1785815310.5845184,
+    "ast_hash": "3542794b50912bfa040f62e3f1403f99",
     "semantic_hash": ""
   },
   "playwright.config.js": {
@@ -640,8 +640,8 @@
     "semantic_hash": ""
   },
   "tests/unit/package-config.test.js": {
-    "mtime": 1785489641.7255726,
-    "ast_hash": "3970799892fbb9345ab45e91379fe29b",
+    "mtime": 1785815310.709566,
+    "ast_hash": "562cb722e41a9be5b800b91772702ce1",
     "semantic_hash": ""
   },
   "tests/unit/playwright-browser-installer.test.js": {
@@ -1225,8 +1225,8 @@
     "semantic_hash": ""
   },
   "docs/tinyworkers/20260804_test-case-maximum-time.md": {
-    "mtime": 1785813284.0251064,
-    "ast_hash": "0559cf7ec7c6ea140c47f4de4888cf8a",
+    "mtime": 1785813516.157301,
+    "ast_hash": "a87d1abceefd429a7e7f25529b6ba5cc",
     "semantic_hash": ""
   }
 }

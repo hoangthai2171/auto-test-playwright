@@ -351,8 +351,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_device_discovery",
-      "community": 145,
-      "community_name": "service-access.spec.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "device-discovery.js"
     },
     {
@@ -362,8 +362,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "app_device_discovery_classifiederror",
-      "community": 145,
-      "community_name": "service-access.spec.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "classifiederror()"
     },
     {
@@ -373,8 +373,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "app_device_discovery_requirereadonlyadapter",
-      "community": 145,
-      "community_name": "service-access.spec.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "requirereadonlyadapter()"
     },
     {
@@ -384,8 +384,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "app_device_discovery_redacttext",
-      "community": 145,
-      "community_name": "service-access.spec.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "redacttext()"
     },
     {
@@ -395,8 +395,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "app_device_discovery_readidentity",
-      "community": 145,
-      "community_name": "service-access.spec.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "readidentity()"
     },
     {
@@ -406,8 +406,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "app_device_discovery_readinstalledapp",
-      "community": 145,
-      "community_name": "service-access.spec.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "readinstalledapp()"
     },
     {
@@ -417,8 +417,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "app_device_discovery_createdevicediscovery",
-      "community": 145,
-      "community_name": "service-access.spec.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "createdevicediscovery()"
     },
     {
@@ -428,8 +428,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_device_lock",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 40,
+      "community_name": "artifacts.js",
       "norm_label": "device-lock.js"
     },
     {
@@ -439,8 +439,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_device_lock_createdevicelock",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 40,
+      "community_name": "artifacts.js",
       "norm_label": "createdevicelock()"
     },
     {
@@ -2881,8 +2881,8 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "app_lg_toolchain_manifest_trustedlgtoolchainbundle",
-      "community": 33,
-      "community_name": "Server-Driven MyTV Test Case Runner",
+      "community": 118,
+      "community_name": "lg-toolchain-installer.test.js",
       "norm_label": "trustedlgtoolchainbundle()"
     },
     {
@@ -2892,8 +2892,8 @@
       "source_location": "L158",
       "_origin": "ast",
       "id": "app_lg_toolchain_manifest_trustedlgtoolchainmanifest",
-      "community": 33,
-      "community_name": "Server-Driven MyTV Test Case Runner",
+      "community": 118,
+      "community_name": "lg-toolchain-installer.test.js",
       "norm_label": "trustedlgtoolchainmanifest()"
     },
     {
@@ -4267,8 +4267,8 @@
       "source_location": "L1045",
       "_origin": "ast",
       "id": "app_main_runlgcompatibilitycase",
-      "community": 145,
-      "community_name": "service-access.spec.js",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "runlgcompatibilitycase()"
     },
     {
@@ -4817,8 +4817,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "app_test_configuration_normalizeplayerchecktimeoutseconds",
-      "community": 34,
-      "community_name": "FakeElement",
+      "community": 129,
+      "community_name": "test-configuration.js",
       "norm_label": "normalizeplayerchecktimeoutseconds()"
     },
     {
@@ -5246,8 +5246,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "app_tv_runner_requireddependency",
-      "community": 40,
-      "community_name": "artifacts.js",
+      "community": 36,
+      "community_name": "selector-validation.js",
       "norm_label": "requireddependency()"
     },
     {
@@ -5433,8 +5433,8 @@
       "source_location": "L209",
       "_origin": "ast",
       "id": "app_tv_runner_createtvrunner",
-      "community": 40,
-      "community_name": "artifacts.js",
+      "community": 36,
+      "community_name": "selector-validation.js",
       "norm_label": "createtvrunner()"
     },
     {
@@ -7352,21 +7352,10 @@
       "norm_label": "output"
     },
     {
-      "label": "electronDist",
-      "file_type": "code",
-      "source_file": "package.json",
-      "source_location": "L53",
-      "_origin": "ast",
-      "id": "package_build_electrondist",
-      "community": 81,
-      "community_name": "tv-device-ipc.test.js",
-      "norm_label": "electrondist"
-    },
-    {
       "label": "mac",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L54",
+      "source_location": "L53",
       "_origin": "ast",
       "id": "package_build_mac",
       "community": 81,
@@ -7377,7 +7366,7 @@
       "label": "target",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L55",
+      "source_location": "L54",
       "_origin": "ast",
       "id": "package_mac_target",
       "community": 81,
@@ -7388,7 +7377,7 @@
       "label": "zip",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L55",
+      "source_location": "L54",
       "_origin": "ast",
       "id": "ref_zip",
       "community": 81,
@@ -7399,7 +7388,7 @@
       "label": "win",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L59",
+      "source_location": "L58",
       "_origin": "ast",
       "id": "package_build_win",
       "community": 81,
@@ -7410,7 +7399,7 @@
       "label": "target",
       "file_type": "code",
       "source_file": "package.json",
-      "source_location": "L60",
+      "source_location": "L59",
       "_origin": "ast",
       "id": "package_win_target",
       "community": 81,
@@ -7421,7 +7410,7 @@
       "label": "nsis",
       "file_type": "concept",
       "source_file": "package.json",
-      "source_location": "L60",
+      "source_location": "L59",
       "_origin": "ast",
       "id": "ref_nsis",
       "community": 81,
@@ -7974,8 +7963,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "lg-webos-case-runner-core.js"
     },
     {
@@ -7985,8 +7974,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_fs",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "fs"
     },
     {
@@ -7996,8 +7985,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_path",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "path"
     },
     {
@@ -8007,8 +7996,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_content_types",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "content_types"
     },
     {
@@ -8018,8 +8007,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_required",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "required()"
     },
     {
@@ -8029,8 +8018,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_createlgproductgatecase",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "createlgproductgatecase()"
     },
     {
@@ -8040,8 +8029,8 @@
       "source_location": "L31",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_withoutlgproductgatecredentials",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "withoutlgproductgatecredentials()"
     },
     {
@@ -8062,8 +8051,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_createlgproductgatemanifest",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "createlgproductgatemanifest()"
     },
     {
@@ -8073,8 +8062,8 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_summarizestep",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "summarizestep()"
     },
     {
@@ -8084,8 +8073,8 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_safefailurecode",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "safefailurecode()"
     },
     {
@@ -8095,8 +8084,8 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_finalizelgproductgatemanifest",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "finalizelgproductgatemanifest()"
     },
     {
@@ -8106,8 +8095,8 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_createlgproductgateevidencewriter",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "createlgproductgateevidencewriter()"
     },
     {
@@ -8117,8 +8106,8 @@
       "source_location": "L120",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_runlgproductgatewithevidence",
-      "community": 122,
-      "community_name": "lg-toolchain-npm-closure.js",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "runlgproductgatewithevidence()"
     },
     {
@@ -10372,8 +10361,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "mytv-session-fixture.js"
     },
     {
@@ -10383,8 +10372,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_base",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "base"
     },
     {
@@ -10394,8 +10383,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_chromium",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "{chromium}"
     },
     {
@@ -10405,8 +10394,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_path",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "path"
     },
     {
@@ -10416,8 +10405,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_fs",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "fs"
     },
     {
@@ -10427,8 +10416,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_gettestoptions",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "{gettestoptions}"
     },
     {
@@ -10438,8 +10427,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_viewport",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "viewport"
     },
     {
@@ -10460,8 +10449,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_applyviewportscale",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "applyviewportscale()"
     },
     {
@@ -10471,8 +10460,8 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_startpreviewstream",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "startpreviewstream()"
     },
     {
@@ -10482,8 +10471,8 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_waitforinteractivepage",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "waitforinteractivepage()"
     },
     {
@@ -10493,8 +10482,8 @@
       "source_location": "L119",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_waitforpageincontext",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "waitforpageincontext()"
     },
     {
@@ -10504,8 +10493,8 @@
       "source_location": "L136",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_isinteractivebrowserpage",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "isinteractivebrowserpage()"
     },
     {
@@ -10515,8 +10504,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_app_cleanup",
-      "community": 44,
-      "community_name": "run-test-case-tv.spec.js",
+      "community": 92,
+      "community_name": "defaultPackageVersion",
       "norm_label": "app-cleanup.js"
     },
     {
@@ -10526,8 +10515,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_app_cleanup_logoutapp",
-      "community": 44,
-      "community_name": "run-test-case-tv.spec.js",
+      "community": 92,
+      "community_name": "defaultPackageVersion",
       "norm_label": "logoutapp()"
     },
     {
@@ -11439,8 +11428,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_dom_scan",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "dom-scan.js"
     },
     {
@@ -11450,8 +11439,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_dom_scan_getselectorcontract",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "{getselectorcontract}"
     },
     {
@@ -11472,8 +11461,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_dom_snapshots",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "dom-snapshots.js"
     },
     {
@@ -11483,8 +11472,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_dom_snapshots_getselectorcontract",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "{getselectorcontract}"
     },
     {
@@ -11505,8 +11494,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "tests_lib_dom_snapshots_getdomsnapshotidentity",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "getdomsnapshotidentity()"
     },
     {
@@ -11516,8 +11505,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "tests_lib_dom_snapshots_sameidentity",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "sameidentity()"
     },
     {
@@ -11527,8 +11516,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "tests_lib_dom_snapshots_clone",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "clone()"
     },
     {
@@ -13826,8 +13815,8 @@
       "source_location": "L370",
       "_origin": "ast",
       "id": "tests_lib_selector_validation_getcontractlocator",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 10,
+      "community_name": "MyTV Auto Test",
       "norm_label": "getcontractlocator()"
     },
     {
@@ -13837,8 +13826,8 @@
       "source_location": "L384",
       "_origin": "ast",
       "id": "tests_lib_selector_validation_resolvecontractlocatorid",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 10,
+      "community_name": "MyTV Auto Test",
       "norm_label": "resolvecontractlocatorid()"
     },
     {
@@ -13969,8 +13958,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_target_action_context",
-      "community": 114,
-      "community_name": "selectors.js",
+      "community": 45,
+      "community_name": "remotePress",
       "norm_label": "target-action-context.js"
     },
     {
@@ -13980,8 +13969,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_target_action_context_targetactionerror",
-      "community": 114,
-      "community_name": "selectors.js",
+      "community": 45,
+      "community_name": "remotePress",
       "norm_label": "targetactionerror"
     },
     {
@@ -13991,8 +13980,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_lib_target_action_context_targetactionerror_constructor",
-      "community": 114,
-      "community_name": "selectors.js",
+      "community": 45,
+      "community_name": "remotePress",
       "norm_label": ".constructor()"
     },
     {
@@ -14002,8 +13991,8 @@
       "source_location": "L14",
       "_origin": "ast",
       "id": "tests_lib_target_action_context_objectorempty",
-      "community": 114,
-      "community_name": "selectors.js",
+      "community": 45,
+      "community_name": "remotePress",
       "norm_label": "objectorempty()"
     },
     {
@@ -14013,8 +14002,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "tests_lib_target_action_context_createtargetactioncontext",
-      "community": 114,
-      "community_name": "selectors.js",
+      "community": 45,
+      "community_name": "remotePress",
       "norm_label": "createtargetactioncontext()"
     },
     {
@@ -14035,8 +14024,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner",
-      "community": 45,
-      "community_name": "remotePress",
+      "community": 59,
+      "community_name": "tizen-poc-login.js",
       "norm_label": "target-action-runner.js"
     },
     {
@@ -14046,8 +14035,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_compiletestcase",
-      "community": 45,
-      "community_name": "remotePress",
+      "community": 59,
+      "community_name": "tizen-poc-login.js",
       "norm_label": "{compiletestcase}"
     },
     {
@@ -14057,8 +14046,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_requireactioncapabilities",
-      "community": 45,
-      "community_name": "remotePress",
+      "community": 59,
+      "community_name": "tizen-poc-login.js",
       "norm_label": "{requireactioncapabilities}"
     },
     {
@@ -14068,8 +14057,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_createtvmytvactionhandlers",
-      "community": 45,
-      "community_name": "remotePress",
+      "community": 59,
+      "community_name": "tizen-poc-login.js",
       "norm_label": "{createtvmytvactionhandlers}"
     },
     {
@@ -14079,8 +14068,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_action_capabilities",
-      "community": 45,
-      "community_name": "remotePress",
+      "community": 59,
+      "community_name": "tizen-poc-login.js",
       "norm_label": "action_capabilities"
     },
     {
@@ -14112,8 +14101,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_notifystep",
-      "community": 45,
-      "community_name": "remotePress",
+      "community": 61,
+      "community_name": "test-case-compiler.js",
       "norm_label": "notifystep()"
     },
     {
@@ -14123,8 +14112,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_runtargetactions",
-      "community": 45,
-      "community_name": "remotePress",
+      "community": 61,
+      "community_name": "test-case-compiler.js",
       "norm_label": "runtargetactions()"
     },
     {
@@ -14387,8 +14376,8 @@
       "source_location": "L423",
       "_origin": "ast",
       "id": "tests_lib_test_case_action_runner_captureplayercheckscreenshot",
-      "community": 34,
-      "community_name": "FakeElement",
+      "community": 24,
+      "community_name": "workflows.js",
       "norm_label": "captureplayercheckscreenshot()"
     },
     {
@@ -14706,8 +14695,8 @@
       "source_location": "L247",
       "_origin": "ast",
       "id": "tests_lib_test_case_schema_validatetestcaselist",
-      "community": 75,
-      "community_name": "tv-case-runner.js",
+      "community": 64,
+      "community_name": "test-case-cache.test.js",
       "norm_label": "validatetestcaselist()"
     },
     {
@@ -14783,8 +14772,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_text_utils",
-      "community": 92,
-      "community_name": "defaultPackageVersion",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "text-utils.js"
     },
     {
@@ -14794,8 +14783,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_text_utils_normalizevietnamesetext",
-      "community": 92,
-      "community_name": "defaultPackageVersion",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "normalizevietnamesetext()"
     },
     {
@@ -14805,8 +14794,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "tests_lib_text_utils_escaperegexp",
-      "community": 92,
-      "community_name": "defaultPackageVersion",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "escaperegexp()"
     },
     {
@@ -14816,8 +14805,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "tests_lib_text_utils_containstextpattern",
-      "community": 92,
-      "community_name": "defaultPackageVersion",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "containstextpattern()"
     },
     {
@@ -14827,8 +14816,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "tests_lib_text_utils_fuzzymatch",
-      "community": 92,
-      "community_name": "defaultPackageVersion",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "fuzzymatch()"
     },
     {
@@ -15399,8 +15388,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_assertinstalledappid",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "assertinstalledappid()"
     },
     {
@@ -15432,8 +15421,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_endpointredactionsecrets",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "endpointredactionsecrets()"
     },
     {
@@ -15454,8 +15443,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_defaultwait",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
       "norm_label": "defaultwait()"
     },
     {
@@ -15520,8 +15509,8 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_createwebosappiumsession",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "createwebosappiumsession()"
     },
     {
@@ -15740,8 +15729,8 @@
       "source_location": "L153",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_mytv_automation_createwebosmytvautomation",
-      "community": 50,
-      "community_name": "device-discovery.test.js",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "createwebosmytvautomation()"
     },
     {
@@ -16136,8 +16125,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "tests_lib_workflows_gettestoptions",
-      "community": 92,
-      "community_name": "defaultPackageVersion",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "gettestoptions()"
     },
     {
@@ -16180,8 +16169,8 @@
       "source_location": "L129",
       "_origin": "ast",
       "id": "tests_lib_workflows_closehomepopupsandverifyhome",
-      "community": 10,
-      "community_name": "MyTV Auto Test",
+      "community": 3,
+      "community_name": "mytv-session-fixture.js",
       "norm_label": "closehomepopupsandverifyhome()"
     },
     {
@@ -16983,8 +16972,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_locator_contracts_spec",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 10,
+      "community_name": "MyTV Auto Test",
       "norm_label": "locator-contracts.spec.js"
     },
     {
@@ -16994,8 +16983,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_locator_contracts_spec_fs",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 10,
+      "community_name": "MyTV Auto Test",
       "norm_label": "fs"
     },
     {
@@ -17005,8 +16994,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_locator_contracts_spec_path",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 10,
+      "community_name": "MyTV Auto Test",
       "norm_label": "path"
     },
     {
@@ -17016,8 +17005,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_locator_contracts_spec_test_expect",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 10,
+      "community_name": "MyTV Auto Test",
       "norm_label": "{test, expect}"
     },
     {
@@ -17027,8 +17016,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_locator_contracts_spec_getcontractlocator_resolvecontractlocatorid_activateverifiedtarget",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 10,
+      "community_name": "MyTV Auto Test",
       "norm_label": "{getcontractlocator, resolvecontractlocatorid, activateverifiedtarget}"
     },
     {
@@ -17225,8 +17214,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec",
-      "community": 126,
-      "community_name": "target-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "readiness-pacing.spec.js"
     },
     {
@@ -17236,8 +17225,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_fs",
-      "community": 126,
-      "community_name": "target-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "fs"
     },
     {
@@ -17247,8 +17236,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_path",
-      "community": 126,
-      "community_name": "target-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "path"
     },
     {
@@ -17258,8 +17247,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_test_expect",
-      "community": 126,
-      "community_name": "target-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "{test, expect}"
     },
     {
@@ -17269,8 +17258,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_api",
-      "community": 126,
-      "community_name": "target-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "api"
     },
     {
@@ -17280,8 +17269,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_helpers",
-      "community": 126,
-      "community_name": "target-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "helpers"
     },
     {
@@ -17291,8 +17280,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_workflows",
-      "community": 126,
-      "community_name": "target-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "workflows"
     },
     {
@@ -17302,8 +17291,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_setscreen",
-      "community": 126,
-      "community_name": "target-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "setscreen()"
     },
     {
@@ -17313,8 +17302,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_sethome",
-      "community": 126,
-      "community_name": "target-action-runner.test.js",
+      "community": 14,
+      "community_name": "preparePreview",
       "norm_label": "sethome()"
     },
     {
@@ -17852,8 +17841,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_app_cleanup_test",
-      "community": 44,
-      "community_name": "run-test-case-tv.spec.js",
+      "community": 92,
+      "community_name": "defaultPackageVersion",
       "norm_label": "app-cleanup.test.js"
     },
     {
@@ -17863,8 +17852,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_app_cleanup_test_test",
-      "community": 44,
-      "community_name": "run-test-case-tv.spec.js",
+      "community": 92,
+      "community_name": "defaultPackageVersion",
       "norm_label": "test"
     },
     {
@@ -17874,8 +17863,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_app_cleanup_test_assert",
-      "community": 44,
-      "community_name": "run-test-case-tv.spec.js",
+      "community": 92,
+      "community_name": "defaultPackageVersion",
       "norm_label": "assert"
     },
     {
@@ -17885,8 +17874,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_app_cleanup_test_logoutapp",
-      "community": 44,
-      "community_name": "run-test-case-tv.spec.js",
+      "community": 92,
+      "community_name": "defaultPackageVersion",
       "norm_label": "{logoutapp}"
     },
     {
@@ -17896,8 +17885,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "tests_unit_app_cleanup_test_processlogout",
-      "community": 44,
-      "community_name": "run-test-case-tv.spec.js",
+      "community": 92,
+      "community_name": "defaultPackageVersion",
       "norm_label": "processlogout()"
     },
     {
@@ -18523,8 +18512,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "tests_unit_device_discovery_test_reset",
-      "community": 46,
-      "community_name": "tv-runner.test.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "reset()"
     },
     {
@@ -18534,8 +18523,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_device_lock_test",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 40,
+      "community_name": "artifacts.js",
       "norm_label": "device-lock.test.js"
     },
     {
@@ -18545,8 +18534,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_device_lock_test_test",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 40,
+      "community_name": "artifacts.js",
       "norm_label": "test"
     },
     {
@@ -18556,8 +18545,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_device_lock_test_assert",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 40,
+      "community_name": "artifacts.js",
       "norm_label": "assert"
     },
     {
@@ -18567,8 +18556,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_device_lock_test_createdevicelock",
-      "community": 36,
-      "community_name": "selector-validation.js",
+      "community": 40,
+      "community_name": "artifacts.js",
       "norm_label": "{createdevicelock}"
     },
     {
@@ -20712,8 +20701,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test",
-      "community": 33,
-      "community_name": "Server-Driven MyTV Test Case Runner",
+      "community": 114,
+      "community_name": "selectors.js",
       "norm_label": "lg-toolchain-manifest.test.js"
     },
     {
@@ -20723,8 +20712,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_test",
-      "community": 33,
-      "community_name": "Server-Driven MyTV Test Case Runner",
+      "community": 114,
+      "community_name": "selectors.js",
       "norm_label": "test"
     },
     {
@@ -20734,8 +20723,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_assert",
-      "community": 33,
-      "community_name": "Server-Driven MyTV Test Case Runner",
+      "community": 114,
+      "community_name": "selectors.js",
       "norm_label": "assert"
     },
     {
@@ -20745,8 +20734,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_createlgtoolchainmanifest_trustedlgcliarchive_trustedchromedriverarchive_trustedlgtoolchainbundle_trustedlgtoolchainmanifest",
-      "community": 33,
-      "community_name": "Server-Driven MyTV Test Case Runner",
+      "community": 114,
+      "community_name": "selectors.js",
       "norm_label": "{createlgtoolchainmanifest, trustedlgcliarchive, trustedchromedriverarchive, trustedlgtoolchainbundle, trustedlgtoolchainmanifest}"
     },
     {
@@ -20756,8 +20745,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_sha",
-      "community": 33,
-      "community_name": "Server-Driven MyTV Test Case Runner",
+      "community": 114,
+      "community_name": "selectors.js",
       "norm_label": "sha"
     },
     {
@@ -20767,8 +20756,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_automaticartifact",
-      "community": 33,
-      "community_name": "Server-Driven MyTV Test Case Runner",
+      "community": 114,
+      "community_name": "selectors.js",
       "norm_label": "automaticartifact()"
     },
     {
@@ -20778,8 +20767,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_fixedmanifest",
-      "community": 33,
-      "community_name": "Server-Driven MyTV Test Case Runner",
+      "community": 114,
+      "community_name": "selectors.js",
       "norm_label": "fixedmanifest()"
     },
     {
@@ -21130,8 +21119,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_navigation_test",
-      "community": 151,
-      "community_name": "package-config.test.js",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "navigation.test.js"
     },
     {
@@ -21141,8 +21130,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_navigation_test_test",
-      "community": 151,
-      "community_name": "package-config.test.js",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "test"
     },
     {
@@ -21152,8 +21141,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_navigation_test_assert",
-      "community": 151,
-      "community_name": "package-config.test.js",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "assert"
     },
     {
@@ -21163,8 +21152,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_navigation_test_navigation",
-      "community": 151,
-      "community_name": "package-config.test.js",
+      "community": 38,
+      "community_name": "lg-webos-case-runner-core.test.js",
       "norm_label": "navigation"
     },
     {
@@ -21966,8 +21955,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_target_action_context_test",
-      "community": 114,
-      "community_name": "selectors.js",
+      "community": 45,
+      "community_name": "remotePress",
       "norm_label": "target-action-context.test.js"
     },
     {
@@ -21977,8 +21966,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_target_action_context_test_test",
-      "community": 114,
-      "community_name": "selectors.js",
+      "community": 45,
+      "community_name": "remotePress",
       "norm_label": "test"
     },
     {
@@ -21988,8 +21977,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_target_action_context_test_assert",
-      "community": 114,
-      "community_name": "selectors.js",
+      "community": 45,
+      "community_name": "remotePress",
       "norm_label": "assert"
     },
     {
@@ -21999,8 +21988,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_target_action_context_test_targetactionerror_createtargetactioncontext_requireactioncapabilities",
-      "community": 114,
-      "community_name": "selectors.js",
+      "community": 45,
+      "community_name": "remotePress",
       "norm_label": "{\n  targetactionerror,\n  createtargetactioncontext,\n  requireactioncapabilities,\n}"
     },
     {
@@ -22010,8 +21999,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "tests_unit_target_action_context_test_presskey",
-      "community": 114,
-      "community_name": "selectors.js",
+      "community": 45,
+      "community_name": "remotePress",
       "norm_label": "presskey()"
     },
     {
@@ -22582,8 +22571,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_text_utils_test",
-      "community": 92,
-      "community_name": "defaultPackageVersion",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "text-utils.test.js"
     },
     {
@@ -22593,8 +22582,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_text_utils_test_test",
-      "community": 92,
-      "community_name": "defaultPackageVersion",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "test"
     },
     {
@@ -22604,8 +22593,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_text_utils_test_assert",
-      "community": 92,
-      "community_name": "defaultPackageVersion",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "assert"
     },
     {
@@ -22615,8 +22604,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_text_utils_test_normalizevietnamesetext_fuzzymatch",
-      "community": 92,
-      "community_name": "defaultPackageVersion",
+      "community": 107,
+      "community_name": "device-profile-service.js",
       "norm_label": "{\n  normalizevietnamesetext,\n  fuzzymatch,\n}"
     },
     {
@@ -22791,8 +22780,8 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "tests_unit_tizen_poc_semantic_test_opensearch",
-      "community": 50,
-      "community_name": "device-discovery.test.js",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "opensearch()"
     },
     {
@@ -23484,8 +23473,8 @@
       "source_location": "L215",
       "_origin": "ast",
       "id": "tests_unit_tv_runner_test_start",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "start()"
     },
     {
@@ -23517,8 +23506,8 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "tests_unit_tv_runner_test_cleanup",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "cleanup()"
     },
     {
@@ -23528,8 +23517,8 @@
       "source_location": "L219",
       "_origin": "ast",
       "id": "tests_unit_tv_runner_test_close",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "close()"
     },
     {
@@ -23770,8 +23759,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "tests_unit_tv_toolchain_test_resolve",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 11,
+      "community_name": "playAllItemsInFirstRow",
       "norm_label": "resolve()"
     },
     {
@@ -23924,8 +23913,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test",
-      "community": 50,
-      "community_name": "device-discovery.test.js",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "webos-mytv-automation.test.js"
     },
     {
@@ -23935,8 +23924,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_test",
-      "community": 50,
-      "community_name": "device-discovery.test.js",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "test"
     },
     {
@@ -23946,8 +23935,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_assert",
-      "community": 50,
-      "community_name": "device-discovery.test.js",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "assert"
     },
     {
@@ -23957,8 +23946,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_createwebosmytvautomation",
-      "community": 50,
-      "community_name": "device-discovery.test.js",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "{createwebosmytvautomation}"
     },
     {
@@ -23968,8 +23957,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_createautomation",
-      "community": 50,
-      "community_name": "device-discovery.test.js",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "createautomation()"
     },
     {
@@ -43289,17 +43278,6 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L53",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "package_build",
-      "target": "package_build_electrondist",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "package.json",
       "source_location": "L41",
       "weight": 1.0,
       "_origin": "ast",
@@ -43311,7 +43289,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L54",
+      "source_location": "L53",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_build",
@@ -43333,7 +43311,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L59",
+      "source_location": "L58",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_build",
@@ -43439,7 +43417,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L55",
+      "source_location": "L54",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_build_mac",
@@ -43450,7 +43428,7 @@
       "relation": "extends",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L55",
+      "source_location": "L54",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -43462,7 +43440,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L60",
+      "source_location": "L59",
       "weight": 1.0,
       "_origin": "ast",
       "source": "package_build_win",
@@ -43473,7 +43451,7 @@
       "relation": "extends",
       "confidence": "EXTRACTED",
       "source_file": "package.json",
-      "source_location": "L60",
+      "source_location": "L59",
       "weight": 1.0,
       "context": "import",
       "_origin": "ast",
@@ -79330,5 +79308,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "cc0b83ceafe408d6932554c780dd37a5c74cd544"
+  "built_at_commit": "d42160e782450b153f6e850680153b7a1ae64ed9"
 }

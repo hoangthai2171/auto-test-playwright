@@ -50,7 +50,6 @@
     "directories": {
       "output": "dist"
     },
-    "electronDist": "node_modules/electron/dist",
     "mac": {
       "target": [
         "zip"

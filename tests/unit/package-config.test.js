@@ -22,6 +22,10 @@ test("Electron packaging excludes the browser cache while Playwright stays pinne
   assert.equal(packageJson.build.extraResources, undefined);
 });
 
+test("cross-platform packaging does not force the host-only Electron distribution", () => {
+  assert.equal(packageJson.build.electronDist, undefined);
+});
+
 test("the LG compatibility maintainer command is available without becoming a packaged runtime dependency", () => {
   assert.equal(packageJson.scripts["tv:compatibility:lg"], "node scripts/real-tv-appium/lg-device-compatibility-check.js");
   assert.ok(!packageJson.build.files.includes("scripts/**/*"));

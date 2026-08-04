@@ -333,9 +333,12 @@ Browser binaries are not packaged. Each desktop user configures the
 project-pinned Chromium after installation through **Settings → SDK
 configuration → Browser configuration**.
 
-### macOS
+### Build commands
 
-Build the macOS zip:
+The target platform is selected by the command. Unless an architecture is
+specified explicitly, electron-builder uses the current host architecture.
+
+Build the macOS zip (ARM64 on Apple Silicon, x64 on Intel macOS):
 
 ```bash
 npm run app:build:mac
@@ -347,14 +350,28 @@ Build a DMG when local signing and disk-image tooling are available:
 npm run app:build:mac:dmg
 ```
 
-### Windows
-
-Build on Windows or Windows CI:
+Build the Windows installer using the current host architecture:
 
 ```bash
 npm install
 npm run app:build:win
 ```
+
+On Apple Silicon, `npm run app:build:win` produces a Windows ARM64 installer.
+To build a Windows x64 installer explicitly, use:
+
+```bash
+npx electron-builder --win --x64
+```
+
+In summary:
+
+| Command | Output |
+| --- | --- |
+| `npm run app:build:mac` | macOS ZIP for the host architecture |
+| `npm run app:build:mac:dmg` | macOS DMG for the host architecture |
+| `npm run app:build:win` | Windows NSIS installer for the host architecture |
+| `npx electron-builder --win --x64` | Windows x64 NSIS installer |
 
 The app obtains the host-appropriate reviewed Chromium only through the
 post-install Browser configuration flow.
