@@ -93,6 +93,9 @@ const SELECTOR_CONTRACTS = Object.freeze({
       "channel_name",
       "service_title",
       "alt",
+      "content_id",
+      "content-id",
+      "data-content-id",
     ],
     excludeIdPrefixes: ["menu_", "key-"],
     alternatives: [

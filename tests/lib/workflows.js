@@ -437,7 +437,9 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
   const batchBudget = createBatchBudget({
     itemLimit: options.itemLimit,
     maxItems: options.maxItems,
-    runtimeBudgetMs: options.runtimeBudgetMs,
+    runtimeBudgetMs: options.unlimitedRuntime === true && options.runtimeBudgetMs === undefined
+      ? Number.POSITIVE_INFINITY
+      : options.runtimeBudgetMs,
   });
 
   const results = [];
@@ -471,17 +473,21 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
     const label = item.title || `Item ${index + 1}`;
 
     await test.step(`Play first-row item ${index + 1}: ${label}`, async () => {
+      const contentId = getContentId(item);
       const result = {
         index: index + 1,
-        id: item.id,
+        id: item.id || "",
+        contentId,
         name: label,
         title: label,
-        poster: item.poster,
+        poster: item.poster || "",
         status: "unknown",
+        result: "fail",
         errorPopup: "",
         screenshot: "",
         screenshotDataUrl: "",
       };
+      let cleanupError = null;
 
       try {
         await expectFocusedContent(page);
@@ -489,42 +495,62 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
           body: JSON.stringify(item, null, 2),
           contentType: "application/json",
         });
-    await openFocusedContentForPlayback(page, testInfo);
+        await openFocusedContentForPlayback(page, testInfo, item);
 
         const playback = await inspectPlaybackAfterWait(page, waitSeconds);
         result.status = playback.ok ? "playable" : "failed";
+        result.result = playback.ok ? "pass" : "fail";
         result.errorPopup = playback.popup?.text || playback.playerState?.reason || "";
         result.playerState = playback.playerState;
 
-        if (!playback.ok) {
-          const screenshotName = `${safeArtifactName(`first-row-${index + 1}-${label}`)}.png`;
-          const screenshot = await page.screenshot({ fullPage: false });
-          await testInfo.attach(screenshotName, {
-            body: screenshot,
-            contentType: "image/png",
-          });
-          result.screenshot = screenshotName;
-          result.screenshotDataUrl = imageDataUrl(screenshot);
-        }
+        // Keep evidence for successful players as well as failures.  For a
+        // poster that never opened a player this is the error/popup state,
+        // which is the most useful diagnostic available for that item.
+        await captureRowPlaybackScreenshot(page, testInfo, result, label);
       } catch (error) {
         result.status = "failed";
+        result.result = "fail";
         result.errorPopup = error?.message || String(error);
-          const screenshotName = `${safeArtifactName(`first-row-${index + 1}-${label}-error`)}.png`;
-        const screenshot = await page.screenshot({ fullPage: false });
-        await testInfo.attach(screenshotName, {
-          body: screenshot,
-          contentType: "image/png",
-        });
-        result.screenshot = screenshotName;
-        result.screenshotDataUrl = imageDataUrl(screenshot);
-      } finally {
-        results.push(result);
+        await captureRowPlaybackScreenshot(page, testInfo, result, label, "error");
+      }
+
+      try {
         await returnToFirstRowContent(page, {
           item,
           rowY: firstRowY,
         });
+      } catch (error) {
+        // A poster-level failure must not erase the evidence already
+        // collected or abort the rest of the row.  The row-return helper
+        // dismisses recognized playback error dialogs; this catch records an
+        // unrecognized cleanup problem and lets the caller decide whether
+        // the row is still safely recoverable.
+        cleanupError = error;
+        result.status = "failed";
+        result.result = "fail";
+        result.cleanupError = error?.message || String(error);
+        if (!result.errorPopup) result.errorPopup = result.cleanupError;
+        if (!result.screenshotDataUrl) {
+          await captureRowPlaybackScreenshot(page, testInfo, result, label, "cleanup-error");
+        }
+      }
+
+      result.result = result.status === "playable" ? "pass" : "fail";
+      results.push(result);
+
+      if (cleanupError) {
+        const rowReady = await isFocusedContentItem(page).catch(() => false);
+        const rowBoundaryReady = rowReady && (
+          await isFocusedNearRow(page, firstRowY).catch(() => false) ||
+          Boolean(item?.id && await isFocusedOnContentItem(page, item).catch(() => false))
+        );
+        if (!rowBoundaryReady) {
+          stopReason = "row-recovery-failed";
+        }
       }
     });
+
+    if (stopReason === "row-recovery-failed") break;
 
     const movedToNext = await moveToNextFirstRowContent(page, {
       previousSignature: signature,
@@ -557,10 +583,10 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
         ? failedCount + " row content item(s) failed to play"
         : "At least one row content item should play successfully"
     );
-    error.details = {results, budget: budgetReport};
+    error.details = {results, budget: budgetReport, exhaustive: options.unlimitedRuntime === true};
     throw error;
   }
-  return {results, budget: budgetReport};
+  return {type: "play_row", results, budget: budgetReport};
 }
 
 async function playItemsInRow(page, testInfo, options = {}) {
@@ -573,7 +599,40 @@ async function playItemsInRow(page, testInfo, options = {}) {
     ...options,
     rowIndex,
     itemLimit: count,
+    unlimitedRuntime: options.count === undefined && options.runtimeBudgetMs === undefined,
   });
+}
+
+function getContentId(item) {
+  return String(
+    item?.contentId ||
+    item?.attributes?.content_id ||
+    item?.attributes?.["content-id"] ||
+    item?.attributes?.["data-content-id"] ||
+    ""
+  ).trim();
+}
+
+async function captureRowPlaybackScreenshot(page, testInfo, result, label, suffix = "player") {
+  if (result.screenshotDataUrl) return;
+
+  try {
+    const screenshotName = `${safeArtifactName(`first-row-${result.index}-${label}-${suffix}`)}.png`;
+    const screenshot = await page.screenshot({fullPage: false});
+    if (testInfo?.attach) {
+      await testInfo.attach(screenshotName, {
+        body: screenshot,
+        contentType: "image/png",
+      });
+    }
+    result.screenshot = screenshotName;
+    result.screenshotDataUrl = imageDataUrl(screenshot);
+  } catch (error) {
+    result.screenshotError = error?.message || String(error);
+    result.status = "failed";
+    result.result = "fail";
+    if (!result.errorPopup) result.errorPopup = result.screenshotError;
+  }
 }
 
 async function playVisibleContentByName(page, testInfo, options = {}) {
@@ -1951,7 +2010,7 @@ async function collectMovieSearchCandidates(page) {
   });
 }
 
-contentRows.configureContentRows({remotePress,remoteFocusById,remoteFocusByText,getFocusedState,getPlayerState,hasVisibleText,expectFocusedText,activateVerifiedTarget});
+contentRows.configureContentRows({remotePress,remoteFocusById,remoteFocusByText,getFocusedState,getPlayerState,hasVisibleText,expectFocusedText,activateVerifiedTarget,observePlayerOrDetailState:playback.observePlayerOrDetailState});
 artifacts.configureArtifacts({getFocusedState,collectMovieSearchCandidates,collectSearchResultCandidates});
 
 

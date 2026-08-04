@@ -295,6 +295,20 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
   if (!kind) return undefined;
 
   if (kind === "player") {
+    const rowPlaybackStep = [...(steps || [])]
+      .reverse()
+      .find((step) => step?.action === "play_row" && step?.status === "passed" &&
+        step?.result?.type === "play_row");
+    if (rowPlaybackStep) {
+      return {
+        type: "row_playback",
+        verified: "All selected row posters were checked and returned to the row",
+        itemCount: Array.isArray(rowPlaybackStep.result.results)
+          ? rowPlaybackStep.result.results.length
+          : 0,
+      };
+    }
+
     const timeoutSeconds = normalizePlayerCheckTimeoutSeconds(playerCheckTimeoutSeconds);
     let playerScreenshotDataUrl = "";
     try {

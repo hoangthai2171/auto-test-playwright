@@ -150,6 +150,7 @@ async function verifyFocusedTarget(page, options = {}) {
   const focusedLabel = normalizeVietnameseText([focused.text, focused.label].filter(Boolean).join(" "));
   const targetLabel = normalizeVietnameseText(expectedLabel);
   const hasTargetIdentity = Boolean(expectedId || expectedLabel);
+  const exactIdMatch = Boolean(expectedId && focused.id === expectedId);
   const focusedContainsCandidate = Boolean(candidate?.id) && await page.evaluate(({targetId, focusSelectors}) => {
     const target = document.getElementById(targetId);
     const focused = findFocusedElement(focusSelectors);
@@ -182,12 +183,15 @@ async function verifyFocusedTarget(page, options = {}) {
       return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden";
     }
   }, {targetId: candidate?.id, focusSelectors: FOCUS_SELECTORS});
-  const idMatches = !expectedId || focused.id === expectedId || focused.id.includes(expectedId) || focusedContainsCandidate;
-  const labelMatches = !targetLabel || fuzzyLabelMatch(focusedLabel, targetLabel) ||
+  const idMatches = !expectedId || exactIdMatch || focused.id.includes(expectedId) || focusedContainsCandidate;
+  // A visible poster can legitimately have no text label. When the caller
+  // supplied the exact focused element ID, that trusted identity is stronger
+  // than a stale/unrelated label candidate left behind during carousel reflow.
+  const labelMatches = exactIdMatch || !targetLabel || fuzzyLabelMatch(focusedLabel, targetLabel) ||
     (focusedContainsCandidate && fuzzyLabelMatch(candidate?.normalizedLabel || "", targetLabel));
-  const candidateIsClear = !hasTargetIdentity || !candidate || candidate.score >= matchOptions.threshold;
+  const candidateIsClear = exactIdMatch || !hasTargetIdentity || !candidate || candidate.score >= matchOptions.threshold;
   const relatedLabelNode = focusedContainsCandidate && candidate?.id && candidate.id !== focused.id;
-  const candidateIsUnambiguous = !hasTargetIdentity || !candidate || relatedLabelNode || candidate.candidateCount <= 1 || candidate.scoreMargin >= matchOptions.margin;
+  const candidateIsUnambiguous = exactIdMatch || !hasTargetIdentity || !candidate || relatedLabelNode || candidate.candidateCount <= 1 || candidate.scoreMargin >= matchOptions.margin;
   const valid = Boolean(focused.id || focused.text) && idMatches && labelMatches && candidateIsClear && candidateIsUnambiguous;
 
   return {

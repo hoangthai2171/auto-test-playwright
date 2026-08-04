@@ -140,6 +140,8 @@ async function attachFirstRowPlaybackReport(testInfo, results) {
   return attachPlaybackBatchReport(testInfo, results, {
     prefix: "first-row-playback",
     heading: "First-row playback results",
+    includeScreenshot: true,
+    screenshotHeading: "Player/error screenshot",
   });
 }
 
@@ -154,9 +156,10 @@ function renderPlaybackResultsHtml(results, options = {}) {
           <td>${escapeHtml(String(item.index))}</td>
           <td>${item.poster ? `<img class="poster" src="${escapeHtml(item.poster)}" alt="" />` : ""}</td>
           <td>${escapeHtml(item.name || item.title)}</td>
-          <td class="${isSuccessfulPlaybackStatus(item.status) ? "ok" : "failed"}">${escapeHtml(item.status)}</td>
+          <td>${escapeHtml(item.contentId || "")}</td>
+          <td class="${isSuccessfulPlaybackStatus(item.status) ? "ok" : "failed"}">${escapeHtml(item.result || item.status || (isSuccessfulPlaybackStatus(item.status) ? "pass" : "fail"))}</td>
           ${includeScreenshot ? `<td>${renderPlaybackScreenshotCell(item)}</td>` : ""}
-          <td>${renderPlaybackErrorCell(item)}</td>
+          <td>${renderPlaybackErrorCell(item, {includeScreenshot})}</td>
         </tr>`
     )
     .join("");
@@ -187,7 +190,8 @@ function renderPlaybackResultsHtml(results, options = {}) {
         <th>#</th>
         <th>Poster</th>
         <th>Tên nội dung</th>
-        <th>Trạng thái</th>
+        <th>Content ID</th>
+        <th>Kết quả</th>
         ${includeScreenshot ? `<th>${escapeHtml(screenshotHeading)}</th>` : ""}
         <th>Lỗi</th>
       </tr>
@@ -214,7 +218,7 @@ function renderPlaybackScreenshotCell(item) {
     </div>`;
 }
 
-function renderPlaybackErrorCell(item) {
+function renderPlaybackErrorCell(item, options = {}) {
   const errorText = item.errorPopup || "";
   const screenshot = item.screenshotDataUrl || "";
   const screenshotName = item.screenshot || "";
@@ -224,7 +228,7 @@ function renderPlaybackErrorCell(item) {
   return `
     <div class="error-cell">
       ${errorText ? `<div class="error-text">${escapeHtml(errorText)}</div>` : ""}
-      ${
+      ${options.includeScreenshot ? "" :
         screenshot
           ? `<img class="error-screenshot" src="${escapeHtml(screenshot)}" alt="${escapeHtml(`Screenshot lỗi ${item.name || item.title}`)}" />`
           : ""

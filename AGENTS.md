@@ -199,7 +199,9 @@ The supported action allowlist is:
 - `play_search_result`: plays the result currently focused by `search_content`.
 - `play_row`: requires either a 1-based `rowIndex` or a `rowName`; optional
   positive `count` limits the number of items, and omitted `count` requests all
-  items within the existing batch runtime budget.
+  reachable items in the selected row. Omitted-count row playback is bounded
+  by row exhaustion rather than the shared short batch runtime budget; every
+  attempted poster is recorded and a failed poster does not stop later items.
 - `play_home_trailers`: Browser-only parameterless action that tests every
   distinct Home promotional trailer through remote `Xem ngay` → player or
   Album-detail check → Back navigation. It reads the trailer name from the
@@ -343,7 +345,10 @@ Electron runs write the user-facing compact report to
 `<userData>/user-report/test-report.html`, with one row per selected test and a
 `Details` row for every test. The row shows the expected result; passed tests
 also show their final viewport screenshot, while failed tests show failed item
-name, poster, and screenshot.
+name, poster, and screenshot. `play_row` details list every attempted poster
+with its name, DOM ID, `content_id`, poster, player/error screenshot, pass/fail
+result, and error text when present; the testcase remains failed when any row
+poster fails.
 The Playwright HTML report remains under `<userData>/playwright-report` for
 debugging and is not the user-facing report.
 
@@ -353,6 +358,14 @@ debugging and is not the user-facing report.
 rows using dimensions, vertical grouping, headings, and focus state. Preserve
 the existing batch-budget behavior and row-return navigation when changing
 legacy playback helpers.
+
+After the shared player/detail close boundary is detected, row playback waits
+1.5 seconds for the previous screen's poster geometry to finish re-rendering
+before refocusing the current item or pressing Right for the next poster.
+
+Browser case runs use a 1920x1080 logical Playwright viewport, matching the
+MyTV TV UI layout. Electron may render that logical surface at a smaller
+visual scale inside the preview, but it does not reduce the document viewport.
 
 ### Preview and CDP
 

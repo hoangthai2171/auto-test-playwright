@@ -111,7 +111,10 @@ API folder is available.
 7. Click `Run Selected (N)` and watch the cases execute sequentially in the logs and optional browser preview.
 8. Open the test report after the batch finishes. Use `Details` for any test to
    see its expected result; passed tests also show their final viewport
-   screenshot, while failed tests show the failed item name, poster, and screenshot.
+   screenshot. `play_row` details list every tested poster with its name,
+   content ID, poster, player/error screenshot, pass/fail result, and any error;
+   one failed poster makes the overall testcase fail while later posters are
+   still tested.
 
 The renderer captures checked case IDs in table order and sends one
 `TEST_CASE_ID`, `APP_URL`, player-check timeout, preview-settings, and the
@@ -188,6 +191,14 @@ initial action vocabulary is:
 - `press_back`
 - `wait_for_ready`
 
+`play_row` accepts a 1-based `rowIndex` or a `rowName`. An optional positive
+`count` limits the run; when omitted, the Browser runner continues until the
+selected carousel reaches its last reachable poster. Each poster is activated
+through the remote Enter path, checked independently, and returned to the row
+before the next poster is focused. A recognized playback/unsupported-device
+dialog is recorded as that poster's failure and dismissed safely so the row
+can continue.
+
 When `focus_text` immediately follows `focus_row` for Home `Thể loại`, it
 scans the complete reachable service carousel, moving right and re-reading the
 row until it finds the requested poster. It never falls back to a matching
@@ -240,9 +251,10 @@ Playback actions use only content currently visible in the TV page's rows:
 
 `play_content` verifies the selected item is playing. `play_row` opens each
 item, waits for playback, uses the shared adaptive player/detail-close helper to
-return to the row, and continues after individual failures. Its `rowIndex` is
-1-based; omit `count` to request all items. The row playback JSON/HTML report
-includes the name and poster of each attempted item, including failed items.
+return to the row, waits 1.5 seconds for the carousel to re-render, and
+continues after individual failures. Its `rowIndex` is 1-based; omit `count` to
+request all items. The row playback JSON/HTML report includes the name and
+poster of each attempted item, including failed items.
 
 `play_home_trailers` tests every distinct promotional trailer shown on Home. It
 uses remote `Xem ngay` → player/Album-detail check → Back navigation so
@@ -353,6 +365,11 @@ No Chromium archive is included in macOS or Windows artifacts. The
 `npm run browsers:install` command remains only for legacy terminal development
 and is not used by the Electron app.
 
+Browser case runs use a 1920x1080 logical Playwright viewport, matching the
+MyTV TV layout. The Electron preview can display that surface at a smaller
+visual scale when the app window is smaller; that visual scale does not change
+the page's logical viewport or carousel behavior.
+
 ## Reports and Artifacts
 
 Terminal runs use the Playwright HTML reporter configured in
@@ -360,7 +377,8 @@ Terminal runs use the Playwright HTML reporter configured in
 player state, focus state, and search or movie candidate details. Electron runs
 show a compact test report from `userData/user-report/test-report.html`,
 whose `Details` rows show the expected result and final viewport screenshot for
-passed tests; the full Playwright HTML report remains under
+passed tests. `play_row` details also show every tested poster, content ID,
+pass/fail result, and player/error screenshot. The full Playwright HTML report remains under
 `userData/playwright-report` for debugging.
 
 ## Common Issues

@@ -10,6 +10,7 @@ const DEFAULT_CLOSE_BACK_DELAY_MS=2500;
 const DEFAULT_CLOSE_BOUNDARY_TIMEOUT_MS=10000;
 const DEFAULT_CLOSE_BOUNDARY_POLLING_MS=250;
 const DEFAULT_MAX_CLOSE_BACK_PRESSES=2;
+const MAX_CLOSE_BACK_PRESSES=6;
 function safeArtifactName(value){return String(value).toLowerCase().replace(/[^a-z0-9]+/g,"-").replace(/^-|-$/g,"")||"artifact";}
 async function assertChannelPlayback(page, testInfo, options) {
   await assertPlayback(page, testInfo, {
@@ -321,6 +322,7 @@ async function waitForCloseBoundary(page, observeBoundary, timeoutMs, pollingMs)
 
 async function closePlayerOrDetail(page, options = {}) {
   const pressBack = options.remotePress || navigation.remotePress;
+  const dismissUnexpectedPopup = options.dismissUnexpectedPopup;
   const observeClosed = options.isClosed || (async (candidatePage) => {
     const observation = await observePlayerOrDetailState(candidatePage);
     return observation.open !== true;
@@ -330,7 +332,7 @@ async function closePlayerOrDetail(page, options = {}) {
     options.maxBackPresses ?? DEFAULT_MAX_CLOSE_BACK_PRESSES,
     DEFAULT_MAX_CLOSE_BACK_PRESSES,
     1,
-    2
+    MAX_CLOSE_BACK_PRESSES
   );
   const backDelayMs = normalizeCloseDuration(options.backDelayMs, DEFAULT_CLOSE_BACK_DELAY_MS);
   const boundaryTimeoutMs = normalizeCloseDuration(options.boundaryTimeoutMs, DEFAULT_CLOSE_BOUNDARY_TIMEOUT_MS);
@@ -342,6 +344,15 @@ async function closePlayerOrDetail(page, options = {}) {
   async function observeBoundary() {
     const popup = await observePopup(page);
     if (popup?.unexpectedVisible === true) {
+      if (typeof dismissUnexpectedPopup === "function" &&
+        await dismissUnexpectedPopup(page, popup) === true) {
+        const afterDismiss = await observePopup(page);
+        if (afterDismiss?.unexpectedVisible === true || afterDismiss?.visible === true) {
+          return {closed: false, popup: afterDismiss, observation: null};
+        }
+        const observation = await observeClosed(page);
+        return {closed: isClosedObservation(observation), popup: null, observation};
+      }
       const error = new Error(
         `Unexpected modal blocked player/detail close: ${JSON.stringify(popup.visibleDialogs || popup)}`
       );
@@ -527,17 +538,29 @@ async function getVisiblePopup(page) {
 async function getPlayerState(page) {
   return page.evaluate(() => {
     const videos = Array.from(document.querySelectorAll("video"));
-    const video =
-      videos.find((item) => {
-        const rect = item.getBoundingClientRect();
-        return rect.width > 0 && rect.height > 0;
-      }) || videos[0];
+    const video = videos.find((item) => {
+      const rect = item.getBoundingClientRect();
+      const style = getComputedStyle(item);
+      const source = item.currentSrc || item.src || item.querySelector("source")?.src || "";
+      const hasMediaState = Boolean(source) || item.readyState > 0 || item.videoWidth > 0 || item.videoHeight > 0;
+      return (
+        rect.width > 0 &&
+        rect.height > 0 &&
+        rect.right > 0 &&
+        rect.bottom > 0 &&
+        style.display !== "none" &&
+        style.visibility !== "hidden" &&
+        Number(style.opacity) !== 0 &&
+        hasMediaState
+      );
+    });
 
     if (!video) {
       return {
         hasVideo: false,
         isProbablyPlaying: false,
-        reason: "No video element found",
+        videoCount: videos.length,
+        reason: videos.length ? "No active video element found" : "No video element found",
       };
     }
 
@@ -571,6 +594,7 @@ async function getPlayerState(page) {
 
     return {
       hasVideo: true,
+      videoCount: videos.length,
       before,
       after,
       timeAdvanced,
@@ -596,4 +620,4 @@ async function getPlayerState(page) {
 }
 
 
-module.exports={assertPlayback,assertChannelPlayback,assertMoviePlayback,assertSearchContentPlayback,getVisiblePopup,getPlayerState,inspectPlaybackAfterWait,observeExitConfirmation,observePlayerOrDetailState,closePlayerOrDetail,waitForPlayerReady,safeArtifactName,PLAYER_PLAYBACK_WAIT_SECONDS,DEFAULT_CLOSE_BACK_DELAY_MS,DEFAULT_CLOSE_BOUNDARY_TIMEOUT_MS,DEFAULT_CLOSE_BOUNDARY_POLLING_MS,DEFAULT_MAX_CLOSE_BACK_PRESSES};
+module.exports={assertPlayback,assertChannelPlayback,assertMoviePlayback,assertSearchContentPlayback,getVisiblePopup,getPlayerState,inspectPlaybackAfterWait,observeExitConfirmation,observePlayerOrDetailState,closePlayerOrDetail,waitForPlayerReady,safeArtifactName,PLAYER_PLAYBACK_WAIT_SECONDS,DEFAULT_CLOSE_BACK_DELAY_MS,DEFAULT_CLOSE_BOUNDARY_TIMEOUT_MS,DEFAULT_CLOSE_BOUNDARY_POLLING_MS,DEFAULT_MAX_CLOSE_BACK_PRESSES,MAX_CLOSE_BACK_PRESSES};

@@ -2,6 +2,8 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 
 const contentRows = require("../lib/content-rows");
+const {MAX_CLOSE_BACK_PRESSES} = require("../lib/playback");
+const {ROW_RETURN_RENDER_DELAY_MS} = contentRows;
 
 test("scans the Thể loại carousel until the requested service poster becomes visible", async () => {
   const rows = [
@@ -275,7 +277,11 @@ function createVirtualizedRowPage({totalItems, initialFocusedIndex}) {
 
 test("returns from playback through the shared adaptive close helper", async () => {
   let closeOptions;
-  const page = {evaluate: async () => true};
+  const waits = [];
+  const page = {
+    evaluate: async () => true,
+    waitForTimeout: async (durationMs) => waits.push(durationMs),
+  };
 
   contentRows.configureContentRows({
     closePlayerOrDetail: async (_page, options) => {
@@ -290,6 +296,129 @@ test("returns from playback through the shared adaptive close helper", async () 
   });
 
   assert.equal(typeof closeOptions.isClosed, "function");
-  assert.equal(closeOptions.maxBackPresses, 2);
+  assert.equal(closeOptions.maxBackPresses, MAX_CLOSE_BACK_PRESSES);
   assert.equal(closeOptions.backDelayMs, 1800);
+  assert.equal(closeOptions.boundaryTimeoutMs, 3000);
+  assert.equal(typeof closeOptions.dismissUnexpectedPopup, "function");
+  assert.deepEqual(waits, [ROW_RETURN_RENDER_DELAY_MS]);
+});
+
+test("opens a focused row poster through the verified content activation path", async () => {
+  let activationOptions;
+  const page = {
+    evaluate: async () => ({
+      id: "poster-1",
+      title: "Poster 1",
+      poster: "poster-1.png",
+      rect: {x: 100, y: 200, width: 150, height: 200},
+    }),
+  };
+
+  contentRows.configureContentRows({
+    activateVerifiedTarget: async (_page, options) => {
+      activationOptions = options;
+    },
+    getPlayerState: async () => ({hasVideo: true, isProbablyPlaying: true}),
+  });
+
+  await contentRows.openFocusedContentForPlayback(page, {id: "test-info"});
+
+  assert.equal(activationOptions.testInfo.id, "test-info");
+  assert.equal(activationOptions.contractName, "contentItem");
+  assert.equal(activationOptions.expectedId, "poster-1");
+  assert.equal(activationOptions.expectedLabel, "Poster 1");
+});
+
+test("retries Enter once when the same focused poster only completed a 1920x1080 carousel reflow", async () => {
+  const activations = [];
+  let playerOpen = false;
+  const page = {
+    evaluate: async () => ({
+      id: "poster-1",
+      title: "Poster 1",
+      poster: "poster-1.png",
+      rect: {x: 100, y: 200, width: 150, height: 200},
+    }),
+  };
+
+  contentRows.configureContentRows({
+    activateVerifiedTarget: async (_page, options) => {
+      activations.push(options);
+      if (activations.length === 2) playerOpen = true;
+    },
+    getPlayerState: async () => ({hasVideo: playerOpen, isProbablyPlaying: playerOpen}),
+    observePlayerOrDetailState: async () => ({open: false}),
+  });
+
+  await contentRows.openFocusedContentForPlayback(page, {id: "test-info"});
+
+  assert.equal(activations.length, 2);
+  assert.match(activations[1].name, /reflow-retry$/u);
+  assert.equal(activations[1].expectedId, "poster-1");
+});
+
+test("does not treat an empty video element as an active player", async () => {
+  let focused = {id: "poster-1", text: "Poster 1", label: "Poster 1"};
+  const activations = [];
+  const page = {
+    evaluate: async () => ({
+      id: focused.id,
+      title: focused.text,
+      poster: "poster-1.png",
+      rect: {x: 100, y: 200, width: 150, height: 200},
+    }),
+  };
+
+  contentRows.configureContentRows({
+    activateVerifiedTarget: async (_page, options) => {
+      activations.push(options);
+      if (activations.length === 2) focused = {id: "detail-play", text: "Xem ngay", label: "Xem ngay"};
+    },
+    getPlayerState: async () => ({hasVideo: false, isProbablyPlaying: false}),
+    observePlayerOrDetailState: async () => ({open: true}),
+    getFocusedState: async () => focused,
+    hasVisibleText: async () => true,
+    remoteFocusByText: async () => {
+      focused = {id: "detail-play", text: "Xem ngay", label: "Xem ngay"};
+    },
+  });
+
+  await contentRows.openFocusedContentForPlayback(page, {id: "test-info"});
+
+  assert.equal(activations.length, 2);
+  assert.equal(activations[0].expectedId, "poster-1");
+  assert.equal(activations[1].expectedId, "detail-play");
+  assert.equal(activations[1].expectedLabel, "Xem ngay");
+});
+
+test("uses target identity when a focused poster has no generic label", async () => {
+  const page = {
+    evaluate: async (callback, argument) => {
+      if (typeof argument === "string") return argument === "poster-1";
+      return false;
+    },
+  };
+
+  await contentRows.focusFirstRowStart(page, {id: "poster-1"});
+});
+
+test("retries row focus while a visible row is still settling", async () => {
+  let remoteFocusCalls = 0;
+  let focused = false;
+  const page = {
+    evaluate: async (_callback, argument) => typeof argument === "string" ? focused : false,
+    waitForTimeout: async () => {},
+  };
+
+  contentRows.configureContentRows({
+    remoteFocusById: async () => {
+      remoteFocusCalls += 1;
+      if (remoteFocusCalls === 2) focused = true;
+      if (remoteFocusCalls === 1) throw new Error("row still loading");
+    },
+  });
+
+  await contentRows.focusFirstRowStart(page, {id: "poster-1"});
+
+  assert.equal(remoteFocusCalls, 2);
 });

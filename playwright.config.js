@@ -1,11 +1,7 @@
 const { defineConfig, devices } = require("playwright/test");
 
 const VIEWPORT = { width: 1920, height: 1080 };
-const VIEWPORT_SCALE = 0.5;
-const WINDOW_SIZE = {
-  width: Math.round(VIEWPORT.width * VIEWPORT_SCALE),
-  height: Math.round(VIEWPORT.height * VIEWPORT_SCALE),
-};
+const WINDOW_SIZE = VIEWPORT;
 
 module.exports = defineConfig({
   testDir: "./tests",
@@ -20,7 +16,7 @@ module.exports = defineConfig({
   },
   use: {
     baseURL: "https://html5stage.mytv.vn/",
-    viewport: WINDOW_SIZE,
+    viewport: VIEWPORT,
     actionTimeout: 10000,
     navigationTimeout: 90000,
     screenshot: "only-on-failure",

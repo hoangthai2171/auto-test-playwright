@@ -3,6 +3,7 @@ function collectFailedItems(caseResult) {
   const seen = new Set();
 
   for (const step of caseResult?.steps || []) {
+    if (step?.action === "play_row") continue;
     collect(step?.result);
     collect(step?.details);
   }
@@ -25,6 +26,53 @@ function collectFailedItems(caseResult) {
       screenshot: String(item.screenshotDataUrl || ""),
     };
     const key = normalized.name + "|" + normalized.poster + "|" + normalized.screenshot;
+    if (seen.has(key)) return;
+    seen.add(key);
+    items.push(normalized);
+  }
+}
+
+function collectRowPlaybackItems(caseResult) {
+  const items = [];
+  const seen = new Set();
+
+  for (const step of caseResult?.steps || []) {
+    if (step?.action !== "play_row") continue;
+    collect(step?.result);
+    collect(step?.details);
+  }
+
+  return items;
+
+  function collect(value) {
+    if (!Array.isArray(value?.results)) return;
+    value.results.forEach(add);
+  }
+
+  function add(item) {
+    const normalized = {
+      index: Number.isInteger(item?.index) ? item.index : items.length + 1,
+      id: String(item?.id || ""),
+      contentId: String(item?.contentId || item?.content_id || ""),
+      name: String(item?.name || item?.title || "Unknown item"),
+      poster: String(item?.poster || ""),
+      status: String(item?.status || "unknown"),
+      result: String(item?.result || (item?.status === "playable" ? "pass" : "fail")),
+      screenshot: String(item?.screenshotDataUrl || ""),
+      screenshotName: String(item?.screenshot || ""),
+      error: String(item?.errorPopup || item?.cleanupError || item?.error || ""),
+    };
+    const key = [
+      normalized.index,
+      normalized.id,
+      normalized.contentId,
+      normalized.name,
+      normalized.status,
+      normalized.result,
+      normalized.screenshot,
+      normalized.screenshotName,
+      normalized.error,
+    ].join("|");
     if (seen.has(key)) return;
     seen.add(key);
     items.push(normalized);
@@ -84,6 +132,7 @@ function buildTestReportEntry({testCaseId, testCaseName, exitCode, caseResult, e
     expectedResult: String(caseResult?.expectedResult || ""),
     completionScreenshot: String(caseResult?.completionScreenshotDataUrl || ""),
     failedItems: collectFailedItems(caseResult),
+    rowPlaybackItems: collectRowPlaybackItems(caseResult),
     homeTrailerItems: collectHomeTrailerItems(caseResult),
     error: status === "failed"
       ? String(errorMessage || failedStepMessage || (!caseResult ? "Test failed" : ""))
@@ -151,7 +200,7 @@ function renderUserReport(report) {
     "table{width:100%;border-collapse:collapse;background:#17191f}th,td{padding:12px;border:1px solid #303541;text-align:left;vertical-align:middle}",
     "th{background:#222631;color:#cbd1dc}.status-passed{color:#46d083;font-weight:700;text-transform:capitalize}.status-failed{color:#ff7a7a;font-weight:700;text-transform:capitalize}",
     ".details-button{padding:6px 12px;border:1px solid #596579;border-radius:4px;background:#2a3140;color:#fff;cursor:pointer}",
-    ".hidden{display:none}.details-row td{background:#0f1117;padding:18px}.detail-section+.detail-section{margin-top:18px}.detail-section h2{font-size:14px;margin:0 0 8px}.expected-result{margin:0;white-space:pre-wrap;word-break:break-word}.failure-table,.trailer-table{background:#14161b}.failure-table th,.failure-table td,.trailer-table th,.trailer-table td{padding:10px}",
+    ".hidden{display:none}.details-row td{background:#0f1117;padding:18px}.detail-section+.detail-section{margin-top:18px}.detail-section h2{font-size:14px;margin:0 0 8px}.expected-result{margin:0;white-space:pre-wrap;word-break:break-word}.failure-table,.trailer-table,.row-playback-table{background:#14161b}.failure-table th,.failure-table td,.trailer-table th,.trailer-table td,.row-playback-table th,.row-playback-table td{padding:10px}",
     ".poster{max-width:100px;max-height:120px;object-fit:contain}.screenshot{max-width:360px;max-height:220px;object-fit:contain;background:#050608}.completion-screenshot{max-width:560px;max-height:315px;object-fit:contain;background:#050608}.empty{color:#9aa3b2}",
     "</style></head><body><main><h1>MyTV Test Report</h1>",
     '<p class="muted">Generated ' + escapeHtml(report?.generatedAt || "") + "</p>",
@@ -167,15 +216,16 @@ function renderTestDetails(entry) {
   const expectedResult = '<section class="detail-section"><h2>Expected Result</h2><p class="expected-result">' +
     escapeHtml(entry.expectedResult || "Not provided") +
     "</p></section>";
+  const rowPlaybackResults = renderRowPlaybackItems(entry);
   const homeTrailerResults = renderHomeTrailerItems(entry);
 
   if (entry.status !== "passed") {
     return expectedResult + '<section class="detail-section"><h2>Failure Details</h2>' +
       renderFailedItems(entry) +
-      "</section>" + homeTrailerResults + renderCompletionScreenshot(entry, "Player Check Screenshot");
+      "</section>" + rowPlaybackResults + homeTrailerResults + renderCompletionScreenshot(entry, "Player Check Screenshot");
   }
 
-  return expectedResult + homeTrailerResults + renderCompletionScreenshot(entry, "Completion Screenshot");
+  return expectedResult + rowPlaybackResults + homeTrailerResults + renderCompletionScreenshot(entry, "Completion Screenshot");
 }
 
 function renderCompletionScreenshot(entry, heading) {
@@ -207,6 +257,26 @@ function renderFailedItems(entry) {
   return '<table class="failure-table"><thead><tr><th>Failed Item Name</th><th>Poster</th><th>Screenshot</th></tr></thead><tbody>' + rows + "</tbody></table>";
 }
 
+function renderRowPlaybackItems(entry) {
+  const items = Array.isArray(entry?.rowPlaybackItems) ? entry.rowPlaybackItems : [];
+  if (!items.length) return "";
+
+  const rows = items.map((item) => {
+    const passed = item.result === "pass" || item.status === "playable";
+    return (
+      "<tr><td>" + escapeHtml(item.index) +
+      "</td><td>" + escapeHtml(item.name) +
+      "</td><td>" + escapeHtml(item.contentId || "—") +
+      "</td><td class=\"status-" + (passed ? "passed" : "failed") + "\">" + escapeHtml(passed ? "pass" : "fail") +
+      "</td><td>" + renderImage(item.poster, "Poster for " + item.name, "poster") +
+      "</td><td>" + renderImage(item.screenshot, "Player/error screenshot for " + item.name, "screenshot") +
+      "</td><td>" + escapeHtml(item.error || "") + "</td></tr>"
+    );
+  }).join("");
+
+  return '<section class="detail-section"><h2>Row Playback Results</h2><table class="row-playback-table"><thead><tr><th>#</th><th>Poster Name</th><th>Content ID</th><th>Result</th><th>Poster</th><th>Player/Error Screenshot</th><th>Error</th></tr></thead><tbody>' + rows + "</tbody></table></section>";
+}
+
 function renderHomeTrailerItems(entry) {
   const items = Array.isArray(entry?.homeTrailerItems) ? entry.homeTrailerItems : [];
   if (!items.length) return "";
@@ -232,5 +302,6 @@ module.exports = {
   upsertTestReport,
   renderUserReport,
   collectFailedItems,
+  collectRowPlaybackItems,
   collectHomeTrailerItems,
 };

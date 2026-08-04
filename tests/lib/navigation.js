@@ -306,12 +306,18 @@ async function remoteFocusById(page, id, maxMoves = 50, options = {}) {
 }
 
 async function remoteFocus(page, { isTarget, getTargetRect, maxMoves, preferredDirection, snapshotCache }) {
-  const targetRect = await getTargetRect();
+  let targetRect = await getTargetRect();
   expect(targetRect).toBeTruthy();
 
   for (let attempt = 0; attempt < maxMoves; attempt++) {
     const state = await getFocusedState(page);
     if (await Promise.resolve(isTarget(state))) return;
+
+    // Home rows can reflow while a remote key is being processed. Refresh the
+    // target geometry before choosing the next direction so a stale first
+    // rectangle cannot drive focus past the target into a later row.
+    const refreshedTargetRect = await getTargetRect().catch(() => null);
+    if (refreshedTargetRect) targetRect = refreshedTargetRect;
 
     const key = preferredDirection || chooseDirection(state.rect, targetRect);
     const before = state.id || state.text;

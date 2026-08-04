@@ -50,6 +50,18 @@ test("item limit blocks another start without throwing", () => {
   expect(budget.canStart({completed: 2, attempted: 2})).toMatchObject({allowed: false, reason: "item-limit"});
 });
 
+test("supports an explicit unlimited runtime for exhaustive omitted-count row playback", () => {
+  const budget = createBatchBudget({itemLimit: 0, runtimeBudgetMs: Number.POSITIVE_INFINITY, startedAt: 0, now: () => 0});
+
+  expect(budget.canStart({completed: 100, attempted: 100, estimatedDurationMs: 999999999}).allowed).toBe(true);
+  expect(budget.report({completed: 100, attempted: 100, reason: "row-exhausted"})).toMatchObject({
+    itemLimit: 0,
+    maxItems: null,
+    budgetMs: null,
+    budgetLimited: false,
+  });
+});
+
 test("active batch workflow uses the shared budget and preserves playback artifacts", () => {
   const workflows = fs.readFileSync(path.join(__dirname, "lib", "workflows.js"), "utf8");
   expect(workflows).toContain("createBatchBudget");

@@ -42,7 +42,9 @@ function createBatchBudget(options = {}) {
   const startedAt = Number.isFinite(options.startedAt) ? options.startedAt : clock();
   const limits = normalizeBatchLimits(options);
   const configuredBudgetMs = Number(options.runtimeBudgetMs);
-  const runtimeBudgetMs = Number.isFinite(configuredBudgetMs) && configuredBudgetMs > 0
+  const runtimeBudgetMs = configuredBudgetMs === Number.POSITIVE_INFINITY
+    ? Number.POSITIVE_INFINITY
+    : Number.isFinite(configuredBudgetMs) && configuredBudgetMs > 0
     ? configuredBudgetMs
     : DEFAULT_BATCH_RUNTIME_BUDGET_MS;
 
@@ -69,7 +71,7 @@ function createBatchBudget(options = {}) {
       completed,
       attempted,
       elapsedMs: elapsedMs(),
-      budgetMs: runtimeBudgetMs,
+      budgetMs: Number.isFinite(runtimeBudgetMs) ? runtimeBudgetMs : null,
       itemLimit: limits.itemLimit,
       maxItems: Number.isFinite(limits.maxItems) ? limits.maxItems : null,
       budgetLimited: Boolean(budgetLimited),

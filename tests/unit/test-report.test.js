@@ -30,6 +30,7 @@ test("builds a compact passed test entry", () => {
     expectedResult: "Home is visible",
     completionScreenshot: "data:image/png;base64,passed",
     failedItems: [],
+    rowPlaybackItems: [],
     homeTrailerItems: [],
     error: "",
   });
@@ -63,6 +64,87 @@ test("extracts failed row items with poster and screenshot", () => {
     poster: "https://example.test/poster.jpg",
     screenshot: "data:image/png;base64,abc",
   }]);
+});
+
+test("reports every play_row item with content ID, result, and screenshot", () => {
+  const entry = buildTestReportEntry({
+    testCaseId: "case-row",
+    testCaseName: "Play row",
+    exitCode: 1,
+    caseResult: {
+      testCaseId: "case-row",
+      name: "Play row",
+      status: "failed",
+      steps: [{
+        action: "play_row",
+        status: "failed",
+        details: {
+          results: [
+            {
+              index: 1,
+              id: "homePage2_0_0",
+              contentId: "162566",
+              name: "Liễu Chu Ký",
+              poster: "https://example.test/first.jpg",
+              status: "playable",
+              result: "pass",
+              screenshotDataUrl: "data:image/png;base64,first",
+            },
+            {
+              index: 2,
+              id: "homePage2_0_1",
+              contentId: "162567",
+              name: "Failed poster",
+              poster: "https://example.test/second.jpg",
+              status: "failed",
+              result: "fail",
+              screenshotDataUrl: "data:image/png;base64,second",
+              errorPopup: "Thiết bị không hỗ trợ",
+            },
+          ],
+        },
+      }],
+    },
+  });
+
+  assert.deepEqual(entry.rowPlaybackItems, [
+    {
+      index: 1,
+      id: "homePage2_0_0",
+      contentId: "162566",
+      name: "Liễu Chu Ký",
+      poster: "https://example.test/first.jpg",
+      status: "playable",
+      result: "pass",
+      screenshot: "data:image/png;base64,first",
+      screenshotName: "",
+      error: "",
+    },
+    {
+      index: 2,
+      id: "homePage2_0_1",
+      contentId: "162567",
+      name: "Failed poster",
+      poster: "https://example.test/second.jpg",
+      status: "failed",
+      result: "fail",
+      screenshot: "data:image/png;base64,second",
+      screenshotName: "",
+      error: "Thiết bị không hỗ trợ",
+    },
+  ]);
+
+  const html = renderUserReport(upsertTestReport(createEmptyReport(), entry));
+  assert.match(html, /Row Playback Results/);
+  assert.match(html, /Liễu Chu Ký/);
+  assert.match(html, /162566/);
+  assert.match(html, />pass</);
+  assert.match(html, /data:image\/png;base64,first/);
+  assert.match(html, /Failed poster/);
+  assert.match(html, /162567/);
+  assert.match(html, />fail</);
+  assert.match(html, /Thiết bị không hỗ trợ/);
+  assert.match(html, /data:image\/png;base64,second/);
 });
 
 test("keeps every Home trailer name, status, and player screenshot on success", () => {

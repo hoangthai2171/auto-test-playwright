@@ -405,6 +405,33 @@ test("verifies a playback expectedResult after all actions complete", async () =
   });
 });
 
+test("treats a successful exhaustive play_row as the playback expected result", async () => {
+  const result = await runTestCase({id: "page"}, createTestInfo(), {
+    id: "expected-row-player",
+    name: "Expected row playback",
+    expectedResult: "Play bình thường",
+    actions: [{action: "play_row", rowIndex: 2}],
+  }, {
+    helpers: createHandlerHelpers(),
+    handlers: {
+      play_row: async () => ({
+        type: "play_row",
+        results: [
+          {index: 1, status: "playable"},
+          {index: 2, status: "playable"},
+        ],
+      }),
+    },
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  assert.deepEqual(result.steps.at(-1).result, {
+    type: "row_playback",
+    verified: "All selected row posters were checked and returned to the row",
+    itemCount: 2,
+  });
+});
+
 test("uses a configured timeout for a playback expectedResult", async () => {
   const waits = [];
   const page = {

@@ -6,10 +6,6 @@ const {getTestOptions} = require("../lib/mytv-helpers");
 
 const VIEWPORT = {width: 1920, height: 1080};
 const VIEWPORT_SCALE = 0.5;
-const WINDOW_VIEWPORT = {
-    width: Math.round(VIEWPORT.width * VIEWPORT_SCALE),
-    height: Math.round(VIEWPORT.height * VIEWPORT_SCALE),
-};
 
 const test = base.test.extend({
     sharedContext: [
@@ -22,7 +18,11 @@ const test = base.test.extend({
             }
 
             const context = await browser.newContext({
-                viewport: isLivePreviewMode() ? VIEWPORT : WINDOW_VIEWPORT,
+                // MyTV lays out its TV UI at 1920x1080.  The Electron preview
+                // may render that logical surface at a smaller visual scale,
+                // but the test document viewport must remain 1920x1080 so
+                // focus, carousel, and player behavior match the product UI.
+                viewport: VIEWPORT,
             });
 
             await use(context);
@@ -50,9 +50,7 @@ const test = base.test.extend({
 });
 
 async function applyViewportScale(page) {
-    const scale = isLivePreviewMode()
-        ? 1
-        : Number(process.env.MYTV_INTERACTIVE_VIEW_SCALE || VIEWPORT_SCALE);
+    const scale = Number(process.env.MYTV_INTERACTIVE_VIEW_SCALE || VIEWPORT_SCALE);
     const client = await page.context().newCDPSession(page);
     await client.send("Emulation.setDeviceMetricsOverride", {
         ...VIEWPORT,
@@ -60,10 +58,6 @@ async function applyViewportScale(page) {
         mobile: false,
         scale,
     });
-}
-
-function isLivePreviewMode() {
-    return Boolean(process.env.MYTV_PREVIEW_PATH) && !process.env.MYTV_INTERACTIVE_CDP_URL;
 }
 
 async function startPreviewStream(page) {

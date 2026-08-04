@@ -14,6 +14,8 @@ const dependencies={
   hasVisibleText:async()=>false,
   expectFocusedText:async()=>{},
   activateVerifiedTarget:async()=>{throw new Error("Content-row activation dependency is not configured");},
+  observePlayerOrDetailState:playback.observePlayerOrDetailState,
+  observeExitConfirmation:playback.observeExitConfirmation,
   closePlayerOrDetail:playback.closePlayerOrDetail,
 };
 
@@ -23,6 +25,8 @@ const NAMED_ROW_SCROLL_DELAY = 1500;
 const SERVICE_CATEGORY_MAX_SCAN_STEPS = 40;
 const ROW_HORIZONTAL_NAV_DELAY = 500;
 const ROW_HORIZONTAL_NAV_MAX_STEPS = 100;
+const ROW_RETURN_BOUNDARY_TIMEOUT_MS = 3000;
+const ROW_RETURN_RENDER_DELAY_MS = 1500;
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
 function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
@@ -34,6 +38,8 @@ function getPlayerState(...args){return dependencies.getPlayerState(...args);}
 function hasVisibleText(...args){return dependencies.hasVisibleText(...args);}
 function expectFocusedText(...args){return dependencies.expectFocusedText(...args);}
 function activateVerifiedTarget(...args){return dependencies.activateVerifiedTarget(...args);}
+function observePlayerOrDetailState(...args){return dependencies.observePlayerOrDetailState(...args);}
+function observeExitConfirmation(...args){return dependencies.observeExitConfirmation(...args);}
 async function collectFirstRowPlayableItems(page, options = {}) {
   const rows = await collectVisibleContentRows(page, options);
   return rows[0]?.items || [];
@@ -595,6 +601,7 @@ async function collectVisibleContentRows(page, options = {}) {
       return {
         id: record.id,
         title,
+        contentId: record.attrs?.content_id || record.attrs?.["content-id"] || record.attrs?.["data-content-id"] || "",
         attributes: record.attrs || {},
         poster: record.poster || extractCssUrl(record.backgroundImage),
         rect: record.rect,
@@ -664,20 +671,45 @@ async function focusFirstRowStart(page, firstItem, options = {}) {
     return;
   }
 
-  const hasTargetFocus = await isFocusedOnContentItem(page, firstItem);
-  if (!hasTargetFocus) {
+  const timeoutMs = options.allowServiceFocus ? 10000 : 6000;
+  const startedAt = Date.now();
+  let lastError;
+
+  for (let attempt = 0; attempt < 3 && Date.now() - startedAt < timeoutMs; attempt++) {
+    if (await isFocusedOnContentItem(page, firstItem)) return;
+
     options.snapshotCache?.invalidate();
-    await remoteFocusById(page, firstItem.id, 80, {snapshotCache: options.snapshotCache}).catch(() => {});
+    try {
+      await remoteFocusById(page, firstItem.id, 80, {snapshotCache: options.snapshotCache});
+    } catch (error) {
+      lastError = error;
+    }
     options.snapshotCache?.invalidate();
+
+    const remainingMs = timeoutMs - (Date.now() - startedAt);
+    if (remainingMs <= 0) break;
+    try {
+      await expect.poll(() => isFocusedOnContentItem(page, firstItem), {
+        timeout: Math.min(2000, remainingMs),
+      }).toBe(true);
+      return;
+    } catch (error) {
+      lastError = error;
+    }
+
+    if (typeof page.waitForTimeout === "function") {
+      await page.waitForTimeout(Math.min(250, Math.max(0, timeoutMs - (Date.now() - startedAt))));
+    }
   }
 
-  if (options.allowServiceFocus) {
-    await expect.poll(() => isFocusedOnContentItem(page, firstItem), { timeout: 10000 }).toBe(true);
-    return;
-  }
-
-  await expectFocusedContent(page);
-  await expect.poll(() => isFocusedOnContentItem(page, firstItem), { timeout: 6000 }).toBe(true);
+  const remainingMs = Math.max(1, timeoutMs - (Date.now() - startedAt));
+  await expect
+    .poll(() => isFocusedOnContentItem(page, firstItem), {timeout: remainingMs})
+    .toBe(true)
+    .catch(() => {
+      if (lastError) throw lastError;
+      throw new Error(`Could not focus row item "${firstItem.id}"`);
+    });
 }
 
 async function expectFocusedContent(page) {
@@ -686,28 +718,36 @@ async function expectFocusedContent(page) {
 
 async function isFocusedContentItem(page) {
   return page.evaluate(() => {
-    const focused = document.querySelector(".focused");
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
     if (!focused) return false;
 
     const rect = focused.getBoundingClientRect();
     const style = getComputedStyle(focused);
     const label = contentLabel(focused);
+    const viewportWidth = window.innerWidth || 1920;
+    const viewportHeight = window.innerHeight || 1080;
     const menuText = /^(Tìm kiếm|Trang chủ|Truyền hình|Phim truyện|Thiếu nhi|Thể thao|Cá nhân|Tất cả dịch vụ)$/i;
     const isMenuItem = focused.id.startsWith("menu_") || rect.x < 100;
+    const isIdentifiedPoster = focused.classList.contains("cate_content_item") ||
+      focused.classList.contains("lw_r_item") ||
+      /^homePage\d+_/u.test(focused.id);
 
     return (
       rect.width >= 100 &&
       rect.height >= 80 &&
       rect.x >= 100 &&
-      rect.y >= 100 &&
       rect.width <= 620 &&
       rect.height <= 460 &&
+      rect.right > 0 &&
+      rect.bottom > 0 &&
+      rect.left < viewportWidth &&
+      rect.top < viewportHeight &&
       style.display !== "none" &&
       style.visibility !== "hidden" &&
       Number(style.opacity) !== 0 &&
       !isMenuItem &&
       !focused.id.startsWith("key-") &&
-      label &&
+      (label || isIdentifiedPoster) &&
       (!menuText.test(label) || !isMenuItem)
     );
 
@@ -725,6 +765,13 @@ async function isFocusedContentItem(page) {
         .replace(/\s+/g, " ")
         .trim();
     }
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 &&
+        style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    }
   });
 }
 
@@ -732,10 +779,17 @@ async function isFocusedOnContentItem(page, item) {
   if (!item?.id) return false;
 
   return page.evaluate((targetId) => {
-    const focused = document.querySelector(".focused");
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
     if (!focused) return false;
     const target = document.getElementById(targetId);
     return focusWithinTarget(focused, target);
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 &&
+        style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    }
 
     function focusWithinTarget(focusedElement, targetElement) {
       if (!focusedElement || !targetElement) return false;
@@ -771,13 +825,20 @@ async function isFocusedOnRowItems(page, items) {
   if (!targetIds.length) return false;
 
   return page.evaluate((ids) => {
-    const focused = document.querySelector(".focused");
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
     if (!focused) return false;
 
     return ids.some((id) => {
       const target = document.getElementById(id);
       return focusWithinTarget(focused, target);
     });
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 &&
+        style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    }
 
     function focusWithinTarget(focusedElement, targetElement) {
       if (!focusedElement || !targetElement) return false;
@@ -810,11 +871,12 @@ async function isFocusedOnRowItems(page, items) {
 
 async function getFocusedContentMetadata(page) {
   return page.evaluate(() => {
-    const focused = document.querySelector(".focused");
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
     if (!focused) {
       return {
         id: "",
         title: "",
+        contentId: "",
         poster: "",
         rect: null,
       };
@@ -839,6 +901,8 @@ async function getFocusedContentMetadata(page) {
     return {
       id: focused.id || "",
       title,
+      contentId: focused.getAttribute("content_id") || focused.getAttribute("content-id") || focused.getAttribute("data-content-id") ||
+        img?.getAttribute("content_id") || img?.getAttribute("content-id") || img?.getAttribute("data-content-id") || "",
       poster: img?.currentSrc || img?.src || extractCssUrl(backgroundImage),
       rect: {
         x: Math.round(rect.x),
@@ -852,28 +916,62 @@ async function getFocusedContentMetadata(page) {
       const match = value.match(/url\(["']?(.+?)["']?\)/);
       return match?.[1] || "";
     }
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 &&
+        style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    }
   });
 }
 
-async function openFocusedContentForPlayback(page, testInfo) {
+async function openFocusedContentForPlayback(page, testInfo, expectedItem = null) {
   const focusedContent = await getFocusedContentMetadata(page).catch(() => ({id: "", title: ""}));
-  await activateVerifiedTarget(page, {
+  const expectedId = focusedContent.id || expectedItem?.id || "";
+  const expectedLabel = focusedContent.title || expectedItem?.title || "";
+  const activationOptions = {
     testInfo,
-    name: `content-${focusedContent.id || "focused"}`,
+    name: `content-${expectedId || "focused"}`,
     contractName: "contentItem",
-    expectedId: focusedContent.id,
-    expectedLabel: focusedContent.title,
+    expectedId,
+    expectedLabel,
     delay: 3500,
-  });
+  };
+  await activateVerifiedTarget(page, activationOptions);
 
-  const hasVideo = await getPlayerState(page)
-    .then((state) => state.hasVideo)
+  let playerState = await getPlayerState(page)
     .catch(() => false);
-  if (hasVideo) return;
+  if (playerState?.hasVideo) return;
+
+  let destination = await observePlayerOrDetailState(page)
+    .catch(() => ({open: false}));
+  const focusedAfterActivation = await getFocusedContentMetadata(page)
+    .catch(() => ({id: "", title: ""}));
+
+  // At the product's 1920x1080 layout the Home carousel can finish its
+  // reflow after the first Enter while keeping the same poster focused.  The
+  // first activation was delivered; only retry when that exact poster is
+  // still on Home and no player/detail boundary opened.  This avoids a blind
+  // double-Enter on destinations that activated normally or opened a detail.
+  if (!playerState?.hasVideo && destination.open !== true && expectedId &&
+    focusedAfterActivation.id === expectedId) {
+    await activateVerifiedTarget(page, {
+      ...activationOptions,
+      name: `${activationOptions.name}-reflow-retry`,
+    });
+    playerState = await getPlayerState(page)
+      .catch(() => false);
+    if (playerState?.hasVideo) return;
+    destination = await observePlayerOrDetailState(page)
+      .catch(() => ({open: false}));
+  }
 
   const focused = await getFocusedState(page).catch(() => ({ text: "", label: "" }));
   const xemNgay = /^Xem ngay$/i;
-  if (xemNgay.test(focused.text) || xemNgay.test(focused.label) || (await hasVisibleText(page, xemNgay))) {
+  const focusedOnXemNgay = xemNgay.test(focused.text) || xemNgay.test(focused.label);
+  const detailHasXemNgay = destination.open === true && await hasVisibleText(page, xemNgay);
+  if (focusedOnXemNgay || detailHasXemNgay) {
     await remoteFocusByText(page, xemNgay, 60).catch(() => {});
     const fallback = await getFocusedState(page).catch(() => ({id: "", text: ""}));
     await activateVerifiedTarget(page, {
@@ -915,13 +1013,22 @@ async function returnFromPlayerOrDetail(page) {
 async function returnToFirstRowContent(page, { item, rowY }) {
   await dependencies.closePlayerOrDetail(page, {
     remotePress,
+    observePopup: observeExitConfirmation,
+    dismissUnexpectedPopup: dismissKnownPlaybackFailurePopup,
     isClosed: async (candidatePage) => (
       (await isFocusedContentItem(candidatePage)) &&
-      (await isFocusedNearRow(candidatePage, rowY))
+      ((await isFocusedNearRow(candidatePage, rowY)) ||
+        (item?.id && (await isFocusedOnContentItem(candidatePage, item))))
     ),
-    maxBackPresses: 2,
+    maxBackPresses: playback.MAX_CLOSE_BACK_PRESSES,
     backDelayMs: 1800,
+    boundaryTimeoutMs: ROW_RETURN_BOUNDARY_TIMEOUT_MS,
   });
+
+  // The Home carousel can report its boundary before the previous screen has
+  // finished rebuilding its poster geometry.  Let that render settle before
+  // refocusing the current item or sending the next horizontal key.
+  await page.waitForTimeout(ROW_RETURN_RENDER_DELAY_MS);
 
   if (item?.id) {
     await remoteFocusById(page, item.id, 20).catch(() => {});
@@ -930,11 +1037,34 @@ async function returnToFirstRowContent(page, { item, rowY }) {
   await expectFocusedContent(page);
 }
 
+async function dismissKnownPlaybackFailurePopup(page, popup) {
+  const dialogText = (popup?.visibleDialogs || [])
+    .map((dialog) => dialog?.text || "")
+    .join(" ");
+  if (!/(?:thiết bị\s+không\s+hỗ\s+trợ|không\s+hỗ\s+trợ|mã\s*20301|playback\s+failed)/iu.test(dialogText)) {
+    return false;
+  }
+
+  const confirmPattern = /^(?:Đồng ý|OK|Đóng|Close)$/i;
+  let focused = await getFocusedState(page).catch(() => ({text: "", label: ""}));
+  if (!confirmPattern.test(focused.text || "")) {
+    await remoteFocusByText(page, confirmPattern, 30).catch(() => {});
+    focused = await getFocusedState(page).catch(() => ({text: "", label: ""}));
+  }
+  if (!confirmPattern.test(focused.text || "")) return false;
+
+  await remotePress(page, "Enter", 500);
+  await observeExitConfirmation(page).catch(() => {});
+  return true;
+}
+
 async function moveToNextFirstRowContent(page, { previousSignature, rowY }) {
+  const currentFocused = await getFocusedContentMetadata(page).catch(() => ({rect: null}));
+  const currentRowY = currentFocused.rect?.y || rowY;
   for (let attempt = 0; attempt < 3; attempt++) {
     await remotePress(page, "ArrowRight", 800);
 
-    if (!(await isFocusedContentItem(page)) || !(await isFocusedNearRow(page, rowY))) {
+    if (!(await isFocusedContentItem(page)) || !(await isFocusedNearRow(page, currentRowY))) {
       return false;
     }
 
@@ -949,17 +1079,24 @@ async function moveToNextFirstRowContent(page, { previousSignature, rowY }) {
 
 async function isFocusedNearRow(page, rowY) {
   return page.evaluate((targetY) => {
-    const focused = document.querySelector(".focused");
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
     if (!focused) return false;
 
     const rect = focused.getBoundingClientRect();
     return Math.abs(Math.round(rect.y) - targetY) <= 80;
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 &&
+        style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    }
   }, rowY);
 }
 
 function contentItemSignature(item) {
-  return [item?.id || "", item?.title || "", item?.poster || ""].join("|").trim();
+  return [item?.id || "", item?.contentId || "", item?.title || "", item?.poster || ""].join("|").trim();
 }
 
 
-module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,focusRequestedContentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};
+module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,focusRequestedContentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,ROW_RETURN_RENDER_DELAY_MS};

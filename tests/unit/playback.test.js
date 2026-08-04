@@ -56,6 +56,30 @@ test("sends a second Back only when the first Back did not close the player", as
   ]);
 });
 
+test("honors the larger bounded close limit for a deep row return", async () => {
+  const harness = createHarness({closedAfter: 4});
+
+  const result = await closePlayerOrDetail(harness.page, {
+    ...harness,
+    maxBackPresses: 6,
+    boundaryTimeoutMs: 0,
+  });
+
+  assert.equal(result.closed, true);
+  assert.equal(result.backPresses, 4);
+  assert.equal(harness.closePresses, 4);
+});
+
+test("keeps the generic close limit at two Back presses", async () => {
+  const harness = createHarness({closedAfter: 3});
+
+  await assert.rejects(
+    () => closePlayerOrDetail(harness.page, {...harness, boundaryTimeoutMs: 0}),
+    (error) => error.code === "PLAYER_CLOSE_FAILED" && error.details.backPresses === 2
+  );
+  assert.equal(harness.closePresses, 2);
+});
+
 test("dismisses an exit confirmation without treating it as another close attempt", async () => {
   const harness = createHarness({closedAfter: 1, popupAt: 1});
 
@@ -79,4 +103,36 @@ test("fails closed when an unexpected modal is visible", async () => {
     (error) => error.code === "PLAYER_CLOSE_UNSAFE_POPUP"
   );
   assert.equal(harness.closePresses, 0);
+});
+
+test("allows a row caller to dismiss one recognized playback failure dialog safely", async () => {
+  let unexpected = true;
+  let enterPresses = 0;
+  const page = {waitForTimeout: async () => {}};
+  const remotePress = async (_page, key) => {
+    if (key === "Enter") {
+      enterPresses += 1;
+      unexpected = false;
+    }
+  };
+  const observePopup = async () => ({
+    visible: false,
+    kind: "none",
+    unexpectedVisible: unexpected,
+    visibleDialogs: unexpected ? [{id: "dialog_alert_v2", text: "Thiết bị không hỗ trợ"}] : [],
+  });
+
+  const result = await closePlayerOrDetail(page, {
+    remotePress,
+    observePopup,
+    dismissUnexpectedPopup: async () => {
+      unexpected = false;
+      return true;
+    },
+    isClosed: async () => !unexpected,
+    boundaryTimeoutMs: 0,
+  });
+
+  assert.equal(result.closed, true);
+  assert.equal(enterPresses, 0);
 });

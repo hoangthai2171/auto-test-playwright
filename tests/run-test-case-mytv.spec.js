@@ -9,6 +9,7 @@ const {waitForServiceScreenImages} = require("./lib/service-screenshot");
 const {normalizePlayerCheckTimeoutSeconds} = require("../app/test-configuration");
 
 const HOME_TRAILER_CASE_TIMEOUT_MS = 10 * 60 * 1000;
+const EXHAUSTIVE_ROW_CASE_TIMEOUT_MS = 30 * 60 * 1000;
 
 async function writeCaseResult(resultPath, result) {
   if (!resultPath) return;
@@ -31,6 +32,8 @@ test("run server-driven MyTV test case", async ({page, options}, testInfo) => {
 
   if (isHomeTrailerCase(testCase)) {
     test.setTimeout(HOME_TRAILER_CASE_TIMEOUT_MS);
+  } else if (isExhaustivePlayRowCase(testCase)) {
+    test.setTimeout(EXHAUSTIVE_ROW_CASE_TIMEOUT_MS);
   }
 
   try {
@@ -94,6 +97,12 @@ function isHomeTrailerCase(testCase) {
   return /(?:chạy|phát|play)\s+(?:toàn bộ|tất cả|các)\s+(?:tra(?:iler|iller))\b[\s\S]*\b(?:trang chủ|home)\b/iu.test(
     String(testCase?.qaDescription || "")
   );
+}
+
+function isExhaustivePlayRowCase(testCase) {
+  return Boolean(testCase?.actions?.some((action) =>
+    action?.action === "play_row" && action.count === undefined
+  ));
 }
 
 async function capturePassedTestScreenshot(page, testInfo, result) {
