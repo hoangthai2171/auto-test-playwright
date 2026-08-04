@@ -1,170 +1,115 @@
 # Action compiler guide
 
-This document guides the server-side agent that transforms a test case's
-`qaDescription` into structured `actions` before the case is sent to the MyTV
-Auto Test app.
+This guide is for the server-side transformer that turns a case's
+`qaDescription` into validated `actions` before delivery to MyTV Auto Test.
 
-The app executes structured actions. It does not execute server-provided code,
-selectors, module paths, or function names. The existing app-side compiler is a
-backward-compatible fallback for local or older cases, but new server responses
-should contain explicit `actions`.
+## Contract
 
-## Transformation contract
+Prefer explicit actions in every server response. A non-empty `actions` array is
+authoritative; the app preserves `qaDescription` for display and does not parse
+it again. The app-side compiler is only a backward-compatible fallback for
+cases with missing, null, or empty `actions`.
 
-The input case keeps its existing metadata. Add an `actions` array generated
-from `qaDescription`:
+Server data may contain structured values only. Never send selectors, module or
+function names, handlers, executable code, or other instructions for the app to
+evaluate.
+
+Example:
 
 ```json
 {
-  "id": "12092",
-  "name": "Kiểm tra tìm kiếm nội dung",
-  "qaDescription": "B1. Đăng nhập vào app với tài khoản ts1/111222\nB2. Vào trang chủ app\nB3. Vào trang tìm kiếm nội dung\nB4. Tìm phim \"Căn phòng tử thần\"\nB5. Play phim tìm được",
-  "actions": [
-    {"action": "login", "username": "ts1", "password": "111222"},
-    {"action": "open_home"},
-    {"action": "open_search"},
-    {"action": "search_content", "name": "Căn phòng tử thần", "type": "movie"},
-    {"action": "play_search_result", "type": "movie"}
-  ]
+    "id": "12092",
+    "name": "Kiểm tra tìm kiếm nội dung",
+    "qaDescription": "B1. Đăng nhập vào app với tài khoản ts1/111222\nB2. Vào trang chủ app\nB3. Vào trang tìm kiếm nội dung\nB4. Tìm phim \"Căn phòng tử thần\"\nB5. Play phim tìm được",
+    "actions": [{"action": "login", "username": "ts1", "password": "111222"}, {"action": "open_home"}, {"action": "open_search"}, {"action": "search_content", "name": "Căn phòng tử thần", "type": "movie"}, {"action": "play_search_result", "type": "movie"}]
 }
 ```
 
-If `actions` is present and non-empty, it is authoritative. The executor does
-not also interpret `qaDescription`. Preserve `qaDescription` for display and
-traceability, but do not require the app to compile it again.
+## Deterministic conversion
 
-## Compilation algorithm
+For each non-empty line, in order:
 
-Before parsing the steps, retain `preCondition` as case metadata and inspect it
-only as a possible credential source for an uncredentialed login step. Then,
-for each non-empty line, in order:
+1. Remove only an optional prefix such as `B1.`, `B2.`, or `B12.`.
+2. Keep the original line for errors and preserve original names, services, and
+   credentials in the emitted action.
+3. Create a matching form by lowercasing, removing Vietnamese accents, mapping
+   `đ`/`Đ` to `d`, and normalizing whitespace.
+4. Match exactly one supported grammar and emit exactly one action.
+5. Validate the complete action list before sending it.
 
-1. Remove only the optional step prefix, such as `B1.`, `B2.`, or `B12.`.
-2. Keep the original line for diagnostics and preserve the original
-   human-readable values for names, services, and credentials.
-3. Create a matching copy by:
-   - lowercasing;
-   - removing Vietnamese accents;
-   - mapping `đ`/`Đ` to `d`;
-   - normalizing repeated whitespace.
-4. Match the normalized line against the supported command grammar below.
-5. Emit exactly one structured action for the line.
-6. Validate the complete action list before sending the case.
+Reject the whole case when a line is unsupported, malformed, or ambiguous. The
+error must include the case ID, line number, original line, and a reason
+(`unsupported`, `malformed`, or `ambiguous`). Never skip a line or send a
+partial action list. A line must contain one command; for example, a service
+command followed by `và`, `rồi`, `sau đó`, a comma, or another command is
+ambiguous.
 
-Do not silently skip a line. If a line is unsupported, malformed, or matches
-more than one grammar, reject the whole transformation with the case ID, line
-number, and original line. Do not send a partially compiled action list.
+Search names remain human-readable in actions. The runtime normalizes them to
+ASCII and enters them character by character through the virtual keyboard.
 
-The content `name` sent in an action should remain human-readable, for example
-`"Căn phòng tử thần"`. The runtime search helper normalizes it to lowercase
-ASCII (`"can phong tu than"`) before entering the virtual keyboard.
+### Login credentials
 
-The app-side runtime does not read `preCondition` to obtain credentials. When
-the server uses it as described below, it must emit the resolved `username` and
-`password` in the explicit `login` action.
-
-## Action grammar and output
-
-### Login
-
-Supported forms include:
+Recognize `username/password`, `tên TK <username>, pass <password>`, and the
+same labeled form with `tài khoản` or `mật khẩu`. Package/subscription wording
+between `tài khoản` and the credentials is ignored:
 
 ```text
 Đăng nhập vào app với tài khoản ts1/111222
-Đăng nhập tài khoản ts1/111222
 Đăng nhập tài khoản gói VIP MAX: tên TK 0913476477, pass 0913476477
 Đăng nhập tài khoản OPEN MAX 0913476477 pass 0913476477
 ```
 
-Output:
+Emit only:
 
 ```json
-{"action":"login","username":"ts1","password":"111222"}
+{"action": "login", "username": "ts1", "password": "111222"}
 ```
 
-The account format may be `username/password`, labeled `tên TK ..., pass ...`,
-or may place a package name between `tài khoản` and the username. Package or
-subscription wording is ignored; only the username and password are emitted.
-Credentials are sensitive and must not be written to logs or failure
-messages.
+If a line clearly requests login but lacks a complete pair, resolve it only
+from `preCondition`. Login-line credentials win; `preCondition` must contain
+exactly one complete supported pair. Do not infer credentials from the case
+name, expected result, other metadata, or partial values. If no unambiguous
+pair exists, reject the line; never emit missing credentials. Credentials must
+not appear in logs or failure messages. The app runtime does not read
+`preCondition` itself.
 
-#### Login credentials from `preCondition`
+## Supported source grammar
 
-If a login step clearly requests login but does not provide both a username and
-password, resolve that one login action from the case's `preCondition` field.
-For example:
+The words `phim`, `kênh`, and `nội dung` are descriptive where noted; preserve
+human-readable values from the source.
 
-```json
-{
-  "preCondition": "Tài khoản đăng nhập: <username>/<password>",
-  "qaDescription": "B1. Đăng nhập vào ứng dụng\nB2. Vào trang chủ ứng dụng",
-  "actions": [
-    {"action":"login","username":"<username>","password":"<password>"},
-    {"action":"open_home"}
-  ]
-}
-```
+| Action                 | Supported source form                                                                                                                                                                 | Emit / notes                                                                                                                                                                                                        |
+| ---------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `open_home`            | `Vào trang chủ`, `Vào trang chủ app/ứng dụng`, `Vào màn hình trang chủ ứng dụng`, `Vào home`                                                                                          | `{"action":"open_home"}`                                                                                                                                                                                            |
+| `open_service`         | `Vào dịch vụ <service>`                                                                                                                                                               | Preserve `<service>`. `kênh` also searches the runtime alias `Truyền hình`.                                                                                                                                         |
+| `focus_row`            | `Di chuyển đến dòng cate/subcate/row "<row>"`; `Di chuyển đến focus vào poster đầu tiên của mục/hàng cate/row "<row>"`; or `Di chuyển ... poster <type> thứ <n> của dòng ... "<row>"` | `{"action":"focus_row","rowName":"<row>"}`; add positive 1-based `itemIndex: n` for a numbered poster.                                                                                                              |
+| `focus_row_first_item` | `Di chuyển focus đến ... đầu tiên bên trái` (including the current `subcate` row)                                                                                                     | Focuses the leftmost item in the active row, regardless of stated content type.                                                                                                                                     |
+| `focus_text`           | `Focus vào mục/item "<text>"`; or `Di chuyển đến focus vào nút "Xem ngay" của 1/một trailer/trailler trang chủ bất kỳ`                                                                | `{"action":"focus_text","text":"<text>"}`. After `focus_row` on Home's `Thể loại` row, scan reachable service posters; never fall back to a same-named left-menu item.                                              |
+| `press_ok`             | `Bấm/Chọn/Nhấn [phím] OK` or `Bấm/Chọn/Nhấn [phím] enter`                                                                                                                             | `{"action":"press_ok"}`. After a Home service poster, activation must pass the service-result check below.                                                                                                          |
+| `open_search`          | `Vào tìm kiếm`, `Vào trang tìm kiếm`, `Vào trang tìm kiếm nội dung`                                                                                                                   | `{"action":"open_search"}`                                                                                                                                                                                          |
+| `search_content`       | `Tìm/Tìm kiếm/Search <phim\|movie\|kênh\|channel\|nội dung\|content> "<name>"`                                                                                                        | Emit `search_content` with `type: movie\|channel\|content`. The runtime searches visible results after virtual-keyboard entry.                                                                                      |
+| `play_content`         | `Phát/Play <phim\|kênh\|nội dung> "<name>"`                                                                                                                                           | Emit `play_content` with the original name and mapped type. This targets a currently visible item; it is not global search.                                                                                         |
+| `play_search_result`   | `Phát/Play <type> tìm được/vừa tìm/tìm thấy`                                                                                                                                          | Emit `play_search_result` with the mapped type. Use after `search_content` unless the case explicitly establishes the focused result.                                                                               |
+| `play_row`             | `Phát/Play <n\|tất cả\|toàn bộ> [nội dung] [phim\|kênh] của hàng cate thứ <rowIndex>` or `... hàng cate "<rowName>"`                                                                  | Emit `play_row`; `n` becomes `count`, `tất cả`/`toàn bộ` omits it, and the row selector is exactly one of `rowIndex` or `rowName`. Do not emit `type`. On Home, numeric indexes exclude the single promotional row. |
+| `play_home_trailers`   | `Chạy/Phát/Play (toàn bộ\|tất cả\|các) (trailer\|trailler) (ở\|trên\|tại) (trang chủ\|Home)`                                                                                          | `{"action":"play_home_trailers"}`. Browser-only; no fixed count.                                                                                                                                                    |
+| `assert_screen`        | No fallback sentence grammar                                                                                                                                                          | Explicit-action-only: emit `{"action":"assert_screen","text":"..."}` when the server already has a direct assertion.                                                                                                |
+| `press_back`           | `Quay lại`, `Quay về`, `Nhấn back`                                                                                                                                                    | `{"action":"press_back"}`. Use explicit `count` for repeats.                                                                                                                                                        |
+| `wait_for_ready`       | `Chờ app`, `Chờ home`, `Chờ content`, `Chờ player`                                                                                                                                    | Emit `wait_for_ready` with the corresponding `name`.                                                                                                                                                                |
 
-Apply these rules deterministically:
+Rows are located on the current page by visible headings/content and fuzzy
+Vietnamese matching, not generated row IDs; focusing a row does not open a new
+service or page. Direct `open_service` uses the left menu or its `Tất cả dịch
+vụ` fallback, while Home category entry is `focus_row` → `focus_text` →
+`press_ok`. `focus_row.itemIndex` is a reachable 1-based poster index;
+the runtime scrolls horizontally and fails with the furthest reachable index if
+the row ends first. `play_row` returns to the row after each item, continues
+after individual playback failures, reports every attempted item, and fails if
+any requested item fails or none succeeds.
 
-1. Credentials stated on the login line take precedence over `preCondition`.
-2. Use `preCondition` only when it supplies one unambiguous complete credential
-   pair in a supported login format (`username/password` or labeled username
-   and password/pass values).
-3. Do not infer credentials from the case name, expected result, another
-   metadata field, or a partial value in `preCondition`.
-4. If the login line omits credentials and `preCondition` is absent, malformed,
-   partial, or contains more than one possible credential pair, reject the
-   transformation with the case ID and the original login line. Never emit a
-   `login` action with missing values.
+### Service success
 
-### Home and service navigation
-
-```text
-Vào trang chủ
-Vào trang chủ app
-Vào home
-```
-
-```json
-{"action":"open_home"}
-```
-
-The home action also accepts `Vào màn hình trang chủ ứng dụng` and equivalent
-`app` wording.
-
-```text
-Vào dịch vụ kênh
-Vào dịch vụ phim truyện
-```
-
-Output:
-
-```json
-{"action":"open_service","service":"kênh"}
-{"action":"open_service","service":"phim truyện"}
-```
-
-Preserve the service value from the original line. For `service: "kênh"`, the
-runtime searches both `kênh` and the alias `Truyền hình`, because the app may
-label the television service as `Truyền hình`. Service lookup is fuzzy and
-Vietnamese-normalized by the runtime.
-
-There are two supported ways to enter a service:
-
-1. Use the left menu directly, or open `Tất cả dịch vụ` from the left menu and
-   choose the service. This is represented by `open_service`.
-2. On Home, focus the `Thể loại` row, focus the requested service item, and
-   press OK. This is represented by `focus_row`, `focus_text`, and `press_ok`.
-
-The Home row is located from its visible heading and nearby service items. Do
-not depend on a generated row ID because it can change between renders.
-
-#### Required service-success assertion
-
-Opening or focusing a service poster is not itself a successful service test.
-For every case whose purpose is to open a service or category, retain a service
-success assertion in `expectedResult`. Accepted Vietnamese forms include:
+Opening or focusing a service is not sufficient by itself. Every service or
+category case must retain a service assertion in `expectedResult`, such as:
 
 ```text
 Vào chuyên mục "TV xem lại" bình thường
@@ -172,444 +117,63 @@ Mở dịch vụ "Thiếu nhi" thành công
 Vào màn hình dịch vụ Phim truyện thành công
 ```
 
-If the source puts that assertion as the final `qaDescription` line instead of
-in `expectedResult`, use that exact line to populate `expectedResult`; it is a
-result assertion, not another navigation action. Do not emit a duplicate
-`open_service` or `press_ok` action for it.
+If that assertion is the final `qaDescription` line, copy the exact line to
+`expectedResult`; do not compile it as another `open_service` or `press_ok`.
+After activation, the runtime requires a non-Home destination with visible
+content rows and rejects a visible auto-hide toast/tooltip or no-data/error
+popup. A focused poster or successful OK press alone is not success.
 
-The runtime checks the outcome immediately after the service is activated:
+### Home trailers
 
-1. A visible auto-hide toast/tooltip is a failure.
-2. A popup saying that the service has no data/content (or another service
-   error) is a failure.
-3. Success requires leaving Home and showing at least one visible content row
-   on the destination screen.
+`play_home_trailers` reads trusted Home promo titles, activates each `Xem ngay`
+control through remote navigation, captures a post-activation screenshot, and
+returns Home until the carousel ends or cycles. Healthy video is `playable`; a
+visible Album detail list is `album_opened`; all other outcomes are `failed`.
+The runtime retains each trailer's name, status, activation type, and
+screenshot. Internal markers such as `#promo-video-next` are app-owned and must
+never be supplied by server data.
 
-Therefore a case must not pass solely because the target poster was visible,
-focused, or received OK/Enter.
+## Action validation
 
-### Focus a named control and press OK
-
-To focus the first poster/content item in a named Home row, use:
-
-```text
-Di chuyển đến focus vào poster đầu tiên của mục "Thịnh hành"
-Di chuyển đến dòng cate: "Kênh đề xuất"
-Di chuyển đến dòng cate "Thể loại"
-
-This focuses the named row visible on the current page; it does not open a
-different service or page before searching for the row.
-```
-
-Output:
-
-```json
-{"action":"focus_row","rowName":"Thịnh hành"}
-```
-
-The runtime locates the visible row/category using Vietnamese-normalized
-matching, then focuses and verifies its first poster. It does not focus the
-category title itself.
-
-To focus a numbered poster in a named row, category, or subcategory, emit
-`focus_row` with a 1-based `itemIndex`:
+Allowed actions:
 
 ```text
-Di chuyển focus vào poster kênh thứ 4 của dòng subcate "HTV"
-Di chuyển focus vào poster phim thứ 2 của dòng cate "Phim song song"
-Di chuyển focus vào poster nội dung thứ 3 của dòng hàng cate "Đề xuất"
+login, open_home, focus_row, focus_row_first_item, focus_text, press_ok,
+open_service, open_search, search_content, play_content, play_search_result,
+play_row, play_home_trailers, assert_screen, press_back, wait_for_ready
 ```
 
-```json
-{"action":"focus_row","rowName":"HTV","itemIndex":4}
-{"action":"focus_row","rowName":"Phim song song","itemIndex":2}
-{"action":"focus_row","rowName":"Đề xuất","itemIndex":3}
-```
-
-`itemIndex` is a positive 1-based index across the reachable posters in the
-named row. The runtime focuses a visible row anchor, uses remote horizontal
-navigation to expose the requested position when it is outside the viewport,
-and fails with the row name, requested index, and furthest reachable position
-when the row ends first. The content words `kênh`, `phim`, and `nội dung` are
-descriptive only.
-
-To move to the first item on the currently active row, use:
-
-```text
-Di chuyển focus đến 1 kênh đầu tiên bên trái
-```
-
-The content type wording (`kênh`, `phim`, or `nội dung`) is descriptive; the
-runtime focuses the leftmost item regardless of its actual content type.
-
-Output:
-
-```json
-{"action":"focus_row_first_item"}
-```
-
-The following all map to the same remote OK action:
-
-```text
-Bấm phím OK
-Chọn phím OK
-Nhấn phím OK
-Bấm enter
-Chọn enter
-Nhấn enter
-```
-
-Output:
-
-```json
-{"action":"press_ok"}
-```
-
-Supported form:
-
-```text
-Di chuyển đến focus vào nút "Xem ngay" của 1 trailler trang chủ bất kỳ
-```
-
-Output:
-
-```json
-{"action":"focus_text","text":"Xem ngay"}
-```
-
-The runtime uses the existing remote-focus navigation to focus the visible
-control whose text matches the requested label. The server provides text only;
-it does not provide selectors or executable behavior.
-
-Supported OK forms include:
-
-```text
-Nhấn chọn OK
-Nhấn OK
-Chọn OK
-```
-
-Output:
-
-```json
-{"action":"press_ok"}
-```
-
-`press_ok` sends the remote Enter key after the preceding focus action. When
-that focus is a Home `Thể loại` service poster, the runtime immediately checks
-the service-success outcome above rather than treating the key press itself as
-success.
-
-### Open global search
-
-All of these forms map to the same action:
-
-```text
-Vào tìm kiếm
-Vào trang tìm kiếm
-Vào trang tìm kiếm nội dung
-```
-
-Output:
-
-```json
-{"action":"open_search"}
-```
-
-The runtime opens the app's global search page through the left menu.
-
-### Search content
-
-Supported forms:
-
-```text
-Tìm phim "Căn phòng tử thần"
-Tìm kiếm phim "Căn phòng tử thần"
-Tìm nội dung "Tin tức"
-Tìm kênh "VTV1 HD"
-Search movie "Dune"
-```
-
-Output type mapping:
-
-| Source type | Action type |
-| --- | --- |
-| `phim` / `movie` | `movie` |
-| `kênh` / `channel` | `channel` |
-| `nội dung` / `content` | `content` |
-
-Examples:
-
-```json
-{"action":"search_content","name":"Căn phòng tử thần","type":"movie"}
-{"action":"search_content","name":"VTV1 HD","type":"channel"}
-```
-
-At runtime this action enters the normalized name character by character using
-the on-screen virtual keyboard, focuses `#callSearch`, activates it, waits
-three seconds, and focuses the best similar visible result in the result rows.
-
-### Play a named visible item
-
-Supported forms:
-
-```text
-Phát phim "Dune"
-Play phim "Dune"
-Phát kênh "VTV1 HD"
-Phát nội dung "Tin tức"
-```
-
-Output:
-
-```json
-{"action":"play_content","name":"Dune","type":"movie"}
-{"action":"play_content","name":"VTV1 HD","type":"channel"}
-{"action":"play_content","name":"Tin tức","type":"content"}
-```
-
-This searches only the currently visible content rows. It must not be
-implemented as a global content search.
-
-### Play the result found by search
-
-Supported forms:
-
-```text
-Phát phim tìm được
-Play nội dung tìm được
-Phát kênh vừa tìm
-```
-
-Output:
-
-```json
-{"action":"play_search_result","type":"movie"}
-{"action":"play_search_result","type":"content"}
-{"action":"play_search_result","type":"channel"}
-```
-
-This action plays the result currently focused by the preceding
-`search_content` action. It should not be emitted without a preceding search
-flow unless the case explicitly establishes the focused result.
-
-### Play items from a category row
-
-Supported forms include both the short content type and the longer wording
-with `nội dung` before `phim` or `kênh`:
-
-```text
-Phát toàn bộ nội dung của hàng cate thứ 2
-Play 4 nội dung phim của hàng cate thứ 2
-Phát 3 nội dung kênh của hàng cate thứ 1
-Play tất cả phim của hàng cate "Phim song song"
-Phát 2 kênh của hàng cate "VTV"
-```
-
-Output rules:
-
-- `toàn bộ` or `tất cả` means omit `count`.
-- A positive number becomes `count`.
-- `hàng cate thứ y` becomes `rowIndex: y`, using a 1-based index.
-- `hàng cate "Cate name"` becomes `rowName: "Cate name"`.
-- The words `nội dung`, `phim`, and `kênh` describe the source text only;
-  `play_row` does not emit a `type` field.
-
-Examples:
-
-```json
-{"action":"play_row","rowIndex":2}
-{"action":"play_row","rowIndex":2,"count":4}
-{"action":"play_row","rowIndex":1,"count":3}
-{"action":"play_row","rowName":"Phim song song"}
-{"action":"play_row","rowName":"VTV","count":2}
-```
-
-The runtime navigates and plays visible items in that row, returns to the row
-after each item, and continues after an individual playback failure. The
-action is failed if one or more requested items fail or if no item plays
-successfully; the report retains each failed item's name, poster, and
-screenshot when available.
-
-### Play all Home promotional trailers
-
-Supported forms:
-
-```text
-Chạy toàn bộ trailer ở trang chủ
-Phát tất cả trailer trên trang chủ
-Play các trailler tại Home
-```
-
-Output:
-
-```json
-{"action":"play_home_trailers"}
-```
-
-This is a Browser-only action. The runtime reads the trusted Home promo title,
-focuses `Xem ngay` through remote navigation, checks the destination, captures
-the post-activation player/Album-detail screenshot for every trailer, returns
-Home, and continues until the promo carousel ends or cycles. A healthy video is
-reported as `playable`; a destination with a visible Album detail content list
-is reported as `album_opened`; only neither destination is `failed`. The action
-retains every trailer name, status, activation type, and screenshot in the
-local user report, including failed results. `#promo-video-next` is an internal
-trusted DOM marker; it must not be supplied by case data, and the server must
-not emit selectors or executable fields. The bounded Home-trailer run is large
-enough for the reported 16-item carousel and does not impose a fixed count, so
-newly available trailers are also tested. It uses the shared adaptive
-player/detail-close helper used by generic Browser player checks and row
-playback; Home supplies only its Home-promo readiness predicate. The helper
-sends one remote Back at a time, permits a second Back only when the first
-destination is not ready, and dismisses a detected exit-confirmation dialog
-without issuing another close press.
-
-### Back navigation
-
-```text
-Quay lại
-Quay về
-Nhấn back
-```
-
-Output:
-
-```json
-{"action":"press_back"}
-```
-
-For repeated back presses, prefer explicit actions or add a validated
-`count`:
-
-```json
-{"action":"press_back","count":2}
-```
-
-### Readiness waits
-
-Supported forms:
-
-```text
-Chờ app
-Chờ home
-Chờ content
-Chờ player
-```
-
-Output:
-
-```json
-{"action":"wait_for_ready","name":"app"}
-{"action":"wait_for_ready","name":"home"}
-{"action":"wait_for_ready","name":"content"}
-{"action":"wait_for_ready","name":"player"}
-```
-
-## Validation rules
-
-Every emitted action must use only this allowlist:
-
-```text
-login
-open_home
-focus_row
-focus_row_first_item
-focus_text
-press_ok
-open_service
-open_search
-search_content
-play_content
-play_search_result
-play_row
-play_home_trailers
-assert_screen
-press_back
-wait_for_ready
-```
-
-`assert_screen` is currently an explicit-action-only capability in the app
-fallback grammar. If the server wants to emit it, construct and validate the
-action directly rather than attempting to infer it from an arbitrary sentence.
-
-Required fields:
-
-| Action | Required fields | Optional fields |
-| --- | --- | --- |
-| `login` | `username`, `password` | — |
-| `open_home` | — | — |
-| `focus_row` | `rowName` | `itemIndex` (positive 1-based index) |
-| `focus_row_first_item` | — | — |
-| `focus_text` | `text` | — |
-| `press_ok` | — | — |
-| `open_service` | `service` | — |
-| `open_search` | — | — |
-| `search_content` | `name`, `type` | — |
-| `play_content` | `name`, `type` | — |
-| `play_search_result` | — | `type` |
-| `play_row` | exactly one of `rowIndex`, `rowName` | `count` |
-| `play_home_trailers` | — | — |
-| `assert_screen` | `text` | — |
-| `press_back` | — | `count` |
-| `wait_for_ready` | `name` | — |
+| Action                                                                               | Required fields                      | Optional fields |
+| ------------------------------------------------------------------------------------ | ------------------------------------ | --------------- |
+| `login`                                                                              | `username`, `password`               | —               |
+| `open_home`, `focus_row_first_item`, `press_ok`, `open_search`, `play_home_trailers` | —                                    | —               |
+| `focus_row`                                                                          | `rowName`                            | `itemIndex`     |
+| `focus_text`, `assert_screen`                                                        | `text`                               | —               |
+| `open_service`                                                                       | `service`                            | —               |
+| `search_content`, `play_content`                                                     | `name`, `type`                       | —               |
+| `play_search_result`                                                                 | —                                    | `type`          |
+| `play_row`                                                                           | exactly one of `rowIndex`, `rowName` | `count`         |
+| `press_back`                                                                         | —                                    | `count`         |
+| `wait_for_ready`                                                                     | `name`                               | —               |
 
 Additional constraints:
 
-- `type` is one of `channel`, `movie`, or `content`.
-- `rowIndex` is a positive 1-based integer.
-- `count`, when present on `play_row`, is a positive integer.
-- `press_back.count`, when present, is a non-negative integer.
-- `rowName`, `service`, and content names must be non-empty strings.
-- `focus_row.itemIndex`, when present, is a positive 1-based integer.
-- Do not add fields such as `selector`, `module`, `handler`, `function`, or
-  executable code.
+- `type` is `channel`, `movie`, or `content`.
+- `rowIndex`, `itemIndex`, and `count` are positive integers; `press_back.count`
+  is a non-negative integer.
+- `name`, `rowName`, `service`, `text`, `username`, and `password` are non-empty
+  strings where used.
+- Reject unknown fields, including `selector`, `module`, `handler`, `function`,
+  and executable code.
 
-## Failure behavior
+## Ownership and failure behavior
 
-Reject the transformation with a machine-readable error containing:
+The server owns language parsing and action validation. The app owns remote
+focus navigation, virtual-keyboard input, visible-row matching, playback and
+service checks, waits, cleanup, and failure artifacts.
 
-```text
-case id
-line number
-original line
-reason: unsupported, malformed, or ambiguous
-```
-
-Examples:
-
-```text
-Không thể parse được bước: B4. Thao tác không được hỗ trợ
-Test case 12092 line B3 is ambiguous: ...
-```
-
-The parser failure text is attached to the failed `compile` step and shown as
-the failed reason in the compact user report.
-
-Do not convert an uncertain sentence into the nearest action. If the server
-needs a new sentence form, add a deterministic grammar rule and regression
-tests, then version the compiler.
-
-## Recommended server response
-
-Return the original case metadata plus explicit actions:
-
-```json
-{
-  "id": "12090",
-  "name": "Kiểm tra play phim truyện",
-  "qaDescription": "B1. Đăng nhập vào app với tài khoản ts1/111222\nB2. Vào trang chủ app\nB3. Vào dịch vụ phim truyện\nB4. Play 4 nội dung phim của hàng cate thứ 2",
-  "actions": [
-    {"action":"login","username":"ts1","password":"111222"},
-    {"action":"open_home"},
-    {"action":"open_service","service":"phim truyện"},
-    {"action":"play_row","rowIndex":2,"count":4}
-  ],
-  "expectedResult": "Nội dung play thành công"
-}
-```
-
-The app then validates the action list and dispatches each action through its
-registered handler. The server compiler is responsible for language parsing;
-the app remains responsible for TV focus navigation, virtual-keyboard input,
-visible-row matching, playback checks, waits, and failure artifacts.
+On any compiler failure, return a machine-readable error with the case ID,
+source line number, original line, and `unsupported`, `malformed`, or
+`ambiguous` reason. Do not guess a nearby action. Adding a new sentence form
+requires a deterministic grammar rule and regression coverage before it is
+used in server responses.
