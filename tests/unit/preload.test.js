@@ -79,9 +79,9 @@ test("exposes hosts-file status and update calls", () => {
 test("exposes the test configuration synchronization call", () => {
   const {bridge, invokes} = loadPreload();
 
-  bridge.setTestConfiguration({PLAYER_CHECK_TIMEOUT_SECONDS: "12"});
+  bridge.setTestConfiguration({PLAYER_CHECK_TIMEOUT_SECONDS: "12", TEST_CASE_MAX_TIME_MINUTES: "45"});
 
-  assert.deepEqual(invokes, [["set-test-configuration", {PLAYER_CHECK_TIMEOUT_SECONDS: "12"}]]);
+  assert.deepEqual(invokes, [["set-test-configuration", {PLAYER_CHECK_TIMEOUT_SECONDS: "12", TEST_CASE_MAX_TIME_MINUTES: "45"}]]);
 });
 
 test("exposes the running campaign loader through the narrow IPC bridge", () => {

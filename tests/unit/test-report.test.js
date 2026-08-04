@@ -338,6 +338,20 @@ test("renders a Details button and expandable failed-item table", () => {
   assert.match(html, /data:image\/png/);
 });
 
+test("preserves numbered row failure summaries as separate lines", () => {
+  const report = upsertTestReport(createEmptyReport(), {
+    id: "case-2287",
+    name: "Playback",
+    status: "failed",
+    failedItems: [],
+    error: "2 row content item(s) failed to play:\n1. 158218 - Ăn Chạy Yêu\n2. 155230 - Yêu Em",
+  });
+  const html = renderUserReport(report);
+
+  assert.match(html, /error-summary/);
+  assert.match(html, /1\. 158218 - Ăn Chạy Yêu\n2\. 155230 - Yêu Em/);
+});
+
 test("renders a passed test's expected result and completion screenshot in expandable details", () => {
   const report = upsertTestReport(createEmptyReport(), {
     id: "case-1",

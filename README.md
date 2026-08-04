@@ -104,7 +104,7 @@ API folder is available.
    npm run app:dev
    ```
 
-3. Open Settings and configure `APP_URL`, API domain, API authorization/service-token value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. The configured value is sent verbatim in the `X-FlowTest-Service-Token` header and is redacted from Logs. In **Test configuration**, set `Player check timeout (second)` to a positive integer; it defaults to 6 seconds and controls the wait before Browser and LG player health checks. In **SDK configuration → Browser configuration**, review and, when needed, explicitly install the project-pinned Chromium.
+3. Open Settings and configure `APP_URL`, API domain, API authorization/service-token value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. The configured value is sent verbatim in the `X-FlowTest-Service-Token` header and is redacted from Logs. In **Test configuration**, set `Test case maximum time (minutes)` to a positive integer (default 30 minutes) to control the maximum duration of one Browser test case, and set `Player check timeout (second)` to control the wait before Browser and LG player health checks (default 6 seconds). In **SDK configuration → Browser configuration**, review and, when needed, explicitly install the project-pinned Chromium.
 4. Use the refresh icon beside **Chiến dịch** to load running campaigns or the refresh icon beside **Folders** to load folders. Selecting a campaign automatically refreshes **Folders** with only that campaign's folders; clearing the campaign refreshes the unfiltered project folders. Choose a folder before clicking `Get test cases`: with a campaign selected, cases come from that campaign and the folder supplies the result context; with no campaign selected, cases come only from the selected folder.
 5. Search by case ID substring or name with the instant filter, then check one or more visible cases in the table.
 6. Use `Detail` to review metadata, expected result, and normalized actions.
@@ -117,7 +117,8 @@ API folder is available.
    still tested.
 
 The renderer captures checked case IDs in table order and sends one
-`TEST_CASE_ID`, `APP_URL`, player-check timeout, preview-settings, and the
+`TEST_CASE_ID`, `APP_URL`, player-check timeout, test-case maximum time,
+preview-settings, and the
 active cache key at a time to the main process. Folder and campaign API calls
 run through main-process IPC. A selected campaign scopes both the folder-tree
 request and the direct testcase request with `campaignId`; the selected folder
@@ -197,7 +198,8 @@ selected carousel reaches its last reachable poster. Each poster is activated
 through the remote Enter path, checked independently, and returned to the row
 before the next poster is focused. A recognized playback/unsupported-device
 dialog is recorded as that poster's failure and dismissed safely so the row
-can continue.
+can continue. On Home, the single `homePage1` promotional row is excluded from
+numeric counting, so public `rowIndex: 5` targets `homePage2_4_*`.
 
 When `focus_text` immediately follows `focus_row` for Home `Thể loại`, it
 scans the complete reachable service carousel, moving right and re-reading the
@@ -254,7 +256,8 @@ item, waits for playback, uses the shared adaptive player/detail-close helper to
 return to the row, waits 1.5 seconds for the carousel to re-render, and
 continues after individual failures. Its `rowIndex` is 1-based; omit `count` to
 request all items. The row playback JSON/HTML report includes the name and
-poster of each attempted item, including failed items.
+poster of each attempted item, including failed items. When failures occur, the
+action error also lists them as `content ID - content name` entries.
 
 `play_home_trailers` tests every distinct promotional trailer shown on Home. It
 uses remote `Xem ngay` → player/Album-detail check → Back navigation so

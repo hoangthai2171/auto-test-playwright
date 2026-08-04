@@ -335,6 +335,17 @@
                         <div class="settings-panel hidden" data-settings-content="test-configuration">
                             <h3>Test configuration</h3>
                             <section class="settings-section">
+                                <h4>Test case</h4>
+                                <label for="test-case-max-time-input" class="settings-help-label">
+                                    <span class="settings-label-with-help">
+                                        <span>Test case maximum time (minutes)</span>
+                                        <span class="tooltip-trigger" tabindex="0" role="img" aria-label="Thời gian tối đa cho phép 1 test case được chạy" data-tooltip="Thời gian tối đa cho phép 1 test case được chạy">?</span>
+                                    </span>
+                                    <input id="test-case-max-time-input" name="TEST_CASE_MAX_TIME_MINUTES" type="number" min="1" max="1440" step="1" inputmode="numeric" pattern="[0-9]*" value="30" />
+                                </label>
+                                <p class="field-note">Maximum duration for one Browser test case. Default: 30 minutes.</p>
+                            </section>
+                            <section class="settings-section">
                                 <h4>Player</h4>
                                 <label for="player-check-timeout-input" class="settings-help-label">
                                     <span class="settings-label-with-help">

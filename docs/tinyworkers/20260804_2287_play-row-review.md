@@ -58,7 +58,7 @@ The existing row-navigation, selector-validation, player-state, and safe remote-
 
 ## Completed verification
 
-- `npm run test:unit`: 614 tests passed after the final changes.
+- `npm run test:unit`: 617 tests passed after the row-mapping and report-summary follow-up.
 - `npx playwright test tests/batch-budget.spec.js --project=chromium --reporter=line`: 5 passed.
 - `node --check` for changed JavaScript entry/helper/report files: passed.
 - `npx playwright test tests/run-test-case-mytv.spec.js --list`: one test listed.
@@ -72,3 +72,17 @@ The existing row-navigation, selector-validation, player-state, and safe remote-
 - This does not change the MyTV application or make an unsupported poster pass.
 - Dynamic carousel content can change between runs; row exhaustion uses focused-item identity and bounded remote navigation rather than a hard-coded poster count.
 - A modal that is not recognized as a row playback error is not auto-dismissed, to avoid pressing a destructive control on an unrelated screen.
+
+## Follow-up correction: case 2291 row mapping and failure summary
+
+- Case 2291 reproduced the numeric row-selection defect: the Home promotional
+  row is `homePage1`, while content rows use `homePage2_<row>_<item>` IDs. The
+  numeric selector now excludes `homePage1` and resolves public row `N` to
+  `homePage2_(N-1)_*`, allowing row 5 to focus `homePage2_4_0`.
+- Row playback failure errors now enumerate each failed content ID and name,
+  while the compact report continues to list the complete per-poster evidence
+  table.
+- Focused live validation of case 2291 reached `SCTV đặc sắc` with first item
+  `homePage2_4_0`. A subsequent full-run attempt was blocked before Home by the
+  staging device-limit popup; this was an environment/session issue, not the
+  row-selection path.

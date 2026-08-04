@@ -51,7 +51,12 @@ const {createTvRunner} = require("./tv-runner");
 const {createWebOsSessionFactory} = require("../tests/lib/tv-session/webos-appium-session");
 const {revealWindowOnFirstPaint} = require("./window-startup");
 const {createHostsFileService} = require("./hosts-file");
-const {DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS, normalizePlayerCheckTimeoutSeconds} = require("./test-configuration");
+const {
+    DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS,
+    DEFAULT_TEST_CASE_MAX_TIME_MINUTES,
+    normalizePlayerCheckTimeoutSeconds,
+    normalizeTestCaseMaxTimeMinutes,
+} = require("./test-configuration");
 
 const INTERACTIVE_BROWSER_DEBUG_PORT = Number(process.env.MYTV_INTERACTIVE_BROWSER_DEBUG_PORT) || 43000 + Math.floor(Math.random() * 1000);
 
@@ -67,6 +72,7 @@ let rendererRunActive = false;
 let hasUnsyncedResultSubmission = false;
 let activeLgBatchRunner;
 let playerCheckTimeoutSeconds = DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS;
+let testCaseMaxTimeMinutes = DEFAULT_TEST_CASE_MAX_TIME_MINUTES;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -740,7 +746,15 @@ ipcMain.handle("set-test-configuration", async (_event, values = {}) => {
         configuration.PLAYER_CHECK_TIMEOUT_SECONDS,
         playerCheckTimeoutSeconds,
     );
-    return {ok: true, PLAYER_CHECK_TIMEOUT_SECONDS: String(playerCheckTimeoutSeconds)};
+    testCaseMaxTimeMinutes = normalizeTestCaseMaxTimeMinutes(
+        configuration.TEST_CASE_MAX_TIME_MINUTES,
+        testCaseMaxTimeMinutes,
+    );
+    return {
+        ok: true,
+        PLAYER_CHECK_TIMEOUT_SECONDS: String(playerCheckTimeoutSeconds),
+        TEST_CASE_MAX_TIME_MINUTES: String(testCaseMaxTimeMinutes),
+    };
 });
 
 ipcMain.handle("run-test", async (event, values = {}) => {
@@ -765,6 +779,10 @@ ipcMain.handle("run-test", async (event, values = {}) => {
     playerCheckTimeoutSeconds = normalizePlayerCheckTimeoutSeconds(
         values.PLAYER_CHECK_TIMEOUT_SECONDS,
         playerCheckTimeoutSeconds,
+    );
+    testCaseMaxTimeMinutes = normalizeTestCaseMaxTimeMinutes(
+        values.TEST_CASE_MAX_TIME_MINUTES,
+        testCaseMaxTimeMinutes,
     );
 
     try {
@@ -802,6 +820,7 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         MYTV_INTERACTIVE_CDP_URL: interactiveCdpUrl,
         MYTV_INTERACTIVE_VIEW_SCALE: interactiveCdpUrl ? String(interactiveViewScale) : "",
         MYTV_PLAYER_CHECK_TIMEOUT_SECONDS: String(playerCheckTimeoutSeconds),
+        MYTV_TEST_CASE_MAX_TIME_MINUTES: String(testCaseMaxTimeMinutes),
     };
 
     if (usesElectronAsNode) {

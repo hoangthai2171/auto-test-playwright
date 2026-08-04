@@ -73,6 +73,7 @@ const DEFAULT_SETTINGS = {
     ENVIRONMENT: "UI",
     API_TIMEOUT_SECONDS: "30",
     PLAYER_CHECK_TIMEOUT_SECONDS: String(TEST_CONFIGURATION.DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS),
+    TEST_CASE_MAX_TIME_MINUTES: String(TEST_CONFIGURATION.DEFAULT_TEST_CASE_MAX_TIME_MINUTES),
     DNS_HOST: "172.16.240.254 html5stage.mytv.vn",
     PREVIEW_TYPE: "live",
     RUN_TARGET: "browser",
@@ -135,6 +136,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const environmentSelect = get("environment-select");
     const apiTimeoutInput = get("api-timeout-input");
     const playerCheckTimeoutInput = get("player-check-timeout-input");
+    const testCaseMaxTimeInput = get("test-case-max-time-input");
     const dnsHostInput = get("dns-host-input");
     const dnsHostAddButton = get("dns-host-add-button");
     const dnsHostRemoveButton = get("dns-host-remove-button");
@@ -319,6 +321,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 saved.PLAYER_CHECK_TIMEOUT_SECONDS,
                 TEST_CONFIGURATION.DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS,
             )),
+            TEST_CASE_MAX_TIME_MINUTES: String(TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
+                saved.TEST_CASE_MAX_TIME_MINUTES,
+                TEST_CONFIGURATION.DEFAULT_TEST_CASE_MAX_TIME_MINUTES,
+            )),
             PREVIEW_TYPE: ["none", "live", "interactive"].includes(saved.PREVIEW_TYPE)
                 ? saved.PREVIEW_TYPE
                 : DEFAULT_SETTINGS.PREVIEW_TYPE,
@@ -333,6 +339,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (environmentSelect) environmentSelect.value = settings.ENVIRONMENT;
         if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
         if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
+        if (testCaseMaxTimeInput) testCaseMaxTimeInput.value = settings.TEST_CASE_MAX_TIME_MINUTES;
         if (dnsHostInput) dnsHostInput.value = settings.DNS_HOST;
         doc?.querySelectorAll?.('[name="preview-type"]').forEach((input) => {
             input.checked = input.value === activePreviewType;
@@ -341,10 +348,14 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         syncTestConfiguration();
     }
 
-    function syncTestConfiguration(playerTimeoutSeconds = settings.PLAYER_CHECK_TIMEOUT_SECONDS) {
+    function syncTestConfiguration(
+        playerTimeoutSeconds = settings.PLAYER_CHECK_TIMEOUT_SECONDS,
+        maxTimeMinutes = settings.TEST_CASE_MAX_TIME_MINUTES,
+    ) {
         testConfigurationSync = Promise.resolve()
             .then(() => api.setTestConfiguration?.({
                 PLAYER_CHECK_TIMEOUT_SECONDS: playerTimeoutSeconds,
+                TEST_CASE_MAX_TIME_MINUTES: maxTimeMinutes,
             }))
             .then((response) => response === undefined ? {ok: true} : response)
             .catch((error) => ({
@@ -360,6 +371,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             playerCheckTimeoutInput?.value,
             settings.PLAYER_CHECK_TIMEOUT_SECONDS,
         );
+        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
+            testCaseMaxTimeInput?.value,
+            settings.TEST_CASE_MAX_TIME_MINUTES,
+        );
         return {
             ...settings,
             APP_URL: settingsAppUrlInput?.value?.trim() || settings.APP_URL,
@@ -373,6 +388,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 ? String(timeoutSeconds)
                 : settings.API_TIMEOUT_SECONDS,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
+            TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
             DNS_HOST: dnsHostInput?.value?.trim() || settings.DNS_HOST,
             RUN_TARGET: runTarget,
         };
@@ -2102,6 +2118,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             playerCheckTimeoutInput?.value,
             settings.PLAYER_CHECK_TIMEOUT_SECONDS,
         );
+        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
+            testCaseMaxTimeInput?.value,
+            settings.TEST_CASE_MAX_TIME_MINUTES,
+        );
         settings = {
             ...settings,
             APP_URL: settingsAppUrlInput?.value?.trim() || DEFAULT_SETTINGS.APP_URL,
@@ -2113,12 +2133,14 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 ? String(timeoutSeconds)
                 : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
+            TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
             DNS_HOST: dnsHostInput?.value?.trim() || DEFAULT_SETTINGS.DNS_HOST,
             PREVIEW_TYPE: activePreviewType,
             RUN_TARGET: runTarget,
         };
         if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
         if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
+        if (testCaseMaxTimeInput) testCaseMaxTimeInput.value = settings.TEST_CASE_MAX_TIME_MINUTES;
         store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
         const response = await syncTestConfiguration();
         showAppToast(
@@ -2132,12 +2154,21 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             playerCheckTimeoutInput?.value,
             settings.PLAYER_CHECK_TIMEOUT_SECONDS,
         );
-        settings = {...settings, PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds)};
+        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
+            testCaseMaxTimeInput?.value,
+            settings.TEST_CASE_MAX_TIME_MINUTES,
+        );
+        settings = {
+            ...settings,
+            PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
+            TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
+        };
         if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
+        if (testCaseMaxTimeInput) testCaseMaxTimeInput.value = settings.TEST_CASE_MAX_TIME_MINUTES;
         store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
         const response = await syncTestConfiguration();
         showAppToast(
-            response?.ok === false ? "Could not save player check timeout." : "Player check timeout saved successfully.",
+            response?.ok === false ? "Could not save test configuration." : "Test configuration saved successfully.",
             response?.ok === false ? "error" : "ok",
         );
     }
@@ -2167,11 +2198,16 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             values.PLAYER_CHECK_TIMEOUT_SECONDS,
             settings.PLAYER_CHECK_TIMEOUT_SECONDS,
         );
+        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
+            values.TEST_CASE_MAX_TIME_MINUTES,
+            settings.TEST_CASE_MAX_TIME_MINUTES,
+        );
         const payload = {
             APP_URL: values.APP_URL,
             TEST_CASE_ID: String(testCaseId),
             PREVIEW_TYPE: values.PREVIEW_TYPE,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
+            TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
         };
         if (values.TEST_CASE_CACHE_KEY) payload.TEST_CASE_CACHE_KEY = String(values.TEST_CASE_CACHE_KEY);
         if (values.TEST_CASE_FOLDER_ID) payload.TEST_CASE_FOLDER_ID = String(values.TEST_CASE_FOLDER_ID);
@@ -2357,6 +2393,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             APP_URL: runSettings.APP_URL,
             PREVIEW_TYPE: activePreviewType,
             PLAYER_CHECK_TIMEOUT_SECONDS: runSettings.PLAYER_CHECK_TIMEOUT_SECONDS,
+            TEST_CASE_MAX_TIME_MINUTES: runSettings.TEST_CASE_MAX_TIME_MINUTES,
             target: runTarget,
         };
         if (activeCacheKey) values.TEST_CASE_CACHE_KEY = activeCacheKey;
@@ -2481,7 +2518,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             values.PLAYER_CHECK_TIMEOUT_SECONDS,
             settings.PLAYER_CHECK_TIMEOUT_SECONDS,
         );
-        syncTestConfiguration(String(playerTimeoutSeconds));
+        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
+            values.TEST_CASE_MAX_TIME_MINUTES,
+            settings.TEST_CASE_MAX_TIME_MINUTES,
+        );
+        syncTestConfiguration(String(playerTimeoutSeconds), String(maxTimeMinutes));
         closeModal(lgRunConfirmationDialog);
         pendingLgRunValues = null;
         batchState = {ids, activeCaseId: null, stopRequested: false, lg: true};
@@ -2600,6 +2641,9 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     get("test-configuration-save-button")?.addEventListener?.("click", () => { void saveTestConfiguration(); });
     playerCheckTimeoutInput?.addEventListener?.("input", () => {
         playerCheckTimeoutInput.value = String(playerCheckTimeoutInput.value || "").replace(/[^0-9]/g, "");
+    });
+    testCaseMaxTimeInput?.addEventListener?.("input", () => {
+        testCaseMaxTimeInput.value = String(testCaseMaxTimeInput.value || "").replace(/[^0-9]/g, "");
     });
     dnsHostInput?.addEventListener?.("input", () => { void refreshDnsHostStatus(); });
     dnsHostAddButton?.addEventListener?.("click", () => { void updateDnsHost("addHostEntry"); });

@@ -1,7 +1,7 @@
 {
   "app/main.js": {
-    "mtime": 1785766335.4519067,
-    "ast_hash": "d34f55f53175e63a7b3ae65b6a66e681",
+    "mtime": 1785813312.751083,
+    "ast_hash": "4f32e1d36b5095bde54a19bfd8863300",
     "semantic_hash": ""
   },
   "app/preload.js": {
@@ -10,8 +10,8 @@
     "semantic_hash": ""
   },
   "app/renderer/renderer.js": {
-    "mtime": 1785766475.4115126,
-    "ast_hash": "bfb0dfbb856800f65837ff638f1cee4d",
+    "mtime": 1785813354.47682,
+    "ast_hash": "07b49e3d58680d3f21e56f9ec8f74508",
     "semantic_hash": ""
   },
   "package.json": {
@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1785808577.0943656,
-    "ast_hash": "ce771ed6b3d40f8c80d4f6b2a17e7848",
+    "mtime": 1785813449.376955,
+    "ast_hash": "227c592128c89389ed6e18204a5d2a9b",
     "semantic_hash": ""
   },
   "IDEA.md": {
@@ -110,13 +110,13 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1785808577.2216315,
-    "ast_hash": "38fc6d8e17f7c733007ad5a862b90e45",
+    "mtime": 1785813449.50227,
+    "ast_hash": "973c2db3aa4ac448c6d8c7567ef1c19c",
     "semantic_hash": ""
   },
   "app/renderer/index.html": {
-    "mtime": 1785743570.0693085,
-    "ast_hash": "0a3e5b5ee1917e9e7b217c09b7c34d1c",
+    "mtime": 1785813377.7393842,
+    "ast_hash": "af50b505e11c4234f262deab01e5c39c",
     "semantic_hash": ""
   },
   ".codex/skills/playwright-interactive/assets/playwright-small.svg": {
@@ -215,8 +215,8 @@
     "semantic_hash": ""
   },
   "app/test-report.js": {
-    "mtime": 1785807018.166844,
-    "ast_hash": "5b2befc206e7f2d51d55a88232dd8d40",
+    "mtime": 1785811735.2275457,
+    "ast_hash": "a044eb14738620104061adb9dab31b57",
     "semantic_hash": ""
   },
   "app/tv-device-ipc.js": {
@@ -345,8 +345,8 @@
     "semantic_hash": ""
   },
   "tests/lib/content-rows.js": {
-    "mtime": 1785808451.1077583,
-    "ast_hash": "15176304056fcf68a57f09bda3a96602",
+    "mtime": 1785811330.2823458,
+    "ast_hash": "d406b97f1be4da5e5280731b8253a49e",
     "semantic_hash": ""
   },
   "tests/lib/dom-scan.js": {
@@ -490,8 +490,8 @@
     "semantic_hash": ""
   },
   "tests/lib/workflows.js": {
-    "mtime": 1785806949.7101228,
-    "ast_hash": "253be13c01dd09d36cebb909dbc70ac5",
+    "mtime": 1785811354.7089672,
+    "ast_hash": "dc91e87e716a707df164401389c6e583",
     "semantic_hash": ""
   },
   "tests/locator-contracts.spec.js": {
@@ -510,8 +510,8 @@
     "semantic_hash": ""
   },
   "tests/run-test-case-mytv.spec.js": {
-    "mtime": 1785807292.5637455,
-    "ast_hash": "fb770c4106ff3c1c88f066d9dd9ed54f",
+    "mtime": 1785813387.6732426,
+    "ast_hash": "af8ee84e31ffd83eaa2fb7fb37600470",
     "semantic_hash": ""
   },
   "tests/run-test-case-tv.spec.js": {
@@ -550,8 +550,8 @@
     "semantic_hash": ""
   },
   "tests/unit/content-rows.test.js": {
-    "mtime": 1785808537.3667943,
-    "ast_hash": "125deaf046a977fd1e16a68c32b405b9",
+    "mtime": 1785811441.4741173,
+    "ast_hash": "78d7ed47bb8298de47d0d71133e40110",
     "semantic_hash": ""
   },
   "tests/unit/credential-redaction.test.js": {
@@ -655,8 +655,8 @@
     "semantic_hash": ""
   },
   "tests/unit/renderer.test.js": {
-    "mtime": 1785766534.4884617,
-    "ast_hash": "5239c076fb1a1b70e7cfa1535fc12a7f",
+    "mtime": 1785813430.8003416,
+    "ast_hash": "d9ae37b64d57bfe2aa0848492f621813",
     "semantic_hash": ""
   },
   "tests/unit/run-close-guard.test.js": {
@@ -685,8 +685,8 @@
     "semantic_hash": ""
   },
   "tests/unit/test-case-action-runner.test.js": {
-    "mtime": 1785807498.6248229,
-    "ast_hash": "c83f21bd22fa7d5d24a0ca4461e442c1",
+    "mtime": 1785811403.2102664,
+    "ast_hash": "2a86c886efd11edcbb427a259338185d",
     "semantic_hash": ""
   },
   "tests/unit/test-case-cache.test.js": {
@@ -710,8 +710,8 @@
     "semantic_hash": ""
   },
   "tests/unit/test-report.test.js": {
-    "mtime": 1785807119.1892185,
-    "ast_hash": "3b4cf7e991f86be15728dcdf165be857",
+    "mtime": 1785811735.359919,
+    "ast_hash": "092843f7d3a48d3eb25c36f8e4be8bc6",
     "semantic_hash": ""
   },
   "tests/unit/text-utils.test.js": {
@@ -890,8 +890,8 @@
     "semantic_hash": ""
   },
   "tests/unit/preload.test.js": {
-    "mtime": 1785742214.0603027,
-    "ast_hash": "ae435065b6b63887fbf1d2c605f3489b",
+    "mtime": 1785813402.8362188,
+    "ast_hash": "c3d2f12764b939a56c495d0098ee1438",
     "semantic_hash": ""
   },
   "app/browser-run-launcher.js": {
@@ -1145,13 +1145,13 @@
     "semantic_hash": ""
   },
   "app/test-configuration.js": {
-    "mtime": 1785654678.5419755,
-    "ast_hash": "aa850037c6a1a24d8370ea1844f23ddf",
+    "mtime": 1785813300.9914963,
+    "ast_hash": "590e9cb5f44fd65c9db50b04fc45eb51",
     "semantic_hash": ""
   },
   "tests/unit/test-configuration.test.js": {
-    "mtime": 1785655053.9815428,
-    "ast_hash": "bcc71df259ae995c3f38dd9c87cefa1f",
+    "mtime": 1785813397.766554,
+    "ast_hash": "b21c09f5dc8573cc7f86f734d74a5baf",
     "semantic_hash": ""
   },
   "docs/tinyworkers/player-check-timeout_20260802.md": {
@@ -1220,8 +1220,13 @@
     "semantic_hash": ""
   },
   "docs/tinyworkers/20260804_2287_play-row-review.md": {
-    "mtime": 1785808577.345456,
-    "ast_hash": "30f7046faeaf827f55858a6b4dc3b04a",
+    "mtime": 1785811842.6953528,
+    "ast_hash": "7a27754de01c068fcd5776b1e595ceec",
+    "semantic_hash": ""
+  },
+  "docs/tinyworkers/20260804_test-case-maximum-time.md": {
+    "mtime": 1785813284.0251064,
+    "ast_hash": "0559cf7ec7c6ea140c47f4de4888cf8a",
     "semantic_hash": ""
   }
 }

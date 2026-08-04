@@ -54,7 +54,8 @@ uses the fixture only when no cached folder is available. `app/main.js` also
 owns flow-case API IPC, sanitizes passwords and service-token header values for the renderer, validates the
 selected case ID from either the fixture or the user-data cache, and starts the
 generic `tests/run-test-case-mytv.spec.js` entry point. The renderer sends the
-selected case ID, `APP_URL`, player-check timeout, preview settings, and an
+selected case ID, `APP_URL`, player-check timeout, test-case maximum time,
+preview settings, and an
 active folder or campaign cache key for a run.
 After every selected API-loaded case has completed, the renderer submits one
 validated `tested`/`testResult` batch through main-process IPC; campaign batches
@@ -126,7 +127,7 @@ workers without redesigning session ownership.
 ```text
 testcased.json
 app/
-  test-configuration.js          Shared player-check timeout default and validation
+  test-configuration.js          Shared player/case-timeout defaults and validation
   main.js                         Electron process, case loading, run IPC
   test-report.js                  Compact user report HTML/data generation
   preload.js                      Context-isolated IPC bridge
@@ -202,6 +203,8 @@ The supported action allowlist is:
   reachable items in the selected row. Omitted-count row playback is bounded
   by row exhaustion rather than the shared short batch runtime budget; every
   attempted poster is recorded and a failed poster does not stop later items.
+  On Home, numeric row indexes exclude the single `homePage1` promotional row:
+  public `rowIndex: N` resolves to the `homePage2_(N-1)_*` item IDs.
 - `play_home_trailers`: Browser-only parameterless action that tests every
   distinct Home promotional trailer through remote `Xem ngay` → player or
   Album-detail check → Back navigation. It reads the trailer name from the
@@ -289,6 +292,7 @@ private fixture data.
 - `MYTV_INTERACTIVE_CDP_URL` — CDP endpoint for interactive preview.
 - `MYTV_INTERACTIVE_VIEW_SCALE` — interactive preview scale.
 - `MYTV_PLAYER_CHECK_TIMEOUT_SECONDS` — sanitized positive-integer player-check wait used by the generic Browser runner; defaults to 6 seconds.
+- `MYTV_TEST_CASE_MAX_TIME_MINUTES` — sanitized positive-integer maximum duration for one generic Browser test case; defaults to 30 minutes and is configurable in Test configuration.
 - `PLAYWRIGHT_BROWSERS_PATH` — app-private per-user Playwright Chromium root,
   assigned by the Electron main process. It is never a bundled browser cache or
   system-browser fallback.
@@ -358,6 +362,10 @@ debugging and is not the user-facing report.
 rows using dimensions, vertical grouping, headings, and focus state. Preserve
 the existing batch-budget behavior and row-return navigation when changing
 legacy playback helpers.
+
+Numeric Home row selection uses the stable `homePage2_<zero-based-row>_<item>`
+ID pattern rather than counting the `homePage1` promotional row. Row playback
+failure messages enumerate each failed content ID and name.
 
 After the shared player/detail close boundary is detected, row playback waits
 1.5 seconds for the previous screen's poster geometry to finish re-rendering

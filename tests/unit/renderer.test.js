@@ -196,6 +196,7 @@ function createRendererFixture() {
     "environment-select",
     "api-timeout-input",
     "player-check-timeout-input",
+    "test-case-max-time-input",
     "dns-host-input",
     "dns-host-add-button",
     "dns-host-remove-button",
@@ -1124,6 +1125,7 @@ test("loads and saves connection and network settings", () => {
     ENVIRONMENT: "API",
     API_TIMEOUT_SECONDS: "45",
     PLAYER_CHECK_TIMEOUT_SECONDS: "12",
+    TEST_CASE_MAX_TIME_MINUTES: "45",
     PREVIEW_TYPE: "none",
   });
   fixture.storage.setItem = (_key, value) => {
@@ -1138,14 +1140,16 @@ test("loads and saves connection and network settings", () => {
   assert.equal(fixture.elements["environment-select"].value, "API");
   assert.equal(fixture.elements["api-timeout-input"].value, "45");
   assert.equal(fixture.elements["player-check-timeout-input"].value, "12");
+  assert.equal(fixture.elements["test-case-max-time-input"].value, "45");
   fixture.elements["gui-settings-save-button"].dispatchEvent("click");
   assert.equal(stored.API_TIMEOUT_SECONDS, "45");
   assert.equal(stored.PLAYER_CHECK_TIMEOUT_SECONDS, "12");
+  assert.equal(stored.TEST_CASE_MAX_TIME_MINUTES, "45");
   assert.equal(stored.API_AUTHORIZATION, "Bearer saved-token");
   assert.equal(stored.ENVIRONMENT, "API");
 });
 
-test("saves and sanitizes the Test configuration player timeout with an auto-hide success toast", async () => {
+test("saves and sanitizes Test configuration timeouts with an auto-hide success toast", async () => {
   assert.equal(loadError, undefined, loadError?.message);
   const fixture = createRendererFixture();
   let stored;
@@ -1155,6 +1159,9 @@ test("saves and sanitizes the Test configuration player timeout with an auto-hid
   fixture.elements["player-check-timeout-input"].value = "15e2";
   fixture.elements["player-check-timeout-input"].dispatchEvent("input");
   assert.equal(fixture.elements["player-check-timeout-input"].value, "152");
+  fixture.elements["test-case-max-time-input"].value = "4e1";
+  fixture.elements["test-case-max-time-input"].dispatchEvent("input");
+  assert.equal(fixture.elements["test-case-max-time-input"].value, "41");
 
   fixture.elements["player-check-timeout-input"].value = "0";
   fixture.elements["test-configuration-save-button"].dispatchEvent("click");
@@ -1162,7 +1169,9 @@ test("saves and sanitizes the Test configuration player timeout with an auto-hid
 
   assert.equal(fixture.elements["player-check-timeout-input"].value, "6");
   assert.equal(stored.PLAYER_CHECK_TIMEOUT_SECONDS, "6");
-  assert.equal(fixture.elements["app-toast"].textContent, "Player check timeout saved successfully.");
+  assert.equal(fixture.elements["test-case-max-time-input"].value, "41");
+  assert.equal(stored.TEST_CASE_MAX_TIME_MINUTES, "41");
+  assert.equal(fixture.elements["app-toast"].textContent, "Test configuration saved successfully.");
   assert.equal(fixture.elements["app-toast"].className, "app-toast ok");
   assert.deepEqual([...fixture.timers.values()].map(({delay}) => delay), [3000]);
   [...fixture.timers.values()][0].callback();
@@ -1181,7 +1190,7 @@ test("shows an error toast when test configuration synchronization fails", async
   fixture.elements["test-configuration-save-button"].dispatchEvent("click");
   await flushRendererPromises();
 
-  assert.equal(fixture.elements["app-toast"].textContent, "Could not save player check timeout.");
+  assert.equal(fixture.elements["app-toast"].textContent, "Could not save test configuration.");
   assert.equal(fixture.elements["app-toast"].className, "app-toast error");
 });
 
@@ -1448,6 +1457,7 @@ test("submits only the generic test-run payload", async () => {
     TEST_CASE_ID: "case-1",
     PREVIEW_TYPE: "live",
     PLAYER_CHECK_TIMEOUT_SECONDS: "14",
+    TEST_CASE_MAX_TIME_MINUTES: "30",
   });
 });
 
@@ -1477,6 +1487,7 @@ test("runs selected cases sequentially and preserves the generic IPC payload", a
     TEST_CASE_ID: "case-1",
     PREVIEW_TYPE: "live",
     PLAYER_CHECK_TIMEOUT_SECONDS: "6",
+    TEST_CASE_MAX_TIME_MINUTES: "30",
   });
   assert.equal(fixture.elements["test-case-list-body"].querySelector('[data-test-case-status="case-1"]').textContent, "Running");
 
@@ -2489,12 +2500,14 @@ test("index markup contains the case browser and no API-key or mode controls", (
   assert.match(html, /id="app-toast"/);
   assert.match(html, /data-settings-panel="test-configuration"/);
   assert.match(html, /Test configuration/);
+  assert.match(html, /Test case maximum time \(minutes\)/);
+  assert.match(html, /Thời gian tối đa cho phép 1 test case được chạy/);
   assert.match(html, /Player check timeout \(second\)/);
   assert.match(html, /Thời gian chờ trước khi check trạng thái player/);
   [
     "campaign-select", "folder-select", "refresh-campaigns-button", "refresh-folders-button", "get-test-cases-button",
     "settings-app-url-input", "api-domain-input", "api-authorization-input", "project-id-input",
-    "environment-select", "api-timeout-input", "player-check-timeout-input", "test-configuration-save-button", "app-toast", "dns-host-input", "dns-host-add-button", "dns-host-remove-button", "dns-host-status", "api-loading-overlay",
+    "environment-select", "api-timeout-input", "player-check-timeout-input", "test-case-max-time-input", "test-configuration-save-button", "app-toast", "dns-host-input", "dns-host-add-button", "dns-host-remove-button", "dns-host-status", "api-loading-overlay",
     "retry-sync-button", "run-target-browser", "run-target-webos", "tv-device-select", "tv-device-status", "tv-device-connection-status", "tv-device-connection-dot", "tv-device-check-connection-button", "tv-device-add-button", "tv-device-edit-button", "tv-device-dialog", "tv-device-name-input", "tv-device-host-input", "tv-device-passphrase-input", "tv-device-passphrase-toggle", "tv-device-dialog-submit-button",
     "sdk-managed-toolchain-status", "sdk-component-list", "sdk-install-review", "sdk-install-progress", "sdk-install-progress-text", "sdk-install-progress-steps", "tv-toolchain-sdk-home-input", "tv-toolchain-appium-home-input", "tv-toolchain-appium-bin-input", "tv-toolchain-chromedriver-input", "tv-toolchain-save-button",
     "lg-run-availability", "configure-lg-sdk-button", "lg-run-confirmation-dialog", "lg-run-confirm-button", "lg-run-cancel-button", "lg-run-state", "lg-preview-image", "lg-preview-empty", "lg-recovery-dialog", "lg-recovery-retry-button", "lg-recovery-stop-button",

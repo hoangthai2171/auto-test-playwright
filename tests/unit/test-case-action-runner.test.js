@@ -968,6 +968,15 @@ test("plays a requested row using either its 1-based index or name", async () =>
   ]);
 });
 
+test("formats row playback failures with content IDs and names", () => {
+  const summary = workflows.__internal.formatRowPlaybackFailureSummary([
+    {contentId: "158218", name: "Ăn Chạy Yêu"},
+    {attributes: {content_id: "155230"}, title: "Yêu Em"},
+  ]);
+
+  assert.equal(summary, "1. 158218 - Ăn Chạy Yêu\n2. 155230 - Yêu Em");
+});
+
 test("plays every Home trailer through the helper and preserves its result", async () => {
   const calls = [];
   const handlers = createDefaultActionHandlers({

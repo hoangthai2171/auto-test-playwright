@@ -201,7 +201,7 @@ function renderUserReport(report) {
     "th{background:#222631;color:#cbd1dc}.status-passed{color:#46d083;font-weight:700;text-transform:capitalize}.status-failed{color:#ff7a7a;font-weight:700;text-transform:capitalize}",
     ".details-button{padding:6px 12px;border:1px solid #596579;border-radius:4px;background:#2a3140;color:#fff;cursor:pointer}",
     ".hidden{display:none}.details-row td{background:#0f1117;padding:18px}.detail-section+.detail-section{margin-top:18px}.detail-section h2{font-size:14px;margin:0 0 8px}.expected-result{margin:0;white-space:pre-wrap;word-break:break-word}.failure-table,.trailer-table,.row-playback-table{background:#14161b}.failure-table th,.failure-table td,.trailer-table th,.trailer-table td,.row-playback-table th,.row-playback-table td{padding:10px}",
-    ".poster{max-width:100px;max-height:120px;object-fit:contain}.screenshot{max-width:360px;max-height:220px;object-fit:contain;background:#050608}.completion-screenshot{max-width:560px;max-height:315px;object-fit:contain;background:#050608}.empty{color:#9aa3b2}",
+    ".poster{max-width:100px;max-height:120px;object-fit:contain}.screenshot{max-width:360px;max-height:220px;object-fit:contain;background:#050608}.completion-screenshot{max-width:560px;max-height:315px;object-fit:contain;background:#050608}.empty{color:#9aa3b2}.error-summary{white-space:pre-wrap;word-break:break-word}",
     "</style></head><body><main><h1>MyTV Test Report</h1>",
     '<p class="muted">Generated ' + escapeHtml(report?.generatedAt || "") + "</p>",
     "<table><thead><tr><th>Test ID</th><th>Test Name</th><th>Status</th><th></th></tr></thead>",
@@ -245,7 +245,7 @@ function renderCompletionScreenshot(entry, heading) {
 function renderFailedItems(entry) {
   const items = Array.isArray(entry.failedItems) ? entry.failedItems : [];
   if (!items.length) {
-    return '<div class="empty">' + escapeHtml(entry.error || "No failed item details were recorded.") + "</div>";
+    return '<div class="empty error-summary">' + escapeHtml(entry.error || "No failed item details were recorded.") + "</div>";
   }
 
   const rows = items.map((item) => (

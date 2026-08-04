@@ -27,6 +27,7 @@ const ROW_HORIZONTAL_NAV_DELAY = 500;
 const ROW_HORIZONTAL_NAV_MAX_STEPS = 100;
 const ROW_RETURN_BOUNDARY_TIMEOUT_MS = 3000;
 const ROW_RETURN_RENDER_DELAY_MS = 1500;
+const HOME_PAGE_ROW_MAX_ATTEMPTS = 18;
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
 function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
@@ -472,6 +473,11 @@ async function findContentRowByPosition(page, { rowIndex, rowPosition, snapshotC
   }
 
   const index = Number.isInteger(rowIndex) ? rowIndex : 0;
+  if (Number.isInteger(rowIndex) && index >= 0) {
+    const homePageRow = await findHomePageRowByIndex(page, index, {snapshotCache});
+    if (homePageRow) return homePageRow;
+  }
+
   for (let attempt = 0; attempt < 12; attempt++) {
     const rows = await collectVisibleContentRows(page, {snapshotCache});
     const cateRows = rows.filter((row) => row.title);
@@ -486,6 +492,59 @@ async function findContentRowByPosition(page, { rowIndex, rowPosition, snapshotC
       .map((row) => row.title || `y=${row.rowY}`)
       .join(", ")}`
   );
+}
+
+async function findHomePageRowByIndex(page, rowIndex, {snapshotCache = createDomSnapshotCache()} = {}) {
+  const rowPrefix = `homePage2_${rowIndex}_`;
+  let hasHomePageRows = false;
+  let lastFocusError;
+
+  for (let attempt = 0; attempt < HOME_PAGE_ROW_MAX_ATTEMPTS; attempt += 1) {
+    const target = await inspectHomePageRowTarget(page, rowPrefix);
+    hasHomePageRows = hasHomePageRows || Boolean(target?.hasHomePageRows);
+
+    if (target?.targetId) {
+      try {
+        await remoteFocusById(page, target.targetId, 120, {snapshotCache});
+        snapshotCache.invalidate();
+        const rows = await collectVisibleContentRows(page, {snapshotCache});
+        const row = rows.find((candidate) => candidate.items.some((item) => item.id.startsWith(rowPrefix)));
+        if (row) return row;
+      } catch (error) {
+        lastFocusError = error;
+      }
+    }
+
+    await remotePress(page, "ArrowDown", 700, {snapshotCache});
+  }
+
+  if (hasHomePageRows && lastFocusError) throw lastFocusError;
+  return null;
+}
+
+async function inspectHomePageRowTarget(page, rowPrefix) {
+  return page.evaluate((prefix) => {
+    const homePageItems = Array.from(document.querySelectorAll("[id]"))
+      .filter((element) => /^homePage2_\d+_\d+$/u.test(element.id))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return {
+          id: element.id,
+          rect: {x: rect.x, y: rect.y, width: rect.width, height: rect.height},
+          laidOut: rect.width >= 100 && rect.height >= 80 &&
+            style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0,
+        };
+      });
+    const target = homePageItems
+      .filter((item) => item.id.startsWith(prefix) && item.laidOut)
+      .sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x)[0];
+
+    return {
+      hasHomePageRows: homePageItems.some((item) => item.laidOut),
+      targetId: target?.id || "",
+    };
+  }, rowPrefix);
 }
 
 async function findLastContentRow(page, {snapshotCache = createDomSnapshotCache()} = {}) {

@@ -6,7 +6,10 @@ const {runTestCase} = require("./lib/test-case-action-runner");
 const {logoutApp} = require("./lib/app-cleanup");
 const {captureCurrentAppScreenshot} = require("./lib/artifacts");
 const {waitForServiceScreenImages} = require("./lib/service-screenshot");
-const {normalizePlayerCheckTimeoutSeconds} = require("../app/test-configuration");
+const {
+  normalizePlayerCheckTimeoutSeconds,
+  normalizeTestCaseMaxTimeMinutes,
+} = require("../app/test-configuration");
 
 const HOME_TRAILER_CASE_TIMEOUT_MS = 10 * 60 * 1000;
 const EXHAUSTIVE_ROW_CASE_TIMEOUT_MS = 30 * 60 * 1000;
@@ -30,7 +33,10 @@ test("run server-driven MyTV test case", async ({page, options}, testInfo) => {
   let result;
   let testError;
 
-  if (isHomeTrailerCase(testCase)) {
+  const configuredMaxTime = String(process.env.MYTV_TEST_CASE_MAX_TIME_MINUTES || "").trim();
+  if (configuredMaxTime) {
+    test.setTimeout(normalizeTestCaseMaxTimeMinutes(configuredMaxTime) * 60 * 1000);
+  } else if (isHomeTrailerCase(testCase)) {
     test.setTimeout(HOME_TRAILER_CASE_TIMEOUT_MS);
   } else if (isExhaustivePlayRowCase(testCase)) {
     test.setTimeout(EXHAUSTIVE_ROW_CASE_TIMEOUT_MS);

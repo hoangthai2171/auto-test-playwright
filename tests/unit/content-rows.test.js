@@ -208,6 +208,57 @@ test("reports the furthest reachable index when a row ends before the request", 
   assert.ok(calls.some(([type, key]) => type === "press" && key === "ArrowRight"));
 });
 
+test("maps a numeric Home row to the zero-based homePage2 row id", async () => {
+  let requestedPrefix = "";
+  const calls = [];
+  const page = {
+    evaluate: async (_callback, argument) => {
+      if (Array.isArray(argument)) return {route: "/", container: "content"};
+      if (typeof argument === "string") {
+        if (argument === "homePage2_4_0") return true;
+        requestedPrefix = argument;
+        return {hasHomePageRows: true, targetId: "homePage2_4_0"};
+      }
+      if (argument && Array.isArray(argument.rootSelectors)) {
+        return {
+          records: [
+            {
+              id: "homePage2_4_0",
+              text: "Poster 5",
+              attrs: {title: "Poster 5", content_id: "content-5"},
+              poster: "poster-5.png",
+              backgroundImage: "",
+              rect: {x: 100, y: 200, width: 150, height: 200},
+              visible: true,
+            },
+          ],
+          headings: [{
+            id: "homePage2_4-heading",
+            text: "Phim bộ hàng 5",
+            rect: {x: 100, y: 100, width: 240, height: 30},
+            visible: true,
+          }],
+          metrics: {rootFound: true, usedFallback: false, fallbackBlocked: false, rootSelector: ".content-area", rootCount: 1, candidateCount: 1, headingCount: 1},
+        };
+      }
+      if (argument && typeof argument === "object") return true;
+      return [];
+    },
+    waitForTimeout: async () => {},
+  };
+
+  contentRows.configureContentRows({
+    remoteFocusById: async (_page, id) => calls.push(["focus", id]),
+    remotePress: async (_page, key) => calls.push(["press", key]),
+  });
+
+  const row = await contentRows.focusRequestedContentRow(page, {rowIndex: 4});
+
+  assert.equal(requestedPrefix, "homePage2_4_");
+  assert.equal(row.items[0].id, "homePage2_4_0");
+  assert.deepEqual(calls, [["focus", "homePage2_4_0"]]);
+});
+
 function createVirtualizedRowPage({totalItems, initialFocusedIndex}) {
   let focusedIndex = initialFocusedIndex;
   const calls = [];

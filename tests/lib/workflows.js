@@ -576,17 +576,32 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
   await attachFirstRowPlaybackReport(testInfo, results);
 
   const playableCount = results.filter((item) => item.status === "playable").length;
-  const failedCount = results.filter((item) => item.status === "failed").length;
+  const failedItems = results.filter((item) => item.status === "failed");
+  const failedCount = failedItems.length;
   if (failedCount > 0 || playableCount === 0) {
+    const failureSummary = formatRowPlaybackFailureSummary(failedItems);
     const error = new Error(
       failedCount > 0
-        ? failedCount + " row content item(s) failed to play"
+        ? failedCount + " row content item(s) failed to play:\n" + failureSummary
         : "At least one row content item should play successfully"
     );
-    error.details = {results, budget: budgetReport, exhaustive: options.unlimitedRuntime === true};
+    error.details = {
+      results,
+      failedItems,
+      budget: budgetReport,
+      exhaustive: options.unlimitedRuntime === true,
+    };
     throw error;
   }
   return {type: "play_row", results, budget: budgetReport};
+}
+
+function formatRowPlaybackFailureSummary(items) {
+  return items.map((item, index) => {
+    const contentId = getContentId(item) || "unknown content id";
+    const name = String(item?.name || item?.title || "Unknown item").trim();
+    return `${index + 1}. ${contentId} - ${name}`;
+  }).join("\n");
 }
 
 async function playItemsInRow(page, testInfo, options = {}) {
@@ -2107,4 +2122,4 @@ function scoreWorkflowText(label, target) {
   return 0;
 }
 
-module.exports={getTestOptions,runStep,openAppAndEnterLoginPage,loginWithAccount,chooseFirstProfileAndEnterHome,closeHomePopupsAndVerifyHome,openSearchFromLeftMenu,searchContentByName,openTelevisionFromLeftMenu,openMovieFromLeftMenu,openSettingFromLeftMenu,openServiceFromLeftMenuOrAllServices,assertServiceOpened,openChannel,searchAndOpenBestContent,openMovieContent,openFirstMovieContent,playAllItemsInFirstRow,playItemsInRow,playVisibleContentByName,playFocusedSearchResult,assertChannelPlayback:playback.assertChannelPlayback,assertMoviePlayback:playback.assertMoviePlayback,assertSearchContentPlayback:playback.assertSearchContentPlayback,attachCurrentAppScreenshot,__internal:{focusFirstRowStart,findServiceIdInAllServices,getServiceSearchNames,closeAdvertisePopupIfVisible,getVisiblePopup:playback.getVisiblePopup,observeServiceOpenState,observeServiceDestinationContent,observeVisibleHomeScreen,getVisibleServicePopup,getVisibleServiceToast,chooseDirection:navigation.__internal.chooseDirection,waitForAppReady,waitForHomeReady,observeAppReadyState,observeHomeReadyState,observeVisibleContentRows,isValidFocusedState}};
+module.exports={getTestOptions,runStep,openAppAndEnterLoginPage,loginWithAccount,chooseFirstProfileAndEnterHome,closeHomePopupsAndVerifyHome,openSearchFromLeftMenu,searchContentByName,openTelevisionFromLeftMenu,openMovieFromLeftMenu,openSettingFromLeftMenu,openServiceFromLeftMenuOrAllServices,assertServiceOpened,openChannel,searchAndOpenBestContent,openMovieContent,openFirstMovieContent,playAllItemsInFirstRow,playItemsInRow,playVisibleContentByName,playFocusedSearchResult,assertChannelPlayback:playback.assertChannelPlayback,assertMoviePlayback:playback.assertMoviePlayback,assertSearchContentPlayback:playback.assertSearchContentPlayback,attachCurrentAppScreenshot,__internal:{focusFirstRowStart,findServiceIdInAllServices,getServiceSearchNames,closeAdvertisePopupIfVisible,getVisiblePopup:playback.getVisiblePopup,observeServiceOpenState,observeServiceDestinationContent,observeVisibleHomeScreen,getVisibleServicePopup,getVisibleServiceToast,chooseDirection:navigation.__internal.chooseDirection,waitForAppReady,waitForHomeReady,observeAppReadyState,observeHomeReadyState,observeVisibleContentRows,isValidFocusedState,formatRowPlaybackFailureSummary}};
