@@ -2337,9 +2337,14 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (!pendingResultSubmission) {
             return {ok: false, message: "There are no unsynced completed test results."};
         }
-        appendApiRequestLog("Retry flow-case results", pendingResultSubmission);
+        const retrySettings = currentSettings();
+        const retrySubmission = {
+            ...pendingResultSubmission,
+            API_AUTHORIZATION: retrySettings.API_AUTHORIZATION,
+        };
+        appendApiRequestLog("Retry flow-case results", retrySubmission);
         try {
-            const result = await api.submitFlowCaseResults?.(pendingResultSubmission);
+            const result = await api.submitFlowCaseResults?.(retrySubmission);
             appendApiResponseLog("Retry flow-case results", result);
             if (!result?.ok) throw new Error(result?.message || "Failed to send flow-case results.");
             setPendingResultSubmission(null);
@@ -2579,17 +2584,17 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     }
 
     form?.addEventListener?.("submit", handleSubmit);
-    async function requestStop() {
+    async function requestStop({notifyMain = true} = {}) {
         if (batchState) {
             batchState.stopRequested = true;
             try {
-                await api.stopTest();
+                if (notifyMain) await api.stopTest();
             } finally {
                 resolveActiveCompletion({code: 1, stopped: true});
             }
             return;
         }
-        await api.stopTest();
+        if (notifyMain) await api.stopTest();
         setFormRunning(false);
         setStatus("idle", "Stopped");
     }
@@ -2762,7 +2767,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         appendLog(`\nFinished with code ${result.code}\n`);
     });
     api.onStopRequested?.(() => {
-        void requestStop();
+        void requestStop({notifyMain: false});
     });
     api.onDiscardUnsyncedResultSubmission?.(() => {
         setPendingResultSubmission(null);

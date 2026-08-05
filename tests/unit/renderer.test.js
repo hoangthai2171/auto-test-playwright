@@ -455,6 +455,10 @@ function createRendererFixture() {
       this.logCallback = callback;
     },
     onPreview: () => {},
+    stopRequestedCallback: null,
+    onStopRequested(callback) {
+      this.stopRequestedCallback = callback;
+    },
     finishedCallback: null,
     onFinished(callback) {
       this.finishedCallback = callback;
@@ -1367,6 +1371,49 @@ test("does not submit partial downloaded results after a batch is stopped", asyn
   assert.equal(submissionCount, 0);
 });
 
+test("does not echo a main stop event and allows a fresh run afterward", async () => {
+  assert.equal(loadError, undefined, loadError?.message);
+  const fixture = createRendererFixture();
+  let runCalls = 0;
+  let stopCalls = 0;
+  let emitStopEvent = true;
+  fixture.runner.loadFlowCases = async () => ({ok: true, folder: {
+    id: "12", name: "Play kênh", fullPath: "/Root/Play kênh",
+  }, cases: [{id: "case-1", name: "Remote case", actions: []}]});
+  fixture.runner.runTest = async () => {
+    runCalls += 1;
+    if (runCalls === 2) queueMicrotask(() => fixture.runner.finishedCallback({code: 0}));
+    return {ok: true};
+  };
+  fixture.runner.stopTest = async () => {
+    stopCalls += 1;
+    if (emitStopEvent) {
+      emitStopEvent = false;
+      queueMicrotask(() => fixture.runner.stopRequestedCallback?.());
+    }
+    return {ok: true};
+  };
+  const controller = renderer.createRendererController(fixture);
+  controller.renderFolders([{id: "12", name: "Play kênh", fullPath: "/Root/Play kênh"}]);
+  fixture.elements["folder-select"].value = "/Root/Play kênh";
+  await controller.loadCasesFromFolder();
+  controller.selectCase("case-1");
+
+  const stoppedRun = controller.runSelectedCases();
+  await new Promise((resolve) => setImmediate(resolve));
+  await fixture.elements["stop-button"].listeners.get("click")();
+  const stoppedResult = await stoppedRun;
+
+  assert.equal(stoppedResult.stopped, true);
+  assert.equal(stopCalls, 1);
+
+  const restartedResult = await controller.runSelectedCases();
+  assert.equal(runCalls, 2);
+  assert.equal(restartedResult.completed, 1);
+  assert.equal(restartedResult.skipped, 0);
+  assert.equal(restartedResult.stopped, false);
+});
+
 test("submits only fully completed downloaded cases after a manual stop", async () => {
   assert.equal(loadError, undefined, loadError?.message);
   const fixture = createRendererFixture();
@@ -1401,7 +1448,7 @@ test("submits only fully completed downloaded cases after a manual stop", async 
   assert.deepEqual(submittedResults[0].testcases.map((item) => item.id), ["case-1"]);
 });
 
-test("keeps an immutable failed result submission in memory for one explicit retry", async () => {
+test("refreshes API authorization before retrying an immutable failed result submission", async () => {
   assert.equal(loadError, undefined, loadError?.message);
   const fixture = createRendererFixture();
   const submissions = [];
@@ -1425,11 +1472,15 @@ test("keeps an immutable failed result submission in memory for one explicit ret
   fixture.runner.finishedCallback({code: 0});
   await runPromise;
   assert.equal(fixture.elements["retry-sync-button"].disabled, false);
+  assert.equal(submissions[0].API_AUTHORIZATION, "");
+  fixture.elements["api-authorization-input"].value = "service-token";
   const retry = await controller.retryResultSync();
 
   assert.equal(retry.ok, true);
   assert.equal(submissions.length, 2);
-  assert.deepEqual(submissions[1], submissions[0]);
+  assert.equal(submissions[1].API_AUTHORIZATION, "service-token");
+  assert.deepEqual(submissions[1].testcases, submissions[0].testcases);
+  assert.equal(submissions[0].API_AUTHORIZATION, "");
   assert.equal(fixture.elements["retry-sync-button"].disabled, true);
   assert.equal((await controller.retryResultSync()).ok, false);
 });

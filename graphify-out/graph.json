@@ -2639,8 +2639,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "lg-toolchain-installer.js"
     },
     {
@@ -2650,8 +2650,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_trustedlgtoolchainbundle_trustedlgtoolchainmanifest",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "{trustedlgtoolchainbundle, trustedlgtoolchainmanifest}"
     },
     {
@@ -2661,8 +2661,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_trustedlgtoolchainnpmclosure",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "{trustedlgtoolchainnpmclosure}"
     },
     {
@@ -2672,8 +2672,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_safe_install_failures",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "safe_install_failures"
     },
     {
@@ -2683,8 +2683,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_safe_verification_results",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "safe_verification_results"
     },
     {
@@ -2694,8 +2694,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_publicreview",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "publicreview()"
     },
     {
@@ -2881,8 +2881,8 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "app_lg_toolchain_manifest_trustedlgtoolchainbundle",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "trustedlgtoolchainbundle()"
     },
     {
@@ -2892,8 +2892,8 @@
       "source_location": "L158",
       "_origin": "ast",
       "id": "app_lg_toolchain_manifest_trustedlgtoolchainmanifest",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "trustedlgtoolchainmanifest()"
     },
     {
@@ -3673,8 +3673,8 @@
       "source_location": "L146",
       "_origin": "ast",
       "id": "app_main_testcasescachepath",
-      "community": 64,
-      "community_name": "test-case-cache.test.js",
+      "community": 62,
+      "community_name": "API Testcase",
       "norm_label": "testcasescachepath()"
     },
     {
@@ -4638,7 +4638,7 @@
       "label": "bootstrapRenderer()",
       "file_type": "code",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2852",
+      "source_location": "L2857",
       "_origin": "ast",
       "id": "app_renderer_renderer_bootstraprenderer",
       "community": 65,
@@ -6478,8 +6478,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_properties_defaultpackageversion",
-      "community": 149,
-      "community_name": "defaultPackageVersion",
+      "community": 97,
+      "community_name": "createScopedDomScanner",
       "norm_label": "defaultpackageversion"
     },
     {
@@ -6489,8 +6489,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_defaultpackageversion_type",
-      "community": 149,
-      "community_name": "defaultPackageVersion",
+      "community": 97,
+      "community_name": "createScopedDomScanner",
       "norm_label": "type"
     },
     {
@@ -6500,8 +6500,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_defaultpackageversion_maxlength",
-      "community": 149,
-      "community_name": "defaultPackageVersion",
+      "community": 97,
+      "community_name": "createScopedDomScanner",
       "norm_label": "maxlength"
     },
     {
@@ -6731,8 +6731,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_properties_createdat",
-      "community": 97,
-      "community_name": "createScopedDomScanner",
+      "community": 175,
+      "community_name": "createdAt",
       "norm_label": "createdat"
     },
     {
@@ -6742,8 +6742,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_createdat_type",
-      "community": 97,
-      "community_name": "createScopedDomScanner",
+      "community": 175,
+      "community_name": "createdAt",
       "norm_label": "type"
     },
     {
@@ -6753,8 +6753,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "docs_real_tv_appium_device_profile_schema_createdat_format",
-      "community": 97,
-      "community_name": "createScopedDomScanner",
+      "community": 175,
+      "community_name": "createdAt",
       "norm_label": "format"
     },
     {
@@ -7963,8 +7963,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "lg-webos-case-runner-core.js"
     },
     {
@@ -7974,8 +7974,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_fs",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "fs"
     },
     {
@@ -7985,8 +7985,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_path",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "path"
     },
     {
@@ -7996,8 +7996,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_content_types",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "content_types"
     },
     {
@@ -8007,8 +8007,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_required",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "required()"
     },
     {
@@ -8018,8 +8018,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_createlgproductgatecase",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "createlgproductgatecase()"
     },
     {
@@ -8040,8 +8040,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_requestloopbackappium",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "requestloopbackappium()"
     },
     {
@@ -8051,8 +8051,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_createlgproductgatemanifest",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "createlgproductgatemanifest()"
     },
     {
@@ -8062,8 +8062,8 @@
       "source_location": "L77",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_summarizestep",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "summarizestep()"
     },
     {
@@ -8073,8 +8073,8 @@
       "source_location": "L86",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_safefailurecode",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "safefailurecode()"
     },
     {
@@ -8084,8 +8084,8 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_finalizelgproductgatemanifest",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "finalizelgproductgatemanifest()"
     },
     {
@@ -8095,8 +8095,8 @@
       "source_location": "L104",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_createlgproductgateevidencewriter",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "createlgproductgateevidencewriter()"
     },
     {
@@ -8106,8 +8106,8 @@
       "source_location": "L120",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_runlgproductgatewithevidence",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 168,
+      "community_name": "lg-webos-case-runner-core.js",
       "norm_label": "runlgproductgatewithevidence()"
     },
     {
@@ -8117,8 +8117,8 @@
       "source_location": "L156",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_core_parselgcaserunnerargs",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "parselgcaserunnerargs()"
     },
     {
@@ -8128,8 +8128,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "lg-webos-case-runner.js"
     },
     {
@@ -8139,8 +8139,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_path",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "path"
     },
     {
@@ -8150,8 +8150,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_spawn_spawnsync",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "{spawn, spawnsync}"
     },
     {
@@ -8161,8 +8161,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createtvrunner",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "{createtvrunner}"
     },
     {
@@ -8172,8 +8172,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createdevicelock",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "{createdevicelock}"
     },
     {
@@ -8183,8 +8183,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createappiumservermanager",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "{createappiumservermanager}"
     },
     {
@@ -8194,8 +8194,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createloopbackappiumclient",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "{createloopbackappiumclient}"
     },
     {
@@ -8205,8 +8205,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_runtvtestcase",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "{runtvtestcase}"
     },
     {
@@ -8216,8 +8216,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createwebossessionfactory",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "{createwebossessionfactory}"
     },
     {
@@ -8227,8 +8227,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_expected_lg_app_id_buildlgruntimeredactionsecrets",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "{expected_lg_app_id, buildlgruntimeredactionsecrets}"
     },
     {
@@ -8238,8 +8238,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_createlgproductgatecase_createlgproductgateevidencewriter_createlgproductgatemanifest_parselgcaserunnerargs_runlgproductgatewithevidence_withoutlgproductgatecredentials",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "{\n  createlgproductgatecase,\n  createlgproductgateevidencewriter,\n  createlgproductgatemanifest,\n  parselgcaserunnerargs,\n  runlgproductgatewithevidence,\n  withoutlgproductgatecredentials,\n}"
     },
     {
@@ -8249,8 +8249,8 @@
       "source_location": "L22",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_usage",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "usage()"
     },
     {
@@ -8260,8 +8260,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_wait",
-      "community": 9,
-      "community_name": "build",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "wait()"
     },
     {
@@ -8271,8 +8271,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_redactfactory",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "redactfactory()"
     },
     {
@@ -8282,8 +8282,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_runreadonly",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "runreadonly()"
     },
     {
@@ -8293,8 +8293,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "scripts_real_tv_appium_lg_webos_case_runner_main",
-      "community": 9,
-      "community_name": "build",
+      "community": 108,
+      "community_name": "searchAndOpenBestContent",
       "norm_label": "main()"
     },
     {
@@ -10240,8 +10240,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_dom_scanning_performance_spec",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 126,
+      "community_name": "dom-scanning-performance.spec.js",
       "norm_label": "dom-scanning-performance.spec.js"
     },
     {
@@ -10251,8 +10251,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_dom_scanning_performance_spec_test_expect",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 126,
+      "community_name": "dom-scanning-performance.spec.js",
       "norm_label": "{test, expect}"
     },
     {
@@ -10262,8 +10262,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_dom_scanning_performance_spec_createscopeddomscanner",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 126,
+      "community_name": "dom-scanning-performance.spec.js",
       "norm_label": "{createscopeddomscanner}"
     },
     {
@@ -10273,8 +10273,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_dom_scanning_performance_spec_collectvisiblecontentrows",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 126,
+      "community_name": "dom-scanning-performance.spec.js",
       "norm_label": "{collectvisiblecontentrows}"
     },
     {
@@ -10284,8 +10284,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_dom_scanning_performance_spec_scan_options",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 126,
+      "community_name": "dom-scanning-performance.spec.js",
       "norm_label": "scan_options"
     },
     {
@@ -10295,8 +10295,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_dom_snapshot_spec",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "dom-snapshot.spec.js"
     },
     {
@@ -10306,8 +10306,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_dom_snapshot_spec_test_expect",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "{test, expect}"
     },
     {
@@ -10317,8 +10317,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_dom_snapshot_spec_createdomsnapshotcache_getdomsnapshotidentity",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "{createdomsnapshotcache, getdomsnapshotidentity}"
     },
     {
@@ -10328,8 +10328,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_dom_snapshot_spec_collectvisiblecontentrows",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "{collectvisiblecontentrows}"
     },
     {
@@ -10339,8 +10339,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_dom_snapshot_spec_remotepress",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "{remotepress}"
     },
     {
@@ -10361,8 +10361,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "mytv-session-fixture.js"
     },
     {
@@ -10372,8 +10372,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_base",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "base"
     },
     {
@@ -10383,8 +10383,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_chromium",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "{chromium}"
     },
     {
@@ -10394,8 +10394,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_path",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "path"
     },
     {
@@ -10405,8 +10405,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_fs",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "fs"
     },
     {
@@ -10416,8 +10416,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_gettestoptions",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "{gettestoptions}"
     },
     {
@@ -10427,8 +10427,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_viewport",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "viewport"
     },
     {
@@ -10449,8 +10449,8 @@
       "source_location": "L52",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_applyviewportscale",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "applyviewportscale()"
     },
     {
@@ -10460,8 +10460,8 @@
       "source_location": "L63",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_startpreviewstream",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "startpreviewstream()"
     },
     {
@@ -10471,8 +10471,8 @@
       "source_location": "L101",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_waitforinteractivepage",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "waitforinteractivepage()"
     },
     {
@@ -10482,8 +10482,8 @@
       "source_location": "L119",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_waitforpageincontext",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "waitforpageincontext()"
     },
     {
@@ -10493,8 +10493,8 @@
       "source_location": "L136",
       "_origin": "ast",
       "id": "tests_fixtures_mytv_session_fixture_isinteractivebrowserpage",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "isinteractivebrowserpage()"
     },
     {
@@ -10933,8 +10933,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "tests_lib_content_rows_createcontentrowsapi",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "createcontentrowsapi()"
     },
     {
@@ -10955,8 +10955,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "tests_lib_content_rows_remotefocusbyid",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "remotefocusbyid()"
     },
     {
@@ -11054,8 +11054,8 @@
       "source_location": "L44",
       "_origin": "ast",
       "id": "tests_lib_content_rows_collectfirstrowplayableitems",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "collectfirstrowplayableitems()"
     },
     {
@@ -11065,8 +11065,8 @@
       "source_location": "L49",
       "_origin": "ast",
       "id": "tests_lib_content_rows_focusrequestedcontentrow",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "focusrequestedcontentrow()"
     },
     {
@@ -11175,8 +11175,8 @@
       "source_location": "L387",
       "_origin": "ast",
       "id": "tests_lib_content_rows_focusfirstitemincurrentcontentrow",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "focusfirstitemincurrentcontentrow()"
     },
     {
@@ -11186,8 +11186,8 @@
       "source_location": "L416",
       "_origin": "ast",
       "id": "tests_lib_content_rows_findvisiblecontentitembyname",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "findvisiblecontentitembyname()"
     },
     {
@@ -11263,8 +11263,8 @@
       "source_location": "L609",
       "_origin": "ast",
       "id": "tests_lib_content_rows_collectvisiblecontentrows",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "collectvisiblecontentrows()"
     },
     {
@@ -11274,8 +11274,8 @@
       "source_location": "L727",
       "_origin": "ast",
       "id": "tests_lib_content_rows_focusfirstrowstart",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "focusfirstrowstart()"
     },
     {
@@ -11285,8 +11285,8 @@
       "source_location": "L774",
       "_origin": "ast",
       "id": "tests_lib_content_rows_expectfocusedcontent",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "expectfocusedcontent()"
     },
     {
@@ -11296,8 +11296,8 @@
       "source_location": "L778",
       "_origin": "ast",
       "id": "tests_lib_content_rows_isfocusedcontentitem",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "isfocusedcontentitem()"
     },
     {
@@ -11307,8 +11307,8 @@
       "source_location": "L837",
       "_origin": "ast",
       "id": "tests_lib_content_rows_isfocusedoncontentitem",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "isfocusedoncontentitem()"
     },
     {
@@ -11318,8 +11318,8 @@
       "source_location": "L882",
       "_origin": "ast",
       "id": "tests_lib_content_rows_isfocusedonrowitems",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "isfocusedonrowitems()"
     },
     {
@@ -11329,8 +11329,8 @@
       "source_location": "L931",
       "_origin": "ast",
       "id": "tests_lib_content_rows_getfocusedcontentmetadata",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "getfocusedcontentmetadata()"
     },
     {
@@ -11373,8 +11373,8 @@
       "source_location": "L1072",
       "_origin": "ast",
       "id": "tests_lib_content_rows_returntofirstrowcontent",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "returntofirstrowcontent()"
     },
     {
@@ -11395,8 +11395,8 @@
       "source_location": "L1120",
       "_origin": "ast",
       "id": "tests_lib_content_rows_movetonextfirstrowcontent",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "movetonextfirstrowcontent()"
     },
     {
@@ -11406,8 +11406,8 @@
       "source_location": "L1139",
       "_origin": "ast",
       "id": "tests_lib_content_rows_isfocusednearrow",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "isfocusednearrow()"
     },
     {
@@ -11417,8 +11417,8 @@
       "source_location": "L1156",
       "_origin": "ast",
       "id": "tests_lib_content_rows_contentitemsignature",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "contentitemsignature()"
     },
     {
@@ -11428,8 +11428,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_dom_scan",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 126,
+      "community_name": "dom-scanning-performance.spec.js",
       "norm_label": "dom-scan.js"
     },
     {
@@ -11439,8 +11439,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_dom_scan_getselectorcontract",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 126,
+      "community_name": "dom-scanning-performance.spec.js",
       "norm_label": "{getselectorcontract}"
     },
     {
@@ -11450,8 +11450,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_dom_scan_createscopeddomscanner",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 126,
+      "community_name": "dom-scanning-performance.spec.js",
       "norm_label": "createscopeddomscanner()"
     },
     {
@@ -11461,8 +11461,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_dom_snapshots",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "dom-snapshots.js"
     },
     {
@@ -11472,8 +11472,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_dom_snapshots_getselectorcontract",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "{getselectorcontract}"
     },
     {
@@ -11483,8 +11483,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_dom_snapshots_createdomsnapshotcache",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "createdomsnapshotcache()"
     },
     {
@@ -11494,8 +11494,8 @@
       "source_location": "L35",
       "_origin": "ast",
       "id": "tests_lib_dom_snapshots_getdomsnapshotidentity",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "getdomsnapshotidentity()"
     },
     {
@@ -11505,8 +11505,8 @@
       "source_location": "L61",
       "_origin": "ast",
       "id": "tests_lib_dom_snapshots_sameidentity",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "sameidentity()"
     },
     {
@@ -11516,8 +11516,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "tests_lib_dom_snapshots_clone",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "clone()"
     },
     {
@@ -11703,8 +11703,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_index",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "index.js"
     },
     {
@@ -11714,8 +11714,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_index_textutils",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "textutils"
     },
     {
@@ -11725,8 +11725,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_lib_index_navigation",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "navigation"
     },
     {
@@ -11736,8 +11736,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_index_contentrows",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "contentrows"
     },
     {
@@ -11747,8 +11747,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_lib_index_playback",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "playback"
     },
     {
@@ -11758,8 +11758,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_lib_index_artifacts",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "artifacts"
     },
     {
@@ -11769,8 +11769,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "tests_lib_index_workflows",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "workflows"
     },
     {
@@ -11780,8 +11780,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_lib_index_selectors",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "selectors"
     },
     {
@@ -11791,8 +11791,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_lib_index_selectorvalidation",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "selectorvalidation"
     },
     {
@@ -11802,8 +11802,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "tests_lib_index_waits",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "waits"
     },
     {
@@ -11813,8 +11813,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "tests_lib_index_domscan",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "domscan"
     },
     {
@@ -11824,8 +11824,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "tests_lib_index_domsnapshots",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "domsnapshots"
     },
     {
@@ -11835,8 +11835,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "tests_lib_index_batchbudget",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "batchbudget"
     },
     {
@@ -11846,8 +11846,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_lib_index_hometrailers",
-      "community": 74,
-      "community_name": "lg-managed-install-operations.test.js",
+      "community": 149,
+      "community_name": "defaultPackageVersion",
       "norm_label": "hometrailers"
     },
     {
@@ -13639,8 +13639,8 @@
       "source_location": "L431",
       "_origin": "ast",
       "id": "tests_lib_playback_getvisiblepopup",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "getvisiblepopup()"
     },
     {
@@ -13848,8 +13848,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_selectors",
-      "community": 105,
-      "community_name": "lg-toolchain-manifest.test.js",
+      "community": 113,
+      "community_name": "play-movie-mytv.spec.js",
       "norm_label": "selectors.js"
     },
     {
@@ -13859,8 +13859,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_lib_selectors_popup_focus_dialog_ids",
-      "community": 105,
-      "community_name": "lg-toolchain-manifest.test.js",
+      "community": 113,
+      "community_name": "play-movie-mytv.spec.js",
       "norm_label": "popup_focus_dialog_ids"
     },
     {
@@ -13870,8 +13870,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_lib_selectors_popup_active_focus_selectors",
-      "community": 105,
-      "community_name": "lg-toolchain-manifest.test.js",
+      "community": 113,
+      "community_name": "play-movie-mytv.spec.js",
       "norm_label": "popup_active_focus_selectors"
     },
     {
@@ -13881,8 +13881,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_lib_selectors_focus_selectors",
-      "community": 105,
-      "community_name": "lg-toolchain-manifest.test.js",
+      "community": 113,
+      "community_name": "play-movie-mytv.spec.js",
       "norm_label": "focus_selectors"
     },
     {
@@ -13892,8 +13892,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_lib_selectors_focus_selector",
-      "community": 105,
-      "community_name": "lg-toolchain-manifest.test.js",
+      "community": 113,
+      "community_name": "play-movie-mytv.spec.js",
       "norm_label": "focus_selector"
     },
     {
@@ -13903,8 +13903,8 @@
       "source_location": "L19",
       "_origin": "ast",
       "id": "tests_lib_selectors_selector_contracts",
-      "community": 105,
-      "community_name": "lg-toolchain-manifest.test.js",
+      "community": 113,
+      "community_name": "play-movie-mytv.spec.js",
       "norm_label": "selector_contracts"
     },
     {
@@ -14772,8 +14772,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_text_utils",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 170,
+      "community_name": "text-utils.js",
       "norm_label": "text-utils.js"
     },
     {
@@ -14783,8 +14783,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_text_utils_normalizevietnamesetext",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 2,
+      "community_name": "renderer.js",
       "norm_label": "normalizevietnamesetext()"
     },
     {
@@ -14794,8 +14794,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "tests_lib_text_utils_escaperegexp",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 170,
+      "community_name": "text-utils.js",
       "norm_label": "escaperegexp()"
     },
     {
@@ -14805,8 +14805,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "tests_lib_text_utils_containstextpattern",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 170,
+      "community_name": "text-utils.js",
       "norm_label": "containstextpattern()"
     },
     {
@@ -14816,8 +14816,8 @@
       "source_location": "L20",
       "_origin": "ast",
       "id": "tests_lib_text_utils_fuzzymatch",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 170,
+      "community_name": "text-utils.js",
       "norm_label": "fuzzymatch()"
     },
     {
@@ -15311,8 +15311,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "webos-appium-session.js"
     },
     {
@@ -15322,8 +15322,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_path",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "path"
     },
     {
@@ -15333,8 +15333,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_normalizeremotekey_tvsessionerror",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "{normalizeremotekey, tvsessionerror}"
     },
     {
@@ -15344,8 +15344,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_normalizedomstate",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "{normalizedomstate}"
     },
     {
@@ -15355,8 +15355,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_createwebosmytvautomation",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "{createwebosmytvautomation}"
     },
     {
@@ -15366,8 +15366,8 @@
       "source_location": "L9",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_safe_appium_failure_codes",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "safe_appium_failure_codes"
     },
     {
@@ -15377,8 +15377,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_webos_remote_keys",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "webos_remote_keys"
     },
     {
@@ -15399,8 +15399,8 @@
       "source_location": "L39",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_requiredruntimestring",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "requiredruntimestring()"
     },
     {
@@ -15410,8 +15410,8 @@
       "source_location": "L46",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_normalizeconnection",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "normalizeconnection()"
     },
     {
@@ -15432,8 +15432,8 @@
       "source_location": "L80",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_isnonemptyscreenshot",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "isnonemptyscreenshot()"
     },
     {
@@ -15443,8 +15443,8 @@
       "source_location": "L87",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_defaultwait",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "defaultwait()"
     },
     {
@@ -15454,8 +15454,8 @@
       "source_location": "L91",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_redacturlquery",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "redacturlquery()"
     },
     {
@@ -15465,8 +15465,8 @@
       "source_location": "L99",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_factoryerror",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "factoryerror()"
     },
     {
@@ -15476,8 +15476,8 @@
       "source_location": "L103",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_assertapprovedprofile",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "assertapprovedprofile()"
     },
     {
@@ -15487,8 +15487,8 @@
       "source_location": "L113",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_normalizeloopbackbaseurl",
-      "community": 35,
-      "community_name": "test-case-action-runner.js",
+      "community": 125,
+      "community_name": "defaultPackagePath",
       "norm_label": "normalizeloopbackbaseurl()"
     },
     {
@@ -15729,8 +15729,8 @@
       "source_location": "L153",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_mytv_automation_createwebosmytvautomation",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 50,
+      "community_name": "device-discovery.test.js",
       "norm_label": "createwebosmytvautomation()"
     },
     {
@@ -16125,8 +16125,8 @@
       "source_location": "L38",
       "_origin": "ast",
       "id": "tests_lib_workflows_gettestoptions",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 170,
+      "community_name": "text-utils.js",
       "norm_label": "gettestoptions()"
     },
     {
@@ -16169,8 +16169,8 @@
       "source_location": "L129",
       "_origin": "ast",
       "id": "tests_lib_workflows_closehomepopupsandverifyhome",
-      "community": 3,
-      "community_name": "mytv-session-fixture.js",
+      "community": 10,
+      "community_name": "MyTV Auto Test",
       "norm_label": "closehomepopupsandverifyhome()"
     },
     {
@@ -16180,8 +16180,8 @@
       "source_location": "L135",
       "_origin": "ast",
       "id": "tests_lib_workflows_opentelevisionfromleftmenu",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 171,
+      "community_name": "openLeftMenuFromHome",
       "norm_label": "opentelevisionfromleftmenu()"
     },
     {
@@ -16191,8 +16191,8 @@
       "source_location": "L141",
       "_origin": "ast",
       "id": "tests_lib_workflows_openmoviefromleftmenu",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 171,
+      "community_name": "openLeftMenuFromHome",
       "norm_label": "openmoviefromleftmenu()"
     },
     {
@@ -16202,8 +16202,8 @@
       "source_location": "L147",
       "_origin": "ast",
       "id": "tests_lib_workflows_opensettingfromleftmenu",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 171,
+      "community_name": "openLeftMenuFromHome",
       "norm_label": "opensettingfromleftmenu()"
     },
     {
@@ -16213,8 +16213,8 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "tests_lib_workflows_opensearchfromleftmenu",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 171,
+      "community_name": "openLeftMenuFromHome",
       "norm_label": "opensearchfromleftmenu()"
     },
     {
@@ -16389,8 +16389,8 @@
       "source_location": "L415",
       "_origin": "ast",
       "id": "tests_lib_workflows_playallitemsinfirstrow",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 74,
+      "community_name": "lg-managed-install-operations.test.js",
       "norm_label": "playallitemsinfirstrow()"
     },
     {
@@ -16400,8 +16400,8 @@
       "source_location": "L599",
       "_origin": "ast",
       "id": "tests_lib_workflows_formatrowplaybackfailuresummary",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 3,
+      "community_name": "mytv-session-fixture.js",
       "norm_label": "formatrowplaybackfailuresummary()"
     },
     {
@@ -16411,8 +16411,8 @@
       "source_location": "L607",
       "_origin": "ast",
       "id": "tests_lib_workflows_playitemsinrow",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 3,
+      "community_name": "mytv-session-fixture.js",
       "norm_label": "playitemsinrow()"
     },
     {
@@ -16422,8 +16422,8 @@
       "source_location": "L621",
       "_origin": "ast",
       "id": "tests_lib_workflows_getcontentid",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 3,
+      "community_name": "mytv-session-fixture.js",
       "norm_label": "getcontentid()"
     },
     {
@@ -16444,8 +16444,8 @@
       "source_location": "L653",
       "_origin": "ast",
       "id": "tests_lib_workflows_playvisiblecontentbyname",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "playvisiblecontentbyname()"
     },
     {
@@ -16455,8 +16455,8 @@
       "source_location": "L675",
       "_origin": "ast",
       "id": "tests_lib_workflows_playfocusedsearchresult",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "playfocusedsearchresult()"
     },
     {
@@ -16466,8 +16466,8 @@
       "source_location": "L686",
       "_origin": "ast",
       "id": "tests_lib_workflows_playfocusedcontent",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "playfocusedcontent()"
     },
     {
@@ -16620,8 +16620,8 @@
       "source_location": "L986",
       "_origin": "ast",
       "id": "tests_lib_workflows_observevisiblecontentrows",
-      "community": 2,
-      "community_name": "renderer.js",
+      "community": 122,
+      "community_name": "target-action-context.js",
       "norm_label": "observevisiblecontentrows()"
     },
     {
@@ -16730,8 +16730,8 @@
       "source_location": "L1105",
       "_origin": "ast",
       "id": "tests_lib_workflows_openleftmenufromhome",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 171,
+      "community_name": "openLeftMenuFromHome",
       "norm_label": "openleftmenufromhome()"
     },
     {
@@ -16741,8 +16741,8 @@
       "source_location": "L1120",
       "_origin": "ast",
       "id": "tests_lib_workflows_focusleftmenuitem",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 171,
+      "community_name": "openLeftMenuFromHome",
       "norm_label": "focusleftmenuitem()"
     },
     {
@@ -16752,8 +16752,8 @@
       "source_location": "L1126",
       "_origin": "ast",
       "id": "tests_lib_workflows_focussearchmenuitem",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 171,
+      "community_name": "openLeftMenuFromHome",
       "norm_label": "focussearchmenuitem()"
     },
     {
@@ -16763,8 +16763,8 @@
       "source_location": "L1132",
       "_origin": "ast",
       "id": "tests_lib_workflows_findleftmenuitemidbytext",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 171,
+      "community_name": "openLeftMenuFromHome",
       "norm_label": "findleftmenuitemidbytext()"
     },
     {
@@ -16829,8 +16829,8 @@
       "source_location": "L1397",
       "_origin": "ast",
       "id": "tests_lib_workflows_isleftmenuopen",
-      "community": 113,
-      "community_name": "play-movie-mytv.spec.js",
+      "community": 171,
+      "community_name": "openLeftMenuFromHome",
       "norm_label": "isleftmenuopen()"
     },
     {
@@ -17214,8 +17214,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 172,
+      "community_name": "readiness-pacing.spec.js",
       "norm_label": "readiness-pacing.spec.js"
     },
     {
@@ -17225,8 +17225,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_fs",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 172,
+      "community_name": "readiness-pacing.spec.js",
       "norm_label": "fs"
     },
     {
@@ -17236,8 +17236,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_path",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 172,
+      "community_name": "readiness-pacing.spec.js",
       "norm_label": "path"
     },
     {
@@ -17247,8 +17247,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_test_expect",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 172,
+      "community_name": "readiness-pacing.spec.js",
       "norm_label": "{test, expect}"
     },
     {
@@ -17258,8 +17258,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_api",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 172,
+      "community_name": "readiness-pacing.spec.js",
       "norm_label": "api"
     },
     {
@@ -17269,8 +17269,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_helpers",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 172,
+      "community_name": "readiness-pacing.spec.js",
       "norm_label": "helpers"
     },
     {
@@ -17280,8 +17280,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_workflows",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 172,
+      "community_name": "readiness-pacing.spec.js",
       "norm_label": "workflows"
     },
     {
@@ -17291,8 +17291,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_setscreen",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 172,
+      "community_name": "readiness-pacing.spec.js",
       "norm_label": "setscreen()"
     },
     {
@@ -17302,8 +17302,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_sethome",
-      "community": 14,
-      "community_name": "preparePreview",
+      "community": 172,
+      "community_name": "readiness-pacing.spec.js",
       "norm_label": "sethome()"
     },
     {
@@ -17753,8 +17753,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_service_access_spec",
-      "community": 3,
-      "community_name": "mytv-session-fixture.js",
+      "community": 151,
+      "community_name": "service-access.spec.js",
       "norm_label": "service-access.spec.js"
     },
     {
@@ -17764,8 +17764,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_service_access_spec_test_expect",
-      "community": 3,
-      "community_name": "mytv-session-fixture.js",
+      "community": 151,
+      "community_name": "service-access.spec.js",
       "norm_label": "{test, expect}"
     },
     {
@@ -17775,8 +17775,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_service_access_spec_assertserviceopened",
-      "community": 3,
-      "community_name": "mytv-session-fixture.js",
+      "community": 151,
+      "community_name": "service-access.spec.js",
       "norm_label": "{assertserviceopened}"
     },
     {
@@ -17786,8 +17786,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_service_access_spec_setservicescreen",
-      "community": 3,
-      "community_name": "mytv-session-fixture.js",
+      "community": 151,
+      "community_name": "service-access.spec.js",
       "norm_label": "setservicescreen()"
     },
     {
@@ -18512,8 +18512,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "tests_unit_device_discovery_test_reset",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 46,
+      "community_name": "tv-runner.test.js",
       "norm_label": "reset()"
     },
     {
@@ -20822,8 +20822,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "lg-webos-case-runner-core.test.js"
     },
     {
@@ -20833,8 +20833,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test_test",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "test"
     },
     {
@@ -20844,8 +20844,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test_assert",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "assert"
     },
     {
@@ -20855,8 +20855,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test_fs",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "fs"
     },
     {
@@ -20866,8 +20866,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test_os",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "os"
     },
     {
@@ -20877,8 +20877,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test_path",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "path"
     },
     {
@@ -20888,8 +20888,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test_createlgproductgatecase_createlgproductgateevidencewriter_createlgproductgatemanifest_finalizelgproductgatemanifest_parselgcaserunnerargs_requestloopbackappium_runlgproductgatewithevidence_withoutlgproductgatecredentials",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "{\n  createlgproductgatecase,\n  createlgproductgateevidencewriter,\n  createlgproductgatemanifest,\n  finalizelgproductgatemanifest,\n  parselgcaserunnerargs,\n  requestloopbackappium,\n  runlgproductgatewithevidence,\n  withoutlgproductgatecredentials,\n}"
     },
     {
@@ -20899,8 +20899,8 @@
       "source_location": "L130",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test_write",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "write()"
     },
     {
@@ -20910,8 +20910,8 @@
       "source_location": "L201",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test_once",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "once()"
     },
     {
@@ -20921,8 +20921,8 @@
       "source_location": "L202",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test_removelistener",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "removelistener()"
     },
     {
@@ -20932,8 +20932,8 @@
       "source_location": "L228",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test_settimeoutimpl",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "settimeoutimpl()"
     },
     {
@@ -20943,8 +20943,8 @@
       "source_location": "L229",
       "_origin": "ast",
       "id": "tests_unit_lg_webos_case_runner_core_test_cleartimeoutimpl",
-      "community": 108,
-      "community_name": "searchAndOpenBestContent",
+      "community": 167,
+      "community_name": "selector-validation.test.js",
       "norm_label": "cleartimeoutimpl()"
     },
     {
@@ -21119,8 +21119,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_navigation_test",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 166,
+      "community_name": "navigation.test.js",
       "norm_label": "navigation.test.js"
     },
     {
@@ -21130,8 +21130,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_navigation_test_test",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 166,
+      "community_name": "navigation.test.js",
       "norm_label": "test"
     },
     {
@@ -21141,8 +21141,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_navigation_test_assert",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 166,
+      "community_name": "navigation.test.js",
       "norm_label": "assert"
     },
     {
@@ -21152,8 +21152,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_navigation_test_navigation",
-      "community": 38,
-      "community_name": "lg-webos-case-runner-core.test.js",
+      "community": 166,
+      "community_name": "navigation.test.js",
       "norm_label": "navigation"
     },
     {
@@ -21732,7 +21732,7 @@
       "label": "flushRendererPromises()",
       "file_type": "code",
       "source_file": "tests/unit/renderer.test.js",
-      "source_location": "L492",
+      "source_location": "L496",
       "_origin": "ast",
       "id": "tests_unit_renderer_test_flushrendererpromises",
       "community": 19,
@@ -21743,7 +21743,7 @@
       "label": "preventDefault()",
       "file_type": "code",
       "source_file": "tests/unit/renderer.test.js",
-      "source_location": "L989",
+      "source_location": "L993",
       "_origin": "ast",
       "id": "tests_unit_renderer_test_preventdefault",
       "community": 19,
@@ -21867,8 +21867,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_selectors_test",
-      "community": 105,
-      "community_name": "lg-toolchain-manifest.test.js",
+      "community": 113,
+      "community_name": "play-movie-mytv.spec.js",
       "norm_label": "selectors.test.js"
     },
     {
@@ -21878,8 +21878,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_selectors_test_test",
-      "community": 105,
-      "community_name": "lg-toolchain-manifest.test.js",
+      "community": 113,
+      "community_name": "play-movie-mytv.spec.js",
       "norm_label": "test"
     },
     {
@@ -21889,8 +21889,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_selectors_test_assert",
-      "community": 105,
-      "community_name": "lg-toolchain-manifest.test.js",
+      "community": 113,
+      "community_name": "play-movie-mytv.spec.js",
       "norm_label": "assert"
     },
     {
@@ -21900,8 +21900,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_selectors_test_focus_selectors_popup_focus_dialog_ids_popup_active_focus_selectors_selector_contracts",
-      "community": 105,
-      "community_name": "lg-toolchain-manifest.test.js",
+      "community": 113,
+      "community_name": "play-movie-mytv.spec.js",
       "norm_label": "{\n  focus_selectors,\n  popup_focus_dialog_ids,\n  popup_active_focus_selectors,\n  selector_contracts,\n}"
     },
     {
@@ -22571,8 +22571,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_text_utils_test",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 170,
+      "community_name": "text-utils.js",
       "norm_label": "text-utils.test.js"
     },
     {
@@ -22582,8 +22582,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_text_utils_test_test",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 170,
+      "community_name": "text-utils.js",
       "norm_label": "test"
     },
     {
@@ -22593,8 +22593,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_text_utils_test_assert",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 170,
+      "community_name": "text-utils.js",
       "norm_label": "assert"
     },
     {
@@ -22604,8 +22604,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_text_utils_test_normalizevietnamesetext_fuzzymatch",
-      "community": 107,
-      "community_name": "device-profile-service.js",
+      "community": 170,
+      "community_name": "text-utils.js",
       "norm_label": "{\n  normalizevietnamesetext,\n  fuzzymatch,\n}"
     },
     {
@@ -22780,8 +22780,8 @@
       "source_location": "L76",
       "_origin": "ast",
       "id": "tests_unit_tizen_poc_semantic_test_opensearch",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 50,
+      "community_name": "device-discovery.test.js",
       "norm_label": "opensearch()"
     },
     {
@@ -23044,8 +23044,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "tests_unit_tv_case_runner_test_logout",
-      "community": 61,
-      "community_name": "test-case-compiler.js",
+      "community": 50,
+      "community_name": "device-discovery.test.js",
       "norm_label": "logout()"
     },
     {
@@ -23473,8 +23473,8 @@
       "source_location": "L215",
       "_origin": "ast",
       "id": "tests_unit_tv_runner_test_start",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 36,
+      "community_name": "selector-validation.js",
       "norm_label": "start()"
     },
     {
@@ -23506,8 +23506,8 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "tests_unit_tv_runner_test_cleanup",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 36,
+      "community_name": "selector-validation.js",
       "norm_label": "cleanup()"
     },
     {
@@ -23517,8 +23517,8 @@
       "source_location": "L219",
       "_origin": "ast",
       "id": "tests_unit_tv_runner_test_close",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 36,
+      "community_name": "selector-validation.js",
       "norm_label": "close()"
     },
     {
@@ -23759,8 +23759,8 @@
       "source_location": "L10",
       "_origin": "ast",
       "id": "tests_unit_tv_toolchain_test_resolve",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 145,
+      "community_name": "locator-contracts.spec.js",
       "norm_label": "resolve()"
     },
     {
@@ -23803,8 +23803,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_webos_appium_session_test",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 169,
+      "community_name": "webos-appium-session.test.js",
       "norm_label": "webos-appium-session.test.js"
     },
     {
@@ -23814,8 +23814,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_webos_appium_session_test_test",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 169,
+      "community_name": "webos-appium-session.test.js",
       "norm_label": "test"
     },
     {
@@ -23825,8 +23825,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_unit_webos_appium_session_test_assert",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 169,
+      "community_name": "webos-appium-session.test.js",
       "norm_label": "assert"
     },
     {
@@ -23836,8 +23836,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_webos_appium_session_test_createwebosappiumsession_createwebossessionfactory",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 169,
+      "community_name": "webos-appium-session.test.js",
       "norm_label": "{createwebosappiumsession, createwebossessionfactory}"
     },
     {
@@ -23847,8 +23847,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_unit_webos_appium_session_test_runtime_connection",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 169,
+      "community_name": "webos-appium-session.test.js",
       "norm_label": "runtime_connection"
     },
     {
@@ -23858,8 +23858,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "tests_unit_webos_appium_session_test_approved_profile",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 169,
+      "community_name": "webos-appium-session.test.js",
       "norm_label": "approved_profile"
     },
     {
@@ -23869,8 +23869,8 @@
       "source_location": "L21",
       "_origin": "ast",
       "id": "tests_unit_webos_appium_session_test_loopback_server",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 169,
+      "community_name": "webos-appium-session.test.js",
       "norm_label": "loopback_server"
     },
     {
@@ -23880,8 +23880,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "tests_unit_webos_appium_session_test_createfakeclient",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 169,
+      "community_name": "webos-appium-session.test.js",
       "norm_label": "createfakeclient()"
     },
     {
@@ -23891,8 +23891,8 @@
       "source_location": "L55",
       "_origin": "ast",
       "id": "tests_unit_webos_appium_session_test_createsession",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 169,
+      "community_name": "webos-appium-session.test.js",
       "norm_label": "createsession()"
     },
     {
@@ -23902,8 +23902,8 @@
       "source_location": "L70",
       "_origin": "ast",
       "id": "tests_unit_webos_appium_session_test_clientfactory",
-      "community": 125,
-      "community_name": "defaultPackagePath",
+      "community": 169,
+      "community_name": "webos-appium-session.test.js",
       "norm_label": "clientfactory()"
     },
     {
@@ -23913,8 +23913,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 50,
+      "community_name": "device-discovery.test.js",
       "norm_label": "webos-mytv-automation.test.js"
     },
     {
@@ -23924,8 +23924,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_test",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 50,
+      "community_name": "device-discovery.test.js",
       "norm_label": "test"
     },
     {
@@ -23935,8 +23935,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_assert",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 50,
+      "community_name": "device-discovery.test.js",
       "norm_label": "assert"
     },
     {
@@ -23946,8 +23946,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_createwebosmytvautomation",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 50,
+      "community_name": "device-discovery.test.js",
       "norm_label": "{createwebosmytvautomation}"
     },
     {
@@ -23957,8 +23957,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_unit_webos_mytv_automation_test_createautomation",
-      "community": 99,
-      "community_name": "test-case-action-runner.test.js",
+      "community": 50,
+      "community_name": "device-discovery.test.js",
       "norm_label": "createautomation()"
     },
     {
@@ -24633,212 +24633,322 @@
       "norm_label": "action compiler guide"
     },
     {
-      "label": "Transformation contract",
+      "label": "Contract",
       "file_type": "document",
       "source_file": "ACTION-COMPILER.md",
-      "source_location": "L12",
+      "source_location": "L6",
       "_origin": "ast",
-      "id": "action_compiler_transformation_contract",
+      "id": "action_compiler_contract",
       "community": 6,
       "community_name": "Playwright Interactive Skill",
+      "norm_label": "contract"
+    },
+    {
+      "label": "Deterministic conversion",
+      "file_type": "document",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L28",
+      "_origin": "ast",
+      "id": "action_compiler_deterministic_conversion",
+      "community": 6,
+      "community_name": "Playwright Interactive Skill",
+      "norm_label": "deterministic conversion"
+    },
+    {
+      "label": "Login credentials",
+      "file_type": "document",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L50",
+      "_origin": "ast",
+      "id": "action_compiler_login_credentials",
+      "community": 6,
+      "community_name": "Playwright Interactive Skill",
+      "norm_label": "login credentials"
+    },
+    {
+      "label": "Supported source grammar",
+      "file_type": "document",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L76",
+      "_origin": "ast",
+      "id": "action_compiler_supported_source_grammar",
+      "community": 6,
+      "community_name": "Playwright Interactive Skill",
+      "norm_label": "supported source grammar"
+    },
+    {
+      "label": "Service success",
+      "file_type": "document",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L109",
+      "_origin": "ast",
+      "id": "action_compiler_service_success",
+      "community": 6,
+      "community_name": "Playwright Interactive Skill",
+      "norm_label": "service success"
+    },
+    {
+      "label": "Home trailers",
+      "file_type": "document",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L126",
+      "_origin": "ast",
+      "id": "action_compiler_home_trailers",
+      "community": 6,
+      "community_name": "Playwright Interactive Skill",
+      "norm_label": "home trailers"
+    },
+    {
+      "label": "Action validation",
+      "file_type": "document",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L136",
+      "_origin": "ast",
+      "id": "action_compiler_action_validation",
+      "community": 6,
+      "community_name": "Playwright Interactive Skill",
+      "norm_label": "action validation"
+    },
+    {
+      "label": "Ownership and failure behavior",
+      "file_type": "document",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L169",
+      "_origin": "ast",
+      "id": "action_compiler_ownership_and_failure_behavior",
+      "community": 6,
+      "community_name": "Playwright Interactive Skill",
+      "norm_label": "ownership and failure behavior"
+    },
+    {
+      "label": "ACTION-COMPILER_bk.md",
+      "file_type": "document",
+      "source_file": "ACTION-COMPILER_bk.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "action_compiler_bk",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
+      "norm_label": "action-compiler_bk.md"
+    },
+    {
+      "label": "Action compiler guide",
+      "file_type": "document",
+      "source_file": "ACTION-COMPILER_bk.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "action_compiler_bk_action_compiler_guide",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
+      "norm_label": "action compiler guide"
+    },
+    {
+      "label": "Transformation contract",
+      "file_type": "document",
+      "source_file": "ACTION-COMPILER_bk.md",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "action_compiler_bk_transformation_contract",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "transformation contract"
     },
     {
       "label": "Compilation algorithm",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L36",
       "_origin": "ast",
-      "id": "action_compiler_compilation_algorithm",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_compilation_algorithm",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "compilation algorithm"
     },
     {
       "label": "Action grammar and output",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L66",
       "_origin": "ast",
-      "id": "action_compiler_action_grammar_and_output",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_action_grammar_and_output",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "action grammar and output"
     },
     {
       "label": "Login",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L68",
       "_origin": "ast",
-      "id": "action_compiler_login",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_login",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "login"
     },
     {
       "label": "Login credentials from `preCondition`",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L91",
       "_origin": "ast",
-      "id": "action_compiler_login_credentials_from_precondition",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_login_credentials_from_precondition",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "login credentials from `precondition`"
     },
     {
       "label": "Home and service navigation",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L121",
       "_origin": "ast",
-      "id": "action_compiler_home_and_service_navigation",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_home_and_service_navigation",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "home and service navigation"
     },
     {
       "label": "Required service-success assertion",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L163",
       "_origin": "ast",
-      "id": "action_compiler_required_service_success_assertion",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_required_service_success_assertion",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "required service-success assertion"
     },
     {
       "label": "Focus a named control and press OK",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L191",
       "_origin": "ast",
-      "id": "action_compiler_focus_a_named_control_and_press_ok",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_focus_a_named_control_and_press_ok",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "focus a named control and press ok"
     },
     {
       "label": "Open global search",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L303",
       "_origin": "ast",
-      "id": "action_compiler_open_global_search",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_open_global_search",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "open global search"
     },
     {
       "label": "Search content",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L321",
       "_origin": "ast",
-      "id": "action_compiler_search_content",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_search_content",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "search content"
     },
     {
       "label": "Play a named visible item",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L352",
       "_origin": "ast",
-      "id": "action_compiler_play_a_named_visible_item",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_play_a_named_visible_item",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "play a named visible item"
     },
     {
       "label": "Play the result found by search",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L374",
       "_origin": "ast",
-      "id": "action_compiler_play_the_result_found_by_search",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_play_the_result_found_by_search",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "play the result found by search"
     },
     {
       "label": "Play items from a category row",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L396",
       "_origin": "ast",
-      "id": "action_compiler_play_items_from_a_category_row",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_play_items_from_a_category_row",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "play items from a category row"
     },
     {
       "label": "Play all Home promotional trailers",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L434",
       "_origin": "ast",
-      "id": "action_compiler_play_all_home_promotional_trailers",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_play_all_home_promotional_trailers",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "play all home promotional trailers"
     },
     {
       "label": "Back navigation",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L468",
       "_origin": "ast",
-      "id": "action_compiler_back_navigation",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_back_navigation",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "back navigation"
     },
     {
       "label": "Readiness waits",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L489",
       "_origin": "ast",
-      "id": "action_compiler_readiness_waits",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_readiness_waits",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "readiness waits"
     },
     {
       "label": "Validation rules",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L509",
       "_origin": "ast",
-      "id": "action_compiler_validation_rules",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_validation_rules",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "validation rules"
     },
     {
       "label": "Failure behavior",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L568",
       "_origin": "ast",
-      "id": "action_compiler_failure_behavior",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_failure_behavior",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "failure behavior"
     },
     {
       "label": "Recommended server response",
       "file_type": "document",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L593",
       "_origin": "ast",
-      "id": "action_compiler_recommended_server_response",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
+      "id": "action_compiler_bk_recommended_server_response",
+      "community": 99,
+      "community_name": "test-case-action-runner.test.js",
       "norm_label": "recommended server response"
     },
     {
@@ -25458,32 +25568,21 @@
       "norm_label": "build the desktop app"
     },
     {
-      "label": "macOS",
+      "label": "Build commands",
       "file_type": "document",
       "source_file": "README.md",
       "source_location": "L336",
       "_origin": "ast",
-      "id": "readme_macos",
+      "id": "readme_build_commands",
       "community": 6,
       "community_name": "Playwright Interactive Skill",
-      "norm_label": "macos"
-    },
-    {
-      "label": "Windows",
-      "file_type": "document",
-      "source_file": "README.md",
-      "source_location": "L350",
-      "_origin": "ast",
-      "id": "readme_windows",
-      "community": 6,
-      "community_name": "Playwright Interactive Skill",
-      "norm_label": "windows"
+      "norm_label": "build commands"
     },
     {
       "label": "Browser Configuration Notes",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L362",
+      "source_location": "L379",
       "_origin": "ast",
       "id": "readme_browser_configuration_notes",
       "community": 6,
@@ -25494,7 +25593,7 @@
       "label": "Reports and Artifacts",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L376",
+      "source_location": "L393",
       "_origin": "ast",
       "id": "readme_reports_and_artifacts",
       "community": 6,
@@ -25505,7 +25604,7 @@
       "label": "Common Issues",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L387",
+      "source_location": "L404",
       "_origin": "ast",
       "id": "readme_common_issues",
       "community": 6,
@@ -25516,7 +25615,7 @@
       "label": "Electron binary failed to install",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L389",
+      "source_location": "L406",
       "_origin": "ast",
       "id": "readme_electron_binary_failed_to_install",
       "community": 6,
@@ -25527,7 +25626,7 @@
       "label": "Playwright cannot find a browser",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L397",
+      "source_location": "L414",
       "_origin": "ast",
       "id": "readme_playwright_cannot_find_a_browser",
       "community": 6,
@@ -25538,7 +25637,7 @@
       "label": "macOS blocks the app",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L403",
+      "source_location": "L420",
       "_origin": "ast",
       "id": "readme_macos_blocks_the_app",
       "community": 6,
@@ -25549,7 +25648,7 @@
       "label": "DMG creation fails",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L409",
+      "source_location": "L426",
       "_origin": "ast",
       "id": "readme_dmg_creation_fails",
       "community": 6,
@@ -25560,7 +25659,7 @@
       "label": "LG device setup status",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L418",
+      "source_location": "L435",
       "_origin": "ast",
       "id": "readme_lg_device_setup_status",
       "community": 6,
@@ -25571,7 +25670,7 @@
       "label": "LG Run Selected",
       "file_type": "document",
       "source_file": "README.md",
-      "source_location": "L432",
+      "source_location": "L449",
       "_origin": "ast",
       "id": "readme_lg_run_selected",
       "community": 6,
@@ -29572,6 +29671,270 @@
       "norm_label": "follow-up correction: case 2291 row mapping and failure summary"
     },
     {
+      "label": "20260804_mytv-user-guide-vi.md",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "20260804_mytv-user-guide-vi.md"
+    },
+    {
+      "label": "Vietnamese MyTV Auto Test User Guide",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "vietnamese mytv auto test user guide"
+    },
+    {
+      "label": "Status",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_status",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "status"
+    },
+    {
+      "label": "Goal",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_goal",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "goal"
+    },
+    {
+      "label": "Problem",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_problem",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "problem"
+    },
+    {
+      "label": "Desired outcome",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L26",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_desired_outcome",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "desired outcome"
+    },
+    {
+      "label": "Acceptance criteria",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L33",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_acceptance_criteria",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "acceptance criteria"
+    },
+    {
+      "label": "Non-goals",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L59",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_non_goals",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "non-goals"
+    },
+    {
+      "label": "Current State and Findings",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L69",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_current_state_and_findings",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "current state and findings"
+    },
+    {
+      "label": "Findings and Decisions",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L99",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_findings_and_decisions",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "findings and decisions"
+    },
+    {
+      "label": "Assumptions, Constraints, and Dependencies",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L109",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_assumptions_constraints_and_dependencies",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "assumptions, constraints, and dependencies"
+    },
+    {
+      "label": "Risks and Rollback",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L125",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_risks_and_rollback",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "risks and rollback"
+    },
+    {
+      "label": "File Impact and Detailed Changes",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L134",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_file_impact_and_detailed_changes",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "file impact and detailed changes"
+    },
+    {
+      "label": "`docs/user-guide/assets/*.png`",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L136",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_docs_user_guide_assets_png",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "`docs/user-guide/assets/*.png`"
+    },
+    {
+      "label": "`docs/user-guide/MyTV-Auto-Test-Huong-dan-su-dung.docx`",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L150",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_docs_user_guide_mytv_auto_test_huong_dan_su_dung_docx",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "`docs/user-guide/mytv-auto-test-huong-dan-su-dung.docx`"
+    },
+    {
+      "label": "`docs/tinyworkers/20260804_mytv-user-guide-vi.md`",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L166",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_docs_tinyworkers_20260804_mytv_user_guide_vi_md",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "`docs/tinyworkers/20260804_mytv-user-guide-vi.md`"
+    },
+    {
+      "label": "Execution Sequence",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L177",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_execution_sequence",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "execution sequence"
+    },
+    {
+      "label": "Step 1 \u2014 Capture and annotate current GUI",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L179",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_step_1_capture_and_annotate_current_gui",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "step 1 \u2014 capture and annotate current gui"
+    },
+    {
+      "label": "Step 2 \u2014 Author Vietnamese Word guide",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L198",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_step_2_author_vietnamese_word_guide",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "step 2 \u2014 author vietnamese word guide"
+    },
+    {
+      "label": "Step 3 \u2014 Render, inspect, and hand off",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L214",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_step_3_render_inspect_and_hand_off",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "step 3 \u2014 render, inspect, and hand off"
+    },
+    {
+      "label": "Verification Plan",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L231",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_verification_plan",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "verification plan"
+    },
+    {
+      "label": "Completed Verification",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L245",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_completed_verification",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "completed verification"
+    },
+    {
+      "label": "Deviations and Plan Updates",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L259",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_deviations_and_plan_updates",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "deviations and plan updates"
+    },
+    {
+      "label": "Handoff and Completion",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L267",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260804_mytv_user_guide_vi_handoff_and_completion",
+      "community": 9,
+      "community_name": "build",
+      "norm_label": "handoff and completion"
+    },
+    {
       "label": "20260804_test-case-maximum-time.md",
       "file_type": "document",
       "source_file": "docs/tinyworkers/20260804_test-case-maximum-time.md",
@@ -29636,6 +29999,270 @@
       "community": 146,
       "community_name": "navigation.test.js",
       "norm_label": "verification"
+    },
+    {
+      "label": "20260805_095932_stop-restart-run-state.md",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "20260805_095932_stop-restart-run-state.md"
+    },
+    {
+      "label": "Stop/restart test-case run state",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "stop/restart test-case run state"
+    },
+    {
+      "label": "Status",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_status",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "status"
+    },
+    {
+      "label": "Goal",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L18",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_goal",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "goal"
+    },
+    {
+      "label": "Problem",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_problem",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "problem"
+    },
+    {
+      "label": "Desired outcome",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L28",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_desired_outcome",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "desired outcome"
+    },
+    {
+      "label": "Acceptance criteria",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L35",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_acceptance_criteria",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "acceptance criteria"
+    },
+    {
+      "label": "Non-goals",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L43",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_non_goals",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "non-goals"
+    },
+    {
+      "label": "Current State and Findings",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L49",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_current_state_and_findings",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "current state and findings"
+    },
+    {
+      "label": "Findings and Decisions",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L61",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_findings_and_decisions",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "findings and decisions"
+    },
+    {
+      "label": "Assumptions, Constraints, and Dependencies",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L68",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_assumptions_constraints_and_dependencies",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "assumptions, constraints, and dependencies"
+    },
+    {
+      "label": "Risks and Rollback",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L77",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_risks_and_rollback",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "risks and rollback"
+    },
+    {
+      "label": "File Impact and Detailed Changes",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L85",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_file_impact_and_detailed_changes",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "file impact and detailed changes"
+    },
+    {
+      "label": "`app/renderer/renderer.js`",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L87",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_app_renderer_renderer_js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "`app/renderer/renderer.js`"
+    },
+    {
+      "label": "`tests/unit/renderer.test.js`",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L114",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_tests_unit_renderer_test_js",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "`tests/unit/renderer.test.js`"
+    },
+    {
+      "label": "`docs/tinyworkers/20260805_095932_stop-restart-run-state.md`",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L136",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_docs_tinyworkers_20260805_095932_stop_restart_run_state_md",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "`docs/tinyworkers/20260805_095932_stop-restart-run-state.md`"
+    },
+    {
+      "label": "Execution Sequence",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L146",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_execution_sequence",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "execution sequence"
+    },
+    {
+      "label": "Step 1 \u2014 Make stop-event handling source-aware",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L148",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_step_1_make_stop_event_handling_source_aware",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "step 1 \u2014 make stop-event handling source-aware"
+    },
+    {
+      "label": "Step 2 \u2014 Add stop/restart regression coverage",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L170",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_step_2_add_stop_restart_regression_coverage",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "step 2 \u2014 add stop/restart regression coverage"
+    },
+    {
+      "label": "Step 3 \u2014 Complete verification and handoff",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L193",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_step_3_complete_verification_and_handoff",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "step 3 \u2014 complete verification and handoff"
+    },
+    {
+      "label": "Verification Plan",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L220",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_verification_plan",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "verification plan"
+    },
+    {
+      "label": "Completed Verification",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L232",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_completed_verification",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "completed verification"
+    },
+    {
+      "label": "Deviations and Plan Updates",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L248",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_deviations_and_plan_updates",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "deviations and plan updates"
+    },
+    {
+      "label": "Handoff and Completion",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L253",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260805_095932_stop_restart_run_state_handoff_and_completion",
+      "community": 35,
+      "community_name": "test-case-action-runner.js",
+      "norm_label": "handoff and completion"
     },
     {
       "label": "player-check-timeout_20260802.md",
@@ -29845,6 +30472,116 @@
       "community": 111,
       "community_name": "device-profile.schema.json",
       "norm_label": "completed verification"
+    },
+    {
+      "label": "query_20260805_033335_why_does_the_test_status_result_update_request_omi.md",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260805_033335_why_does_the_test_status_result_update_request_omi.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi",
+      "community": 173,
+      "community_name": "Q: Why does the test status/result update request omit X-FlowTest-Service-Token?",
+      "norm_label": "query_20260805_033335_why_does_the_test_status_result_update_request_omi.md"
+    },
+    {
+      "label": "Q: Why does the test status/result update request omit X-FlowTest-Service-Token?",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260805_033335_why_does_the_test_status_result_update_request_omi.md",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi_q_why_does_the_test_status_result_update_request_omit_x_flowtest_service_token",
+      "community": 173,
+      "community_name": "Q: Why does the test status/result update request omit X-FlowTest-Service-Token?",
+      "norm_label": "q: why does the test status/result update request omit x-flowtest-service-token?"
+    },
+    {
+      "label": "Answer",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260805_033335_why_does_the_test_status_result_update_request_omi.md",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi_answer",
+      "community": 173,
+      "community_name": "Q: Why does the test status/result update request omit X-FlowTest-Service-Token?",
+      "norm_label": "answer"
+    },
+    {
+      "label": "Outcome",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260805_033335_why_does_the_test_status_result_update_request_omi.md",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi_outcome",
+      "community": 173,
+      "community_name": "Q: Why does the test status/result update request omit X-FlowTest-Service-Token?",
+      "norm_label": "outcome"
+    },
+    {
+      "label": "Source Nodes",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260805_033335_why_does_the_test_status_result_update_request_omi.md",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi_source_nodes",
+      "community": 173,
+      "community_name": "Q: Why does the test status/result update request omit X-FlowTest-Service-Token?",
+      "norm_label": "source nodes"
+    },
+    {
+      "label": "query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md",
+      "source_location": "L1",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se",
+      "community": 174,
+      "community_name": "Q: Why does the result PATCH still omit X-FlowTest-Service-Token after API_AUTHORIZATION is configured?",
+      "norm_label": "query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md"
+    },
+    {
+      "label": "Q: Why does the result PATCH still omit X-FlowTest-Service-Token after API_AUTHORIZATION is configured?",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md",
+      "source_location": "L10",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se_q_why_does_the_result_patch_still_omit_x_flowtest_service_token_after_api_authorization_is_configured",
+      "community": 174,
+      "community_name": "Q: Why does the result PATCH still omit X-FlowTest-Service-Token after API_AUTHORIZATION is configured?",
+      "norm_label": "q: why does the result patch still omit x-flowtest-service-token after api_authorization is configured?"
+    },
+    {
+      "label": "Answer",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md",
+      "source_location": "L12",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se_answer",
+      "community": 174,
+      "community_name": "Q: Why does the result PATCH still omit X-FlowTest-Service-Token after API_AUTHORIZATION is configured?",
+      "norm_label": "answer"
+    },
+    {
+      "label": "Outcome",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md",
+      "source_location": "L16",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se_outcome",
+      "community": 174,
+      "community_name": "Q: Why does the result PATCH still omit X-FlowTest-Service-Token after API_AUTHORIZATION is configured?",
+      "norm_label": "outcome"
+    },
+    {
+      "label": "Source Nodes",
+      "file_type": "document",
+      "source_file": "graphify-out/memory/query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md",
+      "source_location": "L20",
+      "_origin": "ast",
+      "id": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se_source_nodes",
+      "community": 174,
+      "community_name": "Q: Why does the result PATCH still omit X-FlowTest-Service-Token after API_AUTHORIZATION is configured?",
+      "norm_label": "source nodes"
     }
   ],
   "links": [
@@ -38988,7 +39725,7 @@
       "relation": "indirect_call",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2860",
+      "source_location": "L2865",
       "weight": 1.0,
       "_origin": "ast",
       "context": "argument",
@@ -39033,7 +39770,7 @@
       "relation": "indirect_call",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2868",
+      "source_location": "L2873",
       "weight": 1.0,
       "_origin": "ast",
       "context": "collection",
@@ -39100,7 +39837,7 @@
       "relation": "indirect_call",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2876",
+      "source_location": "L2881",
       "weight": 1.0,
       "_origin": "ast",
       "context": "collection",
@@ -39134,7 +39871,7 @@
       "relation": "indirect_call",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2877",
+      "source_location": "L2882",
       "weight": 1.0,
       "_origin": "ast",
       "context": "collection",
@@ -39146,7 +39883,7 @@
       "relation": "indirect_call",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2878",
+      "source_location": "L2883",
       "weight": 1.0,
       "_origin": "ast",
       "context": "collection",
@@ -39159,7 +39896,7 @@
       "context": "collection",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2846",
+      "source_location": "L2851",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_renderer_renderer_createrenderercontroller",
@@ -39171,7 +39908,7 @@
       "context": "collection",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2847",
+      "source_location": "L2852",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_renderer_renderer_createrenderercontroller",
@@ -39207,7 +39944,7 @@
       "context": "collection",
       "confidence": "INFERRED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2848",
+      "source_location": "L2853",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_renderer_renderer_createrenderercontroller",
@@ -39219,7 +39956,7 @@
       "context": "call",
       "confidence": "EXTRACTED",
       "source_file": "app/renderer/renderer.js",
-      "source_location": "L2853",
+      "source_location": "L2858",
       "weight": 1.0,
       "_origin": "ast",
       "source": "app_renderer_renderer_bootstraprenderer",
@@ -71278,7 +72015,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/unit/renderer.test.js",
-      "source_location": "L492",
+      "source_location": "L496",
       "weight": 1.0,
       "_origin": "ast",
       "source": "tests_unit_renderer_test",
@@ -71322,7 +72059,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "tests/unit/renderer.test.js",
-      "source_location": "L1579",
+      "source_location": "L1630",
       "weight": 1.0,
       "_origin": "ast",
       "source": "tests_unit_renderer_test",
@@ -71639,7 +72376,7 @@
       "confidence": "INFERRED",
       "confidence_score": 0.8,
       "source_file": "tests/unit/renderer.test.js",
-      "source_location": "L493",
+      "source_location": "L497",
       "weight": 1.0,
       "_origin": "ast",
       "source": "tests_unit_renderer_test_flushrendererpromises",
@@ -74217,209 +74954,308 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "ACTION-COMPILER.md",
+      "source_location": "L136",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "action_compiler_action_compiler_guide",
+      "target": "action_compiler_action_validation",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L6",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "action_compiler_action_compiler_guide",
+      "target": "action_compiler_contract",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "action_compiler_action_compiler_guide",
+      "target": "action_compiler_deterministic_conversion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L169",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "action_compiler_action_compiler_guide",
+      "target": "action_compiler_ownership_and_failure_behavior",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L76",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "action_compiler_action_compiler_guide",
+      "target": "action_compiler_supported_source_grammar",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L50",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "action_compiler_deterministic_conversion",
+      "target": "action_compiler_login_credentials",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L126",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "action_compiler_supported_source_grammar",
+      "target": "action_compiler_home_trailers",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "ACTION-COMPILER.md",
+      "source_location": "L109",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "action_compiler_supported_source_grammar",
+      "target": "action_compiler_service_success",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "ACTION-COMPILER_bk.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "action_compiler_bk",
+      "target": "action_compiler_bk_action_compiler_guide",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L66",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_compiler_guide",
-      "target": "action_compiler_action_grammar_and_output",
+      "source": "action_compiler_bk_action_compiler_guide",
+      "target": "action_compiler_bk_action_grammar_and_output",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L36",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_compiler_guide",
-      "target": "action_compiler_compilation_algorithm",
+      "source": "action_compiler_bk_action_compiler_guide",
+      "target": "action_compiler_bk_compilation_algorithm",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L568",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_compiler_guide",
-      "target": "action_compiler_failure_behavior",
+      "source": "action_compiler_bk_action_compiler_guide",
+      "target": "action_compiler_bk_failure_behavior",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L593",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_compiler_guide",
-      "target": "action_compiler_recommended_server_response",
+      "source": "action_compiler_bk_action_compiler_guide",
+      "target": "action_compiler_bk_recommended_server_response",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L12",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_compiler_guide",
-      "target": "action_compiler_transformation_contract",
+      "source": "action_compiler_bk_action_compiler_guide",
+      "target": "action_compiler_bk_transformation_contract",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L509",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_compiler_guide",
-      "target": "action_compiler_validation_rules",
+      "source": "action_compiler_bk_action_compiler_guide",
+      "target": "action_compiler_bk_validation_rules",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L468",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_grammar_and_output",
-      "target": "action_compiler_back_navigation",
+      "source": "action_compiler_bk_action_grammar_and_output",
+      "target": "action_compiler_bk_back_navigation",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L191",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_grammar_and_output",
-      "target": "action_compiler_focus_a_named_control_and_press_ok",
+      "source": "action_compiler_bk_action_grammar_and_output",
+      "target": "action_compiler_bk_focus_a_named_control_and_press_ok",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L121",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_grammar_and_output",
-      "target": "action_compiler_home_and_service_navigation",
+      "source": "action_compiler_bk_action_grammar_and_output",
+      "target": "action_compiler_bk_home_and_service_navigation",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L68",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_grammar_and_output",
-      "target": "action_compiler_login",
+      "source": "action_compiler_bk_action_grammar_and_output",
+      "target": "action_compiler_bk_login",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L303",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_grammar_and_output",
-      "target": "action_compiler_open_global_search",
+      "source": "action_compiler_bk_action_grammar_and_output",
+      "target": "action_compiler_bk_open_global_search",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L352",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_grammar_and_output",
-      "target": "action_compiler_play_a_named_visible_item",
+      "source": "action_compiler_bk_action_grammar_and_output",
+      "target": "action_compiler_bk_play_a_named_visible_item",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L434",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_grammar_and_output",
-      "target": "action_compiler_play_all_home_promotional_trailers",
+      "source": "action_compiler_bk_action_grammar_and_output",
+      "target": "action_compiler_bk_play_all_home_promotional_trailers",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L396",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_grammar_and_output",
-      "target": "action_compiler_play_items_from_a_category_row",
+      "source": "action_compiler_bk_action_grammar_and_output",
+      "target": "action_compiler_bk_play_items_from_a_category_row",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L374",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_grammar_and_output",
-      "target": "action_compiler_play_the_result_found_by_search",
+      "source": "action_compiler_bk_action_grammar_and_output",
+      "target": "action_compiler_bk_play_the_result_found_by_search",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L489",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_grammar_and_output",
-      "target": "action_compiler_readiness_waits",
+      "source": "action_compiler_bk_action_grammar_and_output",
+      "target": "action_compiler_bk_readiness_waits",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L321",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_action_grammar_and_output",
-      "target": "action_compiler_search_content",
+      "source": "action_compiler_bk_action_grammar_and_output",
+      "target": "action_compiler_bk_search_content",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L91",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_login",
-      "target": "action_compiler_login_credentials_from_precondition",
+      "source": "action_compiler_bk_login",
+      "target": "action_compiler_bk_login_credentials_from_precondition",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
-      "source_file": "ACTION-COMPILER.md",
+      "source_file": "ACTION-COMPILER_bk.md",
       "source_location": "L163",
       "weight": 1.0,
       "_origin": "ast",
-      "source": "action_compiler_home_and_service_navigation",
-      "target": "action_compiler_required_service_success_assertion",
+      "source": "action_compiler_bk_home_and_service_navigation",
+      "target": "action_compiler_bk_required_service_success_assertion",
       "confidence_score": 1.0
     },
     {
@@ -74921,7 +75757,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L362",
+      "source_location": "L379",
       "weight": 1.0,
       "_origin": "ast",
       "source": "readme_mytv_auto_test",
@@ -74943,7 +75779,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L387",
+      "source_location": "L404",
       "weight": 1.0,
       "_origin": "ast",
       "source": "readme_mytv_auto_test",
@@ -74965,7 +75801,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L418",
+      "source_location": "L435",
       "weight": 1.0,
       "_origin": "ast",
       "source": "readme_mytv_auto_test",
@@ -74987,7 +75823,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L376",
+      "source_location": "L393",
       "weight": 1.0,
       "_origin": "ast",
       "source": "readme_mytv_auto_test",
@@ -75046,25 +75882,14 @@
       "weight": 1.0,
       "_origin": "ast",
       "source": "readme_build_the_desktop_app",
-      "target": "readme_macos",
+      "target": "readme_build_commands",
       "confidence_score": 1.0
     },
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L350",
-      "weight": 1.0,
-      "_origin": "ast",
-      "source": "readme_build_the_desktop_app",
-      "target": "readme_windows",
-      "confidence_score": 1.0
-    },
-    {
-      "relation": "contains",
-      "confidence": "EXTRACTED",
-      "source_file": "README.md",
-      "source_location": "L409",
+      "source_location": "L426",
       "weight": 1.0,
       "_origin": "ast",
       "source": "readme_common_issues",
@@ -75075,7 +75900,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L389",
+      "source_location": "L406",
       "weight": 1.0,
       "_origin": "ast",
       "source": "readme_common_issues",
@@ -75086,7 +75911,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L403",
+      "source_location": "L420",
       "weight": 1.0,
       "_origin": "ast",
       "source": "readme_common_issues",
@@ -75097,7 +75922,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L397",
+      "source_location": "L414",
       "weight": 1.0,
       "_origin": "ast",
       "source": "readme_common_issues",
@@ -75108,7 +75933,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "README.md",
-      "source_location": "L432",
+      "source_location": "L449",
       "weight": 1.0,
       "_origin": "ast",
       "source": "readme_lg_device_setup_status",
@@ -79067,6 +79892,259 @@
     {
       "relation": "contains",
       "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L109",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_assumptions_constraints_and_dependencies",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L245",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_completed_verification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L69",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_current_state_and_findings",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L259",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_deviations_and_plan_updates",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L177",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_execution_sequence",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L134",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_file_impact_and_detailed_changes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L99",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_findings_and_decisions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L18",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_goal",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L267",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_handoff_and_completion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L125",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_risks_and_rollback",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_status",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L231",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_vietnamese_mytv_auto_test_user_guide",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_verification_plan",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L33",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_goal",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_acceptance_criteria",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L26",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_goal",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_desired_outcome",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L59",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_goal",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_non_goals",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_goal",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_problem",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L166",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_file_impact_and_detailed_changes",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_docs_tinyworkers_20260804_mytv_user_guide_vi_md",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L136",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_file_impact_and_detailed_changes",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_docs_user_guide_assets_png",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L150",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_file_impact_and_detailed_changes",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_docs_user_guide_mytv_auto_test_huong_dan_su_dung_docx",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L179",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_execution_sequence",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_step_1_capture_and_annotate_current_gui",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L198",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_execution_sequence",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_step_2_author_vietnamese_word_guide",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260804_mytv-user-guide-vi.md",
+      "source_location": "L214",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260804_mytv_user_guide_vi_execution_sequence",
+      "target": "docs_tinyworkers_20260804_mytv_user_guide_vi_step_3_render_inspect_and_hand_off",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
       "source_file": "docs/tinyworkers/20260804_test-case-maximum-time.md",
       "source_location": "L1",
       "weight": 1.0,
@@ -79117,6 +80195,259 @@
       "_origin": "ast",
       "source": "docs_tinyworkers_20260804_test_case_maximum_time_configurable_test_case_maximum_time",
       "target": "docs_tinyworkers_20260804_test_case_maximum_time_verification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L1",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L68",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_assumptions_constraints_and_dependencies",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L232",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_completed_verification",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L49",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_current_state_and_findings",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L248",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_deviations_and_plan_updates",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L146",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_execution_sequence",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L85",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_file_impact_and_detailed_changes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L61",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_findings_and_decisions",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L18",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_goal",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L253",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_handoff_and_completion",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L77",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_risks_and_rollback",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_status",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L220",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_stop_restart_test_case_run_state",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_verification_plan",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L35",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_goal",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_acceptance_criteria",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L28",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_goal",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_desired_outcome",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L43",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_goal",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_non_goals",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_goal",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_problem",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L87",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_file_impact_and_detailed_changes",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_app_renderer_renderer_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L136",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_file_impact_and_detailed_changes",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_docs_tinyworkers_20260805_095932_stop_restart_run_state_md",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L114",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_file_impact_and_detailed_changes",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_tests_unit_renderer_test_js",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L148",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_execution_sequence",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_step_1_make_stop_event_handling_source_aware",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L170",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_execution_sequence",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_step_2_add_stop_restart_regression_coverage",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260805_095932_stop-restart-run-state.md",
+      "source_location": "L193",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260805_095932_stop_restart_run_state_execution_sequence",
+      "target": "docs_tinyworkers_20260805_095932_stop_restart_run_state_step_3_complete_verification_and_handoff",
       "confidence_score": 1.0
     },
     {
@@ -79305,8 +80636,96 @@
       "source": "docs_tinyworkers_player_save_toast_20260802_files_to_edit",
       "target": "docs_tinyworkers_player_save_toast_20260802_toast_and_save_flow",
       "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260805_033335_why_does_the_test_status_result_update_request_omi.md",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi",
+      "target": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi_q_why_does_the_test_status_result_update_request_omit_x_flowtest_service_token",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260805_033335_why_does_the_test_status_result_update_request_omi.md",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi_q_why_does_the_test_status_result_update_request_omit_x_flowtest_service_token",
+      "target": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi_answer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260805_033335_why_does_the_test_status_result_update_request_omi.md",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi_q_why_does_the_test_status_result_update_request_omit_x_flowtest_service_token",
+      "target": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi_outcome",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260805_033335_why_does_the_test_status_result_update_request_omi.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi_q_why_does_the_test_status_result_update_request_omit_x_flowtest_service_token",
+      "target": "graphify_out_memory_query_20260805_033335_why_does_the_test_status_result_update_request_omi_source_nodes",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md",
+      "source_location": "L10",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se",
+      "target": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se_q_why_does_the_result_patch_still_omit_x_flowtest_service_token_after_api_authorization_is_configured",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md",
+      "source_location": "L12",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se_q_why_does_the_result_patch_still_omit_x_flowtest_service_token_after_api_authorization_is_configured",
+      "target": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se_answer",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md",
+      "source_location": "L16",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se_q_why_does_the_result_patch_still_omit_x_flowtest_service_token_after_api_authorization_is_configured",
+      "target": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se_outcome",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "graphify-out/memory/query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md",
+      "source_location": "L20",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se_q_why_does_the_result_patch_still_omit_x_flowtest_service_token_after_api_authorization_is_configured",
+      "target": "graphify_out_memory_query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se_source_nodes",
+      "confidence_score": 1.0
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "d42160e782450b153f6e850680153b7a1ae64ed9"
+  "built_at_commit": "70bdabfa740692257898e71785783b7ea508a29a"
 }

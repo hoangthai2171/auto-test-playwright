@@ -298,6 +298,7 @@ test("submits tested results with the required PATCH payload", async () => {
     projectId: "1",
     folderPath: "/Boundary",
     testcases,
+    authorization: "service-token",
     fetchImpl: async (url, options) => {
       request = {url, options};
       return {ok: true, status: 200, statusText: "OK", json: async () => ({data: []})};
@@ -307,6 +308,8 @@ test("submits tested results with the required PATCH payload", async () => {
   assert.equal(request.url, "http://api.test/api/v1/projects/1/flow-cases/by-folder");
   assert.equal(request.options.method, "PATCH");
   assert.equal(request.options.headers["Content-Type"], "application/json");
+  assert.equal(request.options.headers["X-FlowTest-Service-Token"], "service-token");
+  assert.equal(request.options.headers.Authorization, undefined);
   assert.deepEqual(JSON.parse(request.options.body), {folderPath: "/Boundary", testcases});
   assert.deepEqual(result.request.body, {folderPath: "/Boundary", testcases});
   assert.equal(result.response.status, 200);
