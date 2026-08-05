@@ -109,8 +109,8 @@ h1 {
 
 .run-target-panel {
   display: grid;
-  gap: 10px;
-  padding: 14px;
+  gap: 6px;
+  padding: 10px;
   border: 1px solid #2f3440;
   border-radius: 6px;
   background: #12151c;
@@ -139,6 +139,10 @@ h1 {
   align-items: center;
   gap: 8px;
   min-height: 18px;
+}
+
+#browser-configuration-cta:has(#browser-toolchain-run-status:empty):has(#configure-browser-button.hidden) {
+  display: none !important;
 }
 
 .browser-configuration-cta .field-note {

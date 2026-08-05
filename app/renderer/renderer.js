@@ -978,10 +978,15 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             previewTargetStatus.textContent = runTarget === "webos" ? "Preview type is available for the Browser runner only." : "";
             previewTargetStatus.classList.toggle("hidden", runTarget === "browser");
         }
+        const browserConfigCtaDiv = document.getElementById("browser-configuration-cta");
+        const shouldShowBrowserCta = runTarget === "browser" && !browserToolchainReady;
         if (browserToolchainRunStatus) {
-            browserToolchainRunStatus.textContent = runTarget === "browser" && !browserToolchainReady ? "Browser tests require the project-pinned Chromium. Configure Browser to continue." : "";
+            browserToolchainRunStatus.textContent = shouldShowBrowserCta ? "Browser tests require the project-pinned Chromium. Configure Browser to continue." : "";
         }
-        configureBrowserButton?.classList?.toggle("hidden", runTarget !== "browser" || browserToolchainReady);
+        configureBrowserButton?.classList?.toggle("hidden", !shouldShowBrowserCta);
+        if (browserConfigCtaDiv) {
+            browserConfigCtaDiv.classList.toggle("hidden", !shouldShowBrowserCta);
+        }
         configureLgSdkButton?.classList?.toggle("hidden", runTarget !== "webos" || lgRunAvailability?.status === "READY");
     }
 
