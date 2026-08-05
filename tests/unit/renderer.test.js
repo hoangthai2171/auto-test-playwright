@@ -189,7 +189,6 @@ function createRendererFixture() {
     "refresh-folders-button",
     "get-test-cases-button",
     "api-loading-overlay",
-    "settings-app-url-input",
     "api-domain-input",
     "api-authorization-input",
     "project-id-input",
@@ -197,7 +196,6 @@ function createRendererFixture() {
     "api-timeout-input",
     "player-check-timeout-input",
     "test-case-max-time-input",
-    "dns-host-input",
     "dns-host-add-button",
     "dns-host-remove-button",
     "dns-host-status",
@@ -1123,6 +1121,7 @@ test("loads and saves connection and network settings", () => {
   let stored;
   fixture.storage.getItem = () => JSON.stringify({
     APP_URL: "https://saved.test/",
+    DNS_HOST: "198.51.100.10 saved.example.test",
     API_DOMAIN: "http://saved-api.test",
     API_AUTHORIZATION: "Bearer saved-token",
     PROJECT_ID: "7",
@@ -1137,7 +1136,8 @@ test("loads and saves connection and network settings", () => {
   };
   renderer.createRendererController(fixture);
 
-  assert.equal(fixture.elements["settings-app-url-input"].value, "https://saved.test/");
+  assert.equal(fixture.elements["settings-app-url-input"], undefined);
+  assert.equal(fixture.elements["dns-host-input"], undefined);
   assert.equal(fixture.elements["api-domain-input"].value, "http://saved-api.test");
   assert.equal(fixture.elements["api-authorization-input"].value, "Bearer saved-token");
   assert.equal(fixture.elements["project-id-input"].value, "7");
@@ -1151,6 +1151,8 @@ test("loads and saves connection and network settings", () => {
   assert.equal(stored.TEST_CASE_MAX_TIME_MINUTES, "45");
   assert.equal(stored.API_AUTHORIZATION, "Bearer saved-token");
   assert.equal(stored.ENVIRONMENT, "API");
+  assert.equal(stored.APP_URL, undefined);
+  assert.equal(stored.DNS_HOST, undefined);
 });
 
 test("saves and sanitizes Test configuration timeouts with an auto-hide success toast", async () => {
@@ -1249,18 +1251,18 @@ test("enables DNS host actions from hosts-file presence", async () => {
   const fixture = createRendererFixture();
   let exists = false;
   const updates = [];
-  fixture.runner.getHostEntryStatus = async () => ({ok: true, exists});
-  fixture.runner.addHostEntry = async (entry) => { updates.push(["add", entry]); exists = true; return {ok: true, exists: true}; };
-  fixture.runner.removeHostEntry = async (entry) => { updates.push(["remove", entry]); exists = false; return {ok: true, exists: false}; };
+  fixture.runner.getHostEntryStatus = async (...args) => { updates.push(["status", ...args]); return {ok: true, exists}; };
+  fixture.runner.addHostEntry = async (...args) => { updates.push(["add", ...args]); exists = true; return {ok: true, exists: true}; };
+  fixture.runner.removeHostEntry = async (...args) => { updates.push(["remove", ...args]); exists = false; return {ok: true, exists: false}; };
   const controller = renderer.createRendererController(fixture);
   await new Promise((resolve) => setImmediate(resolve));
 
-  assert.equal(fixture.elements["dns-host-input"].value, "172.16.240.254 html5stage.mytv.vn");
+  assert.equal(fixture.elements["dns-host-input"], undefined);
   assert.equal(fixture.elements["dns-host-add-button"].disabled, false);
   assert.equal(fixture.elements["dns-host-remove-button"].disabled, true);
   fixture.elements["dns-host-add-button"].dispatchEvent("click");
   await new Promise((resolve) => setImmediate(resolve));
-  assert.deepEqual(updates, [["add", "172.16.240.254 html5stage.mytv.vn"]]);
+  assert.deepEqual(updates, [["status"], ["add"], ["status"]]);
   assert.equal(fixture.elements["dns-host-add-button"].disabled, true);
   assert.equal(fixture.elements["dns-host-remove-button"].disabled, false);
   assert.equal(typeof controller.validateRunValues, "function");
@@ -1495,7 +1497,6 @@ test("submits only the generic test-run payload", async () => {
     return { ok: true };
   };
   const controller = renderer.createRendererController(fixture);
-  fixture.elements["settings-app-url-input"].value = "  https://example.test/  ";
   fixture.elements["player-check-timeout-input"].value = "14";
   controller.renderCaseList([{ id: "case-1", name: "Case", actions: [] }]);
   controller.selectCase("case-1");
@@ -1504,7 +1505,6 @@ test("submits only the generic test-run payload", async () => {
   await submit({ preventDefault() {} });
 
   assert.deepEqual(submittedValues, {
-    APP_URL: "https://example.test/",
     TEST_CASE_ID: "case-1",
     PREVIEW_TYPE: "live",
     PLAYER_CHECK_TIMEOUT_SECONDS: "14",
@@ -1521,7 +1521,6 @@ test("runs selected cases sequentially and preserves the generic IPC payload", a
     return {ok: true};
   };
   const controller = renderer.createRendererController(fixture);
-  fixture.elements["settings-app-url-input"].value = "  https://example.test/  ";
   controller.renderCaseList([
     {id: "case-1", name: "First case", actions: []},
     {id: "case-2", name: "Second case", actions: []},
@@ -1534,7 +1533,6 @@ test("runs selected cases sequentially and preserves the generic IPC payload", a
   await Promise.resolve();
   assert.equal(calls.length, 1);
   assert.deepEqual(calls[0], {
-    APP_URL: "https://example.test/",
     TEST_CASE_ID: "case-1",
     PREVIEW_TYPE: "live",
     PLAYER_CHECK_TIMEOUT_SECONDS: "6",
@@ -1665,7 +1663,7 @@ test("redacts credential-shaped descriptions and log text", () => {
 test("refuses to run until a test case id is selected", () => {
   assert.equal(loadError, undefined, loadError?.message);
 
-  assert.match(renderer.validateRunValues({ APP_URL: "https://example.test/" }), /test case/i);
+  assert.match(renderer.validateRunValues({}), /test case/i);
   assert.equal(
     renderer.validateRunValues({ TEST_CASE_ID: "case-1" }),
     ""
@@ -2549,6 +2547,13 @@ test("index markup contains the case browser and no API-key or mode controls", (
   assert.ok(html.indexOf('id="campaign-select"') < html.indexOf('id="folder-select"'));
   assert.doesNotMatch(html, /id="settings-message"/);
   assert.match(html, /id="app-toast"/);
+  assert.doesNotMatch(html, /APP_URL/);
+  assert.match(html, /<h4>DNS Host<\/h4>/);
+  assert.doesNotMatch(html, /id="settings-app-url-input"/);
+  assert.doesNotMatch(html, /id="dns-host-input"/);
+  assert.match(html, /id="dns-host-add-button"/);
+  assert.match(html, /id="dns-host-remove-button"/);
+  assert.match(html, /id="dns-host-status"/);
   assert.match(html, /data-settings-panel="test-configuration"/);
   assert.match(html, /Test configuration/);
   assert.match(html, /Test case maximum time \(minutes\)/);
@@ -2557,8 +2562,8 @@ test("index markup contains the case browser and no API-key or mode controls", (
   assert.match(html, /Thời gian chờ trước khi check trạng thái player/);
   [
     "campaign-select", "folder-select", "refresh-campaigns-button", "refresh-folders-button", "get-test-cases-button",
-    "settings-app-url-input", "api-domain-input", "api-authorization-input", "project-id-input",
-    "environment-select", "api-timeout-input", "player-check-timeout-input", "test-case-max-time-input", "test-configuration-save-button", "app-toast", "dns-host-input", "dns-host-add-button", "dns-host-remove-button", "dns-host-status", "api-loading-overlay",
+    "api-domain-input", "api-authorization-input", "project-id-input",
+    "environment-select", "api-timeout-input", "player-check-timeout-input", "test-case-max-time-input", "test-configuration-save-button", "app-toast", "dns-host-add-button", "dns-host-remove-button", "dns-host-status", "api-loading-overlay",
     "retry-sync-button", "run-target-browser", "run-target-webos", "tv-device-select", "tv-device-status", "tv-device-connection-status", "tv-device-connection-dot", "tv-device-check-connection-button", "tv-device-add-button", "tv-device-edit-button", "tv-device-dialog", "tv-device-name-input", "tv-device-host-input", "tv-device-passphrase-input", "tv-device-passphrase-toggle", "tv-device-dialog-submit-button",
     "sdk-managed-toolchain-status", "sdk-component-list", "sdk-install-review", "sdk-install-progress", "sdk-install-progress-text", "sdk-install-progress-steps", "tv-toolchain-sdk-home-input", "tv-toolchain-appium-home-input", "tv-toolchain-appium-bin-input", "tv-toolchain-chromedriver-input", "tv-toolchain-save-button",
     "lg-run-availability", "configure-lg-sdk-button", "lg-run-confirmation-dialog", "lg-run-confirm-button", "lg-run-cancel-button", "lg-run-state", "lg-preview-image", "lg-preview-empty", "lg-recovery-dialog", "lg-recovery-retry-button", "lg-recovery-stop-button",

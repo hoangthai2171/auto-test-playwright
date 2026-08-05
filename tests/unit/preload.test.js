@@ -65,14 +65,14 @@ test("exposes browser configuration calls and a removable progress subscription"
 test("exposes hosts-file status and update calls", () => {
   const {bridge, invokes} = loadPreload();
 
-  bridge.getHostEntryStatus("172.16.240.254 html5stage.mytv.vn");
-  bridge.addHostEntry("172.16.240.254 html5stage.mytv.vn");
-  bridge.removeHostEntry("172.16.240.254 html5stage.mytv.vn");
+  bridge.getHostEntryStatus();
+  bridge.addHostEntry();
+  bridge.removeHostEntry();
 
   assert.deepEqual(invokes, [
-    ["get-host-entry-status", {entry: "172.16.240.254 html5stage.mytv.vn"}],
-    ["add-host-entry", {entry: "172.16.240.254 html5stage.mytv.vn"}],
-    ["remove-host-entry", {entry: "172.16.240.254 html5stage.mytv.vn"}],
+    ["get-host-entry-status"],
+    ["add-host-entry"],
+    ["remove-host-entry"],
   ]);
 });
 

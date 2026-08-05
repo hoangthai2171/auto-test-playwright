@@ -36,6 +36,15 @@ test("adds and removes a normalized DNS host entry without changing other lines"
     assert.equal((await service.remove(DEFAULT_HOST_ENTRY)).status, "NOT_PRESENT");
 });
 
+test("defaults hosts-file operations to the built-in entry", async () => {
+  const memoryFs = createMemoryFs("127.0.0.1 localhost\n");
+  const service = createHostsFileService({fs: memoryFs, hostsFilePath: "/tmp/hosts"});
+
+  assert.equal((await service.getStatus()).entry, DEFAULT_HOST_ENTRY);
+  assert.equal((await service.add()).entry, DEFAULT_HOST_ENTRY);
+  assert.equal((await service.remove()).entry, DEFAULT_HOST_ENTRY);
+});
+
 test("rejects unsafe or malformed host entries", async () => {
     const service = createHostsFileService({fs: createMemoryFs(), hostsFilePath: "/tmp/hosts"});
     const response = await service.add("172.16.240.254 html5stage.mytv.vn\nmalicious");

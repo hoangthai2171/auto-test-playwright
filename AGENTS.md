@@ -54,8 +54,8 @@ uses the fixture only when no cached folder is available. `app/main.js` also
 owns flow-case API IPC, sanitizes passwords and service-token header values for the renderer, validates the
 selected case ID from either the fixture or the user-data cache, and starts the
 generic `tests/run-test-case-mytv.spec.js` entry point. The renderer sends the
-selected case ID, `APP_URL`, player-check timeout, test-case maximum time,
-preview settings, and an
+selected case ID, player-check timeout, test-case maximum time, preview settings,
+and an
 active folder or campaign cache key for a run.
 After every selected API-loaded case has completed, the renderer submits one
 validated `tested`/`testResult` batch through main-process IPC; campaign batches
@@ -65,7 +65,10 @@ launch-failed batches are never partially sent.
 The desktop supports two execution targets: Browser (the default) and LG webOS.
 The Settings dialog owns Browser configuration, Test configuration, LG SDK configuration, the
 saved LG-device list, redacted connection status, managed/advanced toolchain
-selection, and the compatibility catalog. Browser runs require the separately
+selection, and the compatibility catalog. APP_URL is source-controlled in
+`app/main.js` and is not rendered or accepted from the GUI. The DNS host mapping
+is source-controlled in `app/hosts-file.js`; host IPC resolves it in the main
+process and returns only safe status fields. Browser runs require the separately
 confirmed managed Chromium installation. LG runs reuse the same case selection,
 batch control, report, and result-submission flow, but require an explicitly
 confirmed real-TV operation.
@@ -281,7 +284,9 @@ private fixture data.
 
 ### Electron generic runner
 
-- `APP_URL` — target MyTV URL passed to the selected case.
+- `APP_URL` — target MyTV URL passed to the selected case; the Electron generic
+  runner sets it from the source-controlled constant in `app/main.js`, while the
+  retained terminal specs may still override their own URL through this variable.
 - `TEST_CASE_PATH` — fixture path used by the child Playwright process.
 - `TEST_CASE_ID` — selected case ID.
 - `TEST_CASE_CACHE_PATH` — user-data cache path for API-downloaded cases.

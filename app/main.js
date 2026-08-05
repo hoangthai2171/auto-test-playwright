@@ -58,6 +58,7 @@ const {
     normalizeTestCaseMaxTimeMinutes,
 } = require("./test-configuration");
 
+const APP_URL = "https://html5stage.mytv.vn/";
 const INTERACTIVE_BROWSER_DEBUG_PORT = Number(process.env.MYTV_INTERACTIVE_BROWSER_DEBUG_PORT) || 43000 + Math.floor(Math.random() * 1000);
 
 app.commandLine.appendSwitch("remote-debugging-port", String(INTERACTIVE_BROWSER_DEBUG_PORT));
@@ -398,9 +399,15 @@ ipcMain.handle("load-test-cases", async () => {
     return {ok: true, source: "local", cases: cases.map(sanitizeCaseForUi)};
 });
 
-ipcMain.handle("get-host-entry-status", async (_event, values = {}) => hostsFileService.getStatus(values.entry));
-ipcMain.handle("add-host-entry", async (_event, values = {}) => hostsFileService.add(values.entry));
-ipcMain.handle("remove-host-entry", async (_event, values = {}) => hostsFileService.remove(values.entry));
+function sanitizeHostEntryResult(result) {
+    if (!result || typeof result !== "object") return result;
+    const {entry: _entry, path: _path, ...safeResult} = result;
+    return safeResult;
+}
+
+ipcMain.handle("get-host-entry-status", async () => sanitizeHostEntryResult(await hostsFileService.getStatus()));
+ipcMain.handle("add-host-entry", async () => sanitizeHostEntryResult(await hostsFileService.add()));
+ipcMain.handle("remove-host-entry", async () => sanitizeHostEntryResult(await hostsFileService.remove()));
 
 ipcMain.handle("load-flow-case-folders", async (_event, settings = {}) => {
     const result = await fetchFlowCaseFolders({
@@ -812,7 +819,7 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         TEST_CASE_CACHE_PATH: values.TEST_CASE_CACHE_KEY || values.TEST_CASE_FOLDER_ID ? testCasesCachePath() : "",
         TEST_CASE_CACHE_KEY: values.TEST_CASE_CACHE_KEY ? String(values.TEST_CASE_CACHE_KEY) : "",
         TEST_CASE_FOLDER_ID: values.TEST_CASE_FOLDER_ID ? String(values.TEST_CASE_FOLDER_ID) : "",
-        APP_URL: values.APP_URL,
+        APP_URL,
         PLAYWRIGHT_BROWSERS_PATH: browserRun.browsersPath,
         PLAYWRIGHT_HTML_REPORT: reportDir,
         MYTV_CASE_RESULT_PATH: caseResultPath,
@@ -958,7 +965,7 @@ ipcMain.handle("stop-test", async () => {
     return {ok: true};
 });
 
-ipcMain.handle("show-interactive-browser", async (_event, values) => {
+ipcMain.handle("show-interactive-browser", async (_event, values = {}) => {
     if (!mainWindow) return {ok: false, message: "Main window is not ready."};
 
     if (!interactiveView) {
@@ -976,9 +983,7 @@ ipcMain.handle("show-interactive-browser", async (_event, values) => {
     }
 
     setInteractiveViewBounds(values.bounds);
-    if (values.url) {
-        await loadInteractiveView(values.url);
-    }
+    await loadInteractiveView(interactiveUrl(APP_URL));
     return {ok: true};
 });
 
@@ -1158,6 +1163,17 @@ function loadInteractiveView(url) {
         webContents.loadURL(url);
         setTimeout(finish, 8000);
     });
+}
+
+function interactiveUrl(appUrl) {
+    try {
+        const url = new URL(appUrl);
+        url.searchParams.set("_interactive", Date.now().toString());
+        return url.toString();
+    } catch {
+        const separator = appUrl.includes("?") ? "&" : "?";
+        return `${appUrl}${separator}_interactive=${Date.now()}`;
+    }
 }
 
 function hideInteractiveView() {

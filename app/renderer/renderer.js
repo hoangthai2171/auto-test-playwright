@@ -66,7 +66,6 @@ function validateRunValues(values) {
 }
 
 const DEFAULT_SETTINGS = {
-    APP_URL: "https://html5stage.mytv.vn/",
     API_DOMAIN: "http://172.16.240.254:30100",
     API_AUTHORIZATION: "",
     PROJECT_ID: "1",
@@ -74,7 +73,6 @@ const DEFAULT_SETTINGS = {
     API_TIMEOUT_SECONDS: "30",
     PLAYER_CHECK_TIMEOUT_SECONDS: String(TEST_CONFIGURATION.DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS),
     TEST_CASE_MAX_TIME_MINUTES: String(TEST_CONFIGURATION.DEFAULT_TEST_CASE_MAX_TIME_MINUTES),
-    DNS_HOST: "172.16.240.254 html5stage.mytv.vn",
     PREVIEW_TYPE: "live",
     RUN_TARGET: "browser",
 };
@@ -129,7 +127,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const refreshFoldersButton = get("refresh-folders-button");
     const getTestCasesButton = get("get-test-cases-button");
     const apiLoadingOverlay = get("api-loading-overlay");
-    const settingsAppUrlInput = get("settings-app-url-input");
     const apiDomainInput = get("api-domain-input");
     const apiAuthorizationInput = get("api-authorization-input");
     const projectIdInput = get("project-id-input");
@@ -137,7 +134,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const apiTimeoutInput = get("api-timeout-input");
     const playerCheckTimeoutInput = get("player-check-timeout-input");
     const testCaseMaxTimeInput = get("test-case-max-time-input");
-    const dnsHostInput = get("dns-host-input");
     const dnsHostAddButton = get("dns-host-add-button");
     const dnsHostRemoveButton = get("dns-host-remove-button");
     const dnsHostStatus = get("dns-host-status");
@@ -309,9 +305,14 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         } catch {
             saved = {};
         }
+        const {
+            APP_URL: _savedAppUrl,
+            DNS_HOST: _savedDnsHost,
+            ...persistedSettings
+        } = saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
         settings = {
             ...DEFAULT_SETTINGS,
-            ...saved,
+            ...persistedSettings,
             API_AUTHORIZATION: String(saved.API_AUTHORIZATION ?? DEFAULT_SETTINGS.API_AUTHORIZATION).trim(),
             ENVIRONMENT: ["API", "UI"].includes(saved.ENVIRONMENT) ? saved.ENVIRONMENT : DEFAULT_SETTINGS.ENVIRONMENT,
             API_TIMEOUT_SECONDS: Number(saved.API_TIMEOUT_SECONDS) > 0
@@ -332,7 +333,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         };
         activePreviewType = settings.PREVIEW_TYPE;
         runTarget = settings.RUN_TARGET;
-        if (settingsAppUrlInput) settingsAppUrlInput.value = settings.APP_URL;
         if (apiDomainInput) apiDomainInput.value = settings.API_DOMAIN;
         if (apiAuthorizationInput) apiAuthorizationInput.value = settings.API_AUTHORIZATION;
         if (projectIdInput) projectIdInput.value = settings.PROJECT_ID;
@@ -340,7 +340,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
         if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
         if (testCaseMaxTimeInput) testCaseMaxTimeInput.value = settings.TEST_CASE_MAX_TIME_MINUTES;
-        if (dnsHostInput) dnsHostInput.value = settings.DNS_HOST;
         doc?.querySelectorAll?.('[name="preview-type"]').forEach((input) => {
             input.checked = input.value === activePreviewType;
         });
@@ -377,7 +376,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         );
         return {
             ...settings,
-            APP_URL: settingsAppUrlInput?.value?.trim() || settings.APP_URL,
             API_DOMAIN: apiDomainInput?.value?.trim() || settings.API_DOMAIN,
             API_AUTHORIZATION: apiAuthorizationInput?.value?.trim() || "",
             PROJECT_ID: projectIdInput?.value?.trim() || settings.PROJECT_ID,
@@ -389,7 +387,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 : settings.API_TIMEOUT_SECONDS,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
             TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
-            DNS_HOST: dnsHostInput?.value?.trim() || settings.DNS_HOST,
             RUN_TARGET: runTarget,
         };
     }
@@ -2052,10 +2049,9 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     let dnsHostStatusRequest = 0;
     async function refreshDnsHostStatus() {
         const requestId = ++dnsHostStatusRequest;
-        const entry = dnsHostInput?.value?.trim() || DEFAULT_SETTINGS.DNS_HOST;
         if (dnsHostAddButton) dnsHostAddButton.disabled = true;
         if (dnsHostRemoveButton) dnsHostRemoveButton.disabled = true;
-        const response = await api.getHostEntryStatus?.(entry);
+        const response = await api.getHostEntryStatus?.();
         if (requestId !== dnsHostStatusRequest) return;
         if (!response?.ok) {
             if (dnsHostStatus) {
@@ -2073,10 +2069,9 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     }
 
     async function updateDnsHost(action) {
-        const entry = dnsHostInput?.value?.trim() || DEFAULT_SETTINGS.DNS_HOST;
         if (dnsHostAddButton) dnsHostAddButton.disabled = true;
         if (dnsHostRemoveButton) dnsHostRemoveButton.disabled = true;
-        const response = await api[action]?.(entry);
+        const response = await api[action]?.();
         if (dnsHostStatus) {
             dnsHostStatus.textContent = response?.ok
                 ? (action === "addHostEntry" ? "Host added to the hosts file." : "Host removed from the hosts file.")
@@ -2124,7 +2119,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         );
         settings = {
             ...settings,
-            APP_URL: settingsAppUrlInput?.value?.trim() || DEFAULT_SETTINGS.APP_URL,
             API_DOMAIN: apiDomainInput?.value?.trim() || DEFAULT_SETTINGS.API_DOMAIN,
             API_AUTHORIZATION: apiAuthorizationInput?.value?.trim() || "",
             PROJECT_ID: projectIdInput?.value?.trim() || DEFAULT_SETTINGS.PROJECT_ID,
@@ -2134,7 +2128,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
             TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
-            DNS_HOST: dnsHostInput?.value?.trim() || DEFAULT_SETTINGS.DNS_HOST,
             PREVIEW_TYPE: activePreviewType,
             RUN_TARGET: runTarget,
         };
@@ -2203,7 +2196,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             settings.TEST_CASE_MAX_TIME_MINUTES,
         );
         const payload = {
-            APP_URL: values.APP_URL,
             TEST_CASE_ID: String(testCaseId),
             PREVIEW_TYPE: values.PREVIEW_TYPE,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
@@ -2395,7 +2387,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         setFormMessage("");
         const runSettings = currentSettings();
         const values = {
-            APP_URL: runSettings.APP_URL,
             PREVIEW_TYPE: activePreviewType,
             PLAYER_CHECK_TIMEOUT_SECONDS: runSettings.PLAYER_CHECK_TIMEOUT_SECONDS,
             TEST_CASE_MAX_TIME_MINUTES: runSettings.TEST_CASE_MAX_TIME_MINUTES,
@@ -2432,14 +2423,14 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             browserPreviewEmpty?.classList.add("hidden");
             browserMuteButton?.classList.remove("hidden");
             await setBrowserMuted(true);
-            await showInteractiveBrowser(values.APP_URL);
+            await showInteractiveBrowser();
         }
     }
 
-    async function showInteractiveBrowser(appUrl) {
+    async function showInteractiveBrowser() {
         const stage = doc?.querySelector?.(".browser-preview-stage");
         const bounds = stage?.getBoundingClientRect?.() || {x: 0, y: 0, width: 0, height: 0};
-        await api.showInteractiveBrowser({url: interactiveUrl(appUrl), bounds});
+        await api.showInteractiveBrowser({bounds});
     }
 
     async function showInteractiveBrowserBounds() {
@@ -2452,17 +2443,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         browserMuted = muted;
         if (browserMuteButton) browserMuteButton.textContent = muted ? "Unmute" : "Mute";
         await api.setInteractiveBrowserMuted(muted);
-    }
-
-    function interactiveUrl(appUrl) {
-        try {
-            const url = new URL(appUrl);
-            url.searchParams.set("_interactive", Date.now().toString());
-            return url.toString();
-        } catch {
-            const separator = appUrl.includes("?") ? "&" : "?";
-            return `${appUrl}${separator}_interactive=${Date.now()}`;
-        }
     }
 
     function resetBrowserPreview() {
@@ -2650,7 +2630,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     testCaseMaxTimeInput?.addEventListener?.("input", () => {
         testCaseMaxTimeInput.value = String(testCaseMaxTimeInput.value || "").replace(/[^0-9]/g, "");
     });
-    dnsHostInput?.addEventListener?.("input", () => { void refreshDnsHostStatus(); });
     dnsHostAddButton?.addEventListener?.("click", () => { void updateDnsHost("addHostEntry"); });
     dnsHostRemoveButton?.addEventListener?.("click", () => { void updateDnsHost("removeHostEntry"); });
     browserTargetInput?.addEventListener?.("change", () => { void selectRunTarget("browser"); });

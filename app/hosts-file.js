@@ -52,7 +52,7 @@ function createHostsFileService({fs, platform = process.platform, env = process.
         return {ok: true, exists, entry, path: filePath};
     }
 
-    async function getStatus(value) {
+    async function getStatus(value = DEFAULT_HOST_ENTRY) {
         let entry;
         try {
             entry = normalizeHostEntry(value);
@@ -108,8 +108,8 @@ function createHostsFileService({fs, platform = process.platform, env = process.
 
     return {
         getStatus,
-        add: (value) => update(value, true),
-        remove: (value) => update(value, false),
+        add: (value = DEFAULT_HOST_ENTRY) => update(value, true),
+        remove: (value = DEFAULT_HOST_ENTRY) => update(value, false),
         path: filePath,
     };
 }
