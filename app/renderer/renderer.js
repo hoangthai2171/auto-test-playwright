@@ -1,6 +1,4 @@
-const TEST_CONFIGURATION = typeof require === "function"
-    ? require("../test-configuration")
-    : globalThis.MYTV_TEST_CONFIGURATION;
+const TEST_CONFIGURATION = typeof require === "function" ? require("../test-configuration") : globalThis.MYTV_TEST_CONFIGURATION;
 
 function maskActionForDisplay(action) {
     const displayAction = {...action};
@@ -54,11 +52,7 @@ function matchesCaseSearch(testCase, query) {
 }
 
 function validateRunValues(values) {
-    const selectedCaseIds = Array.isArray(values?.selectedCaseIds)
-        ? values.selectedCaseIds.filter((id) => String(id).trim())
-        : values?.TEST_CASE_ID?.trim()
-            ? [values.TEST_CASE_ID.trim()]
-            : [];
+    const selectedCaseIds = Array.isArray(values?.selectedCaseIds) ? values.selectedCaseIds.filter((id) => String(id).trim()) : values?.TEST_CASE_ID?.trim() ? [values.TEST_CASE_ID.trim()] : [];
     if (!selectedCaseIds.length) {
         return "Vui lòng chọn một test case trước khi chạy.";
     }
@@ -94,16 +88,7 @@ const LG_INSTALL_PROGRESS_STEPS = Object.freeze([
     {code: "complete", label: "Installation complete"},
 ]);
 
-const LG_INSTALL_FAILURE_STATUSES = new Set([
-    "INSTALL_INPUT_INVALID",
-    "DOWNLOAD_FAILED",
-    "CHECKSUM_MISMATCH",
-    "EXTRACTION_FAILED",
-    "DEPENDENCY_INSTALL_FAILED",
-    "VERIFICATION_FAILED",
-    "ACTIVATION_FAILED",
-    "INSTALL_FAILED",
-]);
+const LG_INSTALL_FAILURE_STATUSES = new Set(["INSTALL_INPUT_INVALID", "DOWNLOAD_FAILED", "CHECKSUM_MISMATCH", "EXTRACTION_FAILED", "DEPENDENCY_INSTALL_FAILED", "VERIFICATION_FAILED", "ACTIVATION_FAILED", "INSTALL_FAILED"]);
 
 const BROWSER_INSTALL_PROGRESS_STEPS = Object.freeze([
     {code: "preparing", label: "Preparing Browser installation"},
@@ -209,6 +194,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const testCaseSearchInput = get("test-case-search-input");
     const selectAllTestCases = get("select-all-test-cases");
     const selectedTestCaseCount = get("selected-test-case-count");
+    const workspaceSelectedCount = get("workspace-selected-count");
     const testCaseDetails = get("test-case-details");
     const testCaseDetailsModal = get("test-case-details-modal");
     const selectedTestCaseId = get("selected-test-case-id");
@@ -305,30 +291,16 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         } catch {
             saved = {};
         }
-        const {
-            APP_URL: _savedAppUrl,
-            DNS_HOST: _savedDnsHost,
-            ...persistedSettings
-        } = saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
+        const {APP_URL: _savedAppUrl, DNS_HOST: _savedDnsHost, ...persistedSettings} = saved && typeof saved === "object" && !Array.isArray(saved) ? saved : {};
         settings = {
             ...DEFAULT_SETTINGS,
             ...persistedSettings,
             API_AUTHORIZATION: String(saved.API_AUTHORIZATION ?? DEFAULT_SETTINGS.API_AUTHORIZATION).trim(),
             ENVIRONMENT: ["API", "UI"].includes(saved.ENVIRONMENT) ? saved.ENVIRONMENT : DEFAULT_SETTINGS.ENVIRONMENT,
-            API_TIMEOUT_SECONDS: Number(saved.API_TIMEOUT_SECONDS) > 0
-                ? String(saved.API_TIMEOUT_SECONDS)
-                : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
-            PLAYER_CHECK_TIMEOUT_SECONDS: String(TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
-                saved.PLAYER_CHECK_TIMEOUT_SECONDS,
-                TEST_CONFIGURATION.DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS,
-            )),
-            TEST_CASE_MAX_TIME_MINUTES: String(TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
-                saved.TEST_CASE_MAX_TIME_MINUTES,
-                TEST_CONFIGURATION.DEFAULT_TEST_CASE_MAX_TIME_MINUTES,
-            )),
-            PREVIEW_TYPE: ["none", "live", "interactive"].includes(saved.PREVIEW_TYPE)
-                ? saved.PREVIEW_TYPE
-                : DEFAULT_SETTINGS.PREVIEW_TYPE,
+            API_TIMEOUT_SECONDS: Number(saved.API_TIMEOUT_SECONDS) > 0 ? String(saved.API_TIMEOUT_SECONDS) : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
+            PLAYER_CHECK_TIMEOUT_SECONDS: String(TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(saved.PLAYER_CHECK_TIMEOUT_SECONDS, TEST_CONFIGURATION.DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS)),
+            TEST_CASE_MAX_TIME_MINUTES: String(TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(saved.TEST_CASE_MAX_TIME_MINUTES, TEST_CONFIGURATION.DEFAULT_TEST_CASE_MAX_TIME_MINUTES)),
+            PREVIEW_TYPE: ["none", "live", "interactive"].includes(saved.PREVIEW_TYPE) ? saved.PREVIEW_TYPE : DEFAULT_SETTINGS.PREVIEW_TYPE,
             RUN_TARGET: saved.RUN_TARGET === "webos" ? "webos" : DEFAULT_SETTINGS.RUN_TARGET,
         };
         activePreviewType = settings.PREVIEW_TYPE;
@@ -347,16 +319,15 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         syncTestConfiguration();
     }
 
-    function syncTestConfiguration(
-        playerTimeoutSeconds = settings.PLAYER_CHECK_TIMEOUT_SECONDS,
-        maxTimeMinutes = settings.TEST_CASE_MAX_TIME_MINUTES,
-    ) {
+    function syncTestConfiguration(playerTimeoutSeconds = settings.PLAYER_CHECK_TIMEOUT_SECONDS, maxTimeMinutes = settings.TEST_CASE_MAX_TIME_MINUTES) {
         testConfigurationSync = Promise.resolve()
-            .then(() => api.setTestConfiguration?.({
-                PLAYER_CHECK_TIMEOUT_SECONDS: playerTimeoutSeconds,
-                TEST_CASE_MAX_TIME_MINUTES: maxTimeMinutes,
-            }))
-            .then((response) => response === undefined ? {ok: true} : response)
+            .then(() =>
+                api.setTestConfiguration?.({
+                    PLAYER_CHECK_TIMEOUT_SECONDS: playerTimeoutSeconds,
+                    TEST_CASE_MAX_TIME_MINUTES: maxTimeMinutes,
+                }),
+            )
+            .then((response) => (response === undefined ? {ok: true} : response))
             .catch((error) => ({
                 ok: false,
                 message: error?.message || "Could not synchronize test configuration.",
@@ -366,25 +337,15 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     function currentSettings() {
         const timeoutSeconds = Number(apiTimeoutInput?.value);
-        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
-            playerCheckTimeoutInput?.value,
-            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
-        );
-        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
-            testCaseMaxTimeInput?.value,
-            settings.TEST_CASE_MAX_TIME_MINUTES,
-        );
+        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(playerCheckTimeoutInput?.value, settings.PLAYER_CHECK_TIMEOUT_SECONDS);
+        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(testCaseMaxTimeInput?.value, settings.TEST_CASE_MAX_TIME_MINUTES);
         return {
             ...settings,
             API_DOMAIN: apiDomainInput?.value?.trim() || settings.API_DOMAIN,
             API_AUTHORIZATION: apiAuthorizationInput?.value?.trim() || "",
             PROJECT_ID: projectIdInput?.value?.trim() || settings.PROJECT_ID,
-            ENVIRONMENT: ["API", "UI"].includes(environmentSelect?.value)
-                ? environmentSelect.value
-                : settings.ENVIRONMENT,
-            API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
-                ? String(timeoutSeconds)
-                : settings.API_TIMEOUT_SECONDS,
+            ENVIRONMENT: ["API", "UI"].includes(environmentSelect?.value) ? environmentSelect.value : settings.ENVIRONMENT,
+            API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0 ? String(timeoutSeconds) : settings.API_TIMEOUT_SECONDS,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
             TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
             RUN_TARGET: runTarget,
@@ -510,9 +471,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const runnerLog = activeRunnerLog;
         runnerLog.content.textContent += redactSensitiveText(value);
         updateLogEntryOverflow(runnerLog.entry, runnerLog.content);
-        win?.requestAnimationFrame?.(() =>
-            updateLogEntryOverflow(runnerLog.entry, runnerLog.content)
-        );
+        win?.requestAnimationFrame?.(() => updateLogEntryOverflow(runnerLog.entry, runnerLog.content));
         logOutput.scrollTop = 0;
     }
 
@@ -557,15 +516,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     }
 
     function getSelectedCaseIds() {
-        return cases
-            .filter((testCase) => selectedCaseIds.has(String(testCase.id)))
-            .map((testCase) => String(testCase.id));
+        return cases.filter((testCase) => selectedCaseIds.has(String(testCase.id))).map((testCase) => String(testCase.id));
     }
 
     function getVisibleCaseIds() {
-        return cases
-            .filter((testCase) => visibleCaseIds.has(String(testCase.id)))
-            .map((testCase) => String(testCase.id));
+        return cases.filter((testCase) => visibleCaseIds.has(String(testCase.id))).map((testCase) => String(testCase.id));
     }
 
     function canRunLg() {
@@ -576,8 +531,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const selectedIds = getSelectedCaseIds();
         const visibleIds = getVisibleCaseIds();
         if (selectedTestCaseCount) selectedTestCaseCount.textContent = `${selectedIds.length} selected`;
+        if (workspaceSelectedCount) workspaceSelectedCount.textContent = `${selectedIds.length} selected`;
         if (runButton) {
-            runButton.textContent = `Run Selected (${selectedIds.length})`;
+            const label = `Run Selected (${selectedIds.length})`;
+            runButton.setAttribute("aria-label", label);
+            runButton.closest?.(".workspace-action-tooltip")?.setAttribute("data-tooltip", label);
             runButton.disabled = selectedIds.length === 0 || (runTarget === "browser" ? !browserToolchainReady : !canRunLg());
         }
         if (selectAllTestCases) {
@@ -687,11 +645,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const heading = doc.createElement("strong");
         heading.textContent = label;
         const content = doc.createElement("span");
-        const displayValue = value === undefined || value === null || value === ""
-            ? "—"
-            : typeof value === "object"
-                ? JSON.stringify(value, null, 2)
-                : String(value);
+        const displayValue = value === undefined || value === null || value === "" ? "—" : typeof value === "object" ? JSON.stringify(value, null, 2) : String(value);
         content.textContent = redactSensitiveText(displayValue);
         row.append(heading, content);
         return row;
@@ -715,15 +669,18 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             ["Pre-condition", testCase.preCondition],
             ["QA description", testCase.qaDescription],
             ["Expected result", testCase.expectedResult],
-            ["Metadata", testCase.metadata || {
-                category: testCase.category,
-                status: testCase.status,
-                mode: testCase.mode,
-                scriptVersion: testCase.scriptVersion,
-                projectId: testCase.projectId,
-                folderId: testCase.folderId,
-                slug: testCase.slug,
-            }],
+            [
+                "Metadata",
+                testCase.metadata || {
+                    category: testCase.category,
+                    status: testCase.status,
+                    mode: testCase.mode,
+                    scriptVersion: testCase.scriptVersion,
+                    projectId: testCase.projectId,
+                    folderId: testCase.folderId,
+                    slug: testCase.slug,
+                },
+            ],
         ].forEach(([label, value]) => testCaseDetails.append(renderField(label, value)));
 
         const actionsHeading = doc.createElement("h4");
@@ -933,9 +890,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const selectedCampaign = campaignsById.get(campaignSelect?.value || "");
         const selectedFolder = foldersByPath.get(folderSelect?.value || "");
         if (!selectedFolder) {
-            const message = selectedCampaign
-                ? "Please select a folder from the selected campaign first."
-                : "Please select a folder first.";
+            const message = selectedCampaign ? "Please select a folder from the selected campaign first." : "Please select a folder first.";
             setFormMessage(message, "error");
             return {ok: false, message};
         }
@@ -943,14 +898,20 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const request = {...currentSettings()};
         delete request.CAMPAIGN_ID;
         delete request.CAMPAIGN_NAME;
-        Object.assign(request, selectedCampaign ? {
-            CAMPAIGN_ID: String(selectedCampaign.campaign.id),
-            CAMPAIGN_NAME: String(selectedCampaign.campaign.name || ""),
-        } : {}, {
-            FOLDER_ID: String(selectedFolder.id),
-            FOLDER_NAME: selectedFolder.fullPath,
-            FOLDER_NAME_LABEL: selectedFolder.name,
-        });
+        Object.assign(
+            request,
+            selectedCampaign
+                ? {
+                      CAMPAIGN_ID: String(selectedCampaign.campaign.id),
+                      CAMPAIGN_NAME: String(selectedCampaign.campaign.name || ""),
+                  }
+                : {},
+            {
+                FOLDER_ID: String(selectedFolder.id),
+                FOLDER_NAME: selectedFolder.fullPath,
+                FOLDER_NAME_LABEL: selectedFolder.name,
+            },
+        );
         resetLoadedCaseSource();
         appendApiRequestLog("Load flow cases", request);
         beginApiRequest();
@@ -961,13 +922,9 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 showApiError(response);
                 return response;
             }
-            activeCampaignId = selectedCampaign
-                ? String(response.campaign?.id ?? selectedCampaign.campaign.id)
-                : "";
+            activeCampaignId = selectedCampaign ? String(response.campaign?.id ?? selectedCampaign.campaign.id) : "";
             activeCacheKey = String(response.cacheKey || (activeCampaignId ? `campaign:${activeCampaignId}` : response.folder?.id || selectedFolder?.id || ""));
-            activeFolderId = response.folder?.id !== undefined && response.folder?.id !== null
-                ? String(response.folder.id)
-                : String(selectedFolder?.id ?? "");
+            activeFolderId = response.folder?.id !== undefined && response.folder?.id !== null ? String(response.folder.id) : String(selectedFolder?.id ?? "");
             activeFolderPath = String(response.folder?.fullPath || selectedFolder?.fullPath || "");
             renderCaseList(response.cases || []);
             setFormMessage(`Loaded ${response.cases?.length || 0} test cases.`, "ok");
@@ -1018,15 +975,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             input.disabled = runTarget !== "browser";
         });
         if (previewTargetStatus) {
-            previewTargetStatus.textContent = runTarget === "webos"
-                ? "Preview type is available for the Browser runner only."
-                : "";
+            previewTargetStatus.textContent = runTarget === "webos" ? "Preview type is available for the Browser runner only." : "";
             previewTargetStatus.classList.toggle("hidden", runTarget === "browser");
         }
         if (browserToolchainRunStatus) {
-            browserToolchainRunStatus.textContent = runTarget === "browser" && !browserToolchainReady
-                ? "Browser tests require the project-pinned Chromium. Configure Browser to continue."
-                : "";
+            browserToolchainRunStatus.textContent = runTarget === "browser" && !browserToolchainReady ? "Browser tests require the project-pinned Chromium. Configure Browser to continue." : "";
         }
         configureBrowserButton?.classList?.toggle("hidden", runTarget !== "browser" || browserToolchainReady);
         configureLgSdkButton?.classList?.toggle("hidden", runTarget !== "webos" || lgRunAvailability?.status === "READY");
@@ -1057,12 +1010,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             lgRunAvailability = {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
         } else {
             try {
-                const sourceRequest = activeCampaignId && activeCacheKey
-                    ? {cacheKey: activeCacheKey}
-                    : activeFolderId
-                        ? {folderId: activeFolderId}
-                        : {};
-                lgRunAvailability = await api.getLgRunAvailability({deviceId, selectedCaseIds, ...sourceRequest}) || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
+                const sourceRequest = activeCampaignId && activeCacheKey ? {cacheKey: activeCacheKey} : activeFolderId ? {folderId: activeFolderId} : {};
+                lgRunAvailability = (await api.getLgRunAvailability({deviceId, selectedCaseIds, ...sourceRequest})) || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
             } catch {
                 lgRunAvailability = {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
             }
@@ -1081,9 +1030,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     }
 
     function canCheckTvDeviceConnection() {
-        return runTarget === "webos"
-            && Boolean(tvDeviceSelect?.value)
-            && typeof api?.checkTvDeviceConnection === "function";
+        return runTarget === "webos" && Boolean(tvDeviceSelect?.value) && typeof api?.checkTvDeviceConnection === "function";
     }
 
     function renderTvDeviceConnectionStatus(response) {
@@ -1131,9 +1078,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         }
         const selectedDeviceId = String(tvDeviceSelect.value || "");
         tvDeviceSelect.replaceChildren(...options);
-        tvDeviceSelect.value = tvDevices.some((device) => String(device.id || "") === selectedDeviceId)
-            ? selectedDeviceId
-            : options[0].value;
+        tvDeviceSelect.value = tvDevices.some((device) => String(device.id || "") === selectedDeviceId) ? selectedDeviceId : options[0].value;
         resetTvDeviceConnectionStatus();
         syncRunTargetControls();
     }
@@ -1152,14 +1097,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             if (tvDeviceStatus) tvDeviceStatus.textContent = response?.message || "Could not load saved LG devices.";
             return;
         }
-        tvDevices = Array.isArray(response.devices)
-            ? response.devices.filter((device) => device?.platform === "webos")
-            : [];
+        tvDevices = Array.isArray(response.devices) ? response.devices.filter((device) => device?.platform === "webos") : [];
         renderTvDevices();
         if (tvDeviceStatus) {
-            tvDeviceStatus.textContent = tvDevices.length
-                ? "Select a saved LG device and test case. Run is enabled only after the main-process LG readiness review reports Ready."
-                : "No saved LG device is available.";
+            tvDeviceStatus.textContent = tvDevices.length ? "Select a saved LG device and test case. Run is enabled only after the main-process LG readiness review reports Ready." : "No saved LG device is available.";
         }
     }
 
@@ -1209,9 +1150,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         try {
             const response = await api.validateAndSaveTvDevice(candidate);
             if (!response?.ok || !response.device) {
-                if (tvDeviceDialogStatus) tvDeviceDialogStatus.textContent = response?.status === "VALIDATION_UNAVAILABLE"
-                    ? "Connection validation is not available in this build."
-                    : "Connection validation did not complete. No device was saved.";
+                if (tvDeviceDialogStatus) tvDeviceDialogStatus.textContent = response?.status === "VALIDATION_UNAVAILABLE" ? "Connection validation is not available in this build." : "Connection validation did not complete. No device was saved.";
                 return response || {ok: false, status: "VALIDATION_FAILED"};
             }
             await loadTvDevices();
@@ -1235,9 +1174,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         try {
             const response = await api.inspectTvToolchain();
             if (tvToolchainStatus) {
-                tvToolchainStatus.textContent = Array.isArray(response?.tools)
-                    ? toolchainStatusText(response, "The local LG toolchain inspector is unavailable.")
-                    : response?.message || "The local LG toolchain inspector is unavailable.";
+                tvToolchainStatus.textContent = Array.isArray(response?.tools) ? toolchainStatusText(response, "The local LG toolchain inspector is unavailable.") : response?.message || "The local LG toolchain inspector is unavailable.";
             }
             return response || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
         } catch {
@@ -1255,11 +1192,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         try {
             const response = await api.planLgToolchainSetup();
             renderSdkComponentList(response);
-            renderSdkInstallReview(response?.ok
-                ? response.state === "ready"
-                    ? "Review complete. All reviewed components are already verified locally."
-                    : "Review complete. Nothing is installed until you confirm."
-                : "Local LG setup review is unavailable.");
+            renderSdkInstallReview(response?.ok ? (response.state === "ready" ? "Review complete. All reviewed components are already verified locally." : "Review complete. Nothing is installed until you confirm.") : "Local LG setup review is unavailable.");
             if (sdkManagedToolchainStatus) sdkManagedToolchainStatus.textContent = "";
             if (sdkInstallConfirmButton) sdkInstallConfirmButton.disabled = !(response?.ok && response.state !== "ready");
             return response || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
@@ -1287,9 +1220,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             });
             if (response?.ok) renderSdkComponentList(response);
             renderSdkInstallReview(response?.ok ? "Installation completed. Review the component status above." : lgInstallationFailureText(response?.status, response?.verification));
-            renderSdkInstallProgress(response?.ok
-                ? {code: "complete"}
-                : {code: "failed", status: response?.status});
+            renderSdkInstallProgress(response?.ok ? {code: "complete"} : {code: "failed", status: response?.status});
             if (sdkManagedToolchainStatus) sdkManagedToolchainStatus.textContent = "";
             return response || {ok: false, status: "INSTALL_FAILED"};
         } catch {
@@ -1327,9 +1258,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         try {
             const response = await api.activateManagedLgToolchain();
             if (tvToolchainStatus) {
-                tvToolchainStatus.textContent = response?.ok
-                    ? `Selected source: Managed local tools. ${toolchainStatusText(response, "Ready.")}`
-                    : "Verified managed LG tools are unavailable.";
+                tvToolchainStatus.textContent = response?.ok ? `Selected source: Managed local tools. ${toolchainStatusText(response, "Ready.")}` : "Verified managed LG tools are unavailable.";
             }
             return response || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
         } catch {
@@ -1401,9 +1330,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (response?.ok && response.state === "available") {
             const count = Number(response.profileCount) || 0;
             const profileText = `${count} ${count === 1 ? "profile" : "profiles"}`;
-            return response.source === "cached"
-                ? `Compatibility catalog available: ${profileText}. Updated locally.`
-                : `Compatibility catalog available: ${profileText}. Using the bundled catalog.`;
+            return response.source === "cached" ? `Compatibility catalog available: ${profileText}. Updated locally.` : `Compatibility catalog available: ${profileText}. Using the bundled catalog.`;
         }
         if (response?.status === "CATALOG_REFRESH_UNAVAILABLE") return "Compatibility catalog update needs the configured API authorization.";
         if (response?.status === "CATALOG_INVALID") return "Compatibility catalog update was not accepted. The existing catalog is unchanged.";
@@ -1725,12 +1652,14 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         progressBar?.setAttribute?.("aria-valuetext", browserInstallProgressText.textContent);
         progressBar?.setAttribute?.("aria-valuenow", String(Math.max(0, activeBrowserInstallStepIndex + 1)));
         const activeIndex = isFailure ? Math.max(0, activeBrowserInstallStepIndex) : stepIndex;
-        browserInstallProgressSteps.replaceChildren(...BROWSER_INSTALL_PROGRESS_STEPS.map((step, index) => {
-            const row = doc.createElement("li");
-            row.textContent = step.label;
-            row.className = index < activeIndex ? "complete" : index === activeIndex ? "current" : "pending";
-            return row;
-        }));
+        browserInstallProgressSteps.replaceChildren(
+            ...BROWSER_INSTALL_PROGRESS_STEPS.map((step, index) => {
+                const row = doc.createElement("li");
+                row.textContent = step.label;
+                row.className = index < activeIndex ? "complete" : index === activeIndex ? "current" : "pending";
+                return row;
+            }),
+        );
     }
 
     function resetBrowserInstallProgress({dismiss = false} = {}) {
@@ -1777,9 +1706,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             const response = await api.planBrowserToolchainSetup();
             browserToolchainReady = Boolean(response?.ok && response.state === "ready");
             renderBrowserComponentList(response);
-            renderBrowserInstallReview(response?.ok
-                ? browserToolchainReady ? "Review complete. The project-pinned Chromium is verified locally." : "Review complete. Nothing is installed until you confirm."
-                : "Browser setup review is unavailable.");
+            renderBrowserInstallReview(response?.ok ? (browserToolchainReady ? "Review complete. The project-pinned Chromium is verified locally." : "Review complete. Nothing is installed until you confirm.") : "Browser setup review is unavailable.");
             if (browserInstallConfirmButton) browserInstallConfirmButton.disabled = !(response?.ok && response.state !== "ready");
             syncRunTargetControls();
             updateSelectionUi();
@@ -1816,9 +1743,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const components = Array.isArray(response?.components) ? response.components : [];
         const tools = Array.isArray(response?.tools) ? response.tools : [];
         const entries = [...components, ...tools];
-        return entries.length
-            ? entries.map((entry) => `${entry.label || entry.id}: ${entry.status || "unknown"}${entry.version ? ` (${entry.version})` : ""}`).join("; ")
-            : fallback;
+        return entries.length ? entries.map((entry) => `${entry.label || entry.id}: ${entry.status || "unknown"}${entry.version ? ` (${entry.version})` : ""}`).join("; ") : fallback;
     }
 
     function sdkComponentPresentation(component) {
@@ -1905,9 +1830,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             progressBar.setAttribute("aria-valuetext", sdkInstallProgressText.textContent);
             progressBar.setAttribute("aria-valuenow", String(Math.max(0, activeLgInstallStepIndex + 1)));
         }
-        const activeIndex = isFailure
-            ? Math.max(0, activeLgInstallStepIndex)
-            : stepIndex;
+        const activeIndex = isFailure ? Math.max(0, activeLgInstallStepIndex) : stepIndex;
         const rows = LG_INSTALL_PROGRESS_STEPS.map((step, index) => {
             const row = doc.createElement("li");
             row.textContent = step.label;
@@ -1954,9 +1877,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             const response = await api.getTvToolchainConfiguration();
             if (tvToolchainStatus) {
                 const source = response?.source === "managed" ? "Managed local tools" : "Advanced paths";
-                tvToolchainStatus.textContent = response?.configured
-                    ? `Selected source: ${source}. ${toolchainStatusText(response, "Ready.")}`
-                    : "No local LG toolchain source is selected.";
+                tvToolchainStatus.textContent = response?.configured ? `Selected source: ${source}. ${toolchainStatusText(response, "Ready.")}` : "No local LG toolchain source is selected.";
             }
             return response || {ok: false, status: "TOOLCHAIN_UNAVAILABLE"};
         } catch {
@@ -2073,9 +1994,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (dnsHostRemoveButton) dnsHostRemoveButton.disabled = true;
         const response = await api[action]?.();
         if (dnsHostStatus) {
-            dnsHostStatus.textContent = response?.ok
-                ? (action === "addHostEntry" ? "Host added to the hosts file." : "Host removed from the hosts file.")
-                : (response?.message || "Could not update the hosts file.");
+            dnsHostStatus.textContent = response?.ok ? (action === "addHostEntry" ? "Host added to the hosts file." : "Host removed from the hosts file.") : response?.message || "Could not update the hosts file.";
             dnsHostStatus.className = response?.ok ? "field-note settings-message ok" : "field-note settings-message error";
         }
         await refreshDnsHostStatus();
@@ -2109,23 +2028,15 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     async function savePreviewSettings() {
         activePreviewType = readPreviewType();
         const timeoutSeconds = Number(apiTimeoutInput?.value);
-        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
-            playerCheckTimeoutInput?.value,
-            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
-        );
-        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
-            testCaseMaxTimeInput?.value,
-            settings.TEST_CASE_MAX_TIME_MINUTES,
-        );
+        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(playerCheckTimeoutInput?.value, settings.PLAYER_CHECK_TIMEOUT_SECONDS);
+        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(testCaseMaxTimeInput?.value, settings.TEST_CASE_MAX_TIME_MINUTES);
         settings = {
             ...settings,
             API_DOMAIN: apiDomainInput?.value?.trim() || DEFAULT_SETTINGS.API_DOMAIN,
             API_AUTHORIZATION: apiAuthorizationInput?.value?.trim() || "",
             PROJECT_ID: projectIdInput?.value?.trim() || DEFAULT_SETTINGS.PROJECT_ID,
             ENVIRONMENT: ["API", "UI"].includes(environmentSelect?.value) ? environmentSelect.value : DEFAULT_SETTINGS.ENVIRONMENT,
-            API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0
-                ? String(timeoutSeconds)
-                : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
+            API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0 ? String(timeoutSeconds) : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
             TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
             PREVIEW_TYPE: activePreviewType,
@@ -2136,21 +2047,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (testCaseMaxTimeInput) testCaseMaxTimeInput.value = settings.TEST_CASE_MAX_TIME_MINUTES;
         store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
         const response = await syncTestConfiguration();
-        showAppToast(
-            response?.ok === false ? "Could not save settings." : "Settings saved successfully.",
-            response?.ok === false ? "error" : "ok",
-        );
+        showAppToast(response?.ok === false ? "Could not save settings." : "Settings saved successfully.", response?.ok === false ? "error" : "ok");
     }
 
     async function saveTestConfiguration() {
-        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
-            playerCheckTimeoutInput?.value,
-            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
-        );
-        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
-            testCaseMaxTimeInput?.value,
-            settings.TEST_CASE_MAX_TIME_MINUTES,
-        );
+        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(playerCheckTimeoutInput?.value, settings.PLAYER_CHECK_TIMEOUT_SECONDS);
+        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(testCaseMaxTimeInput?.value, settings.TEST_CASE_MAX_TIME_MINUTES);
         settings = {
             ...settings,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
@@ -2160,10 +2062,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (testCaseMaxTimeInput) testCaseMaxTimeInput.value = settings.TEST_CASE_MAX_TIME_MINUTES;
         store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
         const response = await syncTestConfiguration();
-        showAppToast(
-            response?.ok === false ? "Could not save test configuration." : "Test configuration saved successfully.",
-            response?.ok === false ? "error" : "ok",
-        );
+        showAppToast(response?.ok === false ? "Could not save test configuration." : "Test configuration saved successfully.", response?.ok === false ? "error" : "ok");
     }
 
     async function suspendInteractiveBrowserForModal() {
@@ -2187,14 +2086,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     }
 
     async function runSingleCase(testCaseId, values, currentBatch) {
-        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
-            values.PLAYER_CHECK_TIMEOUT_SECONDS,
-            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
-        );
-        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
-            values.TEST_CASE_MAX_TIME_MINUTES,
-            settings.TEST_CASE_MAX_TIME_MINUTES,
-        );
+        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(values.PLAYER_CHECK_TIMEOUT_SECONDS, settings.PLAYER_CHECK_TIMEOUT_SECONDS);
+        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(values.TEST_CASE_MAX_TIME_MINUTES, settings.TEST_CASE_MAX_TIME_MINUTES);
         const payload = {
             TEST_CASE_ID: String(testCaseId),
             PREVIEW_TYPE: values.PREVIEW_TYPE,
@@ -2293,11 +2186,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
         const summary = `Completed: ${completed}, Failed: ${failed}, Skipped: ${skipped}`;
         setStatus(failed > 0 || stopped ? "failed" : "passed", failed > 0 || stopped ? "Failed" : "Passed");
-        const allSelectedCasesRan =
-            !stopped &&
-            skipped === 0 &&
-            caseRuns.length === ids.length &&
-            caseRuns.every(({result}) => result.started && !result.stopped);
+        const allSelectedCasesRan = !stopped && skipped === 0 && caseRuns.length === ids.length && caseRuns.every(({result}) => result.started && !result.stopped);
         const fullyCompletedCaseRuns = caseRuns.filter(({result}) => result.started && !result.stopped);
         let resultSubmission;
 
@@ -2360,12 +2249,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     function buildFlowCaseResult(testCaseId, run, campaignId = "") {
         const passed = Boolean(run.passed);
-        const failedStepMessage = run.executionResult?.caseResult?.steps
-            ?.find((step) => step?.status === "failed" && step.message)
-            ?.message;
-        const message = passed
-            ? "Testcase chạy thành công."
-            : String(failedStepMessage || run.executionResult?.message || "Testcase chạy thất bại.");
+        const failedStepMessage = run.executionResult?.caseResult?.steps?.find((step) => step?.status === "failed" && step.message)?.message;
+        const message = passed ? "Testcase chạy thành công." : String(failedStepMessage || run.executionResult?.message || "Testcase chạy thất bại.");
 
         return {
             id: testCaseId,
@@ -2499,14 +2384,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const ids = getSelectedCaseIds();
         const deviceId = String(tvDeviceSelect?.value || "");
         if (!deviceId || !canRunLg() || typeof api?.runLgBatch !== "function") return {ok: false, status: "LG_BATCH_INVALID"};
-        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(
-            values.PLAYER_CHECK_TIMEOUT_SECONDS,
-            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
-        );
-        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(
-            values.TEST_CASE_MAX_TIME_MINUTES,
-            settings.TEST_CASE_MAX_TIME_MINUTES,
-        );
+        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(values.PLAYER_CHECK_TIMEOUT_SECONDS, settings.PLAYER_CHECK_TIMEOUT_SECONDS);
+        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(values.TEST_CASE_MAX_TIME_MINUTES, settings.TEST_CASE_MAX_TIME_MINUTES);
         syncTestConfiguration(String(playerTimeoutSeconds), String(maxTimeMinutes));
         closeModal(lgRunConfirmationDialog);
         pendingLgRunValues = null;
@@ -2517,11 +2396,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (typeof api.startReport === "function") await api.startReport();
         try {
             await testConfigurationSync;
-            const sourceRequest = values.TEST_CASE_CACHE_KEY && activeCampaignId
-                ? {cacheKey: values.TEST_CASE_CACHE_KEY}
-                : values.TEST_CASE_FOLDER_ID
-                    ? {folderId: values.TEST_CASE_FOLDER_ID}
-                    : {};
+            const sourceRequest = values.TEST_CASE_CACHE_KEY && activeCampaignId ? {cacheKey: values.TEST_CASE_CACHE_KEY} : values.TEST_CASE_FOLDER_ID ? {folderId: values.TEST_CASE_FOLDER_ID} : {};
             const result = await api.runLgBatch({deviceId, selectedCaseIds: ids, ...sourceRequest, confirmed: true});
             if (!result?.ok) {
                 setStatus("failed", "Failed");
@@ -2622,21 +2497,39 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         closeModal(logsModal);
         await resumeInteractiveBrowserAfterModal();
     });
-    get("gui-settings-save-button")?.addEventListener?.("click", () => { void savePreviewSettings(); });
-    get("test-configuration-save-button")?.addEventListener?.("click", () => { void saveTestConfiguration(); });
+    get("gui-settings-save-button")?.addEventListener?.("click", () => {
+        void savePreviewSettings();
+    });
+    get("test-configuration-save-button")?.addEventListener?.("click", () => {
+        void saveTestConfiguration();
+    });
     playerCheckTimeoutInput?.addEventListener?.("input", () => {
         playerCheckTimeoutInput.value = String(playerCheckTimeoutInput.value || "").replace(/[^0-9]/g, "");
     });
     testCaseMaxTimeInput?.addEventListener?.("input", () => {
         testCaseMaxTimeInput.value = String(testCaseMaxTimeInput.value || "").replace(/[^0-9]/g, "");
     });
-    dnsHostAddButton?.addEventListener?.("click", () => { void updateDnsHost("addHostEntry"); });
-    dnsHostRemoveButton?.addEventListener?.("click", () => { void updateDnsHost("removeHostEntry"); });
-    browserTargetInput?.addEventListener?.("change", () => { void selectRunTarget("browser"); });
-    webosTargetInput?.addEventListener?.("change", () => { void selectRunTarget("webos"); });
-    tvDeviceAddButton?.addEventListener?.("click", () => { openTvDeviceDialog("add"); });
-    tvDeviceEditButton?.addEventListener?.("click", () => { openTvDeviceDialog("edit"); });
-    tvDeviceCheckConnectionButton?.addEventListener?.("click", () => { void checkTvDeviceConnection(); });
+    dnsHostAddButton?.addEventListener?.("click", () => {
+        void updateDnsHost("addHostEntry");
+    });
+    dnsHostRemoveButton?.addEventListener?.("click", () => {
+        void updateDnsHost("removeHostEntry");
+    });
+    browserTargetInput?.addEventListener?.("change", () => {
+        void selectRunTarget("browser");
+    });
+    webosTargetInput?.addEventListener?.("change", () => {
+        void selectRunTarget("webos");
+    });
+    tvDeviceAddButton?.addEventListener?.("click", () => {
+        openTvDeviceDialog("add");
+    });
+    tvDeviceEditButton?.addEventListener?.("click", () => {
+        openTvDeviceDialog("edit");
+    });
+    tvDeviceCheckConnectionButton?.addEventListener?.("click", () => {
+        void checkTvDeviceConnection();
+    });
     tvDeviceSelect?.addEventListener?.("change", () => {
         resetTvDeviceConnectionStatus();
         syncRunTargetControls();
@@ -2645,21 +2538,45 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     tvDeviceDialogCancelButton?.addEventListener?.("click", closeTvDeviceDialog);
     tvDeviceDialog?.querySelector?.("[data-close-tv-device-dialog]")?.addEventListener?.("click", closeTvDeviceDialog);
     tvDevicePassphraseToggle?.addEventListener?.("click", toggleTvDevicePassphrase);
-    tvDeviceDialogSubmitButton?.addEventListener?.("click", () => { void submitTvDeviceDialog(); });
-    sdkAutoConfigureButton?.addEventListener?.("click", () => { void planLgToolchainSetup(); });
-    sdkCompatibilityCatalogRefreshButton?.addEventListener?.("click", () => { void refreshLgCompatibilityCatalog(); });
+    tvDeviceDialogSubmitButton?.addEventListener?.("click", () => {
+        void submitTvDeviceDialog();
+    });
+    sdkAutoConfigureButton?.addEventListener?.("click", () => {
+        void planLgToolchainSetup();
+    });
+    sdkCompatibilityCatalogRefreshButton?.addEventListener?.("click", () => {
+        void refreshLgCompatibilityCatalog();
+    });
     sdkCompatibilityCheckButton?.addEventListener?.("click", openLgCompatibilityDialog);
-    lgCompatibilityProductGateSaveButton?.addEventListener?.("click", () => { void saveLgCompatibilityProductGateCredentials(); });
+    lgCompatibilityProductGateSaveButton?.addEventListener?.("click", () => {
+        void saveLgCompatibilityProductGateCredentials();
+    });
     lgCompatibilityInspectionReviewButton?.addEventListener?.("click", reviewLgCompatibilityInspection);
-    lgCompatibilityInspectionConfirmButton?.addEventListener?.("click", () => { void confirmLgCompatibilityInspection(); });
+    lgCompatibilityInspectionConfirmButton?.addEventListener?.("click", () => {
+        void confirmLgCompatibilityInspection();
+    });
     lgCompatibilityValidationReviewButton?.addEventListener?.("click", reviewLgCompatibilityValidation);
-    lgCompatibilityValidationConfirmButton?.addEventListener?.("click", () => { void confirmLgCompatibilityValidation(); });
-    lgCompatibilityCloseButton?.addEventListener?.("click", () => { void closeLgCompatibilityDialog(); });
-    lgCompatibilityDialog?.querySelector?.("[data-close-lg-compatibility-dialog]")?.addEventListener?.("click", () => { void closeLgCompatibilityDialog(); });
-    sdkInstallConfirmButton?.addEventListener?.("click", () => { void installLgToolchain(); });
-    sdkUseManagedButton?.addEventListener?.("click", () => { void activateManagedLgToolchain(); });
-    browserAutoConfigureButton?.addEventListener?.("click", () => { void planBrowserToolchainSetup(); });
-    browserInstallConfirmButton?.addEventListener?.("click", () => { void installBrowserToolchain(); });
+    lgCompatibilityValidationConfirmButton?.addEventListener?.("click", () => {
+        void confirmLgCompatibilityValidation();
+    });
+    lgCompatibilityCloseButton?.addEventListener?.("click", () => {
+        void closeLgCompatibilityDialog();
+    });
+    lgCompatibilityDialog?.querySelector?.("[data-close-lg-compatibility-dialog]")?.addEventListener?.("click", () => {
+        void closeLgCompatibilityDialog();
+    });
+    sdkInstallConfirmButton?.addEventListener?.("click", () => {
+        void installLgToolchain();
+    });
+    sdkUseManagedButton?.addEventListener?.("click", () => {
+        void activateManagedLgToolchain();
+    });
+    browserAutoConfigureButton?.addEventListener?.("click", () => {
+        void planBrowserToolchainSetup();
+    });
+    browserInstallConfirmButton?.addEventListener?.("click", () => {
+        void installBrowserToolchain();
+    });
     configureBrowserButton?.addEventListener?.("click", async () => {
         await suspendInteractiveBrowserForModal();
         selectSettingsPanel("sdk");
@@ -2694,9 +2611,16 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const result = await api.resolveLgRunRecovery?.({action: "stop"});
         if (result?.ok) closeModal(lgRecoveryDialog);
     });
-    lgRecoveryDialog?.querySelector?.("[data-close-lg-recovery]")?.addEventListener?.("click", () => { void api.resolveLgRunRecovery?.({action: "stop"}); closeModal(lgRecoveryDialog); });
-    tvToolchainSaveButton?.addEventListener?.("click", () => { void saveTvToolchainConfiguration(); });
-    sdkDownloadLgCliButton?.addEventListener?.("click", () => { void api.openLgCliDownloadPage?.(); });
+    lgRecoveryDialog?.querySelector?.("[data-close-lg-recovery]")?.addEventListener?.("click", () => {
+        void api.resolveLgRunRecovery?.({action: "stop"});
+        closeModal(lgRecoveryDialog);
+    });
+    tvToolchainSaveButton?.addEventListener?.("click", () => {
+        void saveTvToolchainConfiguration();
+    });
+    sdkDownloadLgCliButton?.addEventListener?.("click", () => {
+        void api.openLgCliDownloadPage?.();
+    });
     sdkChooseLgCliButton?.addEventListener?.("click", async () => {
         const result = await api.chooseLgCliArchive?.();
         if (result?.ok) {
@@ -2773,10 +2697,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     updateFolderControls();
     updateRetrySyncButton();
 
-    api.getAppVersion?.().then((version) => {
-        const versionEl = doc.getElementById("app-version");
-        if (versionEl) versionEl.textContent = `v${version}`;
-    }).catch((err) => console.error("Failed to load app version:", err));
+    api.getAppVersion?.()
+        .then((version) => {
+            const versionEl = doc.getElementById("app-version");
+            if (versionEl) versionEl.textContent = `v${version}`;
+        })
+        .catch((err) => console.error("Failed to load app version:", err));
 
     return {
         loadCases,

@@ -1,22 +1,22 @@
 {
   "app/main.js": {
-    "mtime": 1785825896.6841984,
-    "ast_hash": "4f32e1d36b5095bde54a19bfd8863300",
+    "mtime": 1785911624.2655754,
+    "ast_hash": "e6e865d188e2e4d4b8be9504d5a768fa",
     "semantic_hash": ""
   },
   "app/preload.js": {
-    "mtime": 1785825896.684493,
-    "ast_hash": "febfc2bf1f5ea1389cc3408ffa0d48bd",
+    "mtime": 1785911624.2660425,
+    "ast_hash": "a768efb29c714dedfd437e4c6aaa2d9b",
     "semantic_hash": ""
   },
   "app/renderer/renderer.js": {
-    "mtime": 1785901951.5226235,
-    "ast_hash": "1fc49b84662348e594dc60debde256b4",
+    "mtime": 1785920093.8195696,
+    "ast_hash": "a6d4a121a24e7a0f4ff439da32540631",
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1785825896.6935487,
-    "ast_hash": "3542794b50912bfa040f62e3f1403f99",
+    "mtime": 1785913796.1296132,
+    "ast_hash": "78e1d23d30e830b2ee6a9141680650c7",
     "semantic_hash": ""
   },
   "playwright.config.js": {
@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1785825896.6825223,
-    "ast_hash": "227c592128c89389ed6e18204a5d2a9b",
+    "mtime": 1785911624.264237,
+    "ast_hash": "9372b25450b38f5b13f34e97e3c791b0",
     "semantic_hash": ""
   },
   "IDEA.md": {
@@ -110,13 +110,13 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1785825896.683076,
-    "ast_hash": "71ed9ea66949aaa2654962639553e644",
+    "mtime": 1785911624.264666,
+    "ast_hash": "b6906aacce5eb2e569339c8a8b005d7f",
     "semantic_hash": ""
   },
   "app/renderer/index.html": {
-    "mtime": 1785830854.2872808,
-    "ast_hash": "324156a414fc87a06adcf1d62a63bab2",
+    "mtime": 1785920093.5415485,
+    "ast_hash": "96ca2daf074cba64117d289cc44e1e94",
     "semantic_hash": ""
   },
   ".codex/skills/playwright-interactive/assets/playwright-small.svg": {
@@ -585,7 +585,7 @@
     "semantic_hash": ""
   },
   "tests/unit/flow-case-api.test.js": {
-    "mtime": 1785902055.3423226,
+    "mtime": 1785903233.0507543,
     "ast_hash": "d2e7f901c43ba88e636f75483f3c1baa",
     "semantic_hash": ""
   },
@@ -655,8 +655,8 @@
     "semantic_hash": ""
   },
   "tests/unit/renderer.test.js": {
-    "mtime": 1785901951.6614285,
-    "ast_hash": "562b7c12e157a87407f26eb6f910cdd1",
+    "mtime": 1785920093.8556,
+    "ast_hash": "b5f265f4bba5ed209b04948cf26f971a",
     "semantic_hash": ""
   },
   "tests/unit/run-close-guard.test.js": {
@@ -890,8 +890,8 @@
     "semantic_hash": ""
   },
   "tests/unit/preload.test.js": {
-    "mtime": 1785825896.6992247,
-    "ast_hash": "c3d2f12764b939a56c495d0098ee1438",
+    "mtime": 1785911624.2678642,
+    "ast_hash": "3a912aa235442a1f3022e2b0162d7a38",
     "semantic_hash": ""
   },
   "app/browser-run-launcher.js": {
@@ -1110,8 +1110,8 @@
     "semantic_hash": ""
   },
   "app/hosts-file.js": {
-    "mtime": 1785492684.4904761,
-    "ast_hash": "f0ae81e3e4aeb99e7fe42e5c79a23eea",
+    "mtime": 1785911624.265116,
+    "ast_hash": "12167c8fd89054803075edebffcb95f9",
     "semantic_hash": ""
   },
   "tests/unit/hosts-file-elevation.test.js": {
@@ -1120,8 +1120,8 @@
     "semantic_hash": ""
   },
   "tests/unit/hosts-file.test.js": {
-    "mtime": 1785492654.583949,
-    "ast_hash": "1f46c45cd6e09b6f2282b2b8f54d30cc",
+    "mtime": 1785911624.2676773,
+    "ast_hash": "f6bb9924509a818b665b1e620d69172f",
     "semantic_hash": ""
   },
   ".opencode/opencode.json": {
@@ -1240,18 +1240,28 @@
     "semantic_hash": ""
   },
   "docs/tinyworkers/20260805_095932_stop-restart-run-state.md": {
-    "mtime": 1785899363.1951115,
+    "mtime": 1785903233.0429447,
     "ast_hash": "2cbd9845ce37ba6aed5d7ea12f7fef6f",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260805_033335_why_does_the_test_status_result_update_request_omi.md": {
-    "mtime": 1785900815.1343598,
+    "mtime": 1785903233.05013,
     "ast_hash": "a9f582089bcba4198703a1fbd2e92ade",
     "semantic_hash": ""
   },
   "graphify-out/memory/query_20260805_035017_why_does_the_result_patch_still_omit_x_flowtest_se.md": {
-    "mtime": 1785901817.2005007,
+    "mtime": 1785903233.0502806,
     "ast_hash": "b3a1f86c31659d1b5fe702ee1bc2f76e",
+    "semantic_hash": ""
+  },
+  "docs/tinyworkers/20260805_hide-fixed-gui-settings.md": {
+    "mtime": 1785911624.2674584,
+    "ast_hash": "c6023a0ba078d2445024f801763dcb0f",
+    "semantic_hash": ""
+  },
+  "docs/user-guide/MyTV-Auto-Test-Huong-dan-su-dung.pdf": {
+    "mtime": 1785913694.3323195,
+    "ast_hash": "9095d1ae38563e83c709979f72353da6",
     "semantic_hash": ""
   }
 }

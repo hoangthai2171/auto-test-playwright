@@ -597,12 +597,6 @@ textarea:disabled {
   opacity: 0.6;
 }
 
-.actions {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 10px;
-}
-
 button {
   height: 40px;
   border: 0;
@@ -623,12 +617,6 @@ button:disabled {
   opacity: 0.45;
 }
 
-.actions.secondary button,
-#stop-button {
-  border: 1px solid #3a3f4a;
-  background: #222631;
-}
-
 .workspace {
   display: grid;
   grid-template-rows: 54px 1fr;
@@ -638,12 +626,97 @@ button:disabled {
 }
 
 .status-bar {
+  position: relative;
+  z-index: 1;
   display: flex;
   align-items: center;
   gap: 10px;
   padding: 0 22px;
   border-bottom: 1px solid #2a2d34;
   background: #14161b;
+}
+
+.workspace-actions {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-left: auto;
+}
+
+.workspace-action-tooltip {
+  position: relative;
+  display: inline-flex;
+}
+
+.workspace-action-tooltip::after {
+  position: absolute;
+  z-index: 2;
+  top: calc(100% + 8px);
+  left: 50%;
+  padding: 6px 8px;
+  border: 1px solid #3a3f4a;
+  border-radius: 4px;
+  background: #222631;
+  color: #fff;
+  content: attr(data-tooltip);
+  font-size: 12px;
+  font-weight: 600;
+  opacity: 0;
+  pointer-events: none;
+  transform: translate(-50%, -4px);
+  transition: opacity 120ms ease, transform 120ms ease;
+  white-space: nowrap;
+}
+
+.workspace-action-tooltip:hover::after,
+.workspace-action-tooltip:focus-within::after {
+  opacity: 1;
+  transform: translate(-50%, 0);
+}
+
+.workspace-selected-count {
+  color: #c5cad4;
+  font-size: 12px;
+  font-weight: 600;
+  white-space: nowrap;
+}
+
+.workspace-action {
+  display: inline-grid;
+  width: 32px;
+  height: 32px;
+  padding: 0;
+  place-items: center;
+  border: 1px solid transparent;
+  border-radius: 6px;
+  color: #fff;
+}
+
+.workspace-action svg {
+  width: 17px;
+  height: 17px;
+}
+
+.workspace-action-run {
+  background: #2f9e5b;
+}
+
+.workspace-action-stop {
+  background: #c94343;
+}
+
+.workspace-action-retry {
+  background: #2f80ed;
+}
+
+.workspace-action-neutral {
+  border-color: #3a3f4a;
+  background: #222631;
+}
+
+.workspace-action:focus-visible {
+  outline: 2px solid #9fc7ff;
+  outline-offset: 2px;
 }
 
 .status-dot {

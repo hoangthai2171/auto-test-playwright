@@ -114,16 +114,6 @@
 
                     <div id="form-message" class="form-message hidden" role="alert"></div>
 
-                    <div class="actions">
-                        <button type="submit" id="run-button" disabled>Run Selected (0)</button>
-                        <button type="button" id="stop-button" disabled>Stop</button>
-                    </div>
-
-                    <div class="actions secondary">
-                        <button type="button" id="retry-sync-button" disabled>Retry sync</button>
-                        <button type="button" id="open-report-button">Open Test Report</button>
-                        <button type="button" id="show-report-button">Show Folder</button>
-                    </div>
                 </form>
             </section>
 
@@ -131,6 +121,34 @@
                 <div class="status-bar">
                     <span id="status-dot" class="status-dot idle"></span>
                     <span id="status-text">Ready</span>
+                    <div class="workspace-actions" aria-label="Test run actions">
+                        <span id="workspace-selected-count" class="workspace-selected-count">0 selected</span>
+                        <span class="workspace-action-tooltip" data-tooltip="Run Selected (0)">
+                            <button type="submit" form="test-form" id="run-button" class="workspace-action workspace-action-run" disabled aria-label="Run Selected (0)">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M8 5.5v13l10-6.5z" fill="currentColor"/></svg>
+                            </button>
+                        </span>
+                        <span class="workspace-action-tooltip" data-tooltip="Stop">
+                            <button type="button" id="stop-button" class="workspace-action workspace-action-stop" disabled aria-label="Stop">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><rect x="6" y="6" width="12" height="12" rx="1" fill="currentColor"/></svg>
+                            </button>
+                        </span>
+                        <span class="workspace-action-tooltip" data-tooltip="Retry sync">
+                            <button type="button" id="retry-sync-button" class="workspace-action workspace-action-retry" disabled aria-label="Retry sync">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M18.4 8.6A7 7 0 1 0 19 15h-2a5 5 0 1 1-.5-5.1L14 12.4h6V6.4z" fill="currentColor"/></svg>
+                            </button>
+                        </span>
+                        <span class="workspace-action-tooltip" data-tooltip="Open Test Report">
+                            <button type="button" id="open-report-button" class="workspace-action workspace-action-neutral" aria-label="Open Test Report">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M6 3h9l3 3v15H6zm8 1.5V7h2.5zM9 11h6v1.5H9zm0 3h6v1.5H9zm0 3h4v1.5H9z" fill="currentColor"/></svg>
+                            </button>
+                        </span>
+                        <span class="workspace-action-tooltip" data-tooltip="Show Folder">
+                            <button type="button" id="show-report-button" class="workspace-action workspace-action-neutral" aria-label="Show Folder">
+                                <svg viewBox="0 0 24 24" aria-hidden="true"><path d="M3 6h7l2 2h9v10H3zm2 4v6h14v-6z" fill="currentColor"/></svg>
+                            </button>
+                        </span>
+                    </div>
                 </div>
                 <section class="browser-preview">
                     <div class="browser-preview-toolbar">
