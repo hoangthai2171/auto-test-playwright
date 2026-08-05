@@ -1100,7 +1100,9 @@ async function dismissKnownPlaybackFailurePopup(page, popup) {
   const dialogText = (popup?.visibleDialogs || [])
     .map((dialog) => dialog?.text || "")
     .join(" ");
-  if (!/(?:thiết bị\s+không\s+hỗ\s+trợ|không\s+hỗ\s+trợ|mã\s*20301|playback\s+failed)/iu.test(dialogText)) {
+  // Match known playback error patterns: device not supported, error codes (mã xxx),
+  // generic error messages (có lỗi), or DRM failures.
+  if (!/(?:thiết bị\s+không\s+hỗ\s+trợ|không\s+hỗ\s+trợ|mã.*\d+|có\s+lỗi|playback\s+failed|drm.*fail)/iu.test(dialogText)) {
     return false;
   }
 
