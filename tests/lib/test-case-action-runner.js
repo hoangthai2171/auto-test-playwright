@@ -6,6 +6,7 @@ const { captureCurrentAppScreenshot } = require("./artifacts");
 const { normalizePlayerCheckTimeoutSeconds } = require("../../app/test-configuration");
 
 const PLAYER_RETURN_DELAY_MS = 2000;
+const VIEW_MORE_LABELS = new Set(["xem tat ca", "xem them", "view more"]);
 
 function attachJson(testInfo, name, value) {
   if (!testInfo || typeof testInfo.attach !== "function") return Promise.resolve();
@@ -335,17 +336,14 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
     }
   }
 
-  const serviceAccess = getSuccessfulServiceAccess(testCase, steps);
-  if (!serviceAccess) {
+  const destinationAccess = getSuccessfulDestinationAccess(testCase, steps);
+  if (!destinationAccess) {
     throw new Error(
       `Expected result requires a verified service destination with content rows: ${testCase.expectedResult}`
     );
   }
 
-  return {
-    type: "service",
-    ...serviceAccess,
-  };
+  return destinationAccess;
 }
 
 async function assertPlayerReadyAfterWait(helpers, page, timeoutSeconds) {
@@ -456,6 +454,16 @@ function getSuccessfulServiceAccess(_testCase, steps) {
     .find((result) => result?.type === "service" && result?.route && result?.rowCount > 0) || null;
 }
 
+function getSuccessfulDestinationAccess(_testCase, steps) {
+  return steps
+    .map((step) => step?.result)
+    .find((result) =>
+      (result?.type === "service" || result?.type === "view_more") &&
+      result?.route &&
+      result?.rowCount > 0
+    ) || null;
+}
+
 async function resolveReadyWait(helpers, page, testInfo, name) {
   switch (name) {
     case "app":
@@ -484,6 +492,7 @@ async function resolveReadyWait(helpers, page, testInfo, name) {
 function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}) {
   let mostRecentlyFocusedRow = null;
   let pendingServiceName = "";
+  let pendingViewMoreTarget = null;
   const playbackWaitOptions = playerCheckTimeoutSeconds === undefined
     ? {}
     : {waitSeconds: playerCheckTimeoutSeconds};
@@ -503,17 +512,43 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
     open_home: ({ page, testInfo }) =>
       workflows.__internal.waitForHomeReady(page, testInfo),
     focus_row: async ({ page, action }) => {
+      pendingServiceName = "";
+      pendingViewMoreTarget = null;
       mostRecentlyFocusedRow = await helpers.focusRequestedContentRow(page, {
         rowName: action.rowName,
         ...(action.itemIndex ? {itemIndex: action.itemIndex} : {}),
       });
       return mostRecentlyFocusedRow;
     },
-    focus_row_first_item: ({ page }) =>
-      helpers.focusFirstItemInCurrentContentRow(page),
+    focus_row_first_item: async ({ page }) => {
+      pendingServiceName = "";
+      pendingViewMoreTarget = null;
+      return helpers.focusFirstItemInCurrentContentRow(page);
+    },
     focus_text: async ({ page, action }) => {
       const focusedRow = mostRecentlyFocusedRow;
       mostRecentlyFocusedRow = null;
+
+      if (VIEW_MORE_LABELS.has(normalizeVietnameseText(action.text))) {
+        pendingServiceName = "";
+        pendingViewMoreTarget = null;
+        if (!focusedRow) {
+          throw new Error(
+            `Không thể focus poster view more "${action.text}": cần focus_row trước`
+          );
+        }
+
+        const focusedViewMore = await helpers.focusViewMorePosterInCurrentRow(page, focusedRow, {
+          targetLabel: action.text,
+        });
+        pendingViewMoreTarget = {
+          rowName: String(focusedRow.title || "").trim(),
+          label: String(action.text || "").trim(),
+        };
+        return focusedViewMore;
+      }
+
+      pendingViewMoreTarget = null;
       if (normalizeVietnameseText(focusedRow?.title || "") === "the loai") {
         const service = await helpers.focusServiceCategoryItem(page, action.text, {initialRow: focusedRow});
         pendingServiceName = action.text;
@@ -528,6 +563,15 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
     },
     press_ok: async ({ page, testInfo }) => {
       await helpers.remotePress(page, "Enter");
+      if (pendingViewMoreTarget) {
+        const target = pendingViewMoreTarget;
+        pendingViewMoreTarget = null;
+        return helpers.assertViewMoreOpened(page, {
+          rowName: target.rowName,
+          label: target.label,
+          testInfo,
+        });
+      }
       if (!pendingServiceName) return undefined;
       const service = pendingServiceName;
       pendingServiceName = "";
@@ -630,6 +674,7 @@ module.exports = {
   classifyExpectedResult,
   hasSuccessfulServiceNavigation,
   getSuccessfulServiceAccess,
+  getSuccessfulDestinationAccess,
   verifyExpectedResult,
   isPlayerCheckingAction,
   nextStepRequiresPlayer,

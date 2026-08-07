@@ -49,8 +49,9 @@ test-case-schema.js
 ```
 
 `testcased.json` is the read-only local fallback fixture. On startup, the app
-restores the most recently downloaded API folder from the user-data cache; it
-uses the fixture only when no cached folder is available. `app/main.js` also
+restores the latest successfully loaded API test-case list (folder or campaign)
+from the user-data cache; it uses the fixture only when no latest cached list is
+available. `app/main.js` also
 owns flow-case API IPC, sanitizes passwords and service-token header values for the renderer, validates the
 selected case ID from either the fixture or the user-data cache, and starts the
 generic `tests/run-test-case-mytv.spec.js` entry point. The renderer sends the
@@ -102,9 +103,10 @@ passes `campaignId` to return only campaign-related folders and case retrieval
 uses the direct `campaignId` query; the selected folder remains the result
 context. When the campaign selector is empty, folder and case retrieval omit the
 campaign filter. Successful folder responses atomically replace their folder-ID
-cache entry; campaign responses use `campaign:<campaignId>` and are kept separate
-from startup folder restoration. Campaign copies are validated using their own
-`id`; `sourceFlowCaseId` is never substituted. The generic action executor
+cache entry and campaign responses use `campaign:<campaignId>`; each updates the
+latest-entry marker used for GUI startup restoration. Refreshing either campaign
+or folder lists clears the marker and the visible loaded cases. Campaign copies
+are validated using their own `id`; `sourceFlowCaseId` is never substituted. The generic action executor
 receives either the local fixture source or a validated cache source and does not
 contain API or cache logic. Result submission uses
 `PATCH /api/v1/projects/{projectId}/flow-cases/by-folder` with a `folderPath`,
@@ -187,10 +189,12 @@ The supported action allowlist is:
 - `open_home`: waits for the ready home state.
 - `focus_row`: requires a row/category name and navigates to it using its first visible item as the TV focus anchor. An optional positive 1-based `itemIndex` uses remote horizontal navigation to focus that absolute poster position, including items that are initially outside the viewport; it fails only when the row cannot reach the requested position. Home rows are matched by visible headings/content and do not depend on dynamic row IDs.
 - `focus_row_first_item`: focuses the leftmost item in the currently active row, regardless of content type.
-- `focus_text`: focuses a visible control by its human-readable text through remote navigation. Immediately after `focus_row` for the Home `Thể loại` row, it scans every reachable service poster in that carousel, moving right and re-reading the row until it finds the requested service or reaches the end. It never falls back to a same-named left-menu item.
+- `focus_text`: focuses a visible control by its human-readable text through remote navigation. Immediately after `focus_row` for the Home `Thể loại` row, it scans every reachable service poster in that carousel, moving right and re-reading the row until it finds the requested service or reaches the end. Immediately after any `focus_row`, the exact aliases `Xem tất cả`, `Xem thêm`, and `View more` focus the trusted `.view_more[item_view_more="1"]` poster, even when `content_name` is blank; without row context they fail closed. It never falls back to a same-named left-menu item.
 - `press_ok`: sends the remote OK/Enter key. After a Home `Thể loại` service
-  poster it immediately requires a non-Home destination with visible content
-  rows; a visible toast/tooltip or no-data/error popup fails the action.
+  poster or a pending view-more poster it immediately requires a non-Home
+  destination with visible content rows; a visible toast/tooltip or
+  no-data/error popup fails the action. View-more activation may open either a
+  row-content grid or a service screen.
 - `open_service`: requires a service name and uses the left-menu or “Tất cả
   dịch vụ” fallback navigation. A service can also be entered from the Home
   “Thể loại” row with `focus_row`, `focus_text`, and `press_ok`.
@@ -225,10 +229,11 @@ The supported action allowlist is:
 - `press_back`: sends Backspace; optional `count` repeats it.
 - `wait_for_ready`: accepts `app`, `home`, `content`, or `player`.
 
-After credential submission, the login workflow detects the device-limit popup
-(`Vượt quá số lượng thiết bị cho phép`) and remotely activates `Tiếp tục` to
-remove the oldest logged-in device before profile selection. The shared focus
-model reads `.active` inside `#dialog_confirm_v2`, `#dialog_alert_v2`,
+During the asynchronous transition from credential submission to profile
+selection, the login workflow monitors for the device-limit popup
+(`Vượt quá số lượng thiết bị cho phép`), remotely activates `Tiếp tục`, and
+waits for that popup to close before selecting a profile. The shared focus model
+reads `.active` inside `#dialog_confirm_v2`, `#dialog_alert_v2`,
 `#dialog_alert_full`, and `#dialog_confirm_full`; regular controls continue to
 use `.focused`. Generic case cleanup still calls `window.processLogOut` after
 the run to release the account.
@@ -246,8 +251,8 @@ mechanism, and returns structured per-step results.
 After all action steps pass, recognized `expectedResult` values add a final
 `expected_result` check. Playback-success wording waits for the configured
 player-check timeout (6 seconds by default), then waits for a healthy playing
-player; service-success wording (`Vào`/`Mở` a service or
-category `bình thường`/`thành công`) requires the activation check to have
+player; service- and view-more-success wording (`Vào`/`Mở` a service or item,
+or category `bình thường`/`thành công`) requires the activation check to have
 observed a non-Home destination with visible content rows. A visible
 auto-hide toast/tooltip or no-data/error popup fails service access. Player
 checks capture the player screen before cleanup, use the shared adaptive

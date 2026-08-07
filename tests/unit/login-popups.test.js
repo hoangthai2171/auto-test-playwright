@@ -68,3 +68,37 @@ test("does not interact when the device-limit popup is absent", async () => {
   assert.equal(result, false);
   assert.equal(focused, false);
 });
+
+test("waits for a delayed device-limit popup before focusing and pressing Continue", async () => {
+  const calls = [];
+  let elapsed = 0;
+  let popup = null;
+  const page = {
+    waitForTimeout: async (delay) => {
+      elapsed += delay;
+      if (elapsed >= 500) {
+        popup = {dialogId: "dialog_confirm_v2", activeButtonId: "btn_confirm_v2_ok"};
+      }
+    },
+  };
+
+  const result = await acceptDeviceLimitPopupIfVisible(page, {}, {
+    hasVisibleText: async () => true,
+    hasProfileSelection: async () => false,
+    getVisiblePopupState: async () => popup,
+    getFocusedState: async () => ({id: "btn_confirm_v2_ok", text: "Tiếp tục", label: ""}),
+    remotePress: async (...args) => {
+      calls.push(["press", ...args]);
+      popup = null;
+    },
+    transitionTimeout: 2000,
+    transitionPolling: 250,
+    profileGrace: 0,
+    focusTimeout: 1000,
+    dismissTimeout: 1000,
+  });
+
+  assert.equal(result, true);
+  assert.equal(elapsed >= 500, true);
+  assert.deepEqual(calls, [["press", page, "Enter", 2500]]);
+});

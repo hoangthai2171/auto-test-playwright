@@ -122,14 +122,17 @@ async function loginWithAccount(page, options, testInfo) {
     await remoteFocusById(page, "new_ui_login_btn_ok");
     await activateVerifiedTarget(page, {testInfo, name: "login-password-submit", contractName: "menuItem", expectedId: "new_ui_login_btn_ok", delay: 5000});
 
-    await acceptDeviceLimitPopupIfVisible(page, testInfo);
-
     await expect(page.locator("body")).not.toContainText("Nhập mật khẩu", {
         timeout: 30000,
     });
 }
 
 async function chooseFirstProfileAndEnterHome(page, testInfo) {
+    // The device-limit dialog can arrive asynchronously while the app is
+    // transitioning from password submission to profile selection. Monitor
+    // that transition here, immediately before the profile is focused, so a
+    // delayed modal cannot block waitForProfileSelection indefinitely.
+    await acceptDeviceLimitPopupIfVisible(page, testInfo);
     await waitForProfileSelection(page);
     await remoteFocusById(page, "item_0");
     await activateVerifiedTarget(page, {testInfo, name: "profile-selection", contractName: "contentItem", expectedId: "item_0"});
@@ -253,6 +256,27 @@ async function assertServiceOpened(page, {service, testInfo, timeout = 30000, po
 
     await attachServiceOpenFailure(page, testInfo, service, observation);
     throw serviceOpenError(service, observation, "did not reach a non-Home screen with visible content rows");
+}
+
+async function assertViewMoreOpened(page, {rowName, label, testInfo, timeout = 30000, polling = 100} = {}) {
+    const targetLabel = String(label || "view more").trim();
+    const serviceLabel = [String(rowName || "").trim(), targetLabel].filter(Boolean).join(" - ");
+    const result = await assertServiceOpened(page, {
+        service: serviceLabel || targetLabel,
+        testInfo,
+        timeout,
+        polling,
+    });
+
+    return {
+        type: "view_more",
+        label: targetLabel,
+        rowName: String(rowName || "").trim(),
+        route: result.route,
+        rowCount: result.rowCount,
+        visibleCount: result.visibleCount,
+        verified: "View-more poster opened to a non-Home screen with visible content rows",
+    };
 }
 
 async function observeServiceOpenState(page) {
@@ -1965,6 +1989,7 @@ module.exports = {
     openSettingFromLeftMenu,
     openServiceFromLeftMenuOrAllServices,
     assertServiceOpened,
+    assertViewMoreOpened,
     openChannel,
     searchAndOpenBestContent,
     openMovieContent,

@@ -89,13 +89,14 @@ playwright.config.js
 
 ## Run With the Electron Case Browser
 
-The app restores the most recently downloaded API folder at startup. API-loaded
-cases are downloaded from the configured flow-case folder or a selected running
-campaign, validated, and stored in the Electron user-data cache at
-`<userData>/testcases-cache.json`. Folder entries use their folder ID; campaign
-entries use `campaign:<campaignId>` and never replace or become the startup
-folder entry. `testcased.json` is used only as the local fallback when no cached
-API folder is available.
+The app restores the latest successfully loaded API test-case list at startup.
+API-loaded cases are downloaded from the configured flow-case folder or a
+selected running campaign, validated, and stored in the Electron user-data
+cache at `<userData>/testcases-cache.json`. Folder entries use their folder ID;
+campaign entries use `campaign:<campaignId>`, and a latest-entry marker records
+which list the GUI should restore. Refreshing either the campaign list or the
+folder list clears the restored list and its latest marker. `testcased.json` is
+used only as the local fallback when no latest cached API list is available.
 
 1. Add or update server-shaped cases in `testcased.json`.
 2. Start the desktop runner:
@@ -151,18 +152,21 @@ Each generic case invokes the trusted app global `window.processLogOut` after
 execution, including failed cases. The cleanup is awaited and is isolated from
 the shared legacy session fixture.
 
-If login displays the device-limit popup, the workflow detects its message and
-remotely selects `Tiếp tục` before continuing to profile selection. The four
-supported dialog families (`#dialog_confirm_v2`, `#dialog_alert_v2`,
-`#dialog_alert_full`, and `#dialog_confirm_full`) report their active button
-with `.active`; normal controls report focus with `.focused`.
+If login displays the device-limit popup, the workflow monitors the asynchronous
+transition to profile selection, remotely selects `Tiếp tục`, and waits for that
+popup to close before continuing. The four supported dialog families
+(`#dialog_confirm_v2`, `#dialog_alert_v2`, `#dialog_alert_full`, and
+`#dialog_confirm_full`) report their active button with `.active`; normal
+controls report focus with `.focused`.
 
 Recognized `expectedResult` values are checked after all declared actions. Play
 or Phát success wording waits for the configured player-check timeout (6 seconds
 by default), then verifies a healthy playing player; service-screen
 success wording verifies either left-menu/all-services navigation or the Home
 “Thể loại” row route (`focus_row`, `focus_text`, `press_ok`) without requiring
-the service name to appear on the destination screen.
+the service name to appear on the destination screen. The same destination
+check is used for a view-more poster and accepts either a row-content grid or a
+service screen.
 
 The retained terminal channel/movie/search workflows have separate post-Enter
 activation-settle delays in `activateVerifiedTarget`. Those delays only give the
@@ -204,6 +208,16 @@ When `focus_text` immediately follows `focus_row` for Home `Thể loại`, it
 scans the complete reachable service carousel, moving right and re-reading the
 row until it finds the requested poster. It never falls back to a matching
 left-menu label.
+
+When `focus_text` immediately follows `focus_row` and its text is exactly
+`Xem tất cả`, `Xem thêm`, or `View more` (accent-insensitive), it focuses the
+row's trusted `.view_more[item_view_more="1"]` poster with remote horizontal
+navigation. The poster may have a blank `content_name`; the marker is the
+source of truth. If Enter opens a row grid or service screen, the action passes
+only after a non-Home destination with visible content rows is observed. A
+visible tooltip/toast or recognized no-data/error popup fails the action, and a
+view-more label without a preceding `focus_row` fails closed rather than using
+generic text/menu focus.
 
 After any generic service activation (`open_service`, or `focus_row` →
 `focus_text` → `press_ok` on Home `Thể loại`), the runner requires a non-Home

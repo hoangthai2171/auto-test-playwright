@@ -30,6 +30,11 @@ function createHandlerHelpers(overrides = {}) {
     focusRequestedContentRow: async () => {},
     focusFirstItemInCurrentContentRow: async () => {},
     focusServiceCategoryItem: async () => {},
+    focusViewMorePosterInCurrentRow: async () => ({
+      isViewMore: true,
+      id: "view-more",
+      title: "",
+    }),
     remoteFocusById: async () => {},
     remoteFocusByText: async () => {},
     remotePress: async () => {},
@@ -45,6 +50,15 @@ function createHandlerHelpers(overrides = {}) {
       rowCount: 1,
       visibleCount: 1,
       verified: "Service opened to a non-Home screen with visible content rows",
+    }),
+    assertViewMoreOpened: async () => ({
+      type: "view_more",
+      label: "Xem tất cả",
+      rowName: "Phim mới nhất",
+      route: "view-more",
+      rowCount: 1,
+      visibleCount: 6,
+      verified: "View-more poster opened to a non-Home screen with visible content rows",
     }),
     openSearchFromLeftMenu: async () => {},
     searchContentByName: async () => {},
@@ -601,6 +615,61 @@ test("accepts a service expectedResult after entering through the home Thể lo�
   });
 });
 
+test("accepts a view-more expectedResult only after the destination check", async () => {
+  const calls = [];
+  const testInfo = createTestInfo();
+  const row = {
+    title: "Phim mới nhất",
+    rowY: 500,
+    items: [{id: "movie-1", title: "Movie 1"}],
+  };
+  const viewMoreResult = {
+    type: "view_more",
+    label: "Xem tất cả",
+    rowName: "Phim mới nhất",
+    route: "movie-grid",
+    rowCount: 2,
+    visibleCount: 12,
+    verified: "View-more poster opened to a non-Home screen with visible content rows",
+  };
+  const helpers = createHandlerHelpers({
+    focusRequestedContentRow: async (...args) => {
+      calls.push(["row", ...args]);
+      return row;
+    },
+    focusViewMorePosterInCurrentRow: async (...args) => {
+      calls.push(["focus", ...args]);
+      return {isViewMore: true, id: "view-more", title: ""};
+    },
+    assertViewMoreOpened: async (...args) => {
+      calls.push(["verify", ...args]);
+      return viewMoreResult;
+    },
+  });
+  const result = await runTestCase({id: "page"}, testInfo, {
+    id: "expected-view-more",
+    name: "Expected view-more destination",
+    expectedResult: "Vào item \"Xem tất cả\" bình thường",
+    actions: [
+      {action: "focus_row", rowName: "Phim mới nhất"},
+      {action: "focus_text", text: "Xem tất cả"},
+      {action: "press_ok"},
+    ],
+  }, {
+    helpers,
+    handlers: createDefaultActionHandlers({helpers}),
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  assert.deepEqual(calls, [
+    ["row", {id: "page"}, {rowName: "Phim mới nhất"}],
+    ["focus", {id: "page"}, row, {targetLabel: "Xem tất cả"}],
+    ["verify", {id: "page"}, {rowName: "Phim mới nhất", label: "Xem tất cả", testInfo}],
+  ]);
+  assert.equal(result.steps.at(-1).action, "expected_result");
+  assert.deepEqual(result.steps.at(-1).result, viewMoreResult);
+});
+
 test("records a failed expectedResult when the player is not ready", async () => {
   let error;
   try {
@@ -712,6 +781,108 @@ test("focuses a requested visible text target through remote navigation", async 
   assert.equal(calls[0][0], page);
   assert.equal(calls[0][1].test("Xem ngay"), true);
   assert.equal(calls[0][1].test("Xem ngay now"), false);
+});
+
+test("focuses each supported view-more label through the selected row marker", async () => {
+  for (const label of ["Xem tất cả", "Xem thêm", "View more"]) {
+    const calls = [];
+    const page = {id: "page"};
+    const testInfo = {id: "test-info"};
+    const row = {
+      title: "Phim mới nhất",
+      rowY: 500,
+      items: [{id: "movie-1", title: "Movie 1"}],
+    };
+    const helpers = createHandlerHelpers({
+      focusRequestedContentRow: async (...args) => {
+        calls.push(["row", ...args]);
+        return row;
+      },
+      focusViewMorePosterInCurrentRow: async (...args) => {
+        calls.push(["view-more", ...args]);
+        return {isViewMore: true, id: "view-more", title: ""};
+      },
+      remoteFocusByText: async (...args) => calls.push(["text", ...args]),
+      remotePress: async (...args) => calls.push(["press", ...args]),
+      assertViewMoreOpened: async (...args) => {
+        calls.push(["verify", ...args]);
+        return {
+          type: "view_more",
+          label,
+          rowName: row.title,
+          route: "view-more",
+          rowCount: 1,
+          visibleCount: 6,
+        };
+      },
+    });
+    const handlers = createDefaultActionHandlers({helpers});
+
+    await handlers.focus_row({page, action: {action: "focus_row", rowName: row.title}});
+    await handlers.focus_text({page, action: {action: "focus_text", text: label}});
+    await handlers.press_ok({page, testInfo, action: {action: "press_ok"}});
+
+    assert.equal(calls.some(([kind]) => kind === "text"), false);
+    assert.deepEqual(calls.map(([kind, ...args]) => [kind, ...args]), [
+      ["row", page, {rowName: row.title}],
+      ["view-more", page, row, {targetLabel: label}],
+      ["press", page, "Enter"],
+      ["verify", page, {rowName: row.title, label, testInfo}],
+    ]);
+  }
+});
+
+test("fails closed when a view-more label is requested without a focused row", async () => {
+  let viewMoreCalls = 0;
+  let textCalls = 0;
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      focusViewMorePosterInCurrentRow: async () => {
+        viewMoreCalls += 1;
+      },
+      remoteFocusByText: async () => {
+        textCalls += 1;
+      },
+    }),
+  });
+
+  await assert.rejects(
+    () => handlers.focus_text({page: {id: "page"}, action: {action: "focus_text", text: "Xem thêm"}}),
+    /Không thể focus poster view more "Xem thêm": cần focus_row trước/
+  );
+  assert.equal(viewMoreCalls, 0);
+  assert.equal(textCalls, 0);
+});
+
+test("propagates a failed view-more destination check after Enter", async () => {
+  const destinationError = new Error("View-more poster failed: tooltip shown");
+  const row = {
+    title: "Phim mới nhất",
+    items: [{id: "movie-1", title: "Movie 1"}],
+  };
+  let pressCount = 0;
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      focusRequestedContentRow: async () => row,
+      focusViewMorePosterInCurrentRow: async () => ({isViewMore: true, id: "view-more"}),
+      remotePress: async () => {
+        pressCount += 1;
+      },
+      assertViewMoreOpened: async () => {
+        throw destinationError;
+      },
+    }),
+  });
+  const page = {id: "page"};
+
+  await handlers.focus_row({page, action: {action: "focus_row", rowName: row.title}});
+  await handlers.focus_text({page, action: {action: "focus_text", text: "Xem tất cả"}});
+
+  await assert.rejects(
+    () => handlers.press_ok({page, testInfo: createTestInfo(), action: {action: "press_ok"}}),
+    destinationError
+  );
+  assert.equal(pressCount, 1);
 });
 
 test("focuses the first poster in the requested content row", async () => {

@@ -140,6 +140,127 @@ test("accepts a category poster when its focused child has the requested service
   assert.deepEqual(calls, [["press", "ArrowRight"]]);
 });
 
+test("focuses a blank-name view-more poster through remote row navigation", async () => {
+  let focusedIndex = 0;
+  const calls = [];
+  const page = {
+    evaluate: async (_callback, argument) => {
+      if (typeof argument === "string") return focusedIndex === 0;
+      if (typeof argument === "number") {
+        return focusedIndex === 2
+          ? {
+              id: "view-more",
+              title: "",
+              contentId: "",
+              poster: "view-more.png",
+              rect: {x: 460, y: 200, width: 150, height: 200},
+              isViewMore: true,
+            }
+          : null;
+      }
+      return null;
+    },
+  };
+
+  contentRows.configureContentRows({
+    getFocusedState: async () => ({
+      id: `poster-${focusedIndex}`,
+      text: focusedIndex === 2 ? "" : `Poster ${focusedIndex + 1}`,
+      label: focusedIndex === 2 ? "" : `Poster ${focusedIndex + 1}`,
+      rect: {x: 100 + focusedIndex * 180, y: 200, width: 150, height: 200},
+    }),
+    remotePress: async (_page, key) => {
+      calls.push(["press", key]);
+      assert.equal(key, "ArrowRight");
+      focusedIndex = Math.min(2, focusedIndex + 1);
+    },
+  });
+
+  const focused = await contentRows.focusViewMorePosterInCurrentRow(page, {
+    title: "Phim mới nhất",
+    // The initial row snapshot can be below the viewport before focusing
+    // reflows the active row upward; the helper must use the focused poster's
+    // current geometry instead of this stale y coordinate.
+    rowY: 915,
+    items: [{id: "poster-0", title: "Poster 1", rect: {x: 100, y: 915, width: 150, height: 200}}],
+  }, {targetLabel: "Xem tất cả"});
+
+  assert.equal(focused.id, "view-more");
+  assert.equal(focused.title, "");
+  assert.equal(focused.isViewMore, true);
+  assert.deepEqual(calls, [["press", "ArrowRight"], ["press", "ArrowRight"]]);
+});
+
+test("reports remote navigation failure when a known view-more poster cannot be reached", async () => {
+  const page = {
+    evaluate: async (_callback, argument) => {
+      if (typeof argument === "string") return true;
+      if (typeof argument === "number") return null;
+      return null;
+    },
+  };
+
+  contentRows.configureContentRows({
+    getFocusedState: async () => ({
+      id: "poster-0",
+      text: "Poster 1",
+      label: "Poster 1",
+      rect: {x: 100, y: 200, width: 150, height: 200},
+    }),
+    remotePress: async () => {},
+  });
+
+  await assert.rejects(
+    contentRows.focusViewMorePosterInCurrentRow(page, {
+      title: "Phim mới nhất",
+      rowY: 200,
+      items: [
+        {id: "poster-0", title: "Poster 1", rect: {x: 100, y: 200, width: 150, height: 200}},
+        {id: "view-more", title: "", attributes: {item_view_more: "1"}, rect: {x: 280, y: 200, width: 150, height: 200}},
+      ],
+    }, {targetLabel: "Xem thêm"}),
+    /view more.*Xem thêm.*Phim mới nhất.*không thể tiến tới/u
+  );
+});
+
+test("reports a missing view-more poster when the row ends without the marker", async () => {
+  let metadataEvaluateCalls = 0;
+  const page = {
+    evaluate: async (_callback, argument) => {
+      if (typeof argument === "string") return true;
+      if (typeof argument === "number") {
+        metadataEvaluateCalls += 1;
+        assert.ok(metadataEvaluateCalls <= 2);
+        return null;
+      }
+      assert.deepEqual(argument, {
+        targetRowY: 200,
+        selector: '.view_more[item_view_more="1"]',
+      });
+      return false;
+    },
+  };
+
+  contentRows.configureContentRows({
+    getFocusedState: async () => ({
+      id: "poster-0",
+      text: "Poster 1",
+      label: "Poster 1",
+      rect: {x: 100, y: 200, width: 150, height: 200},
+    }),
+    remotePress: async () => {},
+  });
+
+  await assert.rejects(
+    contentRows.focusViewMorePosterInCurrentRow(page, {
+      title: "Phim",
+      rowY: 200,
+      items: [{id: "poster-0", title: "Poster 1", rect: {x: 100, y: 200, width: 150, height: 200}}],
+    }, {targetLabel: "Xem tất cả"}),
+    /Không thể focus poster view more "Xem tất cả" của hàng\/cate "Phim": Không tìm thấy poster view more/u
+  );
+});
+
 test("uses remote navigation to focus an indexed poster beyond the visible row window", async () => {
   const virtualRow = createVirtualizedRowPage({
     totalItems: 10,

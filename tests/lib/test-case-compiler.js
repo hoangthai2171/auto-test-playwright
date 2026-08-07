@@ -72,14 +72,14 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
-      return /^(?:di chuyen den\s+)?focus vao (?:muc|item)\s+["“].+?["”][.!?…。！？]*$/u.test(normalizedLine);
+      return /^(?:(?:di chuyen)(?: den)?(?: va)?\s+)?focus vao (?:muc|item)\s+["“].+?["”][.!?…。！？]*$/u.test(normalizedLine);
     },
     compile(preparedLine, normalizedLine) {
       const normalizedMatch = normalizedLine.match(
-        /^(?:di chuyen den\s+)?focus vao (?:muc|item)\s+["“](.+?)["”][.!?…。！？]*$/u
+        /^(?:(?:di chuyen)(?: den)?(?: va)?\s+)?focus vao (?:muc|item)\s+["“](.+?)["”][.!?…。！？]*$/u
       );
       const preparedMatch = preparedLine.match(
-        /^(?:di chuyển đến\s+)?focus vào (?:mục|item)\s+["“](.+?)["”][.!?…。！？]*$/iu
+        /^(?:(?:di chuyển)(?: đến)?(?: và)?\s+)?focus vào (?:mục|item)\s+["“](.+?)["”][.!?…。！？]*$/iu
       );
 
       if (!normalizedMatch) return null;

@@ -8,9 +8,11 @@ const {
   readTestCaseCache,
   replaceFolderCacheEntry,
   replaceCampaignCacheEntry,
+  clearTestCaseCache,
   readFolderCacheEntry,
   readCampaignCacheEntry,
   readMostRecentFolderCacheEntry,
+  readMostRecentTestCaseCacheEntry,
 } = require("../../app/test-case-cache");
 
 async function withTempCache(callback) {
@@ -55,6 +57,7 @@ test("replaces one folder cache entry without removing other folders", async () 
     assert.deepEqual(JSON.parse(await fs.readFile(cachePath, "utf8")), {
       "9": {folder: folder9, cases: [{id: "case-9", name: "Other", actions: []}], updatedAt: "2026-07-22T00:00:00.000Z"},
       "12": {folder: {...folder12, name: "New"}, cases: [{id: "new", name: "New", actions: []}], updatedAt: "2026-07-22T00:02:00.000Z"},
+      __latest__: {cacheKey: "12", updatedAt: "2026-07-22T00:02:00.000Z"},
     });
   });
 });
@@ -82,7 +85,7 @@ test("reads the most recently downloaded folder cache entry", async () => {
   });
 });
 
-test("isolates campaign cache entries and excludes them from folder startup restoration", async () => {
+test("keeps folder-specific cache lookup isolated from campaign entries", async () => {
   await withTempCache(async (cachePath) => {
     await replaceFolderCacheEntry({
       cachePath,
@@ -106,5 +109,49 @@ test("isolates campaign cache entries and excludes them from folder startup rest
     });
     assert.equal((await readMostRecentFolderCacheEntry({cachePath})).folder.id, "folder-1");
     assert.equal((await readFolderCacheEntry({cachePath, folderId: "folder-1"})).cases[0].id, "folder-case");
+  });
+});
+
+test("restores the latest loaded campaign or folder cache entry with its source key", async () => {
+  await withTempCache(async (cachePath) => {
+    await replaceFolderCacheEntry({
+      cachePath,
+      folder: {id: "folder-1", name: "Folder", fullPath: "/Folder"},
+      cases: [{id: "folder-case", name: "Folder case", actions: []}],
+      updatedAt: "2026-07-22T08:00:00.000Z",
+    });
+    await replaceCampaignCacheEntry({
+      cachePath,
+      campaignId: "12",
+      campaign: {id: "12", name: "Campaign"},
+      folder: {id: "folder-1", name: "Campaign folder", fullPath: "/Campaign"},
+      cases: [{id: "1842", name: "Campaign case", actions: []}],
+      updatedAt: "2026-07-22T10:00:00.000Z",
+    });
+
+    assert.deepEqual(await readMostRecentTestCaseCacheEntry({cachePath}), {
+      source: "campaign",
+      campaign: {id: "12", name: "Campaign"},
+      folder: {id: "folder-1", name: "Campaign folder", fullPath: "/Campaign"},
+      cases: [{id: "1842", name: "Campaign case", actions: []}],
+      updatedAt: "2026-07-22T10:00:00.000Z",
+      cacheKey: "campaign:12",
+    });
+  });
+});
+
+test("clearing the cache prevents old entries from returning on the next startup", async () => {
+  await withTempCache(async (cachePath) => {
+    await replaceFolderCacheEntry({
+      cachePath,
+      folder: {id: "folder-1", name: "Folder", fullPath: "/Folder"},
+      cases: [{id: "folder-case", name: "Folder case", actions: []}],
+      updatedAt: "2026-07-22T08:00:00.000Z",
+    });
+
+    await clearTestCaseCache({cachePath});
+
+    assert.equal(await readMostRecentTestCaseCacheEntry({cachePath}), null);
+    assert.deepEqual(await readTestCaseCache(cachePath), {});
   });
 });
