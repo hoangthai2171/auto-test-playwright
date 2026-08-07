@@ -28,9 +28,10 @@ const ROW_HORIZONTAL_NAV_MAX_STEPS = 100;
 const ROW_RETURN_BOUNDARY_TIMEOUT_MS = 3000;
 const ROW_RETURN_RENDER_DELAY_MS = 1500;
 const HOME_PAGE_ROW_MAX_ATTEMPTS = 18;
+const VIEW_MORE_POSTER_SELECTOR = '.view_more[item_view_more="1"]';
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
-function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
+function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
 function remotePress(...args){return dependencies.remotePress(...args);}
 function remoteFocusById(...args){return dependencies.remoteFocusById(...args);}
 function remoteFocusByText(...args){return dependencies.remoteFocusByText(...args);}
@@ -131,6 +132,138 @@ async function focusRequestedContentRow(page, rowSelector = {}) {
     `Các hàng đang thấy: ${visibleRows
       .map((row) => row.title || `y=${row.rowY}`)
       .join(", ")}`
+  );
+}
+
+async function focusViewMorePosterInCurrentRow(page, row, options = {}) {
+  const snapshotCache = options.snapshotCache || createDomSnapshotCache();
+  const rowLabel = row?.title || options.rowName || "hiện tại";
+  const targetLabel = options.targetLabel || "view more";
+  const firstItem = row?.items?.[0];
+
+  if (!firstItem) {
+    throw viewMoreFocusError(rowLabel, targetLabel, "không có poster đầu tiên để bắt đầu");
+  }
+
+  await focusFirstRowStart(page, firstItem, {snapshotCache});
+  let focusedState = await getFocusedState(page);
+  // Focusing a Home row can vertically reflow the carousel into the active
+  // viewport. The row snapshot was collected before that reflow, so anchor
+  // subsequent marker checks to the verified focused poster's current y
+  // coordinate instead of the stale snapshot geometry.
+  const focusedRowY = focusedState?.rect?.y;
+  const rowY = Number.isFinite(focusedRowY) && focusedState?.rect?.height >= 80
+    ? focusedRowY
+    : row.rowY || firstItem.rect?.y || 0;
+  if (!isFocusedStateOnRow(focusedState, rowY)) {
+    throw viewMoreFocusError(rowLabel, targetLabel, "focus không còn ở hàng đã chọn");
+  }
+
+  const visitedFocusStates = new Set([focusStateSignature(focusedState)]);
+  for (let attempt = 0; attempt < ROW_HORIZONTAL_NAV_MAX_STEPS; attempt += 1) {
+    const focusedViewMore = await getFocusedViewMoreMetadata(page, rowY);
+    if (focusedViewMore) return focusedViewMore;
+
+    const beforeSignature = focusStateSignature(focusedState);
+    await remotePress(page, "ArrowRight", ROW_HORIZONTAL_NAV_DELAY, {snapshotCache});
+    const nextState = await getFocusedState(page);
+    const nextSignature = focusStateSignature(nextState);
+    const nextViewMore = await getFocusedViewMoreMetadata(page, rowY);
+    if (nextViewMore) return nextViewMore;
+
+    if (!isFocusedStateOnRow(nextState, rowY)) {
+      throw viewMoreFocusError(rowLabel, targetLabel, "remote focus đã rời khỏi hàng");
+    }
+    if (nextSignature === beforeSignature || visitedFocusStates.has(nextSignature)) {
+      throw viewMoreFocusError(
+        rowLabel,
+        targetLabel,
+        await viewMoreNavigationFailureReason(
+          page,
+          row,
+          rowY,
+          "remote focus không thể tiến tới poster cuối hàng",
+        ),
+      );
+    }
+
+    visitedFocusStates.add(nextSignature);
+    focusedState = nextState;
+  }
+
+  throw viewMoreFocusError(
+    rowLabel,
+    targetLabel,
+    await viewMoreNavigationFailureReason(
+      page,
+      row,
+      rowY,
+      `đã vượt quá ${ROW_HORIZONTAL_NAV_MAX_STEPS} lần di chuyển`,
+    ),
+  );
+}
+
+async function viewMoreNavigationFailureReason(page, row, rowY, fallbackReason) {
+  const rowItems = row?.items || [];
+  const rowHasMarker = rowItems.some((item) => {
+    const attributes = item?.attributes || {};
+    return String(attributes.item_view_more || item?.item_view_more || "").trim() === "1";
+  });
+  if (rowHasMarker) return fallbackReason;
+
+  try {
+    const hasMarker = await page.evaluate(({targetRowY, selector}) => {
+      return Array.from(document.querySelectorAll(selector)).some((poster) => {
+        const rect = poster.getBoundingClientRect();
+        const style = getComputedStyle(poster);
+        return rect.width > 0 && rect.height > 0 &&
+          style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0 &&
+          (targetRowY <= 0 || Math.abs(rect.y - targetRowY) <= 80);
+      });
+    }, {targetRowY: rowY, selector: VIEW_MORE_POSTER_SELECTOR});
+    return hasMarker ? fallbackReason : "Không tìm thấy poster view more";
+  } catch {
+    return fallbackReason;
+  }
+}
+
+async function getFocusedViewMoreMetadata(page, rowY) {
+  return page.evaluate((targetRowY) => {
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
+    const poster = focused?.closest?.('.view_more[item_view_more="1"]');
+    if (!poster || !isVisible(poster)) return null;
+
+    const rect = poster.getBoundingClientRect();
+    if (targetRowY > 0 && Math.abs(rect.y - targetRowY) > 80) return null;
+
+    const img = poster.querySelector("img");
+    return {
+      id: poster.id || focused.id || "",
+      title: "",
+      contentId: poster.getAttribute("content_id") || poster.getAttribute("content-id") ||
+        poster.getAttribute("data-content-id") || "",
+      poster: img?.currentSrc || img?.src || "",
+      rect: {
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      },
+      isViewMore: true,
+    };
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 &&
+        style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    }
+  }, rowY);
+}
+
+function viewMoreFocusError(rowLabel, targetLabel, reason) {
+  return new Error(
+    `Không thể focus poster view more "${targetLabel}" của hàng/cate "${rowLabel}": ${reason}`
   );
 }
 
@@ -1160,4 +1293,4 @@ function contentItemSignature(item) {
 }
 
 
-module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,focusRequestedContentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,ROW_RETURN_RENDER_DELAY_MS};
+module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,ROW_RETURN_RENDER_DELAY_MS};

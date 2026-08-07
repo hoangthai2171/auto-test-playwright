@@ -79,6 +79,25 @@ test("focuses a named dòng cate on the current page without requiring a colon",
   );
 });
 
+test("compiles the view-more focus wording used by row navigation cases", () => {
+  assert.deepEqual(
+    compileQaDescription(
+      "B1. Đăng nhập vào app với tài khoản ts1/111222\n" +
+      "B2. Vào trang chủ ứng dụng\n" +
+      'B3. Di chuyển đến dòng cate "Phim mới nhất"\n' +
+      'B4. Di chuyển và focus vào item "Xem tất cả"\n' +
+      "B5. Chọn OK"
+    ),
+    [
+      {action: "login", username: "ts1", password: "111222"},
+      {action: "open_home"},
+      {action: "focus_row", rowName: "Phim mới nhất"},
+      {action: "focus_text", text: "Xem tất cả"},
+      {action: "press_ok"},
+    ]
+  );
+});
+
 test("compiles the category-service-subcategory navigation flow", () => {
   assert.deepEqual(
     compileQaDescription(

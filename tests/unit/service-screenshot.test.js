@@ -21,6 +21,24 @@ test("waits two seconds before capturing a successful service screen", async () 
   assert.deepEqual(waits, [2000]);
 });
 
+test("waits two seconds before capturing a successful view-more screen", async () => {
+  const waits = [];
+  const page = {
+    waitForTimeout: async (milliseconds) => waits.push(milliseconds),
+  };
+  const result = {
+    steps: [{
+      action: "press_ok",
+      result: {type: "view_more", route: "category/123", rowCount: 3},
+    }],
+  };
+
+  const waited = await waitForServiceScreenImages(page, result);
+
+  assert.equal(waited, true);
+  assert.deepEqual(waits, [2000]);
+});
+
 test("does not delay a non-service completion screenshot", async () => {
   const waits = [];
   const page = {

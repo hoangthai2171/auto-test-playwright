@@ -717,11 +717,15 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         try {
             const response = await api.loadTestCases();
             if (!response?.ok) throw new Error(response?.message || "Không thể tải test cases.");
-            if (response.source === "cache" && response.folder?.id !== undefined) {
-                activeCampaignId = "";
-                activeCacheKey = String(response.cacheKey || response.folder.id);
-                activeFolderId = String(response.folder.id);
-                activeFolderPath = String(response.folder.fullPath || "");
+            if (response.source === "cache") {
+                activeCampaignId = response.campaign?.id !== undefined && response.campaign?.id !== null
+                    ? String(response.campaign.id)
+                    : "";
+                activeCacheKey = String(response.cacheKey || (activeCampaignId ? `campaign:${activeCampaignId}` : response.folder?.id || ""));
+                activeFolderId = response.folder?.id !== undefined && response.folder?.id !== null
+                    ? String(response.folder.id)
+                    : "";
+                activeFolderPath = String(response.folder?.fullPath || "");
             } else {
                 activeCampaignId = "";
                 activeCacheKey = "";
@@ -753,6 +757,18 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         activeFolderId = "";
         activeFolderPath = "";
         renderCaseList([]);
+    }
+
+    async function clearLoadedCaseCache() {
+        let response = {ok: true};
+        try {
+            if (typeof api.clearTestCaseCache === "function") response = await api.clearTestCaseCache();
+        } catch (error) {
+            response = {ok: false, message: error.message};
+        }
+        resetLoadedCaseSource();
+        if (!response?.ok) showApiError(response);
+        return response;
     }
 
     function renderCampaigns(nextCampaigns = []) {
@@ -833,6 +849,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 showApiError(response);
                 return response;
             }
+            await clearLoadedCaseCache();
             renderFolders(response.folders || []);
             return response;
         } catch (error) {
@@ -868,6 +885,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 showApiError(response);
                 return response;
             }
+            await clearLoadedCaseCache();
             renderCampaigns(response.campaigns || []);
             if (previousCampaignId && !campaignSelect?.value) {
                 resetLoadedCaseSource();
@@ -978,7 +996,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             previewTargetStatus.textContent = runTarget === "webos" ? "Preview type is available for the Browser runner only." : "";
             previewTargetStatus.classList.toggle("hidden", runTarget === "browser");
         }
-        const browserConfigCtaDiv = document.getElementById("browser-configuration-cta");
+        const browserConfigCtaDiv = doc?.getElementById?.("browser-configuration-cta");
         const shouldShowBrowserCta = runTarget === "browser" && !browserToolchainReady;
         if (browserToolchainRunStatus) {
             browserToolchainRunStatus.textContent = shouldShowBrowserCta ? "Browser tests require the project-pinned Chromium. Configure Browser to continue." : "";

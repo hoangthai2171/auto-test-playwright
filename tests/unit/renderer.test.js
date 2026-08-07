@@ -174,6 +174,7 @@ function createRendererFixture() {
     const elements = {};
     const document = {
         createElement: (tagName) => new FakeElement(tagName),
+        getElementById: (id) => elements[id] || null,
         querySelector(selector) {
             const idMatch = selector.match(/^#([\w-]+)$/);
             if (idMatch) return elements[idMatch[1]] || null;
@@ -403,6 +404,7 @@ function createRendererFixture() {
 
     const runner = {
         loadTestCases: async () => ({ok: true, cases: []}),
+        clearTestCaseCache: async () => ({ok: true}),
         loadFlowCaseCampaigns: async () => ({ok: true, campaigns: []}),
         loadFlowCaseFolders: async () => ({ok: true, folders: []}),
         loadFlowCases: async () => ({ok: true, folder: null, cases: []}),
@@ -901,6 +903,36 @@ test("loads cases through IPC and renders the returned list", async () => {
     assert.match(fixture.elements["test-case-list"].textContent, /Local case/);
 });
 
+test("bootstraps from browser globals and restores cached cases without an injected document", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    fixture.runner.loadTestCases = async () => ({
+        ok: true,
+        source: "cache",
+        cacheKey: "30",
+        folder: {id: "30", name: "Cached folder", fullPath: "/Cached"},
+        cases: [{id: "cached-1", name: "Cached startup case", actions: []}],
+    });
+    fixture.windowRef.mytvRunner = fixture.runner;
+    fixture.windowRef.localStorage = fixture.storage;
+
+    const previousDocument = global.document;
+    const previousWindow = global.window;
+    global.document = fixture.document;
+    global.window = fixture.windowRef;
+    try {
+        renderer.bootstrapRenderer();
+        await flushRendererPromises();
+    } finally {
+        if (previousDocument === undefined) delete global.document;
+        else global.document = previousDocument;
+        if (previousWindow === undefined) delete global.window;
+        else global.window = previousWindow;
+    }
+
+    assert.match(fixture.elements["test-case-list"].textContent, /Cached startup case/);
+});
+
 test("restores the active folder when startup loads cached API cases", async () => {
     assert.equal(loadError, undefined, loadError?.message);
     const fixture = createRendererFixture();
@@ -916,6 +948,27 @@ test("restores the active folder when startup loads cached API cases", async () 
 
     assert.equal(controller.getActiveFolderId(), "12");
     assert.match(fixture.elements["test-case-list"].textContent, /Cached case/);
+});
+
+test("restores the active campaign and cache key when startup loads campaign cases", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    fixture.runner.loadTestCases = async () => ({
+        ok: true,
+        source: "cache",
+        cacheKey: "campaign:12",
+        campaign: {id: "12", name: "Regression tháng 8"},
+        folder: {id: "folder-1", name: "Campaign folder", fullPath: "/Campaign"},
+        cases: [{id: "cached-campaign-1", name: "Cached campaign case", actions: []}],
+    });
+    const controller = renderer.createRendererController(fixture);
+
+    await controller.loadCases();
+
+    assert.equal(controller.getActiveCampaignId(), "12");
+    assert.equal(controller.getActiveCacheKey(), "campaign:12");
+    assert.equal(controller.getActiveFolderId(), "folder-1");
+    assert.match(fixture.elements["test-case-list"].textContent, /Cached campaign case/);
 });
 
 test("loads and renders folders by name with fullPath values", async () => {
@@ -1028,6 +1081,44 @@ test("clearing the campaign refreshes the folder list without a campaign filter"
     await flushRendererPromises();
 
     assert.equal(folderRequests.at(-1).CAMPAIGN_ID, undefined);
+    assert.equal(fixture.elements["test-case-list-body"].children.length, 0);
+    assert.equal(controller.getActiveCacheKey(), "");
+});
+
+test("clears loaded cases and the persisted cache after a successful folder refresh", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    let clearCalls = 0;
+    fixture.runner.clearTestCaseCache = async () => {
+        clearCalls += 1;
+        return {ok: true};
+    };
+    fixture.runner.loadFlowCaseFolders = async () => ({ok: true, folders: [{id: "folder-1", name: "Folder", fullPath: "/Folder"}]});
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCaseList([{id: "stale", name: "Stale case", actions: []}]);
+
+    await controller.loadFolders();
+
+    assert.equal(clearCalls, 1);
+    assert.equal(fixture.elements["test-case-list-body"].children.length, 0);
+    assert.equal(controller.getActiveCacheKey(), "");
+});
+
+test("clears loaded cases and the persisted cache after a successful campaign refresh", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    let clearCalls = 0;
+    fixture.runner.clearTestCaseCache = async () => {
+        clearCalls += 1;
+        return {ok: true};
+    };
+    fixture.runner.loadFlowCaseCampaigns = async () => ({ok: true, campaigns: []});
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCaseList([{id: "stale", name: "Stale case", actions: []}]);
+
+    await controller.loadCampaigns();
+
+    assert.equal(clearCalls, 1);
     assert.equal(fixture.elements["test-case-list-body"].children.length, 0);
     assert.equal(controller.getActiveCacheKey(), "");
 });

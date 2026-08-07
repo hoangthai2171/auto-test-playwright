@@ -92,6 +92,15 @@ test("exposes the running campaign loader through the narrow IPC bridge", () => 
   assert.deepEqual(invokes, [["load-flow-case-campaigns", {API_DOMAIN: "https://api.example.test", PROJECT_ID: "1"}]]);
 });
 
+test("exposes test-case restore and cache-clear calls through the narrow IPC bridge", () => {
+  const {bridge, invokes} = loadPreload();
+
+  bridge.loadTestCases();
+  bridge.clearTestCaseCache();
+
+  assert.deepEqual(invokes, [["load-test-cases"], ["clear-test-case-cache"]]);
+});
+
 test("exposes the selected-device connection check without a host or passphrase argument", () => {
   const {bridge, invokes} = loadPreload();
 

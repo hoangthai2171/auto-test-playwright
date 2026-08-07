@@ -2,6 +2,7 @@ const { contextBridge, ipcRenderer } = require("electron");
 
 contextBridge.exposeInMainWorld("mytvRunner", {
   loadTestCases: () => ipcRenderer.invoke("load-test-cases"),
+  clearTestCaseCache: () => ipcRenderer.invoke("clear-test-case-cache"),
   loadFlowCaseFolders: (settings) => ipcRenderer.invoke("load-flow-case-folders", settings),
   loadFlowCaseCampaigns: (settings) => ipcRenderer.invoke("load-flow-case-campaigns", settings),
   loadFlowCases: (settings) => ipcRenderer.invoke("load-flow-cases", settings),

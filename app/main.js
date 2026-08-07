@@ -7,7 +7,7 @@ const {loadLocalTestCases, loadCachedTestCases, findTestCaseById} = require("../
 const {validateTestCaseList} = require("../tests/lib/test-case-schema");
 const {redactSensitiveText, createLogRedactor} = require("./credential-redaction");
 const {fetchFlowCaseFolders, fetchFlowCases, fetchRunningFlowCaseCampaigns, submitFlowCaseResults, fetchDeviceCompatibilityCatalog, normalizeTimeoutMs} = require("./flow-case-api");
-const {replaceFolderCacheEntry, replaceCampaignCacheEntry, readMostRecentFolderCacheEntry} = require("./test-case-cache");
+const {replaceFolderCacheEntry, replaceCampaignCacheEntry, clearTestCaseCache, readMostRecentTestCaseCacheEntry} = require("./test-case-cache");
 const {createEmptyReport, buildTestReportEntry, upsertTestReport, renderUserReport} = require("./test-report");
 const {buildPlaywrightTestArgs} = require("./playwright-runner");
 const {createRunCloseGuard} = require("./run-close-guard");
@@ -380,12 +380,14 @@ app.on("window-all-closed", () => {
 
 ipcMain.handle("load-test-cases", async () => {
     try {
-        const cached = await readMostRecentFolderCacheEntry({cachePath: testCasesCachePath()});
+        const cached = await readMostRecentTestCaseCacheEntry({cachePath: testCasesCachePath()});
         if (cached) {
             const cases = validateTestCaseList(cached.cases, "test-case cache");
             return {
                 ok: true,
                 source: "cache",
+                cacheKey: cached.cacheKey,
+                ...(cached.campaign ? {campaign: cached.campaign} : {}),
                 folder: cached.folder,
                 cases: cases.map(sanitizeCaseForUi),
             };
@@ -397,6 +399,15 @@ ipcMain.handle("load-test-cases", async () => {
     const fixturePath = path.join(app.getAppPath(), "testcased.json");
     const cases = await loadLocalTestCases(fixturePath);
     return {ok: true, source: "local", cases: cases.map(sanitizeCaseForUi)};
+});
+
+ipcMain.handle("clear-test-case-cache", async () => {
+    try {
+        await clearTestCaseCache({cachePath: testCasesCachePath()});
+        return {ok: true};
+    } catch (error) {
+        return {ok: false, message: error.message};
+    }
 });
 
 function sanitizeHostEntryResult(result) {

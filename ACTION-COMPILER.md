@@ -84,7 +84,7 @@ human-readable values from the source.
 | `open_service`         | `Vào dịch vụ <service>`                                                                                                                                                               | Preserve `<service>`. `kênh` also searches the runtime alias `Truyền hình`.                                                                                                                                         |
 | `focus_row`            | `Di chuyển đến dòng cate/subcate/row "<row>"`; `Di chuyển đến focus vào poster đầu tiên của mục/hàng cate/row "<row>"`; or `Di chuyển ... poster <type> thứ <n> của dòng ... "<row>"` | `{"action":"focus_row","rowName":"<row>"}`; add positive 1-based `itemIndex: n` for a numbered poster.                                                                                                              |
 | `focus_row_first_item` | `Di chuyển focus đến ... đầu tiên bên trái` (including the current `subcate` row)                                                                                                     | Focuses the leftmost item in the active row, regardless of stated content type.                                                                                                                                     |
-| `focus_text`           | `Focus vào mục/item "<text>"`; or `Di chuyển đến focus vào nút "Xem ngay" của 1/một trailer/trailler trang chủ bất kỳ`                                                                | `{"action":"focus_text","text":"<text>"}`. After `focus_row` on Home's `Thể loại` row, scan reachable service posters; never fall back to a same-named left-menu item.                                              |
+| `focus_text`           | `Focus vào mục/item "<text>"`; `Di chuyển [đến] [và] focus vào mục/item "<text>"`; or `Di chuyển đến focus vào nút "Xem ngay" của 1/một trailer/trailler trang chủ bất kỳ`                                                                | `{"action":"focus_text","text":"<text>"}`. After `focus_row` on Home's `Thể loại` row, scan reachable service posters; for `Xem tất cả`, `Xem thêm`, or `View more`, focus the row's trusted view-more poster; never fall back to a same-named left-menu item.                                              |
 | `press_ok`             | `Bấm/Chọn/Nhấn [phím] OK` or `Bấm/Chọn/Nhấn [phím] enter`                                                                                                                             | `{"action":"press_ok"}`. After a Home service poster, activation must pass the service-result check below.                                                                                                          |
 | `open_search`          | `Vào tìm kiếm`, `Vào trang tìm kiếm`, `Vào trang tìm kiếm nội dung`                                                                                                                   | `{"action":"open_search"}`                                                                                                                                                                                          |
 | `search_content`       | `Tìm/Tìm kiếm/Search <phim\|movie\|kênh\|channel\|nội dung\|content> "<name>"`                                                                                                        | Emit `search_content` with `type: movie\|channel\|content`. The runtime searches visible results after virtual-keyboard entry.                                                                                      |
@@ -105,6 +105,33 @@ the runtime scrolls horizontally and fails with the furthest reachable index if
 the row ends first. `play_row` returns to the row after each item, continues
 after individual playback failures, reports every attempted item, and fails if
 any requested item fails or none succeeds.
+
+### View-more posters
+
+The exact labels `Xem tất cả`, `Xem thêm`, and `View more` are special only
+when their `focus_text` action immediately follows a successful `focus_row`.
+The Browser runner uses remote horizontal navigation to focus the last poster
+whose trusted DOM marker is `.view_more[item_view_more="1"]`; it does not
+depend on `content_name`, which is commonly blank. If the row cannot reach
+that marker, the focus step fails and the runner does not press Enter on an
+unrelated poster or control.
+
+The following action sequence is the supported form:
+
+```json
+[
+  {"action":"focus_row","rowName":"Phim mới nhất"},
+  {"action":"focus_text","text":"Xem tất cả"},
+  {"action":"press_ok"}
+]
+```
+
+After Enter, the runner accepts either a row-content grid or a service screen
+only after it observes a non-Home route with visible content rows. A visible
+bottom-right tooltip/toast, recognized no-data/error popup, or unchanged Home
+screen fails the activation. Use an expected result such as
+`Vào item "Xem tất cả" bình thường` when the case needs the final
+`view_more` destination assertion.
 
 ### Service success
 
