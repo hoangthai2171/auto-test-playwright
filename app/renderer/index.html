@@ -238,7 +238,10 @@
             <section class="logs-dialog">
                 <header class="settings-header">
                     <h2>Logs</h2>
-                    <button type="button" id="logs-close-button" class="icon-button">×</button>
+                    <div class="logs-header-actions">
+                        <button type="button" id="logs-clear-button" class="secondary-button" aria-label="Clear logs" title="Clear logs">Clear</button>
+                        <button type="button" id="logs-close-button" class="icon-button">×</button>
+                    </div>
                 </header>
                 <div id="log-output" class="log-output" role="log" aria-label="Application logs"></div>
             </section>

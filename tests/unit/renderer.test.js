@@ -291,6 +291,7 @@ function createRendererFixture() {
         "settings-modal",
         "logs-modal",
         "settings-close-button",
+        "logs-clear-button",
         "logs-close-button",
         "gui-settings-save-button",
         "test-configuration-save-button",
@@ -1184,6 +1185,29 @@ test("logs API request and redacted response details while loading folders", asy
     assert.equal(requestEntry.classList.contains("is-expanded"), true);
     assert.equal(requestEntry.getAttribute("aria-expanded"), "true");
     assert.match(responseEntry.querySelector(".log-entry-label").textContent, /Load flow-case folders response/);
+});
+
+test("clears all logs and starts a fresh runner entry from the Logs modal", () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    renderer.createRendererController(fixture);
+
+    fixture.runner.logCallback("first output chunk\n");
+    fixture.runner.logCallback("second output chunk\n");
+    assert.equal(fixture.elements["log-output"].children.length, 1);
+    assert.match(fixture.elements["log-output"].textContent, /first output chunk/);
+
+    fixture.elements["logs-clear-button"].dispatchEvent("click");
+
+    assert.equal(fixture.elements["log-output"].children.length, 0);
+    assert.equal(fixture.elements["log-output"].textContent, "");
+
+    fixture.runner.logCallback("fresh output chunk\n");
+    assert.equal(fixture.elements["log-output"].children.length, 1);
+    assert.equal(
+        fixture.elements["log-output"].children[0].querySelector(".log-entry-content").textContent,
+        "fresh output chunk\n",
+    );
 });
 
 test("downloads selected-folder cases and tracks the folder ID", async () => {
@@ -2792,6 +2816,9 @@ test("index markup contains the case browser and no API-key or mode controls", (
     assert.match(html, /id="test-case-details-modal"/);
     assert.match(html, /id="test-case-details"/);
     assert.match(html, /id="selected-test-case-id"/);
+    const logsHeader = html.match(/<div id="logs-modal"[\s\S]*?<header class="settings-header">([\s\S]*?)<\/header>/)?.[1] || "";
+    assert.match(logsHeader, /id="logs-clear-button"[^>]*aria-label="Clear logs"/);
+    assert.match(logsHeader, /class="logs-header-actions"[\s\S]*id="logs-close-button"/);
     assert.match(html, /<label for="campaign-select">Chiến dịch<\/label>/);
     assert.match(html, /id="refresh-campaigns-button"/);
     assert.ok(html.indexOf('id="campaign-select"') < html.indexOf('id="folder-select"'));

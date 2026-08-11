@@ -211,6 +211,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const statusDot = get("status-dot");
     const statusText = get("status-text");
     const logOutput = get("log-output");
+    const logsClearButton = get("logs-clear-button");
     const browserMuteButton = get("browser-mute-button");
     const browserPreviewEmpty = get("browser-preview-empty");
     const browserPreviewImage = get("browser-preview-image");
@@ -2500,6 +2501,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         closeSettingsModal();
         await resumeInteractiveBrowserAfterModal();
     });
+    logsClearButton?.addEventListener?.("click", () => clearLog());
     get("logs-close-button")?.addEventListener?.("click", async () => {
         closeModal(logsModal);
         await resumeInteractiveBrowserAfterModal();

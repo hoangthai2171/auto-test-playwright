@@ -1079,6 +1079,17 @@ button:disabled {
   font-size: 18px;
 }
 
+.logs-header-actions {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.logs-header-actions .secondary-button {
+  width: auto;
+  padding: 0 14px;
+}
+
 .icon-button {
   width: 34px;
   height: 34px;
