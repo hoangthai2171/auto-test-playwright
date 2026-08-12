@@ -5,6 +5,14 @@ const {normalizePlayerCheckTimeoutSeconds} = require("../../../app/test-configur
 
 const FOCUS_SELECTORS = [".focused", '[data-focused="true"]', ".active"];
 const CONTENT_TYPES = new Set(["channel", "movie", "content"]);
+const USER_CONSENT_ACCEPT_ALL_ID = "user-consent-popup-accept-all-checkbox";
+const USER_CONSENT_FOOTER_ID = "user-consent-popup-footer-checkbox";
+const USER_CONSENT_SUBMIT_ID = "user-consent-btn-submit";
+const USER_CONSENT_USERNAME_LABEL_ID = "new_ui_login_input_label";
+const USER_CONSENT_TRANSITION_TIMEOUT_MS = 8_000;
+const USER_CONSENT_TRANSITION_POLL_MS = 150;
+const USER_CONSENT_CHECKBOX_TIMEOUT_MS = 5_000;
+const USER_CONSENT_DISMISS_TIMEOUT_MS = 10_000;
 
 function semanticError(code, message, details) {
   const error = new Error(message);
@@ -49,6 +57,22 @@ function elementRectScript(id) {
     var style = getComputedStyle(element);
     if (rect.width <= 0 || rect.height <= 0 || style.display === 'none' || style.visibility === 'hidden') return null;
     return {x:rect.x,y:rect.y,width:rect.width,height:rect.height};
+  })();`;
+}
+
+function checkboxStateScript(id) {
+  return `return (function(){
+    /* MYTV_TRUSTED_CHECKBOX */
+    var element = document.getElementById(${JSON.stringify(id)});
+    if (!element) return null;
+    if ('checked' in element) return Boolean(element.checked);
+    var ariaChecked = element.getAttribute('aria-checked');
+    if (ariaChecked !== null) return ariaChecked === 'true';
+    var dataChecked = element.getAttribute('data-checked');
+    if (dataChecked !== null) return dataChecked === 'true';
+    var classNames = String(element.className || '').toLowerCase();
+    if (/\\b(?:checked|selected|ticked)\\b/.test(classNames)) return true;
+    return null;
   })();`;
 }
 
@@ -168,12 +192,12 @@ function createWebOsMyTvAutomation({execute, pressKey, wait, playerCheckTimeoutS
     }
     throw semanticError("CONTENT_NOT_FOUND", "The requested MyTV control is not visible.");
   }
-  async function focusId(id, maxMoves = 80) {
+  async function focusId(id, maxMoves = 80, options = {}) {
     const target = await waitForVisibleId(id);
     for (let attempt = 0; attempt < maxMoves; attempt += 1) {
       const focus = await readFocus();
       if (focus.id === id) return;
-      const key = chooseDirection(focus.rect || {x: 0, y: 0, width: 0, height: 0}, target);
+      const key = options.preferredDirection || chooseDirection(focus.rect || {x: 0, y: 0, width: 0, height: 0}, target);
       const before = focus.id;
       await pressKey(key);
       await wait(160);
@@ -181,6 +205,57 @@ function createWebOsMyTvAutomation({execute, pressKey, wait, playerCheckTimeoutS
       if (after.id === before) { await pressKey(fallbackDirection(key)); await wait(160); }
     }
     throw semanticError("REMOTE_FOCUS_FAILED", "The required MyTV control did not receive native remote focus.");
+  }
+  async function waitForOptionalVisibleId(id, {timeoutMs = USER_CONSENT_TRANSITION_TIMEOUT_MS, pollIntervalMs = USER_CONSENT_TRANSITION_POLL_MS} = {}) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() <= deadline) {
+      if (await execute(elementRectScript(id), [])) return true;
+      if (id === USER_CONSENT_ACCEPT_ALL_ID && await execute(elementRectScript(USER_CONSENT_SUBMIT_ID), [])) return true;
+      if (await execute(elementRectScript(USER_CONSENT_USERNAME_LABEL_ID), [])) return false;
+      await wait(Math.min(pollIntervalMs, Math.max(0, deadline - Date.now())));
+    }
+    return false;
+  }
+  async function waitForConsentCheckboxChecked(id, {timeoutMs = USER_CONSENT_CHECKBOX_TIMEOUT_MS, pollIntervalMs = USER_CONSENT_TRANSITION_POLL_MS} = {}) {
+    const deadline = Date.now() + timeoutMs;
+    let observedState = null;
+    while (Date.now() <= deadline) {
+      observedState = await execute(checkboxStateScript(id), []);
+      // Some LG builds expose a focusable wrapper without a checked property;
+      // the native remote Enter action remains authoritative there.
+      if (observedState === null || observedState === true) return;
+      await wait(Math.min(pollIntervalMs, Math.max(0, deadline - Date.now())));
+    }
+    throw semanticError("CONSENT_CHECKBOX_FAILED", `The MyTV consent checkbox did not become checked: ${id} (observed=${String(observedState)})`);
+  }
+  async function waitForConsentPopupDismissed({timeoutMs = USER_CONSENT_DISMISS_TIMEOUT_MS, pollIntervalMs = USER_CONSENT_TRANSITION_POLL_MS} = {}) {
+    const deadline = Date.now() + timeoutMs;
+    let visibleIds = [];
+    while (Date.now() <= deadline) {
+      visibleIds = [];
+      for (const id of [USER_CONSENT_ACCEPT_ALL_ID, USER_CONSENT_FOOTER_ID, USER_CONSENT_SUBMIT_ID]) {
+        if (await execute(elementRectScript(id), [])) visibleIds.push(id);
+      }
+      if (!visibleIds.length) return;
+      await wait(Math.min(pollIntervalMs, Math.max(0, deadline - Date.now())));
+    }
+    throw semanticError("CONSENT_POPUP_DISMISS_FAILED", `The MyTV consent popup did not close after activating "${USER_CONSENT_SUBMIT_ID}": ${visibleIds.join(", ")}`);
+  }
+  async function acceptUserConsentPopupIfVisible() {
+    if (!await waitForOptionalVisibleId(USER_CONSENT_ACCEPT_ALL_ID)) return false;
+
+    await focusId(USER_CONSENT_ACCEPT_ALL_ID, 100, {preferredDirection: "ArrowUp"});
+    await pressKey("Enter");
+    await waitForConsentCheckboxChecked(USER_CONSENT_ACCEPT_ALL_ID);
+
+    await focusId(USER_CONSENT_FOOTER_ID, 100, {preferredDirection: "ArrowDown"});
+    await pressKey("Enter");
+    await waitForConsentCheckboxChecked(USER_CONSENT_FOOTER_ID);
+
+    await focusId(USER_CONSENT_SUBMIT_ID, 100);
+    await pressKey("Enter");
+    await waitForConsentPopupDismissed();
+    return true;
   }
   async function waitForBody(predicate, timeoutMs, message) {
     const deadline = Date.now() + timeoutMs;
@@ -211,6 +286,7 @@ function createWebOsMyTvAutomation({execute, pressKey, wait, playerCheckTimeoutS
     await waitForBody((text) => text.includes("Đăng nhập"), 10_000, "MyTV account login was not available.");
     await focusId("remote-login-method");
     await pressKey("Enter");
+    await acceptUserConsentPopupIfVisible();
     await waitForBody((text) => text.includes("Nhập số điện thoại") || text.includes("Tài khoản MyTV"), 15_000, "MyTV account-name keyboard was not available.");
   }
   async function enterVirtualKey(character) {

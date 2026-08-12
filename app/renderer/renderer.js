@@ -67,11 +67,16 @@ const DEFAULT_SETTINGS = {
     API_TIMEOUT_SECONDS: "30",
     PLAYER_CHECK_TIMEOUT_SECONDS: String(TEST_CONFIGURATION.DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS),
     TEST_CASE_MAX_TIME_MINUTES: String(TEST_CONFIGURATION.DEFAULT_TEST_CASE_MAX_TIME_MINUTES),
+    TEST_RESOLUTION: TEST_CONFIGURATION.DEFAULT_TEST_RESOLUTION,
+    SIMULTANEOUS_DEVICES: String(TEST_CONFIGURATION.DEFAULT_SIMULTANEOUS_DEVICES),
     PREVIEW_TYPE: "live",
     RUN_TARGET: "browser",
 };
 
 const SAVE_TOAST_DURATION_MS = 3000;
+const MAX_BROWSER_PREVIEW_SLOTS = 6;
+const MAX_BROWSER_LOG_LENGTH = 120000;
+const BROWSER_LOG_TRUNCATION_MARKER = "[Older Playwright output truncated. Newest output retained.]\n";
 
 const LG_INSTALL_PROGRESS_STEPS = Object.freeze([
     {code: "preparing", label: "Preparing the managed installation"},
@@ -119,6 +124,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const apiTimeoutInput = get("api-timeout-input");
     const playerCheckTimeoutInput = get("player-check-timeout-input");
     const testCaseMaxTimeInput = get("test-case-max-time-input");
+    const testResolutionInputs = doc?.querySelectorAll?.('[name="test-resolution"]') || [];
+    const simultaneousDevicesSelect = get("simultaneous-devices-select");
     const dnsHostAddButton = get("dns-host-add-button");
     const dnsHostRemoveButton = get("dns-host-remove-button");
     const dnsHostStatus = get("dns-host-status");
@@ -218,6 +225,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const lgPreviewEmpty = get("lg-preview-empty");
     const lgPreviewImage = get("lg-preview-image");
     const lgRunState = get("lg-run-state");
+    const browserSlotGrid = get("browser-slot-grid");
+    const browserLogPanel = get("browser-log-panel");
+    const browserSelectedLog = get("browser-selected-log");
+    const browserLogSelection = get("browser-log-selection");
+    const browserLogEmpty = get("browser-log-empty");
+    const legacyPreview = doc?.querySelector?.(".legacy-browser-preview");
     const lgRunConfirmationDialog = get("lg-run-confirmation-dialog");
     const lgRunConfirmationCount = get("lg-run-confirmation-count");
     const lgRunConfirmButton = get("lg-run-confirm-button");
@@ -251,6 +264,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const foldersByPath = new Map();
     let apiRequestDepth = 0;
     let activeRunnerLog = null;
+    let activeBrowserBatchId = "";
+    let activeBrowserBatchSettings = null;
+    let activeLogCaseId = "";
+    const browserSlots = new Map();
+    const browserCaseLogs = new Map();
     let pendingResultSubmission = null;
     let runTarget = "browser";
     let tvDevices = [];
@@ -301,6 +319,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             API_TIMEOUT_SECONDS: Number(saved.API_TIMEOUT_SECONDS) > 0 ? String(saved.API_TIMEOUT_SECONDS) : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(saved.PLAYER_CHECK_TIMEOUT_SECONDS, TEST_CONFIGURATION.DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS)),
             TEST_CASE_MAX_TIME_MINUTES: String(TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(saved.TEST_CASE_MAX_TIME_MINUTES, TEST_CONFIGURATION.DEFAULT_TEST_CASE_MAX_TIME_MINUTES)),
+            TEST_RESOLUTION: TEST_CONFIGURATION.normalizeTestResolution(saved.TEST_RESOLUTION, TEST_CONFIGURATION.DEFAULT_TEST_RESOLUTION),
+            SIMULTANEOUS_DEVICES: String(TEST_CONFIGURATION.normalizeSimultaneousDevices(saved.SIMULTANEOUS_DEVICES, TEST_CONFIGURATION.DEFAULT_SIMULTANEOUS_DEVICES)),
             PREVIEW_TYPE: ["none", "live", "interactive"].includes(saved.PREVIEW_TYPE) ? saved.PREVIEW_TYPE : DEFAULT_SETTINGS.PREVIEW_TYPE,
             RUN_TARGET: saved.RUN_TARGET === "webos" ? "webos" : DEFAULT_SETTINGS.RUN_TARGET,
         };
@@ -313,6 +333,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
         if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
         if (testCaseMaxTimeInput) testCaseMaxTimeInput.value = settings.TEST_CASE_MAX_TIME_MINUTES;
+        testResolutionInputs.forEach((input) => { input.checked = input.value === settings.TEST_RESOLUTION; });
+        if (simultaneousDevicesSelect) simultaneousDevicesSelect.value = settings.SIMULTANEOUS_DEVICES;
         doc?.querySelectorAll?.('[name="preview-type"]').forEach((input) => {
             input.checked = input.value === activePreviewType;
         });
@@ -320,12 +342,19 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         syncTestConfiguration();
     }
 
-    function syncTestConfiguration(playerTimeoutSeconds = settings.PLAYER_CHECK_TIMEOUT_SECONDS, maxTimeMinutes = settings.TEST_CASE_MAX_TIME_MINUTES) {
+    function syncTestConfiguration(
+        playerTimeoutSeconds = settings.PLAYER_CHECK_TIMEOUT_SECONDS,
+        maxTimeMinutes = settings.TEST_CASE_MAX_TIME_MINUTES,
+        resolution = settings.TEST_RESOLUTION,
+        devices = settings.SIMULTANEOUS_DEVICES,
+    ) {
         testConfigurationSync = Promise.resolve()
             .then(() =>
                 api.setTestConfiguration?.({
                     PLAYER_CHECK_TIMEOUT_SECONDS: playerTimeoutSeconds,
                     TEST_CASE_MAX_TIME_MINUTES: maxTimeMinutes,
+                    TEST_RESOLUTION: TEST_CONFIGURATION.normalizeTestResolution(resolution, settings.TEST_RESOLUTION),
+                    SIMULTANEOUS_DEVICES: String(TEST_CONFIGURATION.normalizeSimultaneousDevices(devices, settings.SIMULTANEOUS_DEVICES)),
                 }),
             )
             .then((response) => (response === undefined ? {ok: true} : response))
@@ -340,6 +369,11 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const timeoutSeconds = Number(apiTimeoutInput?.value);
         const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(playerCheckTimeoutInput?.value, settings.PLAYER_CHECK_TIMEOUT_SECONDS);
         const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(testCaseMaxTimeInput?.value, settings.TEST_CASE_MAX_TIME_MINUTES);
+        const resolution = TEST_CONFIGURATION.normalizeTestResolution(
+            [...testResolutionInputs].find((input) => input.checked)?.value,
+            settings.TEST_RESOLUTION,
+        );
+        const devices = String(TEST_CONFIGURATION.normalizeSimultaneousDevices(simultaneousDevicesSelect?.value, settings.SIMULTANEOUS_DEVICES));
         return {
             ...settings,
             API_DOMAIN: apiDomainInput?.value?.trim() || settings.API_DOMAIN,
@@ -349,6 +383,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0 ? String(timeoutSeconds) : settings.API_TIMEOUT_SECONDS,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
             TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
+            TEST_RESOLUTION: resolution,
+            SIMULTANEOUS_DEVICES: devices,
             RUN_TARGET: runTarget,
         };
     }
@@ -516,6 +552,207 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (statusText) statusText.textContent = text;
     }
 
+    function browserCaseById(caseId) {
+        return cases.find((testCase) => String(testCase.id) === String(caseId)) || null;
+    }
+
+    function browserStatusLabel(status) {
+        const labels = {idle: "Idle", queued: "Queued", running: "Running", passed: "Passed", failed: "Failed", stopped: "Stopped", skipped: "Skipped"};
+        return labels[String(status || "idle")] || String(status || "Idle");
+    }
+
+    function createBrowserSlot(slotId) {
+        const state = {
+            slotId,
+            caseId: "",
+            name: "",
+            status: "idle",
+            image: "",
+            root: null,
+            idElement: null,
+            nameElement: null,
+            statusElement: null,
+            imageElement: null,
+            emptyElement: null,
+        };
+        browserSlots.set(slotId, state);
+        if (!browserSlotGrid || !doc?.createElement) return state;
+
+        const root = doc.createElement("article");
+        root.className = "browser-slot browser-slot-idle";
+        root.dataset.slotId = String(slotId);
+        root.setAttribute("aria-label", `Browser preview slot ${slotId}`);
+        root.tabIndex = 0;
+        const header = doc.createElement("header");
+        header.className = "browser-slot-header";
+        const idElement = doc.createElement("span");
+        idElement.className = "browser-slot-case-id";
+        const nameElement = doc.createElement("span");
+        nameElement.className = "browser-slot-case-name";
+        const statusElement = doc.createElement("span");
+        statusElement.className = "browser-slot-status status-idle";
+        header.append(idElement, nameElement, statusElement);
+        const stage = doc.createElement("div");
+        stage.className = "browser-slot-stage";
+        stage.dataset.slotId = String(slotId);
+        const emptyElement = doc.createElement("span");
+        emptyElement.className = "browser-slot-empty";
+        const imageElement = doc.createElement("img");
+        imageElement.className = "browser-slot-image hidden";
+        imageElement.alt = `Browser preview slot ${slotId}`;
+        stage.append(emptyElement, imageElement);
+        root.append(header, stage);
+        root.addEventListener?.("click", () => {
+            if (state.caseId) selectBrowserLogCase(state.caseId);
+        });
+        root.addEventListener?.("keydown", (event) => {
+            if ((event.key === "Enter" || event.key === " ") && state.caseId) {
+                event.preventDefault?.();
+                selectBrowserLogCase(state.caseId);
+            }
+        });
+        browserSlotGrid.append(root);
+        Object.assign(state, {root, idElement, nameElement, statusElement, imageElement, emptyElement});
+        renderBrowserSlot(state);
+        return state;
+    }
+
+    function initializeBrowserSlots() {
+        if (browserSlots.size) return;
+        for (let slotId = 1; slotId <= MAX_BROWSER_PREVIEW_SLOTS; slotId += 1) createBrowserSlot(slotId);
+    }
+
+    function renderBrowserSlot(state) {
+        if (!state) return;
+        const label = browserStatusLabel(state.status);
+        state.root?.classList?.remove?.("browser-slot-idle", "browser-slot-assigned");
+        state.root?.classList?.add?.(state.caseId ? "browser-slot-assigned" : "browser-slot-idle");
+        state.root?.classList?.toggle?.("browser-slot-selected", Boolean(state.caseId && activeLogCaseId === state.caseId));
+        if (state.idElement) state.idElement.textContent = state.caseId || "—";
+        if (state.nameElement) {
+            state.nameElement.textContent = state.caseId ? state.name || `Test case ${state.caseId}` : "Idle";
+            state.nameElement.title = state.nameElement.textContent;
+        }
+        if (state.statusElement) {
+            state.statusElement.className = `browser-slot-status status-${state.status}`;
+            state.statusElement.textContent = label;
+        }
+        if (state.imageElement) {
+            if (state.image) {
+                state.imageElement.src = state.image;
+                state.imageElement.classList.remove("hidden");
+                state.emptyElement?.classList.add("hidden");
+            } else {
+                state.imageElement.removeAttribute?.("src");
+                state.imageElement.classList.add("hidden");
+                state.emptyElement?.classList.remove("hidden");
+            }
+        }
+    }
+
+    function resetBrowserDashboard({clearLogs = false} = {}) {
+        activeBrowserBatchId = "";
+        activeBrowserBatchSettings = null;
+        if (clearLogs) browserCaseLogs.clear();
+        browserSlots.forEach((state) => {
+            state.caseId = "";
+            state.name = "";
+            state.status = "idle";
+            state.image = "";
+            renderBrowserSlot(state);
+        });
+        if (clearLogs) {
+            activeLogCaseId = "";
+            refreshBrowserLogPanel();
+        }
+    }
+
+    function selectBrowserLogCase(caseId) {
+        const id = String(caseId ?? "").trim();
+        if (!id) return;
+        activeLogCaseId = id;
+        testCaseListBody?.querySelectorAll?.("[data-test-case-id]").forEach((row) => {
+            row.classList.toggle("browser-log-selected", String(row.dataset.testCaseId) === id);
+        });
+        browserSlots.forEach(renderBrowserSlot);
+        refreshBrowserLogPanel();
+    }
+
+    function refreshBrowserLogPanel() {
+        const testCase = browserCaseById(activeLogCaseId);
+        if (browserLogSelection) browserLogSelection.textContent = testCase ? `${testCase.id} · ${testCase.name || "Unnamed test case"}` : "Select a test case to view Playwright output";
+        const text = activeLogCaseId ? browserCaseLogs.get(activeLogCaseId) || "" : "";
+        if (browserSelectedLog) browserSelectedLog.textContent = text;
+        browserLogEmpty?.classList?.toggle?.("hidden", Boolean(text));
+    }
+
+    function appendBrowserCaseLog(event) {
+        const id = String(event?.caseId || "").trim();
+        if (!id) return;
+        let text = `${browserCaseLogs.get(id) || ""}${redactSensitiveText(event.text || "")}`;
+        if (text.length > MAX_BROWSER_LOG_LENGTH) {
+            const retainedLength = Math.max(MAX_BROWSER_LOG_LENGTH - BROWSER_LOG_TRUNCATION_MARKER.length, 0);
+            text = BROWSER_LOG_TRUNCATION_MARKER + text.slice(-retainedLength);
+        }
+        browserCaseLogs.set(id, text);
+        if (activeLogCaseId === id) refreshBrowserLogPanel();
+    }
+
+    function renderBrowserBatchEvent(event) {
+        if (!event || typeof event !== "object") return;
+        if (event.type === "batch-started") {
+            activeBrowserBatchId = String(event.batchId || "");
+            activeBrowserBatchSettings = event.settings || null;
+            resetBrowserDashboard({clearLogs: true});
+            activeBrowserBatchId = String(event.batchId || "");
+            (event.caseIds || []).forEach((id) => renderCaseStatus(id, "queued"));
+            return;
+        }
+        if (!activeBrowserBatchId || String(event.batchId || "") !== activeBrowserBatchId) return;
+        const id = String(event.caseId || "");
+        const state = browserSlots.get(Number(event.slotId));
+        if (event.type === "case-queued") {
+            renderCaseStatus(id, "queued");
+        } else if (event.type === "case-assigned") {
+            if (!state) return;
+            state.caseId = id;
+            state.name = browserCaseById(id)?.name || "";
+            state.status = "queued";
+            state.image = "";
+            renderBrowserSlot(state);
+            renderCaseStatus(id, "queued");
+            selectBrowserLogCase(id);
+        } else if (event.type === "case-started") {
+            if (state && state.caseId === id) {
+                state.status = "running";
+                renderBrowserSlot(state);
+            }
+            renderCaseStatus(id, "running");
+        } else if (event.type === "case-log") {
+            appendBrowserCaseLog(event);
+        } else if (event.type === "preview-frame") {
+            if (!state || state.caseId !== id || typeof event.dataUrl !== "string" || !/^data:image\/png;base64,[A-Za-z0-9+/]+={0,2}$/u.test(event.dataUrl)) return;
+            state.image = event.dataUrl;
+            renderBrowserSlot(state);
+        } else if (event.type === "preview-clear") {
+            if (state && state.caseId === id) {
+                state.image = "";
+                renderBrowserSlot(state);
+            }
+        } else if (event.type === "case-finished") {
+            const status = ["passed", "failed", "stopped"].includes(event.status) ? event.status : "failed";
+            if (state && state.caseId === id) {
+                state.status = status;
+                renderBrowserSlot(state);
+            }
+            renderCaseStatus(id, status);
+        } else if (event.type === "case-skipped") {
+            renderCaseStatus(id, "skipped");
+        } else if (event.type === "batch-finished") {
+            activeBrowserBatchSettings = event.settings || activeBrowserBatchSettings;
+        }
+    }
+
     function getSelectedCaseIds() {
         return cases.filter((testCase) => selectedCaseIds.has(String(testCase.id))).map((testCase) => String(testCase.id));
     }
@@ -596,6 +833,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         selectedCaseIds.clear();
         caseStatuses.clear();
         visibleCaseIds.clear();
+        resetBrowserDashboard({clearLogs: true});
         if (!testCaseListBody) return;
         testCaseListBody.replaceChildren();
         cases.forEach((testCase) => {
@@ -625,13 +863,20 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             detailButton.type = "button";
             detailButton.className = "secondary-button detail-button";
             detailButton.textContent = "Detail";
-            detailButton.addEventListener("click", () => openCaseDetails(testCase.id));
+            detailButton.addEventListener("click", (event) => {
+                event.stopPropagation?.();
+                openCaseDetails(testCase.id);
+            });
             detailCell.append(detailButton);
 
             const statusCell = doc.createElement("td");
             statusCell.append(renderStatusCell(testCase.id));
 
             row.append(selectionCell, idCell, nameCell, detailCell, statusCell);
+            row.addEventListener?.("click", (event) => {
+                if (event.target?.closest?.("button, input, select, textarea")) return;
+                selectBrowserLogCase(testCase.id);
+            });
             testCaseListBody.append(row);
         });
         applyCaseFilter(testCaseSearchInput?.value || "");
@@ -1952,6 +2197,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (persist) store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
         syncRunTargetControls();
         resetBrowserPreview();
+        resetBrowserDashboard({clearLogs: true});
+        legacyPreview?.classList?.toggle?.("hidden", runTarget !== "webos");
+        browserSlotGrid?.classList?.toggle?.("hidden", runTarget === "webos");
+        browserLogPanel?.classList?.toggle?.("hidden", runTarget === "webos");
         if (browserPreviewEmpty) browserPreviewEmpty.textContent = "Browser preview will appear here when a test starts.";
         if (runTarget === "webos") {
             await loadTvDevices();
@@ -2063,29 +2312,55 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             API_TIMEOUT_SECONDS: Number.isFinite(timeoutSeconds) && timeoutSeconds > 0 ? String(timeoutSeconds) : DEFAULT_SETTINGS.API_TIMEOUT_SECONDS,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
             TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
+            TEST_RESOLUTION: TEST_CONFIGURATION.normalizeTestResolution(
+                [...testResolutionInputs].find((input) => input.checked)?.value,
+                settings.TEST_RESOLUTION,
+            ),
+            SIMULTANEOUS_DEVICES: String(TEST_CONFIGURATION.normalizeSimultaneousDevices(simultaneousDevicesSelect?.value, settings.SIMULTANEOUS_DEVICES)),
             PREVIEW_TYPE: activePreviewType,
             RUN_TARGET: runTarget,
         };
         if (apiTimeoutInput) apiTimeoutInput.value = settings.API_TIMEOUT_SECONDS;
         if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
         if (testCaseMaxTimeInput) testCaseMaxTimeInput.value = settings.TEST_CASE_MAX_TIME_MINUTES;
+        testResolutionInputs.forEach((input) => { input.checked = input.value === settings.TEST_RESOLUTION; });
+        if (simultaneousDevicesSelect) simultaneousDevicesSelect.value = settings.SIMULTANEOUS_DEVICES;
         store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
-        const response = await syncTestConfiguration();
+        const response = await syncTestConfiguration(
+            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
+            settings.TEST_CASE_MAX_TIME_MINUTES,
+            settings.TEST_RESOLUTION,
+            settings.SIMULTANEOUS_DEVICES,
+        );
         showAppToast(response?.ok === false ? "Could not save settings." : "Settings saved successfully.", response?.ok === false ? "error" : "ok");
     }
 
     async function saveTestConfiguration() {
         const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(playerCheckTimeoutInput?.value, settings.PLAYER_CHECK_TIMEOUT_SECONDS);
         const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(testCaseMaxTimeInput?.value, settings.TEST_CASE_MAX_TIME_MINUTES);
+        const resolution = TEST_CONFIGURATION.normalizeTestResolution(
+            [...testResolutionInputs].find((input) => input.checked)?.value,
+            settings.TEST_RESOLUTION,
+        );
+        const devices = String(TEST_CONFIGURATION.normalizeSimultaneousDevices(simultaneousDevicesSelect?.value, settings.SIMULTANEOUS_DEVICES));
         settings = {
             ...settings,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
             TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
+            TEST_RESOLUTION: resolution,
+            SIMULTANEOUS_DEVICES: devices,
         };
         if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
         if (testCaseMaxTimeInput) testCaseMaxTimeInput.value = settings.TEST_CASE_MAX_TIME_MINUTES;
+        testResolutionInputs.forEach((input) => { input.checked = input.value === settings.TEST_RESOLUTION; });
+        if (simultaneousDevicesSelect) simultaneousDevicesSelect.value = settings.SIMULTANEOUS_DEVICES;
         store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
-        const response = await syncTestConfiguration();
+        const response = await syncTestConfiguration(
+            settings.PLAYER_CHECK_TIMEOUT_SECONDS,
+            settings.TEST_CASE_MAX_TIME_MINUTES,
+            settings.TEST_RESOLUTION,
+            settings.SIMULTANEOUS_DEVICES,
+        );
         showAppToast(response?.ok === false ? "Could not save test configuration." : "Test configuration saved successfully.", response?.ok === false ? "error" : "ok");
     }
 
@@ -2109,6 +2384,99 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         return true;
     }
 
+    async function runBrowserBatch(values = {}) {
+        const ids = getSelectedCaseIds();
+        const validationMessage = validateRunValues({selectedCaseIds: ids});
+        if (validationMessage) {
+            setFormMessage(validationMessage, "error");
+            return {completed: 0, failed: 0, skipped: 0, stopped: false};
+        }
+        const previewType = values.PREVIEW_TYPE || activePreviewType || "live";
+        if (previewType === "interactive" && ids.length !== 1) {
+            const message = "Interactive preview supports one Browser test case at a time. Choose Live or None for multiple cases.";
+            setFormMessage(message, "error");
+            return {ok: false, message};
+        }
+        const resolution = TEST_CONFIGURATION.normalizeTestResolution(values.TEST_RESOLUTION, settings.TEST_RESOLUTION);
+        const devices = String(TEST_CONFIGURATION.normalizeSimultaneousDevices(values.SIMULTANEOUS_DEVICES, settings.SIMULTANEOUS_DEVICES));
+        const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(values.PLAYER_CHECK_TIMEOUT_SECONDS, settings.PLAYER_CHECK_TIMEOUT_SECONDS);
+        const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(values.TEST_CASE_MAX_TIME_MINUTES, settings.TEST_CASE_MAX_TIME_MINUTES);
+        const payload = {
+            selectedCaseIds: ids,
+            PREVIEW_TYPE: previewType,
+            TEST_RESOLUTION: resolution,
+            SIMULTANEOUS_DEVICES: devices,
+            PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
+            TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
+        };
+        if (values.TEST_CASE_CACHE_KEY) payload.TEST_CASE_CACHE_KEY = String(values.TEST_CASE_CACHE_KEY);
+        if (values.TEST_CASE_FOLDER_ID) payload.TEST_CASE_FOLDER_ID = String(values.TEST_CASE_FOLDER_ID);
+
+        const currentBatch = {ids, activeCaseId: null, stopRequested: false, browser: true};
+        batchState = currentBatch;
+        setRunActive(true);
+        setFormRunning(true);
+        setStatus("running", "Running");
+        resetBrowserDashboard({clearLogs: true});
+        activePreviewType = previewType;
+        ids.forEach((id) => renderCaseStatus(id, "queued"));
+
+        try {
+            if (previewType === "interactive") await preparePreview({...payload, PREVIEW_TYPE: previewType});
+            const response = await api.runBrowserBatch(payload);
+            if (!response?.ok) {
+                const message = response?.message || "The Browser batch could not start.";
+                setStatus("failed", "Failed");
+                setFormMessage(message, "error");
+                appendLog(`${message}\n`);
+                return {ok: false, message, completed: 0, failed: 0, skipped: ids.length, stopped: false};
+            }
+
+            const rawRuns = Array.isArray(response.caseRuns) ? response.caseRuns : [];
+            const caseRuns = rawRuns.map((run) => ({
+                id: String(run?.caseId || run?.id || ""),
+                result: run,
+            })).filter(({id}) => id);
+            const completed = caseRuns.filter(({result}) => result?.passed === true).length;
+            const failed = caseRuns.filter(({result}) => result?.passed !== true && !result?.stopped && !result?.skipped).length;
+            const skipped = caseRuns.filter(({result}) => result?.skipped || result?.stopped).length;
+            const stopped = response.stopped === true || caseRuns.some(({result}) => result?.stopped === true);
+            const summary = `Completed: ${completed}, Failed: ${failed}, Skipped: ${skipped}`;
+            setStatus(failed || stopped ? "failed" : "passed", failed || stopped ? "Failed" : "Passed");
+
+            const allSelectedCasesRan = !stopped && skipped === 0 && caseRuns.length === ids.length && caseRuns.every(({result}) => result?.started && !result?.stopped);
+            const fullyCompletedCaseRuns = caseRuns.filter(({result}) => result?.started && !result?.stopped && !result?.skipped);
+            let resultSubmission;
+            if ((allSelectedCasesRan || (stopped && fullyCompletedCaseRuns.length > 0)) && values.FLOW_CASE_RESULT_CONTEXT) {
+                const submission = buildFlowCaseResultSubmission(values.FLOW_CASE_RESULT_CONTEXT, fullyCompletedCaseRuns);
+                appendApiRequestLog("Send flow-case results", submission);
+                try {
+                    resultSubmission = await api.submitFlowCaseResults?.(submission);
+                    appendApiResponseLog("Send flow-case results", resultSubmission);
+                    if (!resultSubmission?.ok) throw new Error(resultSubmission?.message || "Failed to send flow-case results.");
+                } catch (error) {
+                    setPendingResultSubmission(submission);
+                    const message = `Failed to send flow-case results: ${error.message}`;
+                    appendLog(`${message}\n`);
+                    setFormMessage(`${summary}. ${message}`, "error");
+                    return {completed, failed, skipped, stopped, caseRuns, resultSubmission: {ok: false, message: error.message}};
+                }
+            }
+            setFormMessage(summary, failed || stopped ? "error" : "ok");
+            return {completed, failed, skipped, stopped, caseRuns, resultSubmission, batchId: response.batchId};
+        } catch (error) {
+            const message = error?.message || "The Browser batch failed.";
+            setStatus("failed", "Failed");
+            setFormMessage(message, "error");
+            appendLog(`${message}\n`);
+            return {ok: false, message, completed: 0, failed: ids.length, skipped: 0, stopped: false};
+        } finally {
+            batchState = null;
+            setRunActive(false);
+            setFormRunning(false);
+        }
+    }
+
     async function runSingleCase(testCaseId, values, currentBatch) {
         const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(values.PLAYER_CHECK_TIMEOUT_SECONDS, settings.PLAYER_CHECK_TIMEOUT_SECONDS);
         const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(values.TEST_CASE_MAX_TIME_MINUTES, settings.TEST_CASE_MAX_TIME_MINUTES);
@@ -2127,7 +2495,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         });
 
         try {
-            await preparePreview(payload);
+            await preparePreview({
+                ...payload,
+                TEST_RESOLUTION: TEST_CONFIGURATION.normalizeTestResolution(values.TEST_RESOLUTION, settings.TEST_RESOLUTION),
+            });
             const response = await api.runTest(payload);
             activeRunnerLog = null;
             if (response?.initialLog) appendRunnerLog(response.initialLog);
@@ -2172,6 +2543,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             openLgBatchConfirmation({selectedCaseCount: ids.length, values});
             return {completed: 0, failed: 0, skipped: 0, stopped: false, awaitingConfirmation: true};
         }
+
+        if (typeof api.runBrowserBatch === "function") return runBrowserBatch(values);
 
         const currentBatch = {ids, activeCaseId: null, stopRequested: false};
         batchState = currentBatch;
@@ -2273,8 +2646,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     function buildFlowCaseResult(testCaseId, run, campaignId = "") {
         const passed = Boolean(run.passed);
-        const failedStepMessage = run.executionResult?.caseResult?.steps?.find((step) => step?.status === "failed" && step.message)?.message;
-        const message = passed ? "Testcase chạy thành công." : String(failedStepMessage || run.executionResult?.message || "Testcase chạy thất bại.");
+        const executionResult = run.executionResult || run;
+        const caseResult = executionResult.caseResult || run.caseResult || null;
+        const failedStepMessage = caseResult?.steps?.find((step) => step?.status === "failed" && step.message)?.message;
+        const message = passed
+            ? "Testcase chạy thành công."
+            : String(failedStepMessage || executionResult.message || run.message || "Testcase chạy thất bại.");
 
         return {
             id: testCaseId,
@@ -2297,6 +2674,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const runSettings = currentSettings();
         const values = {
             PREVIEW_TYPE: activePreviewType,
+            TEST_RESOLUTION: runSettings.TEST_RESOLUTION,
+            SIMULTANEOUS_DEVICES: runSettings.SIMULTANEOUS_DEVICES,
             PLAYER_CHECK_TIMEOUT_SECONDS: runSettings.PLAYER_CHECK_TIMEOUT_SECONDS,
             TEST_CASE_MAX_TIME_MINUTES: runSettings.TEST_CASE_MAX_TIME_MINUTES,
             target: runTarget,
@@ -2332,20 +2711,28 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             browserPreviewEmpty?.classList.add("hidden");
             browserMuteButton?.classList.remove("hidden");
             await setBrowserMuted(true);
-            await showInteractiveBrowser();
+            await showInteractiveBrowser(values);
         }
     }
 
-    async function showInteractiveBrowser() {
-        const stage = doc?.querySelector?.(".browser-preview-stage");
+    async function showInteractiveBrowser(values = {}) {
+        const stage = doc?.querySelector?.('.browser-slot-stage[data-slot-id="1"]') || doc?.querySelector?.(".browser-preview-stage");
         const bounds = stage?.getBoundingClientRect?.() || {x: 0, y: 0, width: 0, height: 0};
-        await api.showInteractiveBrowser({bounds});
+        const resolution = TEST_CONFIGURATION.normalizeTestResolution(
+            values.TEST_RESOLUTION,
+            activeBrowserBatchSettings?.TEST_RESOLUTION || settings.TEST_RESOLUTION,
+        );
+        await api.showInteractiveBrowser({bounds, TEST_RESOLUTION: resolution});
     }
 
     async function showInteractiveBrowserBounds() {
-        const stage = doc?.querySelector?.(".browser-preview-stage");
+        const stage = doc?.querySelector?.('.browser-slot-stage[data-slot-id="1"]') || doc?.querySelector?.(".browser-preview-stage");
         const bounds = stage?.getBoundingClientRect?.() || {x: 0, y: 0, width: 0, height: 0};
-        await api.resumeInteractiveBrowser({bounds});
+        const resolution = TEST_CONFIGURATION.normalizeTestResolution(
+            activeBrowserBatchSettings?.TEST_RESOLUTION,
+            settings.TEST_RESOLUTION,
+        );
+        await api.resumeInteractiveBrowser({bounds, TEST_RESOLUTION: resolution});
     }
 
     async function setBrowserMuted(muted) {
@@ -2676,6 +3063,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         setFormRunning(true);
         setStatus("running", "Running");
     });
+    const unsubscribeBrowserBatchEvent = api.onBrowserBatchEvent?.((event) => renderBrowserBatchEvent(event));
     api.onLog?.((line) => appendRunnerLog(line));
     api.onPreview?.((dataUrl) => {
         if (activePreviewType !== "live") return;
@@ -2713,8 +3101,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (typeof unsubscribeBrowserToolchainInstallProgress === "function") unsubscribeBrowserToolchainInstallProgress();
         if (typeof unsubscribeLgRunStatus === "function") unsubscribeLgRunStatus();
         if (typeof unsubscribeLgRunPreview === "function") unsubscribeLgRunPreview();
+        if (typeof unsubscribeBrowserBatchEvent === "function") unsubscribeBrowserBatchEvent();
     });
 
+    initializeBrowserSlots();
     loadSettings();
     void refreshDnsHostStatus();
     void loadBrowserToolchainStatus();
@@ -2744,6 +3134,9 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         getActiveCampaignId: () => activeCampaignId,
         getActiveCacheKey: () => activeCacheKey,
         getActiveFolderId: () => activeFolderId,
+        runBrowserBatch,
+        renderBrowserBatchEvent,
+        selectBrowserLogCase,
         runSelectedCases,
         retryResultSync,
         selectRunTarget,

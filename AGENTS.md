@@ -54,14 +54,18 @@ from the user-data cache; it uses the fixture only when no latest cached list is
 available. `app/main.js` also
 owns flow-case API IPC, sanitizes passwords and service-token header values for the renderer, validates the
 selected case ID from either the fixture or the user-data cache, and starts the
-generic `tests/run-test-case-mytv.spec.js` entry point. The renderer sends the
-selected case ID, player-check timeout, test-case maximum time, preview settings,
-and an
-active folder or campaign cache key for a run.
-After every selected API-loaded case has completed, the renderer submits one
-validated `tested`/`testResult` batch through main-process IPC; campaign batches
-include `campaignId` per testcase. Stopped, skipped, local-fixture, and
-launch-failed batches are never partially sent.
+generic `tests/run-test-case-mytv.spec.js` entry point. Browser runs send one
+ordered selected-case list plus the validated Test resolution (`1280x720` by
+default or `1920x1080`), Simultaneous devices (`1`, `2`, `4`, or `6`, default
+`6`), player-check timeout, test-case maximum time, preview settings, and an
+active folder or campaign cache key for the batch. `app/browser-batch-runner.js`
+owns the main-process queue and one-worker child per active slot; each child
+gets batch/case-scoped preview, result, test-results, and debug-report paths.
+After every normally completed selected API-loaded case, the renderer submits
+one validated `tested`/`testResult` batch through main-process IPC; campaign
+batches include `campaignId` per testcase. If the operator stops a batch, only
+cases that fully completed before the stop are submitted. Stopped, skipped,
+local-fixture, and launch-failed cases are never included.
 
 The desktop supports two execution targets: Browser (the default) and LG webOS.
 The Settings dialog owns Browser configuration, Test configuration, LG SDK configuration, the
@@ -70,7 +74,11 @@ selection, and the compatibility catalog. APP_URL is source-controlled in
 `app/main.js` and is not rendered or accepted from the GUI. The DNS host mapping
 is source-controlled in `app/hosts-file.js`; host IPC resolves it in the main
 process and returns only safe status fields. Browser runs require the separately
-confirmed managed Chromium installation. LG runs reuse the same case selection,
+confirmed managed Chromium installation. The Browser workspace always renders
+six 16:9 holders; slots above the selected concurrency remain Idle, and each
+assigned holder routes keyed live frames/status/logs by batch, case, and slot.
+Interactive BrowserView/CDP preview is allowed only for one selected Browser
+case; Live or None is required for a multi-case batch. LG runs reuse the same case selection,
 batch control, report, and result-submission flow, but require an explicitly
 confirmed real-TV operation.
 
@@ -133,6 +141,8 @@ workers without redesigning session ownership.
 testcased.json
 app/
   test-configuration.js          Shared player/case-timeout defaults and validation
+  browser-batch-runner.js        Configurable Browser slot scheduler and lifecycle events
+  test-report-store.js           Ordered serialized compact-report persistence
   main.js                         Electron process, case loading, run IPC
   test-report.js                  Compact user report HTML/data generation
   preload.js                      Context-isolated IPC bridge
@@ -172,7 +182,7 @@ tests/
   open-setting-mytv.spec.js       Legacy settings flow
 scripts/run-headed.js             Interactive legacy runner
 scripts/run-electron-app.js       Electron development entry point
-playwright.config.js              1920x1080 viewport, one worker, debug HTML report
+playwright.config.js              Allowlisted 1280x720/1920x1080 viewport, one worker, debug HTML report
 package.json                      Commands and Electron Builder configuration
 ```
 
@@ -229,14 +239,20 @@ The supported action allowlist is:
 - `press_back`: sends Backspace; optional `count` repeats it.
 - `wait_for_ready`: accepts `app`, `home`, `content`, or `player`.
 
-During the asynchronous transition from credential submission to profile
-selection, the login workflow monitors for the device-limit popup
-(`Vượt quá số lượng thiết bị cho phép`), remotely activates `Tiếp tục`, and
-waits for that popup to close before selecting a profile. The shared focus model
-reads `.active` inside `#dialog_confirm_v2`, `#dialog_alert_v2`,
-`#dialog_alert_full`, and `#dialog_confirm_full`; regular controls continue to
-use `.focused`. Generic case cleanup still calls `window.processLogOut` after
-the run to release the account.
+After activating the account-login method, the login workflow handles the
+optional service-consent popup with native remote focus: it moves up to
+`#user-consent-popup-accept-all-checkbox`, moves down to
+`#user-consent-popup-footer-checkbox`, activates both checkboxes, then focuses
+`#user-consent-btn-submit` and confirms. Deployments without that popup continue
+directly to the username keyboard. During the asynchronous transition from
+credential submission to profile selection, the workflow monitors for the
+device-limit popup (`Vượt quá số lượng thiết bị cho phép`), remotely activates
+`Tiếp tục`, and waits for that popup to close before selecting a profile. The
+shared focus model reads `.active` inside `#dialog_confirm_v2`,
+`#dialog_alert_v2`, `#dialog_alert_full`, `#dialog_confirm_full`, and the
+`#user-consent-popup` root; regular controls continue to use `.focused`. Generic
+case cleanup still calls `window.processLogOut` after the run to release the
+account.
 
 Every action is validated before browser interaction. Server data must not
 provide JavaScript, module paths, selectors, or function names.
@@ -301,6 +317,11 @@ private fixture data.
 - `MYTV_CASE_RESULT_PATH` — per-case structured result sidecar for the compact user report.
 - `MYTV_INTERACTIVE_CDP_URL` — CDP endpoint for interactive preview.
 - `MYTV_INTERACTIVE_VIEW_SCALE` — interactive preview scale.
+- `MYTV_TEST_RESOLUTION` — validated Browser resolution (`1280x720` by default
+  or `1920x1080`) snapshotted for the child process.
+- `MYTV_SIMULTANEOUS_DEVICES` — validated Browser batch limit (`1`, `2`, `4`,
+  or `6`); the main process owns scheduling and does not pass this to
+  Playwright workers.
 - `MYTV_PLAYER_CHECK_TIMEOUT_SECONDS` — sanitized positive-integer player-check wait used by the generic Browser runner; defaults to 6 seconds.
 - `MYTV_TEST_CASE_MAX_TIME_MINUTES` — sanitized positive-integer maximum duration for one generic Browser test case; defaults to 30 minutes and is configurable in Test configuration.
 - `PLAYWRIGHT_BROWSERS_PATH` — app-private per-user Playwright Chromium root,
@@ -381,9 +402,10 @@ After the shared player/detail close boundary is detected, row playback waits
 1.5 seconds for the previous screen's poster geometry to finish re-rendering
 before refocusing the current item or pressing Right for the next poster.
 
-Browser case runs use a 1920x1080 logical Playwright viewport, matching the
-MyTV TV UI layout. Electron may render that logical surface at a smaller
-visual scale inside the preview, but it does not reduce the document viewport.
+Browser case runs use the validated 1280x720 or 1920x1080 logical Playwright
+viewport (1280x720 by default), matching the selected MyTV TV UI layout.
+Electron may render that logical surface at a smaller visual scale inside the
+six preview holders, but it does not reduce the document viewport.
 
 ### Preview and CDP
 

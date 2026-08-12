@@ -154,7 +154,16 @@
                     <div class="browser-preview-toolbar">
                         <button type="button" id="browser-mute-button" class="preview-control hidden">Unmute</button>
                     </div>
-                    <div class="browser-preview-stage">
+                    <div id="browser-slot-grid" class="browser-slot-grid" aria-label="Browser test preview slots"></div>
+                    <section id="browser-log-panel" class="browser-log-panel" aria-labelledby="browser-log-title">
+                        <header class="browser-log-header">
+                            <h2 id="browser-log-title">Playwright log</h2>
+                            <span id="browser-log-selection">Select a test case to view Playwright output</span>
+                        </header>
+                        <pre id="browser-selected-log" class="browser-selected-log"></pre>
+                        <p id="browser-log-empty" class="browser-log-empty">Logs for the selected test case will appear here.</p>
+                    </section>
+                    <div class="legacy-browser-preview hidden" aria-hidden="true">
                         <div id="browser-preview-empty" class="browser-preview-empty">Browser preview will appear here when a test starts.</div>
                         <img id="browser-preview-image" class="browser-preview-image hidden" alt="Browser preview" />
                         <webview id="interactive-browser" class="interactive-browser hidden" allowpopups></webview>
@@ -349,6 +358,33 @@
                         </div>
                         <div class="settings-panel hidden" data-settings-content="test-configuration">
                             <h3>Test configuration</h3>
+                            <section class="settings-section">
+                                <h4>Test resolution</h4>
+                                <div class="tickbox-row" role="radiogroup" aria-label="Test resolution">
+                                    <label class="tickbox-option">
+                                        <input type="radio" name="test-resolution" value="1280x720" checked />
+                                        <span>1280x720</span>
+                                    </label>
+                                    <label class="tickbox-option">
+                                        <input type="radio" name="test-resolution" value="1920x1080" />
+                                        <span>1920x1080</span>
+                                    </label>
+                                </div>
+                                <p class="field-note">Browser test viewport. Default: 1280x720.</p>
+                            </section>
+                            <section class="settings-section">
+                                <h4>Simultaneous devices</h4>
+                                <label for="simultaneous-devices-select">
+                                    Maximum Browser tests running at the same time
+                                    <select id="simultaneous-devices-select" name="SIMULTANEOUS_DEVICES">
+                                        <option value="1">1 device</option>
+                                        <option value="2">2 devices</option>
+                                        <option value="4">4 devices</option>
+                                        <option value="6" selected>6 devices</option>
+                                    </select>
+                                </label>
+                                <p class="field-note">Queued cases start as slots become available. Default: 6 devices.</p>
+                            </section>
                             <section class="settings-section">
                                 <h4>Test case</h4>
                                 <label for="test-case-max-time-input" class="settings-help-label">

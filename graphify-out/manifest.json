@@ -1,27 +1,27 @@
 {
   "app/main.js": {
-    "mtime": 1786087941.8552155,
-    "ast_hash": "8fcf75060de74930841a6d0bc2086f0c",
+    "mtime": 1786501290.9533908,
+    "ast_hash": "36cdeec993c49d946bb56635e93aefb1",
     "semantic_hash": ""
   },
   "app/preload.js": {
-    "mtime": 1786087941.9857843,
-    "ast_hash": "50f35ace757c5b4cc129866f6e7d3b4a",
+    "mtime": 1786499411.5238914,
+    "ast_hash": "c66b53b9bb8f155a76f042a2b75d4f28",
     "semantic_hash": ""
   },
   "app/renderer/renderer.js": {
-    "mtime": 1786089039.0168474,
-    "ast_hash": "10a699c98c0cc6722bb514aa7a910bf7",
+    "mtime": 1786501306.2653215,
+    "ast_hash": "5c53e29c3728b65561f45a306680eebc",
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1785982095.2837465,
-    "ast_hash": "f05baa07255688f72fb6cec1c6498227",
+    "mtime": 1786348202.5056288,
+    "ast_hash": "402aebac5232b3463cbd80a0666172e4",
     "semantic_hash": ""
   },
   "playwright.config.js": {
-    "mtime": 1785825896.6937056,
-    "ast_hash": "171342361507d46f5e807c162a932453",
+    "mtime": 1786499424.7867565,
+    "ast_hash": "24521de2441e0cc8e3cf4bb76e1cb806",
     "semantic_hash": ""
   },
   "scripts/install-playwright-browsers.js": {
@@ -45,8 +45,8 @@
     "semantic_hash": ""
   },
   "tests/fixtures/mytv-session-fixture.js": {
-    "mtime": 1785825896.6940997,
-    "ast_hash": "09717197ebf339de00b7bac7bf676e4f",
+    "mtime": 1786499433.5514572,
+    "ast_hash": "579f1defcc4963897b1fc9947aefeff0",
     "semantic_hash": ""
   },
   "tests/lib/mytv-helpers.js": {
@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1786088027.9962337,
-    "ast_hash": "f4ff3042f90bb2cd964866c2fdc89cdd",
+    "mtime": 1786503944.8218973,
+    "ast_hash": "1e7a125f783e28fa73baf890630bb2f8",
     "semantic_hash": ""
   },
   "IDEA.md": {
@@ -110,13 +110,13 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1786088014.689979,
-    "ast_hash": "adb5f08d8194e7079ff68bbb30b9b145",
+    "mtime": 1786503935.9549165,
+    "ast_hash": "2bfe88f55af588601c4ed78aa4c26299",
     "semantic_hash": ""
   },
   "app/renderer/index.html": {
-    "mtime": 1785982095.2754483,
-    "ast_hash": "96ca2daf074cba64117d289cc44e1e94",
+    "mtime": 1786500987.373923,
+    "ast_hash": "3133d793090fa3c9a3bc90377e67893f",
     "semantic_hash": ""
   },
   ".codex/skills/playwright-interactive/assets/playwright-small.svg": {
@@ -210,7 +210,7 @@
     "semantic_hash": ""
   },
   "app/test-case-cache.js": {
-    "mtime": 1786088086.4041584,
+    "mtime": 1786091253.0135398,
     "ast_hash": "099da0b15e32cd0c41b5da778cf3da57",
     "semantic_hash": ""
   },
@@ -345,7 +345,7 @@
     "semantic_hash": ""
   },
   "tests/lib/content-rows.js": {
-    "mtime": 1786089790.048738,
+    "mtime": 1786091253.018905,
     "ast_hash": "66cd3cc0984248ef885ed300071ec06c",
     "semantic_hash": ""
   },
@@ -370,13 +370,13 @@
     "semantic_hash": ""
   },
   "tests/lib/login-popups.js": {
-    "mtime": 1786086671.3566906,
-    "ast_hash": "cb37e866c30e18cac97ab2188e8c7787",
+    "mtime": 1786503519.1934805,
+    "ast_hash": "f0ebf66041ffcaafe59873a643a63a94",
     "semantic_hash": ""
   },
   "tests/lib/mytv-helpers.legacy.js": {
-    "mtime": 1785825896.6953337,
-    "ast_hash": "81b100f2f378f2bf387731444fbfb4bc",
+    "mtime": 1786503740.7520092,
+    "ast_hash": "3a499fe2369f5867289f2f9b86fcfcde",
     "semantic_hash": ""
   },
   "tests/lib/navigation.js": {
@@ -395,12 +395,12 @@
     "semantic_hash": ""
   },
   "tests/lib/selectors.js": {
-    "mtime": 1785825896.696102,
-    "ast_hash": "e5b5ce17ff743e77dc0a79e2cd560e96",
+    "mtime": 1786503537.6560063,
+    "ast_hash": "47569b25fedccafce94c400426db572a",
     "semantic_hash": ""
   },
   "tests/lib/service-screenshot.js": {
-    "mtime": 1786090520.8679368,
+    "mtime": 1786091253.0191863,
     "ast_hash": "413783244309a7ffbc7fca1153b5834e",
     "semantic_hash": ""
   },
@@ -415,12 +415,12 @@
     "semantic_hash": ""
   },
   "tests/lib/test-case-action-runner.js": {
-    "mtime": 1786078847.3155107,
+    "mtime": 1786091253.0193512,
     "ast_hash": "663ac3c70c7e525e4d211f489883cd9e",
     "semantic_hash": ""
   },
   "tests/lib/test-case-compiler.js": {
-    "mtime": 1786078497.8092363,
+    "mtime": 1786091253.0195425,
     "ast_hash": "61f6cc9624bf096a64f0cb89997fc062",
     "semantic_hash": ""
   },
@@ -480,8 +480,8 @@
     "semantic_hash": ""
   },
   "tests/lib/tv-session/webos-mytv-automation.js": {
-    "mtime": 1785654562.2744155,
-    "ast_hash": "a9a15e714de8ac7e64c4179503a383fd",
+    "mtime": 1786503804.6754365,
+    "ast_hash": "1eae4e38b227875f4cf8d41c6bd64cb2",
     "semantic_hash": ""
   },
   "tests/lib/waits.js": {
@@ -490,8 +490,8 @@
     "semantic_hash": ""
   },
   "tests/lib/workflows.js": {
-    "mtime": 1786086405.3633957,
-    "ast_hash": "317092735ad6372ff9071629fc5b8c37",
+    "mtime": 1786503531.2629461,
+    "ast_hash": "6c29bfab55a52842e757993f95ff8476",
     "semantic_hash": ""
   },
   "tests/locator-contracts.spec.js": {
@@ -550,7 +550,7 @@
     "semantic_hash": ""
   },
   "tests/unit/content-rows.test.js": {
-    "mtime": 1786089831.2075653,
+    "mtime": 1786091253.0199316,
     "ast_hash": "1d00765c3df2c5d77beee90340972a0c",
     "semantic_hash": ""
   },
@@ -635,8 +635,8 @@
     "semantic_hash": ""
   },
   "tests/unit/login-popups.test.js": {
-    "mtime": 1786086423.4597845,
-    "ast_hash": "935b73f58580f60bf5ca615b182f187b",
+    "mtime": 1786503775.2518415,
+    "ast_hash": "13037980cf0f3919529fe9b6fe7fd6ae",
     "semantic_hash": ""
   },
   "tests/unit/package-config.test.js": {
@@ -655,8 +655,8 @@
     "semantic_hash": ""
   },
   "tests/unit/renderer.test.js": {
-    "mtime": 1786089078.0328717,
-    "ast_hash": "ba0a4e006778e7307ce2ef77b367600b",
+    "mtime": 1786501408.5089762,
+    "ast_hash": "27a97b8a3b9c0babc597065ba3a2773b",
     "semantic_hash": ""
   },
   "tests/unit/run-close-guard.test.js": {
@@ -665,12 +665,12 @@
     "semantic_hash": ""
   },
   "tests/unit/selectors.test.js": {
-    "mtime": 1784617183.771043,
-    "ast_hash": "27a1d7ecabcf7d75244dc6be69c44bf2",
+    "mtime": 1786503537.72284,
+    "ast_hash": "ecd1c88289406f4afa82afaa5ccd52c9",
     "semantic_hash": ""
   },
   "tests/unit/service-screenshot.test.js": {
-    "mtime": 1786090521.0020523,
+    "mtime": 1786091253.0205665,
     "ast_hash": "b8ef9097f09417087762d67234073446",
     "semantic_hash": ""
   },
@@ -685,17 +685,17 @@
     "semantic_hash": ""
   },
   "tests/unit/test-case-action-runner.test.js": {
-    "mtime": 1786078637.6142812,
+    "mtime": 1786091253.020737,
     "ast_hash": "de2e2792d27b795553cc914d368bf6fb",
     "semantic_hash": ""
   },
   "tests/unit/test-case-cache.test.js": {
-    "mtime": 1786088284.6997716,
+    "mtime": 1786091253.0208893,
     "ast_hash": "06c1d8ecbc1dee938a2556638169dbd5",
     "semantic_hash": ""
   },
   "tests/unit/test-case-compiler.test.js": {
-    "mtime": 1786078506.8132775,
+    "mtime": 1786091253.0210986,
     "ast_hash": "daafae1e85771717adb039f3c347dc22",
     "semantic_hash": ""
   },
@@ -785,8 +785,8 @@
     "semantic_hash": ""
   },
   "tests/unit/webos-mytv-automation.test.js": {
-    "mtime": 1785654955.9816859,
-    "ast_hash": "957e5c89d774a7d1cd72624dda2b4ac5",
+    "mtime": 1786503775.3175826,
+    "ast_hash": "fa5b519172517942b8e03285f13cb9f8",
     "semantic_hash": ""
   },
   "tests/unit/webos-read-only-adapter.test.js": {
@@ -805,8 +805,8 @@
     "semantic_hash": ""
   },
   "ACTION-COMPILER.md": {
-    "mtime": 1786078550.7265596,
-    "ast_hash": "cd75d777ff86c0836e582b7dbbdd4e56",
+    "mtime": 1786425205.3854601,
+    "ast_hash": "e5e4edee7ebe05a2e3f06ab46c20e36e",
     "semantic_hash": ""
   },
   "API-SPEC.md": {
@@ -890,8 +890,8 @@
     "semantic_hash": ""
   },
   "tests/unit/preload.test.js": {
-    "mtime": 1786088335.617735,
-    "ast_hash": "c935f0f6823ef8b8bf0ee7956f5a5cdb",
+    "mtime": 1786499419.6967404,
+    "ast_hash": "3562dca4bee705d3c9f479bb1a265d48",
     "semantic_hash": ""
   },
   "app/browser-run-launcher.js": {
@@ -1145,13 +1145,13 @@
     "semantic_hash": ""
   },
   "app/test-configuration.js": {
-    "mtime": 1785825896.6855571,
-    "ast_hash": "590e9cb5f44fd65c9db50b04fc45eb51",
+    "mtime": 1786498791.160705,
+    "ast_hash": "c12ea75f361059c0835c7bc13655bd70",
     "semantic_hash": ""
   },
   "tests/unit/test-configuration.test.js": {
-    "mtime": 1785825896.7007828,
-    "ast_hash": "b21c09f5dc8573cc7f86f734d74a5baf",
+    "mtime": 1786498807.7145393,
+    "ast_hash": "3201da5aee49ba152d5e60bf2f4f61f6",
     "semantic_hash": ""
   },
   "docs/tinyworkers/player-check-timeout_20260802.md": {
@@ -1265,8 +1265,38 @@
     "semantic_hash": ""
   },
   "docs/tinyworkers/20260807_113831_view-more-poster.md": {
-    "mtime": 1786085460.6363642,
+    "mtime": 1786091253.0137265,
     "ast_hash": "cfbd940117082c1ce47b5afca36dc7a6",
+    "semantic_hash": ""
+  },
+  "app/browser-batch-runner.js": {
+    "mtime": 1786500999.6517417,
+    "ast_hash": "4edd7558e0d7da4b51888ddea593f1b4",
+    "semantic_hash": ""
+  },
+  "app/test-report-store.js": {
+    "mtime": 1786498938.1877158,
+    "ast_hash": "c3babd71f0c834c5c452d37030adc361",
+    "semantic_hash": ""
+  },
+  "tests/unit/browser-batch-runner.test.js": {
+    "mtime": 1786499012.0659015,
+    "ast_hash": "c5b0b8416c4380c74f42edb1615f37db",
+    "semantic_hash": ""
+  },
+  "tests/unit/playwright-config.test.js": {
+    "mtime": 1786499447.5557494,
+    "ast_hash": "e82084c8208a96d150536b943c4802a8",
+    "semantic_hash": ""
+  },
+  "tests/unit/test-report-store.test.js": {
+    "mtime": 1786499037.2210805,
+    "ast_hash": "ae89477ba17f680e6fddc35e11498bad",
+    "semantic_hash": ""
+  },
+  "docs/tinyworkers/20260811_160811_simultaneous-browser-tests.md": {
+    "mtime": 1786501443.4431071,
+    "ast_hash": "5a01d0640c732a410584651328e3ec52",
     "semantic_hash": ""
   }
 }

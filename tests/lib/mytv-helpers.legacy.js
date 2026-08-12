@@ -1,5 +1,6 @@
 const { test, expect } = require("playwright/test");
 const sharedPlayback = require("./playback");
+const {acceptUserConsentPopupIfVisible} = require("./login-popups");
 
 const DEFAULT_OPTIONS = {
   APP_URL: "https://html5stage.mytv.vn/",
@@ -80,6 +81,7 @@ async function openAppAndEnterLoginPage(page, options) {
 async function loginWithAccount(page, options) {
   await remoteFocusById(page, "remote-login-method");
   await remotePress(page, "Enter", 1500);
+  await acceptUserConsentPopupIfVisible(page, undefined, {remoteFocusById, remotePress});
 
   await expect(page.locator("#new_ui_login_input_label")).toContainText(
     "Nhập số điện thoại / Tài khoản MyTV"
@@ -2638,9 +2640,10 @@ async function remoteFocusByKeyText(page, char, maxMoves = 50) {
   });
 }
 
-async function remoteFocusById(page, id, maxMoves = 50) {
+async function remoteFocusById(page, id, maxMoves = 50, options = {}) {
   await remoteFocus(page, {
     maxMoves,
+    preferredDirection: options.preferredDirection,
     isTarget: (state) => {
       if (state.id === id) return true;
       // When the target is a container element (e.g. id="space" wrapping the
@@ -2679,7 +2682,7 @@ async function remoteFocusById(page, id, maxMoves = 50) {
   });
 }
 
-async function remoteFocus(page, { isTarget, getTargetRect, maxMoves }) {
+async function remoteFocus(page, { isTarget, getTargetRect, maxMoves, preferredDirection }) {
   const targetRect = await getTargetRect();
   expect(targetRect).toBeTruthy();
 
@@ -2687,7 +2690,7 @@ async function remoteFocus(page, { isTarget, getTargetRect, maxMoves }) {
     const state = await getFocusedState(page);
     if (await Promise.resolve(isTarget(state))) return;
 
-    const key = chooseDirection(state.rect, targetRect);
+    const key = preferredDirection || chooseDirection(state.rect, targetRect);
     const before = state.id || state.text;
     await remotePress(page, key, 160);
     const after = await getFocusedState(page);

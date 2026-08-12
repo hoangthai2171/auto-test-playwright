@@ -3,8 +3,10 @@ const {chromium} = require("playwright");
 const path = require("node:path");
 const fs = require("node:fs/promises");
 const {getTestOptions} = require("../lib/mytv-helpers");
+const {resolveTestViewport} = require("../../app/test-configuration");
 
-const VIEWPORT = {width: 1920, height: 1080};
+const TEST_VIEWPORT = resolveTestViewport(process.env.MYTV_TEST_RESOLUTION);
+const VIEWPORT = {width: TEST_VIEWPORT.width, height: TEST_VIEWPORT.height};
 const VIEWPORT_SCALE = 0.5;
 
 const test = base.test.extend({
@@ -18,10 +20,10 @@ const test = base.test.extend({
             }
 
             const context = await browser.newContext({
-                // MyTV lays out its TV UI at 1920x1080.  The Electron preview
-                // may render that logical surface at a smaller visual scale,
-                // but the test document viewport must remain 1920x1080 so
-                // focus, carousel, and player behavior match the product UI.
+                // MyTV's Browser surface is selected by Test configuration.
+                // Electron may render that logical surface at a smaller visual
+                // scale, but the test document viewport remains exact so focus,
+                // carousel, and player behavior match the selected product UI.
                 viewport: VIEWPORT,
             });
 

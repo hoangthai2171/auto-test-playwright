@@ -105,11 +105,11 @@ used only as the local fallback when no latest cached API list is available.
    npm run app:dev
    ```
 
-3. Open Settings and configure the API domain, API authorization/service-token value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. The Browser `APP_URL` is fixed in `app/main.js` and is not shown or editable in the GUI. The DNS host mapping is fixed in `app/hosts-file.js`; Settings retains only value-free Add host and Remove host controls. The configured API authorization value is sent verbatim in the `X-FlowTest-Service-Token` header and is redacted from Logs. In **Test configuration**, set `Test case maximum time (minutes)` to a positive integer (default 30 minutes) to control the maximum duration of one Browser test case, and set `Player check timeout (second)` to control the wait before Browser and LG player health checks (default 6 seconds). In **SDK configuration → Browser configuration**, review and, when needed, explicitly install the project-pinned Chromium.
+3. Open Settings and configure the API domain, API authorization/service-token value, project ID, environment (default `UI`), and Network config API timeout (default 30 seconds), then save. The Browser `APP_URL` is fixed in `app/main.js` and is not shown or editable in the GUI. The DNS host mapping is fixed in `app/hosts-file.js`; Settings retains only value-free Add host and Remove host controls. The configured API authorization value is sent verbatim in the `X-FlowTest-Service-Token` header and is redacted from Logs. In **Test configuration**, choose `Test resolution` (`1280x720` by default, or `1920x1080`) and `Simultaneous devices` (`1`, `2`, `4`, or `6 devices`; default `6`) for Browser runs. The selected values are validated, persisted, and snapshotted when each Browser batch starts. The same panel also contains `Test case maximum time (minutes)` (default 30) and `Player check timeout (second)` (default 6). In **SDK configuration → Browser configuration**, review and, when needed, explicitly install the project-pinned Chromium.
 4. Use the refresh icon beside **Chiến dịch** to load running campaigns or the refresh icon beside **Folders** to load folders. Selecting a campaign automatically refreshes **Folders** with only that campaign's folders; clearing the campaign refreshes the unfiltered project folders. Choose a folder before clicking `Get test cases`: with a campaign selected, cases come from that campaign and the folder supplies the result context; with no campaign selected, cases come only from the selected folder.
 5. Search by case ID substring or name with the instant filter, then check one or more visible cases in the table.
 6. Use `Detail` to review metadata, expected result, and normalized actions.
-7. Click `Run Selected (N)` and watch the cases execute sequentially in the logs and optional browser preview.
+7. Click `Run Selected (N)`. The Browser workspace keeps six 16:9 preview holders visible; the configured number of slots runs immediately and later selected cases refill the first slot that becomes free. Each holder shows the full testcase ID, an ellipsized name when necessary, and a white status badge. Select a holder or testcase row to view that case's redacted Playwright log in the lower workspace panel. Slots above the configured simultaneous-device limit remain `Idle`.
 8. Open the test report after the batch finishes. Use `Details` for any test to
    see its expected result; passed tests also show their final viewport
    screenshot. `play_row` details list every tested poster with its name,
@@ -117,9 +117,10 @@ used only as the local fallback when no latest cached API list is available.
    one failed poster makes the overall testcase fail while later posters are
    still tested.
 
-The renderer captures checked case IDs in table order and sends one
-`TEST_CASE_ID`, player-check timeout, test-case maximum time, preview-settings, and the
-active cache key at a time to the main process. Folder and campaign API calls
+The renderer captures checked case IDs in table order and sends one Browser batch
+request containing the ordered IDs, normalized resolution, simultaneous-device
+limit, player-check timeout, test-case maximum time, preview settings, and the
+active cache key to the main process. Folder and campaign API calls
 run through main-process IPC. A selected campaign scopes both the folder-tree
 request and the direct testcase request with `campaignId`; the selected folder
 path remains the result context. With no campaign selected, neither request
@@ -127,16 +128,21 @@ contains a campaign filter. A
 full-screen spinner blocks interaction while an API call is active; timeout
 failures show an alert and leave the existing list/cache untouched. The main
 process validates each ID from the selected folder or campaign cache, then
-starts the generic spec `tests/run-test-case-mytv.spec.js`. Campaign loading
-uses each returned campaign copy's own `id`; `sourceFlowCaseId` is never used as
-the execution ID. The renderer waits for each process to finish, records its row
-status, and continues after a pass or failure. When every checked API-loaded
+starts one owned Playwright child per active Browser slot. Every child keeps
+`workers: 1`; the main-process scheduler refills slots in table order and gives
+each case unique preview, result, test-results, and debug-report paths under an
+opaque batch directory. Campaign loading uses each returned campaign copy's own
+`id`; `sourceFlowCaseId` is never used as the execution ID. The main scheduler
+continues after a pass, failure, or launch error, while the renderer records
+each keyed slot/table status. When every checked API-loaded
 case has completed, it sends one
 `PATCH /api/v1/projects/{projectId}/flow-cases/by-folder` request with the
 selected folder path and each case's `tested` lifecycle status plus its
 `testResult`. Campaign batches also include the selected `campaignId` on every
-testcase result item. A stopped, skipped, local-fixture, or failed-to-launch
-batch is not submitted partially.
+testcase result item. A normally completed API batch submits all selected
+cases; after a manual stop, only cases that fully completed before the stop
+are submitted. Skipped, local-fixture, and failed-to-launch cases are never
+included.
 
 Player checks wait for normal playback using the value from **Settings → Test
 configuration** (6 seconds by default), capture the player screen for the
@@ -158,6 +164,13 @@ popup to close before continuing. The four supported dialog families
 (`#dialog_confirm_v2`, `#dialog_alert_v2`, `#dialog_alert_full`, and
 `#dialog_confirm_full`) report their active button with `.active`; normal
 controls report focus with `.focused`.
+
+When the account-login method opens MyTV's service-consent screen, the login
+helper handles it with native remote focus: it moves up to
+`#user-consent-popup-accept-all-checkbox`, moves down to
+`#user-consent-popup-footer-checkbox`, activates both checkboxes, then focuses
+`#user-consent-btn-submit` and confirms. Older deployments that do not show the
+consent screen continue directly to the username keyboard.
 
 Recognized `expectedResult` values are checked after all declared actions. Play
 or Phát success wording waits for the configured player-check timeout (6 seconds
@@ -398,9 +411,9 @@ No Chromium archive is included in macOS or Windows artifacts. The
 `npm run browsers:install` command remains only for legacy terminal development
 and is not used by the Electron app.
 
-Browser case runs use a 1920x1080 logical Playwright viewport, matching the
-MyTV TV layout. The Electron preview can display that surface at a smaller
-visual scale when the app window is smaller; that visual scale does not change
+Browser case runs use the selected 1280x720 or 1920x1080 logical Playwright
+viewport (1280x720 by default). Both surfaces are 16:9; the fullscreen Electron
+workspace scales them only inside the six smaller holders and does not change
 the page's logical viewport or carousel behavior.
 
 ## Reports and Artifacts
@@ -411,8 +424,15 @@ player state, focus state, and search or movie candidate details. Electron runs
 show a compact test report from `userData/user-report/test-report.html`,
 whose `Details` rows show the expected result and final viewport screenshot for
 passed tests. `play_row` details also show every tested poster, content ID,
-pass/fail result, and player/error screenshot. The full Playwright HTML report remains under
-`userData/playwright-report` for debugging.
+pass/fail result, and player/error screenshot. Each Browser case's full
+Playwright HTML report and test-results are isolated under its
+`userData/browser-runs/<batchId>/...` directory for debugging; the compact
+report remains the stable user-facing summary.
+
+Interactive Browser preview is supported for exactly one selected Browser case;
+use Live or None when running multiple cases. LG selection remains a separately
+confirmed serial workflow and is unaffected by Browser resolution or
+simultaneous-device settings.
 
 ## Common Issues
 
