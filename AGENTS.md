@@ -108,18 +108,27 @@ never guess arbitrary behavior or evaluate server-provided code.
 API folder, running-campaign, and case retrieval runs in the main process
 through the preload IPC bridge. When a campaign is selected, folder retrieval
 passes `campaignId` to return only campaign-related folders and case retrieval
-uses the direct `campaignId` query; the selected folder remains the result
-context. When the campaign selector is empty, folder and case retrieval omit the
-campaign filter. Successful folder responses atomically replace their folder-ID
-cache entry and campaign responses use `campaign:<campaignId>`; each updates the
-latest-entry marker used for GUI startup restoration. Refreshing either campaign
-or folder lists clears the marker and the visible loaded cases. Campaign copies
-are validated using their own `id`; `sourceFlowCaseId` is never substituted. The generic action executor
-receives either the local fixture source or a validated cache source and does not
-contain API or cache logic. Result submission uses
-`PATCH /api/v1/projects/{projectId}/flow-cases/by-folder` with a `folderPath`,
-per-case `tested`/`testResult` records, and `campaignId` on each item for
-campaign runs.
+uses `GET /api/v1/projects/{projectId}/test-campaigns/{campaignId}/testcases`
+with the configured value only in `X-FlowTest-Service-Token`. A selected folder
+is optional for campaign loading: Main fetches the authoritative campaign list
+without invented query filters and, when a folder is selected, intersects it
+with the existing folder subtree by exact copy ID. When the campaign selector is
+empty, a folder is still required and the existing folder case retrieval is
+unchanged. Successful folder responses atomically replace their folder-ID cache
+entry and campaign responses use `campaign:<campaignId>`; each updates the
+latest-entry marker used for GUI startup restoration. Campaign-only cache entries
+may omit `folder`, while folder-filtered campaign entries retain the selected
+folder metadata. Refreshing either campaign or folder lists clears the marker and
+the visible loaded cases. Campaign copies are validated using their own `id`;
+`sourceFlowCaseId` is never substituted. The generic action executor receives
+either the local fixture source or a validated cache source and does not contain
+API or cache logic. Folder-filtered campaign results use
+`PATCH /api/v1/projects/{projectId}/flow-cases/by-folder` with the real selected
+`folderPath` and per-case `tested`/`testResult` records carrying `campaignId`.
+Campaign-only results use ordered per-case
+`PATCH /api/v1/projects/{projectId}/flow-cases/{caseId}` requests with
+`campaignId`, `status`, and `testResult`; only failed/unknown IDs remain
+eligible for Retry sync after partial success.
 
 ### Terminal regression runner
 
@@ -147,6 +156,7 @@ app/
   test-report.js                  Compact user report HTML/data generation
   preload.js                      Context-isolated IPC bridge
   flow-case-api.js                Flow-case API URLs, fetch, normalization, timeout
+  campaign-flow-case-workflow.js Pure campaign/folder intersection and ordered result fan-out
   test-case-cache.js              Atomic folder/campaign-keyed user-data cache
   lg-desktop-run-preflight.js     Main-only LG local/read-only preflight
   lg-desktop-batch-runner.js      Confirmed LG serial batch and recovery policy

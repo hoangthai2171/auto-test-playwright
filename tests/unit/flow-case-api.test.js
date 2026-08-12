@@ -65,6 +65,32 @@ test("builds the running-campaign URL", () => {
   );
 });
 
+test("builds the dedicated campaign testcase URL", () => {
+  assert.equal(
+    api.buildCampaignTestCasesUrl({apiDomain: "http://api.test/", projectId: "1", campaignId: "12"}),
+    "http://api.test/api/v1/projects/1/test-campaigns/12/testcases"
+  );
+  assert.throws(
+    () => api.buildCampaignTestCasesUrl({projectId: "1", campaignId: "campaign-12"}),
+    /campaignId must be a positive integer/
+  );
+  assert.throws(
+    () => api.buildCampaignTestCasesUrl({projectId: "1"}),
+    /campaignId must be a positive integer/
+  );
+});
+
+test("builds a single flow-case result URL", () => {
+  assert.equal(
+    api.buildFlowCaseResultUrl({apiDomain: "http://api.test/", projectId: "1", caseId: "1842"}),
+    "http://api.test/api/v1/projects/1/flow-cases/1842"
+  );
+  assert.throws(
+    () => api.buildFlowCaseResultUrl({projectId: "1", caseId: ""}),
+    /caseId is required/
+  );
+});
+
 test("builds a testcaseId lookup without also sending folderName", () => {
   assert.equal(
     api.buildFlowCasesUrl({
@@ -217,6 +243,46 @@ test("loads running campaigns from the data envelope with the configured X-FlowT
   assert.deepEqual(result.campaigns, [{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]);
 });
 
+test("loads campaign testcases from the dedicated endpoint with the configured service token", async () => {
+  let request;
+  const result = await api.fetchCampaignTestCases({
+    apiDomain: "https://api.example.test",
+    projectId: "1",
+    campaignId: "12",
+    authorization: "service-token",
+    fetchImpl: async (url, options) => {
+      request = {url, options};
+      return {
+        ok: true,
+        status: 200,
+        json: async () => ({testcases: [{id: "1842", name: "Campaign copy", actions: []}]}),
+      };
+    },
+  });
+
+  assert.equal(request.url, "https://api.example.test/api/v1/projects/1/test-campaigns/12/testcases");
+  assert.equal(request.options.headers["X-FlowTest-Service-Token"], "service-token");
+  assert.equal(request.options.headers.Authorization, undefined);
+  assert.deepEqual(result.cases, [{id: "1842", name: "Campaign copy", actions: []}]);
+  assert.equal(result.request.url, request.url);
+});
+
+test("accepts a top-level campaign testcase array without adding filter queries", async () => {
+  let requestUrl;
+  const result = await api.fetchCampaignTestCases({
+    apiDomain: "http://api.test",
+    projectId: "1",
+    campaignId: "12",
+    fetchImpl: async (url) => {
+      requestUrl = url;
+      return {ok: true, status: 200, json: async () => [{id: "1842", name: "Campaign copy", actions: []}]};
+    },
+  });
+
+  assert.equal(requestUrl, "http://api.test/api/v1/projects/1/test-campaigns/12/testcases");
+  assert.deepEqual(result.cases, [{id: "1842", name: "Campaign copy", actions: []}]);
+});
+
 test("loads campaign-scoped cases through the campaignId query", async () => {
   let requestUrl;
   const result = await api.fetchFlowCases({
@@ -335,4 +401,30 @@ test("preserves campaignId on each result item in the PATCH body", async () => {
   });
 
   assert.deepEqual(JSON.parse(request.options.body), {folderPath: "/Thai-test", testcases});
+});
+
+test("submits one campaign testcase result through the per-case PATCH endpoint", async () => {
+  let request;
+  const testResult = {status: "success", message: "Testcase chạy thành công.", passed: 1, failed: 0};
+  const result = await api.submitFlowCaseResult({
+    apiDomain: "http://api.test",
+    projectId: "1",
+    caseId: "1842",
+    campaignId: "12",
+    status: "tested",
+    testResult,
+    authorization: "service-token",
+    fetchImpl: async (url, options) => {
+      request = {url, options};
+      return {ok: true, status: 200, statusText: "OK", json: async () => ({data: {id: "1842"}})};
+    },
+  });
+
+  assert.equal(request.url, "http://api.test/api/v1/projects/1/flow-cases/1842");
+  assert.equal(request.options.method, "PATCH");
+  assert.equal(request.options.headers["X-FlowTest-Service-Token"], "service-token");
+  assert.equal(request.options.headers.Authorization, undefined);
+  assert.deepEqual(JSON.parse(request.options.body), {campaignId: "12", status: "tested", testResult});
+  assert.deepEqual(result.request.body, {campaignId: "12", status: "tested", testResult});
+  assert.equal(result.response.status, 200);
 });

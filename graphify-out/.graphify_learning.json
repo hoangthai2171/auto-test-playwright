@@ -1,5 +1,96 @@
 {
-  "generated_at": "2026-08-05T03:29:37.084455+00:00",
-  "nodes": {},
+  "generated_at": "2026-08-12T03:52:15.557803+00:00",
+  "nodes": {
+    "app_flow_case_api": {
+      "code_fingerprint": "8ec4e54b60b078ec4edb914b89d2fd3248f246cc22ec8012d75648dd9a0e0510",
+      "label": "flow-case-api.js",
+      "last": "2026-08-05T03:33:35.134020+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-05T03:33:35.134020+00:00",
+          "outcome": "useful",
+          "q": "Why does the test status/result update request omit X-FlowTest-Service-Token?"
+        }
+      ],
+      "score": 0.850412321,
+      "source_file": "app/flow-case-api.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "app_flow_case_api_requestjson": {
+      "code_fingerprint": "8ec4e54b60b078ec4edb914b89d2fd3248f246cc22ec8012d75648dd9a0e0510",
+      "label": "requestJson()",
+      "last": "2026-08-05T03:50:17.200076+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-05T03:50:17.200076+00:00",
+          "outcome": "useful",
+          "q": "Why does the result PATCH still omit X-FlowTest-Service-Token after API_AUTHORIZATION is configured?"
+        },
+        {
+          "date": "2026-08-05T03:33:35.134020+00:00",
+          "outcome": "useful",
+          "q": "Why does the test status/result update request omit X-FlowTest-Service-Token?"
+        }
+      ],
+      "score": 1.701052558,
+      "source_file": "app/flow-case-api.js",
+      "status": "preferred",
+      "uses": 2
+    },
+    "app_flow_case_api_submitflowcaseresults": {
+      "code_fingerprint": "8ec4e54b60b078ec4edb914b89d2fd3248f246cc22ec8012d75648dd9a0e0510",
+      "label": "submitFlowCaseResults()",
+      "last": "2026-08-05T03:50:17.200076+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-05T03:50:17.200076+00:00",
+          "outcome": "useful",
+          "q": "Why does the result PATCH still omit X-FlowTest-Service-Token after API_AUTHORIZATION is configured?"
+        },
+        {
+          "date": "2026-08-05T03:33:35.134020+00:00",
+          "outcome": "useful",
+          "q": "Why does the test status/result update request omit X-FlowTest-Service-Token?"
+        }
+      ],
+      "score": 1.701052558,
+      "source_file": "app/flow-case-api.js",
+      "status": "preferred",
+      "uses": 2
+    },
+    "app_main": {
+      "code_fingerprint": "7e845d7e6ed93f6c33a8c508a436d3ad3b8d21492d1e9b65c36e0682592ad5b7",
+      "label": "main.js",
+      "last": "2026-08-05T03:33:35.134020+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-05T03:33:35.134020+00:00",
+          "outcome": "useful",
+          "q": "Why does the test status/result update request omit X-FlowTest-Service-Token?"
+        }
+      ],
+      "score": 0.850412321,
+      "source_file": "app/main.js",
+      "status": "tentative",
+      "uses": 1
+    },
+    "app_renderer_renderer": {
+      "code_fingerprint": "5c9d71e52b69153feaceffeb3cce3e0432c6b03fde7151c2befc486730cdc44b",
+      "label": "renderer.js",
+      "last": "2026-08-05T03:33:35.134020+00:00",
+      "provenance": [
+        {
+          "date": "2026-08-05T03:33:35.134020+00:00",
+          "outcome": "useful",
+          "q": "Why does the test status/result update request omit X-FlowTest-Service-Token?"
+        }
+      ],
+      "score": 0.850412321,
+      "source_file": "app/renderer/renderer.js",
+      "status": "tentative",
+      "uses": 1
+    }
+  },
   "version": 1
 }

@@ -6,7 +6,8 @@ const {app, BrowserView, BrowserWindow, dialog, ipcMain, safeStorage, shell} = r
 const {loadLocalTestCases, loadCachedTestCases, findTestCaseById} = require("../tests/lib/test-case-source");
 const {validateTestCaseList} = require("../tests/lib/test-case-schema");
 const {redactSensitiveText, createLogRedactor} = require("./credential-redaction");
-const {fetchFlowCaseFolders, fetchFlowCases, fetchRunningFlowCaseCampaigns, submitFlowCaseResults, fetchDeviceCompatibilityCatalog, normalizeTimeoutMs} = require("./flow-case-api");
+const {fetchFlowCaseFolders, fetchFlowCases, fetchRunningFlowCaseCampaigns, fetchCampaignTestCases, submitFlowCaseResults, submitFlowCaseResult, fetchDeviceCompatibilityCatalog, normalizeTimeoutMs} = require("./flow-case-api");
+const {intersectCampaignCasesById, submitCampaignResultsOrdered} = require("./campaign-flow-case-workflow");
 const {replaceFolderCacheEntry, replaceCampaignCacheEntry, clearTestCaseCache, readMostRecentTestCaseCacheEntry} = require("./test-case-cache");
 const {createEmptyReport, buildTestReportEntry, upsertTestReport, renderUserReport} = require("./test-report");
 const {createBrowserBatchRunner} = require("./browser-batch-runner");
@@ -510,19 +511,34 @@ ipcMain.handle("load-flow-cases", async (_event, settings = {}) => {
 });
 
 async function loadCampaignCases(settings, campaignId) {
-    const result = await fetchFlowCases({
+    const campaignResult = await fetchCampaignTestCases({
         apiDomain: settings.API_DOMAIN,
         authorization: settings.API_AUTHORIZATION,
         projectId: settings.PROJECT_ID,
         campaignId,
-        environment: settings.ENVIRONMENT,
         timeoutMs: normalizeTimeoutMs(settings.API_TIMEOUT_SECONDS),
     });
-    if (!result.ok) return withApiLog(result);
+    const apiResults = [campaignResult];
+    if (!campaignResult.ok) return withApiLog(campaignResult);
 
     try {
-        const cases = validateTestCaseList(result.cases, "running campaign API");
-        const folder = resolveCampaignFolder(settings, null, cases);
+        const campaignCases = validateTestCaseList(campaignResult.cases, "campaign testcase API");
+        const folder = buildSelectedFolder(settings);
+        let cases = campaignCases;
+        if (folder) {
+            const folderResult = await fetchFlowCases({
+                apiDomain: settings.API_DOMAIN,
+                authorization: settings.API_AUTHORIZATION,
+                projectId: settings.PROJECT_ID,
+                folderName: folder.fullPath,
+                environment: settings.ENVIRONMENT,
+                timeoutMs: normalizeTimeoutMs(settings.API_TIMEOUT_SECONDS),
+            });
+            apiResults.push(folderResult);
+            if (!folderResult.ok) return withApiLogs(folderResult, apiResults);
+            const folderCases = validateTestCaseList(folderResult.cases, "campaign folder API");
+            cases = intersectCampaignCasesById(campaignCases, folderCases);
+        }
         const campaign = {
             id: campaignId,
             ...(String(settings.CAMPAIGN_NAME ?? "").trim() ? {name: String(settings.CAMPAIGN_NAME).trim()} : {}),
@@ -538,14 +554,21 @@ async function loadCampaignCases(settings, campaignId) {
         return {
             ok: true,
             campaign,
-            folder,
+            ...(folder ? {folder} : {}),
             cacheKey: `campaign:${campaignId}`,
             cases: cases.map(sanitizeCaseForUi),
             source: "api",
-            apiLog: sanitizeApiLog(result),
+            apiLog: sanitizeApiLog({request: campaignResult.request, response: campaignResult.response}),
+            apiLogs: apiResults.map((entry) => sanitizeApiLog({request: entry.request, response: entry.response})),
         };
     } catch (error) {
-        return {ok: false, message: error.message, timeout: false, apiLog: sanitizeApiLog(result)};
+        return {
+            ok: false,
+            message: error.message,
+            timeout: false,
+            apiLog: sanitizeApiLog({request: apiResults.at(-1)?.request, response: apiResults.at(-1)?.response}),
+            apiLogs: apiResults.map((entry) => sanitizeApiLog({request: entry.request, response: entry.response})),
+        };
     }
 }
 
@@ -589,52 +612,71 @@ function summarizeRunningCampaign(entry, index = 0) {
     };
 }
 
-function resolveCampaignFolder(settings, campaign, cases) {
+function buildSelectedFolder(settings) {
     const configuredPath = String(settings.FOLDER_NAME ?? "").trim();
-    if (configuredPath) {
-        return {
-            id: settings.FOLDER_ID,
-            name: String(settings.FOLDER_NAME_LABEL ?? "").trim() || configuredPath.split("/").filter(Boolean).at(-1) || configuredPath,
-            fullPath: configuredPath,
-        };
+    if (!configuredPath) return null;
+    if (!/^\/(?:[^/]+(?:\/[^/]+)*)?$/u.test(configuredPath)) {
+        throw new Error("Selected campaign folder path must be an absolute path.");
     }
-
-    const paths = new Set();
-    const addPath = (value) => {
-        const pathValue = String(value ?? "").trim();
-        if (/^\/(?:[^/]+(?:\/[^/]+)*)?$/u.test(pathValue)) paths.add(pathValue);
-    };
-    const collectPath = (value) => {
-        if (!value || typeof value !== "object") return;
-        addPath(value.folderPath);
-        addPath(value.folderName);
-        addPath(value.fullPath);
-        addPath(value.folder?.fullPath);
-    };
-    collectPath(campaign);
-    (campaign?.testcases || []).forEach(collectPath);
-    cases.forEach(collectPath);
-    if (paths.size !== 1) return null;
-
-    const fullPath = [...paths][0];
     return {
-        name: fullPath.split("/").filter(Boolean).at(-1) || fullPath,
-        fullPath,
+        id: settings.FOLDER_ID,
+        name: String(settings.FOLDER_NAME_LABEL ?? "").trim() || configuredPath.split("/").filter(Boolean).at(-1) || configuredPath,
+        fullPath: configuredPath,
     };
 }
 
 ipcMain.handle("submit-flow-case-results", async (_event, values = {}) => {
     try {
         const payload = normalizeFlowCaseResultsPayload(values);
-        const result = await submitFlowCaseResults({
-            apiDomain: values.API_DOMAIN,
-            authorization: values.API_AUTHORIZATION,
-            projectId: values.PROJECT_ID,
-            folderPath: payload.folderPath,
+        if (payload.folderPath) {
+            const result = await submitFlowCaseResults({
+                apiDomain: values.API_DOMAIN,
+                authorization: values.API_AUTHORIZATION,
+                projectId: values.PROJECT_ID,
+                folderPath: payload.folderPath,
+                testcases: payload.testcases,
+                timeoutMs: normalizeTimeoutMs(values.API_TIMEOUT_SECONDS),
+            });
+            return withApiLog(result);
+        }
+
+        const apiResults = [];
+        const result = await submitCampaignResultsOrdered({
             testcases: payload.testcases,
-            timeoutMs: normalizeTimeoutMs(values.API_TIMEOUT_SECONDS),
+            submitOne: async (testCase) => {
+                try {
+                    const response = await submitFlowCaseResult({
+                        apiDomain: values.API_DOMAIN,
+                        authorization: values.API_AUTHORIZATION,
+                        projectId: values.PROJECT_ID,
+                        caseId: testCase.id,
+                        campaignId: payload.campaignId || testCase.campaignId,
+                        status: testCase.status,
+                        testResult: testCase.testResult,
+                        timeoutMs: normalizeTimeoutMs(values.API_TIMEOUT_SECONDS),
+                    });
+                    apiResults.push({id: testCase.id, ...response});
+                    return response;
+                } catch (error) {
+                    const response = {ok: false, message: error.message, timeout: Boolean(error.timeout)};
+                    apiResults.push({id: testCase.id, ...response});
+                    return response;
+                }
+            },
         });
-        return withApiLog(result);
+
+        return {
+            ok: result.ok,
+            ...(result.ok ? {} : {message: `Failed to submit ${result.retryTestcaseIds.length} campaign testcase result(s).`}),
+            timeout: result.unknownTestcaseIds.length > 0,
+            submittedTestcaseIds: result.submittedTestcaseIds,
+            failedTestcaseIds: result.failedTestcaseIds,
+            unknownTestcaseIds: result.unknownTestcaseIds,
+            retryTestcaseIds: result.retryTestcaseIds,
+            failures: result.failures.map((failure) => ({...failure, message: redactSensitiveText(failure.message)})),
+            apiLog: sanitizeApiLog(apiResults.at(-1)),
+            apiLogs: apiResults.map((entry) => sanitizeApiLog(entry)),
+        };
     } catch (error) {
         return {ok: false, message: error.message, timeout: false};
     }
@@ -654,17 +696,38 @@ ipcMain.handle("get-app-version", () => app.getVersion());
 
 function normalizeFlowCaseResultsPayload(values) {
     const folderPath = String(values.FOLDER_PATH ?? "").trim();
-    if (!/^\/(?:[^/]+(?:\/[^/]+)*)?$/u.test(folderPath)) {
+    const campaignId = String(values.CAMPAIGN_ID ?? "").trim();
+    if (folderPath && !/^\/(?:[^/]+(?:\/[^/]+)*)?$/u.test(folderPath)) {
         throw new Error("Flow-case result folderPath must be an absolute path.");
+    }
+    if (!folderPath && !campaignId) {
+        throw new Error("Flow-case results require a folderPath or campaignId.");
+    }
+    if (campaignId && !/^[1-9]\d*$/u.test(campaignId)) {
+        throw new Error("Flow-case result campaignId must be a positive integer.");
     }
 
     if (!Array.isArray(values.testcases) || values.testcases.length === 0) {
         throw new Error("Flow-case results require at least one testcase.");
     }
 
+    const testcases = values.testcases.map((testCase, index) => normalizeFlowCaseResult(testCase, index));
+    if (campaignId) {
+        testcases.forEach((testCase, index) => {
+            if (testCase.campaignId && testCase.campaignId !== campaignId) {
+                throw new Error(`testcases[${index}].campaignId must match the selected campaign.`);
+            }
+            testCase.campaignId = campaignId;
+        });
+    }
+    if (!folderPath && testcases.some((testCase) => !testCase.campaignId)) {
+        throw new Error("Campaign-only flow-case results require campaignId on every testcase.");
+    }
+
     return {
         folderPath,
-        testcases: values.testcases.map((testCase, index) => normalizeFlowCaseResult(testCase, index)),
+        ...(campaignId ? {campaignId} : {}),
+        testcases,
     };
 }
 
@@ -726,6 +789,15 @@ function normalizeFlowCaseResult(testCase, index) {
 function withApiLog(result) {
     const {request, response, ...payload} = result;
     return {...payload, apiLog: sanitizeApiLog({request, response})};
+}
+
+function withApiLogs(result, results = [result]) {
+    const {request, response, ...payload} = result;
+    return {
+        ...payload,
+        apiLog: sanitizeApiLog({request, response}),
+        apiLogs: results.filter(Boolean).map((entry) => sanitizeApiLog(entry)),
+    };
 }
 
 function sanitizeApiLog(value) {

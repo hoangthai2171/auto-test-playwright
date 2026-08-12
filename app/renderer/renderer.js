@@ -532,12 +532,18 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     function appendApiResponseLog(operation, response) {
         const details = response?.apiLog;
+        const apiLogs = Array.isArray(response?.apiLogs) && response.apiLogs.length
+            ? response.apiLogs
+            : details
+                ? [details]
+                : [];
         const result = {
             ok: Boolean(response?.ok),
             message: response?.message || "",
             timeout: Boolean(response?.timeout),
             request: details?.request || null,
             response: details?.response || null,
+            ...(apiLogs.length > 1 ? {apiLogs} : {}),
         };
         appendLog(formatLogDetails(result), `[API] ${operation} response`);
     }
@@ -989,7 +995,9 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     function updateFolderControls() {
         if (getTestCasesButton) {
-            getTestCasesButton.disabled = !folderSelect?.value || apiRequestDepth > 0;
+            const hasCampaign = Boolean(String(campaignSelect?.value || "").trim());
+            const hasFolder = Boolean(String(folderSelect?.value || "").trim());
+            getTestCasesButton.disabled = !(hasCampaign || hasFolder) || apiRequestDepth > 0;
         }
         if (refreshCampaignsButton) refreshCampaignsButton.disabled = apiRequestDepth > 0;
         if (refreshFoldersButton) refreshFoldersButton.disabled = apiRequestDepth > 0;
@@ -1053,7 +1061,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         folderSelect.replaceChildren();
         const placeholder = doc.createElement("option");
         placeholder.value = "";
-        placeholder.textContent = "Select a folder...";
+        placeholder.textContent = campaignSelect?.value ? "All campaign cases (optional folder)" : "Select a folder...";
         folderSelect.append(placeholder);
         nextFolders.forEach((folder) => {
             const normalizedFolder = {
@@ -1153,8 +1161,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     async function loadCasesFromSelection() {
         const selectedCampaign = campaignsById.get(campaignSelect?.value || "");
         const selectedFolder = foldersByPath.get(folderSelect?.value || "");
-        if (!selectedFolder) {
-            const message = selectedCampaign ? "Please select a folder from the selected campaign first." : "Please select a folder first.";
+        if (!selectedCampaign && !selectedFolder) {
+            const message = "Please select a campaign or folder first.";
             setFormMessage(message, "error");
             return {ok: false, message};
         }
@@ -1170,11 +1178,13 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                       CAMPAIGN_NAME: String(selectedCampaign.campaign.name || ""),
                   }
                 : {},
-            {
-                FOLDER_ID: String(selectedFolder.id),
-                FOLDER_NAME: selectedFolder.fullPath,
-                FOLDER_NAME_LABEL: selectedFolder.name,
-            },
+            selectedFolder
+                ? {
+                      FOLDER_ID: String(selectedFolder.id),
+                      FOLDER_NAME: selectedFolder.fullPath,
+                      FOLDER_NAME_LABEL: selectedFolder.name,
+                  }
+                : {},
         );
         resetLoadedCaseSource();
         appendApiRequestLog("Load flow cases", request);
@@ -1188,7 +1198,9 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             }
             activeCampaignId = selectedCampaign ? String(response.campaign?.id ?? selectedCampaign.campaign.id) : "";
             activeCacheKey = String(response.cacheKey || (activeCampaignId ? `campaign:${activeCampaignId}` : response.folder?.id || selectedFolder?.id || ""));
-            activeFolderId = response.folder?.id !== undefined && response.folder?.id !== null ? String(response.folder.id) : String(selectedFolder?.id ?? "");
+            activeFolderId = response.folder?.id !== undefined && response.folder?.id !== null
+                ? String(response.folder.id)
+                : String(selectedFolder?.id ?? "");
             activeFolderPath = String(response.folder?.fullPath || selectedFolder?.fullPath || "");
             renderCaseList(response.cases || []);
             setFormMessage(`Loaded ${response.cases?.length || 0} test cases.`, "ok");
@@ -2448,18 +2460,13 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             const fullyCompletedCaseRuns = caseRuns.filter(({result}) => result?.started && !result?.stopped && !result?.skipped);
             let resultSubmission;
             if ((allSelectedCasesRan || (stopped && fullyCompletedCaseRuns.length > 0)) && values.FLOW_CASE_RESULT_CONTEXT) {
-                const submission = buildFlowCaseResultSubmission(values.FLOW_CASE_RESULT_CONTEXT, fullyCompletedCaseRuns);
-                appendApiRequestLog("Send flow-case results", submission);
-                try {
-                    resultSubmission = await api.submitFlowCaseResults?.(submission);
-                    appendApiResponseLog("Send flow-case results", resultSubmission);
-                    if (!resultSubmission?.ok) throw new Error(resultSubmission?.message || "Failed to send flow-case results.");
-                } catch (error) {
-                    setPendingResultSubmission(submission);
-                    const message = `Failed to send flow-case results: ${error.message}`;
+                const sync = await submitFlowCaseResultsForRuns(values.FLOW_CASE_RESULT_CONTEXT, fullyCompletedCaseRuns);
+                resultSubmission = sync.result;
+                if (!sync.ok) {
+                    const message = `Failed to send flow-case results: ${sync.message}`;
                     appendLog(`${message}\n`);
                     setFormMessage(`${summary}. ${message}`, "error");
-                    return {completed, failed, skipped, stopped, caseRuns, resultSubmission: {ok: false, message: error.message}};
+                    return {completed, failed, skipped, stopped, caseRuns, resultSubmission: sync.result};
                 }
             }
             setFormMessage(summary, failed || stopped ? "error" : "ok");
@@ -2588,21 +2595,14 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         let resultSubmission;
 
         if ((allSelectedCasesRan || (stopped && fullyCompletedCaseRuns.length > 0)) && values.FLOW_CASE_RESULT_CONTEXT) {
-            const submission = buildFlowCaseResultSubmission(values.FLOW_CASE_RESULT_CONTEXT, fullyCompletedCaseRuns);
-            appendApiRequestLog("Send flow-case results", submission);
-            try {
-                resultSubmission = await api.submitFlowCaseResults?.(submission);
-                appendApiResponseLog("Send flow-case results", resultSubmission);
-                if (!resultSubmission?.ok) {
-                    throw new Error(resultSubmission?.message || "Failed to send flow-case results.");
-                }
-            } catch (error) {
-                setPendingResultSubmission(submission);
-                const message = `Failed to send flow-case results: ${error.message}`;
+            const sync = await submitFlowCaseResultsForRuns(values.FLOW_CASE_RESULT_CONTEXT, fullyCompletedCaseRuns);
+            resultSubmission = sync.result;
+            if (!sync.ok) {
+                const message = `Failed to send flow-case results: ${sync.message}`;
                 appendLog(`${message}\n`);
                 setFormMessage(`${summary}. ${message}`, "error");
                 setFormRunning(false);
-                return {completed, failed, skipped, stopped, resultSubmission: {ok: false, message: error.message}};
+                return {completed, failed, skipped, stopped, resultSubmission: sync.result};
             }
         }
 
@@ -2624,7 +2624,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         try {
             const result = await api.submitFlowCaseResults?.(retrySubmission);
             appendApiResponseLog("Retry flow-case results", result);
-            if (!result?.ok) throw new Error(result?.message || "Failed to send flow-case results.");
+            if (!result?.ok) {
+                setPendingResultSubmission(filterResultSubmissionForRetry(retrySubmission, result));
+                throw new Error(result?.message || "Failed to send flow-case results.");
+            }
             setPendingResultSubmission(null);
             return result;
         } catch (error) {
@@ -2632,16 +2635,47 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         }
     }
 
+    function filterResultSubmissionForRetry(submission, response) {
+        const retryIds = Array.isArray(response?.retryTestcaseIds)
+            ? new Set(response.retryTestcaseIds.map((id) => String(id)))
+            : new Set();
+        if (!retryIds.size || !Array.isArray(submission?.testcases)) return submission;
+        const testcases = submission.testcases.filter((testCase) => retryIds.has(String(testCase?.id)));
+        return testcases.length ? {...submission, testcases} : submission;
+    }
+
+    async function submitFlowCaseResultsForRuns(context, caseRuns) {
+        const submission = buildFlowCaseResultSubmission(context, caseRuns);
+        appendApiRequestLog("Send flow-case results", submission);
+        try {
+            const result = await api.submitFlowCaseResults?.(submission);
+            appendApiResponseLog("Send flow-case results", result);
+            if (!result?.ok) {
+                const message = result?.message || "Failed to send flow-case results.";
+                setPendingResultSubmission(filterResultSubmissionForRetry(submission, result));
+                return {ok: false, result: result || {ok: false, message}, message};
+            }
+            return {ok: true, result, message: ""};
+        } catch (error) {
+            const message = error?.message || "Failed to send flow-case results.";
+            setPendingResultSubmission(submission);
+            return {ok: false, result: {ok: false, message}, message};
+        }
+    }
+
     function buildFlowCaseResultSubmission(context, caseRuns) {
         const campaignId = String(context.CAMPAIGN_ID ?? "").trim();
-        return {
+        const folderPath = String(context.FOLDER_PATH ?? "").trim();
+        const submission = {
             API_DOMAIN: context.API_DOMAIN,
             API_AUTHORIZATION: context.API_AUTHORIZATION,
             PROJECT_ID: context.PROJECT_ID,
             API_TIMEOUT_SECONDS: context.API_TIMEOUT_SECONDS,
-            FOLDER_PATH: context.FOLDER_PATH,
             testcases: caseRuns.map(({id, result}) => buildFlowCaseResult(id, result, campaignId)),
         };
+        if (folderPath) submission.FOLDER_PATH = folderPath;
+        if (campaignId) submission.CAMPAIGN_ID = campaignId;
+        return submission;
     }
 
     function buildFlowCaseResult(testCaseId, run, campaignId = "") {
@@ -2682,17 +2716,13 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         };
         if (activeCacheKey) values.TEST_CASE_CACHE_KEY = activeCacheKey;
         if (activeFolderId) values.TEST_CASE_FOLDER_ID = activeFolderId;
-        if (activeCampaignId && !activeFolderPath) {
-            setFormMessage("The selected campaign has no result folder path. Select a folder and reload its cases before running.", "error");
-            return;
-        }
-        if (activeFolderPath) {
+        if (activeFolderPath || activeCampaignId) {
             values.FLOW_CASE_RESULT_CONTEXT = {
                 API_DOMAIN: runSettings.API_DOMAIN,
                 API_AUTHORIZATION: runSettings.API_AUTHORIZATION,
                 PROJECT_ID: runSettings.PROJECT_ID,
                 API_TIMEOUT_SECONDS: runSettings.API_TIMEOUT_SECONDS,
-                FOLDER_PATH: activeFolderPath,
+                ...(activeFolderPath ? {FOLDER_PATH: activeFolderPath} : {}),
                 ...(activeCampaignId ? {CAMPAIGN_ID: activeCampaignId} : {}),
             };
         }
@@ -2825,18 +2855,13 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             const fullyCompletedCaseRuns = caseRuns.filter(({result: caseResult}) => caseResult?.started && !caseResult?.stopped);
             let resultSubmission;
             if ((allSelectedCasesRan || (stopped && fullyCompletedCaseRuns.length > 0)) && values.FLOW_CASE_RESULT_CONTEXT) {
-                const submission = buildFlowCaseResultSubmission(values.FLOW_CASE_RESULT_CONTEXT, fullyCompletedCaseRuns);
-                appendApiRequestLog("Send flow-case results", submission);
-                try {
-                    resultSubmission = await api.submitFlowCaseResults?.(submission);
-                    appendApiResponseLog("Send flow-case results", resultSubmission);
-                    if (!resultSubmission?.ok) throw new Error(resultSubmission?.message || "Failed to send flow-case results.");
-                } catch (error) {
-                    setPendingResultSubmission(submission);
-                    const message = `Failed to send flow-case results: ${error.message}`;
+                const sync = await submitFlowCaseResultsForRuns(values.FLOW_CASE_RESULT_CONTEXT, fullyCompletedCaseRuns);
+                resultSubmission = sync.result;
+                if (!sync.ok) {
+                    const message = `Failed to send flow-case results: ${sync.message}`;
                     appendLog(`${message}\n`);
                     setFormMessage(`${summary}. ${message}`, "error");
-                    return {completed, failed, skipped, stopped, caseRuns, resultSubmission: {ok: false, message: error.message}};
+                    return {completed, failed, skipped, stopped, caseRuns, resultSubmission: sync.result};
                 }
             }
             setStatus(failed || stopped ? "failed" : "passed", failed || stopped ? "Failed" : "Passed");

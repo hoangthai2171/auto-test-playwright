@@ -62,6 +62,18 @@ function buildRunningFlowCaseCampaignsUrl({apiDomain, projectId}) {
   return `${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/test-campaigns/running`;
 }
 
+function buildCampaignTestCasesUrl({apiDomain, projectId, campaignId}) {
+  const normalizedCampaignId = normalizeOptionalPositiveInteger(campaignId, "campaignId");
+  if (!normalizedCampaignId) throw new Error("campaignId must be a positive integer.");
+  return `${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/test-campaigns/${encodePathPart(normalizedCampaignId)}/testcases`;
+}
+
+function buildFlowCaseResultUrl({apiDomain, projectId, caseId}) {
+  const normalizedCaseId = String(caseId ?? "").trim();
+  if (!normalizedCaseId) throw new Error("caseId is required.");
+  return `${normalizeApiDomain(apiDomain)}/api/v1/projects/${encodePathPart(projectId)}/flow-cases/${encodePathPart(normalizedCaseId)}`;
+}
+
 function buildDeviceCompatibilityUrl({apiDomain}) {
   return `${normalizeApiDomain(apiDomain)}/api/v1/device-compatibility`;
 }
@@ -257,12 +269,62 @@ async function fetchRunningFlowCaseCampaigns({apiDomain, projectId, authorizatio
   }
 }
 
+async function fetchCampaignTestCases({apiDomain, projectId, campaignId, authorization, timeoutMs, fetchImpl} = {}) {
+  const result = await requestJson(
+    buildCampaignTestCasesUrl({apiDomain, projectId, campaignId}),
+    {authorization, timeoutMs, fetchImpl}
+  );
+  if (!result.ok) return result;
+
+  try {
+    return {
+      ok: true,
+      cases: extractList(result.body, ["testcases", "cases", "data"]),
+      request: result.request,
+      response: result.response,
+    };
+  } catch (error) {
+    return {
+      ok: false,
+      message: error.message,
+      timeout: false,
+      request: result.request,
+      response: result.response,
+    };
+  }
+}
+
 async function submitFlowCaseResults({apiDomain, projectId, folderPath, testcases, authorization, timeoutMs, fetchImpl} = {}) {
   const result = await requestJson(
     buildFlowCaseResultsUrl({apiDomain, projectId}),
     {
       method: "PATCH",
       body: {folderPath, testcases},
+      authorization,
+      timeoutMs,
+      fetchImpl,
+    }
+  );
+  if (!result.ok) return result;
+
+  return {
+    ok: true,
+    request: result.request,
+    response: result.response,
+  };
+}
+
+async function submitFlowCaseResult({apiDomain, projectId, caseId, campaignId, status = "tested", testResult, authorization, timeoutMs, fetchImpl} = {}) {
+  const normalizedCampaignId = String(campaignId ?? "").trim();
+  const result = await requestJson(
+    buildFlowCaseResultUrl({apiDomain, projectId, caseId}),
+    {
+      method: "PATCH",
+      body: {
+        ...(normalizedCampaignId ? {campaignId: normalizedCampaignId} : {}),
+        status,
+        testResult,
+      },
       authorization,
       timeoutMs,
       fetchImpl,
@@ -293,11 +355,15 @@ module.exports = {
   buildFlowCasesUrl,
   buildFlowCaseResultsUrl,
   buildRunningFlowCaseCampaignsUrl,
+  buildCampaignTestCasesUrl,
+  buildFlowCaseResultUrl,
   buildDeviceCompatibilityUrl,
   flattenFlowCaseFolders,
   fetchFlowCaseFolders,
   fetchFlowCases,
   fetchRunningFlowCaseCampaigns,
+  fetchCampaignTestCases,
   fetchDeviceCompatibilityCatalog,
   submitFlowCaseResults,
+  submitFlowCaseResult,
 };

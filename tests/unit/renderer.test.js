@@ -1074,6 +1074,99 @@ test("loads campaign copies by campaign ID and carries the campaign cache key in
     assert.equal(submissions[0].testcases[0].campaignId, "12");
 });
 
+test("loads all campaign cases without a folder and submits campaign-only results", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    let loadRequest;
+    let runRequest;
+    const submissions = [];
+    fixture.runner.loadFlowCases = async (values) => {
+        loadRequest = values;
+        return {
+            ok: true,
+            campaign: {id: "12", name: "Regression tháng 8"},
+            folder: null,
+            cacheKey: "campaign:12",
+            cases: [{id: "1842", name: "Campaign case", actions: []}],
+        };
+    };
+    fixture.runner.runTest = async (values) => {
+        runRequest = values;
+        queueMicrotask(() => fixture.runner.finishedCallback({code: 0}));
+        return {ok: true};
+    };
+    fixture.runner.submitFlowCaseResults = async (payload) => {
+        submissions.push(payload);
+        return {ok: true};
+    };
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCampaigns([{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]);
+    fixture.elements["campaign-select"].value = "12";
+    fixture.elements["campaign-select"].dispatchEvent("change", {target: fixture.elements["campaign-select"]});
+    await flushRendererPromises();
+
+    assert.equal(fixture.elements["get-test-cases-button"].disabled, false);
+    await controller.loadCasesFromFolder();
+
+    assert.equal(loadRequest.CAMPAIGN_ID, "12");
+    assert.equal(loadRequest.CAMPAIGN_NAME, "Regression tháng 8");
+    assert.equal(loadRequest.FOLDER_ID, undefined);
+    assert.equal(loadRequest.FOLDER_NAME, undefined);
+    assert.equal(controller.getActiveCampaignId(), "12");
+    assert.equal(controller.getActiveCacheKey(), "campaign:12");
+
+    controller.selectCase("1842");
+    await fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+
+    assert.equal(runRequest.TEST_CASE_CACHE_KEY, "campaign:12");
+    assert.equal(runRequest.TEST_CASE_FOLDER_ID, undefined);
+    assert.equal(submissions.length, 1);
+    assert.equal(submissions[0].CAMPAIGN_ID, "12");
+    assert.equal(submissions[0].FOLDER_PATH, undefined);
+    assert.equal(submissions[0].testcases[0].campaignId, "12");
+});
+
+test("narrows a failed campaign-only result retry to the failed testcase IDs", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    const submissions = [];
+    fixture.runner.loadFlowCases = async () => ({
+        ok: true,
+        campaign: {id: "12", name: "Regression tháng 8"},
+        folder: null,
+        cacheKey: "campaign:12",
+        cases: [
+            {id: "case-1", name: "First campaign case", actions: []},
+            {id: "case-2", name: "Second campaign case", actions: []},
+        ],
+    });
+    fixture.runner.runTest = async () => {
+        queueMicrotask(() => fixture.runner.finishedCallback({code: 0}));
+        return {ok: true};
+    };
+    fixture.runner.submitFlowCaseResults = async (payload) => {
+        submissions.push(payload);
+        return submissions.length === 1
+            ? {ok: false, message: "case-2 was not accepted", retryTestcaseIds: ["case-2"]}
+            : {ok: true};
+    };
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCampaigns([{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]);
+    fixture.elements["campaign-select"].value = "12";
+    await controller.loadCasesFromFolder();
+    fixture.elements["select-all-test-cases"].checked = true;
+    fixture.elements["select-all-test-cases"].dispatchEvent("change", {target: fixture.elements["select-all-test-cases"]});
+
+    await fixture.elements["test-form"].listeners.get("submit")({preventDefault() {}});
+    assert.equal(fixture.elements["retry-sync-button"].disabled, false);
+    assert.deepEqual(submissions[0].testcases.map((testCase) => testCase.id), ["case-1", "case-2"]);
+
+    const retry = await controller.retryResultSync();
+    assert.equal(retry.ok, true);
+    assert.deepEqual(submissions[1].testcases.map((testCase) => testCase.id), ["case-2"]);
+    assert.equal(submissions[1].FOLDER_PATH, undefined);
+});
+
 test("clearing the campaign refreshes the folder list without a campaign filter", async () => {
     assert.equal(loadError, undefined, loadError?.message);
     const fixture = createRendererFixture();
@@ -1199,6 +1292,43 @@ test("logs API request and redacted response details while loading folders", asy
     assert.equal(requestEntry.classList.contains("is-expanded"), true);
     assert.equal(requestEntry.getAttribute("aria-expanded"), "true");
     assert.match(responseEntry.querySelector(".log-entry-label").textContent, /Load flow-case folders response/);
+});
+
+test("renders every sanitized API log for a campaign-plus-folder load", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    const createElement = fixture.document.createElement;
+    fixture.document.createElement = (tagName) => {
+        const element = createElement(tagName);
+        if (tagName === "pre") {
+            element.scrollHeight = 0;
+            element.clientHeight = 0;
+        }
+        return element;
+    };
+    fixture.runner.loadFlowCases = async () => ({
+        ok: true,
+        campaign: {id: "12", name: "Campaign"},
+        folder: {id: "folder-1", name: "Folder", fullPath: "/Folder"},
+        cacheKey: "campaign:12",
+        cases: [{id: "copy-1", name: "Copy", actions: []}],
+        apiLog: {request: {url: "https://api.example/campaign"}, response: {status: 200}},
+        apiLogs: [
+            {request: {url: "https://api.example/campaign", headers: {"X-FlowTest-Service-Token": "••••••"}}, response: {status: 200}},
+            {request: {url: "https://api.example/folder", headers: {"X-FlowTest-Service-Token": "••••••"}}, response: {status: 200}},
+        ],
+    });
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCampaigns([{campaign: {id: "12", name: "Campaign"}, run: {status: "running"}}]);
+    controller.renderFolders([{id: "folder-1", name: "Folder", fullPath: "/Folder"}]);
+    fixture.elements["campaign-select"].value = "12";
+    fixture.elements["folder-select"].value = "/Folder";
+
+    await controller.loadCasesFromFolder();
+
+    assert.match(fixture.elements["log-output"].textContent, /https:\/\/api\.example\/campaign/);
+    assert.match(fixture.elements["log-output"].textContent, /https:\/\/api\.example\/folder/);
+    assert.doesNotMatch(fixture.elements["log-output"].textContent, /service-token-value/);
 });
 
 test("clears all logs and starts a fresh runner entry from the Logs modal", () => {
@@ -1482,6 +1612,44 @@ test("submits ordered completed Browser batch results after keyed events settle"
     assert.equal(submissions[0].testcases[0].testResult.status, "success");
     assert.equal(submissions[0].testcases[1].testResult.status, "failed");
     assert.equal(submissions[0].testcases[1].testResult.message, "case 2 boom");
+});
+
+test("submits campaign-only Browser batch results without a folder path", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    const submissions = [];
+    fixture.runner.runBrowserBatch = async () => ({
+        ok: true,
+        batchId: "campaign-batch",
+        stopped: false,
+        caseRuns: [{caseId: "case-1", started: true, passed: true, stopped: false, skipped: false}],
+    });
+    fixture.runner.submitFlowCaseResults = async (payload) => {
+        submissions.push(payload);
+        return {ok: true};
+    };
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCaseList([{id: "case-1", name: "Campaign case", actions: []}]);
+    const selectAll = fixture.elements["select-all-test-cases"];
+    selectAll.checked = true;
+    selectAll.dispatchEvent("change", {target: selectAll});
+
+    await controller.runSelectedCases({
+        PREVIEW_TYPE: "live",
+        TEST_CASE_CACHE_KEY: "campaign:12",
+        FLOW_CASE_RESULT_CONTEXT: {
+            API_DOMAIN: "https://api.example.test",
+            API_AUTHORIZATION: "",
+            PROJECT_ID: "1",
+            API_TIMEOUT_SECONDS: "30",
+            CAMPAIGN_ID: "12",
+        },
+    });
+
+    assert.equal(submissions.length, 1);
+    assert.equal(submissions[0].CAMPAIGN_ID, "12");
+    assert.equal(submissions[0].FOLDER_PATH, undefined);
+    assert.equal(submissions[0].testcases[0].campaignId, "12");
 });
 
 test("shows an error toast when test configuration synchronization fails", async () => {
@@ -2876,6 +3044,54 @@ test("LG campaign runs use the campaign cache key and submit campaignId", async 
     await new Promise((resolve) => setImmediate(resolve));
 
     assert.deepEqual(runRequests[0], {deviceId: "lab-lg", selectedCaseIds: ["1842"], cacheKey: "campaign:12", confirmed: true});
+    assert.equal(submissions[0].testcases[0].campaignId, "12");
+});
+
+test("LG campaign-only runs use the campaign cache key without a folder", async () => {
+    const fixture = createRendererFixture();
+    const runRequests = [];
+    const submissions = [];
+    fixture.runner.loadFlowCases = async () => ({
+        ok: true,
+        campaign: {id: "12", name: "Regression tháng 8"},
+        folder: null,
+        cacheKey: "campaign:12",
+        cases: [{id: "1842", name: "Campaign LG copy", actions: [{action: "assert_screen", text: "Ready"}]}],
+    });
+    fixture.runner.getLgRunAvailability = async () => ({ok: true, status: "READY"});
+    fixture.runner.runLgBatch = async (request) => {
+        runRequests.push(request);
+        return {ok: true, caseRuns: [{id: "1842", result: {passed: true, started: true, stopped: false, executionResult: {status: "passed"}}}], stopped: false};
+    };
+    fixture.runner.submitFlowCaseResults = async (payload) => {
+        submissions.push(payload);
+        return {ok: true};
+    };
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCampaigns([{campaign: {id: "12", name: "Regression tháng 8"}, run: {status: "running"}}]);
+    fixture.elements["campaign-select"].value = "12";
+    fixture.elements["campaign-select"].dispatchEvent("change", {target: fixture.elements["campaign-select"]});
+    await flushRendererPromises();
+    await controller.loadCasesFromFolder();
+    controller.selectCase("1842");
+    await controller.selectRunTarget("webos");
+
+    await controller.runSelectedCases({
+        target: "webos",
+        TEST_CASE_CACHE_KEY: "campaign:12",
+        FLOW_CASE_RESULT_CONTEXT: {
+            API_DOMAIN: "https://api.example",
+            API_AUTHORIZATION: "authorization-value",
+            PROJECT_ID: "1",
+            API_TIMEOUT_SECONDS: "30",
+            CAMPAIGN_ID: "12",
+        },
+    });
+    fixture.elements["lg-run-confirm-button"].dispatchEvent("click");
+    await new Promise((resolve) => setImmediate(resolve));
+
+    assert.deepEqual(runRequests[0], {deviceId: "lab-lg", selectedCaseIds: ["1842"], cacheKey: "campaign:12", confirmed: true});
+    assert.equal(submissions[0].FOLDER_PATH, undefined);
     assert.equal(submissions[0].testcases[0].campaignId, "12");
 });
 
