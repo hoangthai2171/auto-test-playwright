@@ -1,6 +1,8 @@
 const { defineConfig, devices } = require("playwright/test");
+const {resolveTestViewport} = require("./app/test-configuration");
 
-const VIEWPORT = { width: 1920, height: 1080 };
+const TEST_VIEWPORT = resolveTestViewport(process.env.MYTV_TEST_RESOLUTION);
+const VIEWPORT = {width: TEST_VIEWPORT.width, height: TEST_VIEWPORT.height};
 const WINDOW_SIZE = VIEWPORT;
 
 module.exports = defineConfig({
@@ -27,6 +29,7 @@ module.exports = defineConfig({
       name: "chromium",
       use: {
         ...devices["Desktop Chrome"],
+        viewport: VIEWPORT,
         launchOptions: {
           args: [
             `--window-size=${WINDOW_SIZE.width},${WINDOW_SIZE.height}`,

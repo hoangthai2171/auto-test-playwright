@@ -201,6 +201,7 @@ function createRendererFixture() {
         "api-timeout-input",
         "player-check-timeout-input",
         "test-case-max-time-input",
+        "simultaneous-devices-select",
         "dns-host-add-button",
         "dns-host-remove-button",
         "dns-host-status",
@@ -302,6 +303,11 @@ function createRendererFixture() {
         "status-text",
         "log-output",
         "browser-mute-button",
+        "browser-slot-grid",
+        "browser-log-panel",
+        "browser-selected-log",
+        "browser-log-selection",
+        "browser-log-empty",
         "browser-preview-empty",
         "browser-preview-image",
         "lg-preview-empty",
@@ -392,6 +398,14 @@ function createRendererFixture() {
         const input = new FakeElement("input");
         input.setAttribute("name", "preview-type");
         input.value = value;
+        root.append(input);
+    });
+
+    ["1280x720", "1920x1080"].forEach((value, index) => {
+        const input = new FakeElement("input");
+        input.setAttribute("name", "test-resolution");
+        input.value = value;
+        input.checked = index === 0;
         root.append(input);
     });
 
@@ -1323,6 +1337,153 @@ test("saves and sanitizes Test configuration timeouts with an auto-hide success 
     assert.equal(fixture.elements["test-configuration-nav"].dataset.settingsPanel, "test-configuration");
 });
 
+test("persists the allowlisted Browser resolution and simultaneous-device settings", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    let stored;
+    const synchronized = [];
+    fixture.storage.getItem = () => JSON.stringify({TEST_RESOLUTION: "invalid", SIMULTANEOUS_DEVICES: "3"});
+    fixture.storage.setItem = (_key, value) => { stored = JSON.parse(value); };
+    fixture.runner.setTestConfiguration = async (value) => {
+        synchronized.push(value);
+        return {ok: true, ...value};
+    };
+    renderer.createRendererController(fixture);
+
+    assert.equal(fixture.document.querySelector('[name="test-resolution"][value="1280x720"]').checked, true);
+    assert.equal(fixture.elements["simultaneous-devices-select"].value, "6");
+    fixture.document.querySelector('[name="test-resolution"][value="1280x720"]').checked = false;
+    fixture.document.querySelector('[name="test-resolution"][value="1920x1080"]').checked = true;
+    fixture.elements["simultaneous-devices-select"].value = "2";
+    fixture.elements["test-configuration-save-button"].dispatchEvent("click");
+    await flushRendererPromises();
+
+    assert.equal(stored.TEST_RESOLUTION, "1920x1080");
+    assert.equal(stored.SIMULTANEOUS_DEVICES, "2");
+    assert.equal(synchronized.at(-1).TEST_RESOLUTION, "1920x1080");
+    assert.equal(synchronized.at(-1).SIMULTANEOUS_DEVICES, "2");
+});
+
+test("renders keyed Browser batch slots and keeps selected per-case logs after slot reuse", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    let batchEvent;
+    const payloads = [];
+    fixture.runner.onBrowserBatchEvent = (callback) => {
+        batchEvent = callback;
+        return () => { batchEvent = null; };
+    };
+    fixture.runner.runBrowserBatch = async (payload) => {
+        payloads.push(payload);
+        const send = (event) => batchEvent?.(event);
+        send({type: "batch-started", batchId: "batch-ui", caseIds: ["case-1", "case-2", "case-3"], settings: {TEST_RESOLUTION: "1280x720", SIMULTANEOUS_DEVICES: "2"}});
+        send({type: "case-assigned", batchId: "batch-ui", caseId: "case-1", slotId: 1});
+        send({type: "case-started", batchId: "batch-ui", caseId: "case-1", slotId: 1});
+        send({type: "case-log", batchId: "batch-ui", caseId: "case-1", slotId: 1, text: "password: secret\nready\n"});
+        send({type: "preview-frame", batchId: "batch-ui", caseId: "case-1", slotId: 1, dataUrl: "data:image/png;base64,ZmFrZQ=="});
+        send({type: "case-finished", batchId: "batch-ui", caseId: "case-1", slotId: 1, status: "passed", code: 0, started: true, caseResult: {status: "passed"}});
+        send({type: "case-assigned", batchId: "batch-ui", caseId: "case-3", slotId: 1});
+        send({type: "case-started", batchId: "batch-ui", caseId: "case-3", slotId: 1});
+        send({type: "case-finished", batchId: "batch-ui", caseId: "case-3", slotId: 1, status: "failed", code: 1, started: true, caseResult: {status: "failed"}});
+        send({type: "case-skipped", batchId: "batch-ui", caseId: "case-2", status: "skipped"});
+        send({type: "batch-finished", batchId: "batch-ui", caseRuns: []});
+        return {ok: true, batchId: "batch-ui", caseRuns: [
+            {caseId: "case-1", started: true, passed: true, stopped: false, skipped: false},
+            {caseId: "case-2", started: false, passed: false, stopped: false, skipped: true},
+            {caseId: "case-3", started: true, passed: false, stopped: false, skipped: false},
+        ], stopped: false};
+    };
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCaseList([
+        {id: "case-1", name: "First case", actions: []},
+        {id: "case-2", name: "Second case", actions: []},
+        {id: "case-3", name: "Third case", actions: []},
+    ]);
+    const header = fixture.elements["select-all-test-cases"];
+    header.checked = true;
+    header.dispatchEvent("change", {target: header});
+    await controller.runSelectedCases({PREVIEW_TYPE: "live"});
+
+    assert.deepEqual(payloads[0].selectedCaseIds, ["case-1", "case-2", "case-3"]);
+    const slot = fixture.elements["browser-slot-grid"].querySelector('[data-slot-id="1"]');
+    assert.match(slot.textContent, /case-3/);
+    assert.match(slot.textContent, /Failed/);
+    controller.selectBrowserLogCase("case-1");
+    assert.match(fixture.elements["browser-selected-log"].textContent, /password: ••••••/);
+    assert.doesNotMatch(fixture.elements["browser-selected-log"].textContent, /secret/);
+});
+
+test("bounds retained Browser logs and marks discarded output", () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    let batchEvent;
+    fixture.runner.onBrowserBatchEvent = (callback) => {
+        batchEvent = callback;
+        return () => { batchEvent = null; };
+    };
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCaseList([{id: "case-1", name: "Case", actions: []}]);
+    controller.renderBrowserBatchEvent({type: "batch-started", batchId: "batch-log", caseIds: ["case-1"]});
+    controller.renderBrowserBatchEvent({type: "case-assigned", batchId: "batch-log", caseId: "case-1", slotId: 1});
+    controller.renderBrowserBatchEvent({type: "case-log", batchId: "batch-log", caseId: "case-1", slotId: 1, text: "x".repeat(130000)});
+    controller.selectBrowserLogCase("case-1");
+
+    assert.match(fixture.elements["browser-selected-log"].textContent, /Older Playwright output truncated/);
+    assert.ok(fixture.elements["browser-selected-log"].textContent.length < 121000);
+    assert.equal(typeof batchEvent, "function");
+});
+
+test("submits ordered completed Browser batch results after keyed events settle", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    let batchEvent;
+    const submissions = [];
+    fixture.runner.onBrowserBatchEvent = (callback) => {
+        batchEvent = callback;
+        return () => { batchEvent = null; };
+    };
+    fixture.runner.submitFlowCaseResults = async (value) => {
+        submissions.push(value);
+        return {ok: true};
+    };
+    fixture.runner.runBrowserBatch = async (payload) => {
+        const send = (event) => batchEvent?.(event);
+        send({type: "batch-started", batchId: "batch-submit", caseIds: payload.selectedCaseIds});
+        send({type: "case-assigned", batchId: "batch-submit", caseId: "case-1", slotId: 1});
+        send({type: "case-assigned", batchId: "batch-submit", caseId: "case-2", slotId: 2});
+        send({type: "case-started", batchId: "batch-submit", caseId: "case-1", slotId: 1});
+        send({type: "case-started", batchId: "batch-submit", caseId: "case-2", slotId: 2});
+        send({type: "case-finished", batchId: "batch-submit", caseId: "case-2", slotId: 2, status: "failed", code: 1, started: true, caseResult: {status: "failed", steps: [{status: "failed", message: "case 2 boom"}]}});
+        send({type: "case-finished", batchId: "batch-submit", caseId: "case-1", slotId: 1, status: "passed", code: 0, started: true, caseResult: {status: "passed"}});
+        send({type: "batch-finished", batchId: "batch-submit"});
+        return {ok: true, batchId: "batch-submit", stopped: false, caseRuns: [
+            {caseId: "case-1", started: true, passed: true, stopped: false, skipped: false},
+            {caseId: "case-2", started: true, passed: false, stopped: false, skipped: false, caseResult: {status: "failed", steps: [{status: "failed", message: "case 2 boom"}]}},
+        ]};
+    };
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCaseList([{id: "case-1", name: "First", actions: []}, {id: "case-2", name: "Second", actions: []}]);
+    const header = fixture.elements["select-all-test-cases"];
+    header.checked = true;
+    header.dispatchEvent("change", {target: header});
+    await controller.runSelectedCases({
+        PREVIEW_TYPE: "live",
+        FLOW_CASE_RESULT_CONTEXT: {
+            API_DOMAIN: "https://api.example.test",
+            API_AUTHORIZATION: "",
+            PROJECT_ID: "1",
+            API_TIMEOUT_SECONDS: "30",
+            FOLDER_PATH: "/Root/Folder",
+        },
+    });
+
+    assert.equal(submissions.length, 1);
+    assert.deepEqual(submissions[0].testcases.map((item) => item.id), ["case-1", "case-2"]);
+    assert.equal(submissions[0].testcases[0].testResult.status, "success");
+    assert.equal(submissions[0].testcases[1].testResult.status, "failed");
+    assert.equal(submissions[0].testcases[1].testResult.message, "case 2 boom");
+});
+
 test("shows an error toast when test configuration synchronization fails", async () => {
     assert.equal(loadError, undefined, loadError?.message);
     const fixture = createRendererFixture();
@@ -1972,6 +2133,7 @@ test("selecting LG removes a Browser preview and shows the LG preview state", as
     assert.match(fixture.elements["browser-preview-image"].className, /hidden/);
     assert.match(fixture.elements["interactive-browser"].className, /hidden/);
     assert.match(fixture.elements["browser-mute-button"].className, /hidden/);
+    assert.match(fixture.elements["browser-log-panel"].className, /hidden/);
     assert.match(fixture.elements["browser-preview-empty"].className, /hidden/);
     assert.doesNotMatch(fixture.elements["lg-preview-empty"].className, /hidden/);
 });
@@ -2964,7 +3126,24 @@ test("uses the taller default Electron window size", () => {
 
     assert.match(mainSource, /new BrowserWindow\(\{[\s\S]*?width:\s*1240,[\s\S]*?height:\s*900,[\s\S]*?minWidth:\s*920,[\s\S]*?minHeight:\s*760,/);
     assert.match(mainSource, /show:\s*false,/);
+    assert.match(mainSource, /fullscreen:\s*true,/);
     assert.match(mainSource, /revealWindowOnFirstPaint\(mainWindow\)/);
+});
+
+test("ships the six-slot Browser workspace and resolution/device controls", () => {
+    const html = fs.readFileSync(path.join(__dirname, "../../app/renderer/index.html"), "utf8");
+    const css = fs.readFileSync(path.join(__dirname, "../../app/renderer/styles.css"), "utf8");
+
+    assert.match(html, /id="browser-slot-grid"/);
+    assert.match(html, /id="browser-selected-log"/);
+    assert.match(html, /name="test-resolution" value="1280x720"/);
+    assert.match(html, /name="test-resolution" value="1920x1080"/);
+    assert.match(html, /id="simultaneous-devices-select"/);
+    assert.match(html, /<option value="6" selected>6 devices<\/option>/);
+    assert.match(css, /\.browser-slot-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*grid-template-rows:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
+    assert.match(css, /\.browser-slot\s*\{[^}]*aspect-ratio:\s*16 \/ 9;/s);
+    assert.match(css, /\.browser-slot-case-name\s*\{[^}]*min-width:\s*0;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s);
+    assert.match(css, /\.browser-slot-status\s*\{[^}]*background:\s*#fff;/s);
 });
 
 test("ships the normal application shell under the first loading overlay", () => {

@@ -36,6 +36,7 @@ contextBridge.exposeInMainWorld("mytvRunner", {
   resolveLgRunRecovery: (request) => ipcRenderer.invoke("resolve-lg-run-recovery", request),
   submitFlowCaseResults: (values) => ipcRenderer.invoke("submit-flow-case-results", values),
   runTest: (values) => ipcRenderer.invoke("run-test", values),
+  runBrowserBatch: (values) => ipcRenderer.invoke("run-browser-batch", values),
   startReport: () => ipcRenderer.invoke("start-report"),
   showInteractiveBrowser: (values) => ipcRenderer.invoke("show-interactive-browser", values),
   hideInteractiveBrowser: () => ipcRenderer.invoke("hide-interactive-browser"),
@@ -52,6 +53,12 @@ contextBridge.exposeInMainWorld("mytvRunner", {
   onLog: (callback) => ipcRenderer.on("test-log", (_event, value) => callback(value)),
   onPreview: (callback) => ipcRenderer.on("browser-preview", (_event, value) => callback(value)),
   onFinished: (callback) => ipcRenderer.on("test-finished", (_event, value) => callback(value)),
+  onBrowserBatchEvent: (callback) => {
+    if (typeof callback !== "function") return () => {};
+    const listener = (_event, value) => callback(value);
+    ipcRenderer.on("browser-batch-event", listener);
+    return () => ipcRenderer.removeListener("browser-batch-event", listener);
+  },
   onLgToolchainInstallProgress: (callback) => {
     if (typeof callback !== "function") return () => {};
     const listener = (_event, value) => callback(value);

@@ -14,12 +14,14 @@ test("popup dialog focus selectors prioritize active buttons for every supported
     "dialog_alert_v2",
     "dialog_alert_full",
     "dialog_confirm_full",
+    "user-consent-popup",
   ]);
   assert.deepEqual(POPUP_ACTIVE_FOCUS_SELECTORS, [
     "#dialog_confirm_v2 .active",
     "#dialog_alert_v2 .active",
     "#dialog_alert_full .active",
     "#dialog_confirm_full .active",
+    "#user-consent-popup .active",
   ]);
   assert.deepEqual(FOCUS_SELECTORS, [
     ...POPUP_ACTIVE_FOCUS_SELECTORS,

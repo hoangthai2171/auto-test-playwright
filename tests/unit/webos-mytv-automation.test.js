@@ -4,10 +4,11 @@ const test = require("node:test");
 const assert = require("node:assert/strict");
 const {createWebOsMyTvAutomation} = require("../lib/tv-session/webos-mytv-automation");
 
-function createAutomation({playerStates = [], visibleAfter = {}, bodyText = "Search", searchCandidates = [{id: "result-1", label: "Mẫu phim", type: "movie"}], searchCandidatesAfter = 1, playerCheckTimeoutSeconds} = {}) {
+function createAutomation({playerStates = [], visibleAfter = {}, bodyText = "Search", searchCandidates = [{id: "result-1", label: "Mẫu phim", type: "movie"}], searchCandidatesAfter = 1, playerCheckTimeoutSeconds, consentVisible = false} = {}) {
   let focusedId = "";
   let playerIndex = 0;
   let searchCandidateReads = 0;
+  let consentDismissed = false;
   const remoteKeys = [];
   const waits = [];
   const rectReads = new Map();
@@ -16,11 +17,13 @@ function createAutomation({playerStates = [], visibleAfter = {}, bodyText = "Sea
       if (script.includes("MYTV_TRUSTED_RECT")) {
         const id = /document\.getElementById\(("[^"]+")\)/.exec(script)?.[1];
         focusedId = id ? JSON.parse(id) : "";
+        if ((!consentVisible || consentDismissed) && ["user-consent-popup-accept-all-checkbox", "user-consent-popup-footer-checkbox", "user-consent-btn-submit"].includes(focusedId)) return null;
         const reads = (rectReads.get(focusedId) || 0) + 1;
         rectReads.set(focusedId, reads);
         if (reads < (visibleAfter[focusedId] || 1)) return null;
         return {x: 0, y: 0, width: 120, height: 80};
       }
+      if (script.includes("MYTV_TRUSTED_CHECKBOX")) return null;
       if (script.includes("MYTV_TRUSTED_FOCUS")) return {id: focusedId, text: "", rect: {x: 0, y: 0, width: 120, height: 80}};
         if (script.includes("MYTV_TRUSTED_SEARCH_CANDIDATES")) {
           searchCandidateReads += 1;
@@ -30,7 +33,10 @@ function createAutomation({playerStates = [], visibleAfter = {}, bodyText = "Sea
       if (script.includes("document.body")) return bodyText;
       return "";
     },
-    async pressKey(key) { remoteKeys.push(key); },
+    async pressKey(key) {
+      remoteKeys.push(key);
+      if (consentVisible && key === "Enter" && remoteKeys.length >= 5) consentDismissed = true;
+    },
     async wait(milliseconds) { waits.push(milliseconds); },
     playerCheckTimeoutSeconds,
   });
@@ -47,6 +53,17 @@ test("LG MyTV login waits for the welcome control after a fresh app reset", asyn
 
   assert.deepEqual(remoteKeys, ["Enter", "Enter"]);
   assert.deepEqual(waits, [250, 250]);
+});
+
+test("LG MyTV login accepts the account consent popup before the username keyboard", async () => {
+  const {automation, remoteKeys} = createAutomation({
+    consentVisible: true,
+    bodyText: "Đăng nhập Nhập số điện thoại",
+  });
+
+  await automation.focusLogin();
+
+  assert.deepEqual(remoteKeys, ["Enter", "Enter", "Enter", "Enter", "Enter"]);
 });
 
 test("LG MyTV search waits for a delayed matching result", async () => {

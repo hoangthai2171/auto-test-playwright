@@ -4,6 +4,7 @@ const POPUP_FOCUS_DIALOG_IDS = Object.freeze([
   "dialog_alert_v2",
   "dialog_alert_full",
   "dialog_confirm_full",
+  "user-consent-popup",
 ]);
 const POPUP_ACTIVE_FOCUS_SELECTORS = Object.freeze(
   POPUP_FOCUS_DIALOG_IDS.map((id) => `#${id} .active`)

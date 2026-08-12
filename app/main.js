@@ -9,6 +9,8 @@ const {redactSensitiveText, createLogRedactor} = require("./credential-redaction
 const {fetchFlowCaseFolders, fetchFlowCases, fetchRunningFlowCaseCampaigns, submitFlowCaseResults, fetchDeviceCompatibilityCatalog, normalizeTimeoutMs} = require("./flow-case-api");
 const {replaceFolderCacheEntry, replaceCampaignCacheEntry, clearTestCaseCache, readMostRecentTestCaseCacheEntry} = require("./test-case-cache");
 const {createEmptyReport, buildTestReportEntry, upsertTestReport, renderUserReport} = require("./test-report");
+const {createBrowserBatchRunner} = require("./browser-batch-runner");
+const {createOrderedTestReportStore} = require("./test-report-store");
 const {buildPlaywrightTestArgs} = require("./playwright-runner");
 const {createRunCloseGuard} = require("./run-close-guard");
 const {createManagedWindowCloseController} = require("./window-close-controller");
@@ -54,8 +56,13 @@ const {createHostsFileService} = require("./hosts-file");
 const {
     DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS,
     DEFAULT_TEST_CASE_MAX_TIME_MINUTES,
+    DEFAULT_TEST_RESOLUTION,
+    DEFAULT_SIMULTANEOUS_DEVICES,
     normalizePlayerCheckTimeoutSeconds,
     normalizeTestCaseMaxTimeMinutes,
+    normalizeTestResolution,
+    normalizeSimultaneousDevices,
+    resolveTestViewport,
 } = require("./test-configuration");
 
 const APP_URL = "https://html5stage.mytv.vn/";
@@ -66,6 +73,7 @@ app.commandLine.appendSwitch("remote-debugging-port", String(INTERACTIVE_BROWSER
 let mainWindow;
 let runningProcess;
 let previewWatcher;
+let activeBrowserBatchRunner;
 let interactiveView;
 let interactiveViewScale = 1;
 let interactiveAudioMuted = true;
@@ -74,6 +82,8 @@ let hasUnsyncedResultSubmission = false;
 let activeLgBatchRunner;
 let playerCheckTimeoutSeconds = DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS;
 let testCaseMaxTimeMinutes = DEFAULT_TEST_CASE_MAX_TIME_MINUTES;
+let testResolution = DEFAULT_TEST_RESOLUTION;
+let simultaneousDevices = DEFAULT_SIMULTANEOUS_DEVICES;
 
 function createWindow() {
     mainWindow = new BrowserWindow({
@@ -83,6 +93,7 @@ function createWindow() {
         minHeight: 760,
         title: "MyTV Auto Test",
         show: false,
+        fullscreen: true,
         backgroundColor: "#101318",
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
@@ -97,7 +108,7 @@ function createWindow() {
     createManagedWindowCloseController({
         window: mainWindow,
         guard: createRunCloseGuard({
-            isRunning: () => Boolean(runningProcess) || rendererRunActive,
+            isRunning: () => Boolean(runningProcess) || Boolean(activeBrowserBatchRunner?.isRunning?.()) || rendererRunActive,
             hasUnsyncedResults: () => hasUnsyncedResultSubmission,
             stopRun: stopActiveTest,
             discardUnsyncedResults: discardUnsyncedResultSubmission,
@@ -129,6 +140,9 @@ async function confirmWindowClose(reason) {
 }
 
 async function stopActiveTest() {
+    if (activeBrowserBatchRunner?.isRunning?.()) {
+        await activeBrowserBatchRunner.requestStop();
+    }
     activeLgBatchRunner?.requestStop();
     if (runningProcess) {
         runningProcess.kill();
@@ -768,15 +782,19 @@ ipcMain.handle("set-test-configuration", async (_event, values = {}) => {
         configuration.TEST_CASE_MAX_TIME_MINUTES,
         testCaseMaxTimeMinutes,
     );
+    testResolution = normalizeTestResolution(configuration.TEST_RESOLUTION, testResolution);
+    simultaneousDevices = normalizeSimultaneousDevices(configuration.SIMULTANEOUS_DEVICES, simultaneousDevices);
     return {
         ok: true,
         PLAYER_CHECK_TIMEOUT_SECONDS: String(playerCheckTimeoutSeconds),
         TEST_CASE_MAX_TIME_MINUTES: String(testCaseMaxTimeMinutes),
+        TEST_RESOLUTION: testResolution,
+        SIMULTANEOUS_DEVICES: String(simultaneousDevices),
     };
 });
 
 ipcMain.handle("run-test", async (event, values = {}) => {
-    if (runningProcess) {
+    if (runningProcess || activeBrowserBatchRunner?.isRunning?.()) {
         return {ok: false, message: "A test run is already in progress."};
     }
 
@@ -802,6 +820,7 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         values.TEST_CASE_MAX_TIME_MINUTES,
         testCaseMaxTimeMinutes,
     );
+    testResolution = normalizeTestResolution(values.TEST_RESOLUTION, testResolution);
 
     try {
         const cacheKey = String(values.TEST_CASE_CACHE_KEY || values.TEST_CASE_FOLDER_ID || "").trim();
@@ -839,6 +858,7 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         MYTV_INTERACTIVE_VIEW_SCALE: interactiveCdpUrl ? String(interactiveViewScale) : "",
         MYTV_PLAYER_CHECK_TIMEOUT_SECONDS: String(playerCheckTimeoutSeconds),
         MYTV_TEST_CASE_MAX_TIME_MINUTES: String(testCaseMaxTimeMinutes),
+        MYTV_TEST_RESOLUTION: testResolution,
     };
 
     if (usesElectronAsNode) {
@@ -914,6 +934,192 @@ ipcMain.handle("run-test", async (event, values = {}) => {
     });
 
     return {ok: true, initialLog};
+});
+
+ipcMain.handle("run-browser-batch", async (event, values = {}) => {
+    if (runningProcess || activeBrowserBatchRunner?.isRunning?.()) {
+        return {ok: false, message: "A Browser test run is already in progress."};
+    }
+
+    const selectedCaseIds = normalizeBrowserBatchCaseIds(values.selectedCaseIds || values.TEST_CASE_IDS);
+    if (!selectedCaseIds.length) {
+        return {ok: false, message: "Select at least one test case before starting a Browser batch."};
+    }
+
+    const previewType = normalizePreviewType(values.PREVIEW_TYPE);
+    if (previewType === "interactive" && selectedCaseIds.length !== 1) {
+        return {ok: false, message: "Interactive preview supports exactly one Browser test case. Choose Live or None for a batch."};
+    }
+
+    const resolution = normalizeTestResolution(values.TEST_RESOLUTION, testResolution);
+    const concurrency = normalizeSimultaneousDevices(values.SIMULTANEOUS_DEVICES, simultaneousDevices);
+    const batchPlayerCheckTimeout = normalizePlayerCheckTimeoutSeconds(values.PLAYER_CHECK_TIMEOUT_SECONDS, playerCheckTimeoutSeconds);
+    const batchMaxTimeMinutes = normalizeTestCaseMaxTimeMinutes(values.TEST_CASE_MAX_TIME_MINUTES, testCaseMaxTimeMinutes);
+    testResolution = resolution;
+    simultaneousDevices = concurrency;
+    playerCheckTimeoutSeconds = batchPlayerCheckTimeout;
+    testCaseMaxTimeMinutes = batchMaxTimeMinutes;
+    const batchSettings = Object.freeze({
+        TEST_RESOLUTION: resolution,
+        SIMULTANEOUS_DEVICES: String(concurrency),
+        PLAYER_CHECK_TIMEOUT_SECONDS: String(batchPlayerCheckTimeout),
+        TEST_CASE_MAX_TIME_MINUTES: String(batchMaxTimeMinutes),
+        PREVIEW_TYPE: previewType,
+    });
+
+    const browserRun = await browserRunLauncher.prepare();
+    if (!browserRun.ok) {
+        return {ok: false, status: browserRun.status, message: "Configure Browser in Settings before running browser tests."};
+    }
+
+    const projectRoot = app.getAppPath();
+    const fixturePath = path.join(projectRoot, "testcased.json");
+    const outputRoot = app.getPath("userData");
+    const cacheKey = String(values.TEST_CASE_CACHE_KEY || values.TEST_CASE_FOLDER_ID || "").trim();
+    let cases;
+    try {
+        cases = cacheKey
+            ? await loadCachedTestCases(testCasesCachePath(), cacheKey)
+            : await loadLocalTestCases(fixturePath);
+    } catch (error) {
+        return {ok: false, message: error.message};
+    }
+
+    const casesById = new Map();
+    for (const caseId of selectedCaseIds) {
+        const testCase = findTestCaseById(cases, caseId);
+        if (!testCase) return {ok: false, message: `Test case ${caseId} could not be found.`};
+        casesById.set(caseId, testCase);
+    }
+
+    const batchId = randomUUID();
+    const reportStore = createOrderedTestReportStore({
+        selectedCaseIds,
+        reportJsonPath: userReportJsonPath(),
+        reportHtmlPath: userReportHtmlPath(),
+    });
+    try {
+        await reportStore.initialize();
+    } catch (error) {
+        return {ok: false, message: `Could not initialize the Browser report: ${error.message}`};
+    }
+
+    const playwrightCli = path.join(path.dirname(require.resolve("playwright/package.json")), "cli.js");
+    const runnerBinary = testRunnerBinary();
+    const usesElectronAsNode = runnerBinary === process.execPath;
+    const reportWrites = [];
+    let reportWriteError = null;
+
+    const runner = createBrowserBatchRunner({
+        createBatchId: () => batchId,
+        onEvent: (batchEvent) => {
+            if (batchEvent.type === "case-finished") {
+                const testCase = casesById.get(batchEvent.caseId);
+                if (testCase) {
+                    const write = reportStore.recordCaseCompletion({
+                        testCaseId: testCase.id,
+                        testCaseName: testCase.name,
+                        exitCode: batchEvent.code,
+                        caseResult: batchEvent.caseResult,
+                        errorMessage: batchEvent.message,
+                    }).catch((error) => {
+                        reportWriteError = reportWriteError || error;
+                    });
+                    reportWrites.push(write);
+                }
+            }
+            sendBrowserBatchEvent(event, batchEvent);
+        },
+        launchCase: async (context) => {
+            const testCase = casesById.get(context.caseId);
+            const caseRoot = path.join(outputRoot, "browser-runs", batchId, `slot-${context.slotId}-${safeFileName(context.caseId)}-${caseArtifactToken(context.caseId)}`);
+            const artifactPaths = {
+                root: caseRoot,
+                previewPath: path.join(caseRoot, "preview.png"),
+                caseResultPath: path.join(caseRoot, "case-result.json"),
+                testResultsDir: path.join(caseRoot, "test-results"),
+                reportDir: path.join(caseRoot, "playwright-report"),
+            };
+            context.artifacts = artifactPaths;
+            await fs.mkdir(caseRoot, {recursive: true});
+
+            const args = buildPlaywrightTestArgs({
+                playwrightCli,
+                testResultsDir: artifactPaths.testResultsDir,
+                tsconfigPath: path.join(projectRoot, "app", "playwright.tsconfig.json"),
+            });
+            const env = {
+                ...process.env,
+                TEST_CASE_PATH: fixturePath,
+                TEST_CASE_ID: String(testCase.id),
+                TEST_CASE_CACHE_PATH: cacheKey ? testCasesCachePath() : "",
+                TEST_CASE_CACHE_KEY: values.TEST_CASE_CACHE_KEY ? String(values.TEST_CASE_CACHE_KEY) : "",
+                TEST_CASE_FOLDER_ID: values.TEST_CASE_FOLDER_ID ? String(values.TEST_CASE_FOLDER_ID) : "",
+                APP_URL,
+                PLAYWRIGHT_BROWSERS_PATH: browserRun.browsersPath,
+                PLAYWRIGHT_HTML_REPORT: artifactPaths.reportDir,
+                MYTV_CASE_RESULT_PATH: artifactPaths.caseResultPath,
+                MYTV_PREVIEW_PATH: previewType === "live" ? artifactPaths.previewPath : "",
+                MYTV_INTERACTIVE_CDP_URL: previewType === "interactive" ? `http://127.0.0.1:${INTERACTIVE_BROWSER_DEBUG_PORT}` : "",
+                MYTV_INTERACTIVE_VIEW_SCALE: previewType === "interactive" ? String(interactiveViewScale) : "",
+                MYTV_PLAYER_CHECK_TIMEOUT_SECONDS: batchSettings.PLAYER_CHECK_TIMEOUT_SECONDS,
+                MYTV_TEST_CASE_MAX_TIME_MINUTES: batchSettings.TEST_CASE_MAX_TIME_MINUTES,
+                MYTV_TEST_RESOLUTION: batchSettings.TEST_RESOLUTION,
+                MYTV_SIMULTANEOUS_DEVICES: batchSettings.SIMULTANEOUS_DEVICES,
+            };
+            if (usesElectronAsNode) env.ELECTRON_RUN_AS_NODE = "1";
+            else delete env.ELECTRON_RUN_AS_NODE;
+
+            const child = spawn(runnerBinary, args, {
+                cwd: projectRoot,
+                env,
+                detached: process.platform !== "win32",
+                stdio: ["ignore", "pipe", "pipe"],
+            });
+            if (!child || !Number.isInteger(child.pid)) {
+                throw new Error(`Could not start Browser test case ${context.caseId}.`);
+            }
+            return {
+                child,
+                stop: () => terminateOwnedBrowserChild(child),
+            };
+        },
+        readCaseResult: async ({artifacts}) => {
+            try {
+                return JSON.parse(await fs.readFile(artifacts.caseResultPath, "utf8"));
+            } catch {
+                return null;
+            }
+        },
+        createPreviewWatcher: async ({artifacts, onFrame, onClear}) => {
+            if (previewType !== "live") return () => {};
+            return startBatchPreviewWatcher(artifacts.previewPath, onFrame, onClear);
+        },
+        terminateChild: (child, options) => terminateOwnedBrowserChild(child, options),
+    });
+    activeBrowserBatchRunner = runner;
+
+    try {
+        const result = await runner.start({
+            caseIds: selectedCaseIds,
+            concurrency,
+            batchId,
+            settings: batchSettings,
+        });
+        await Promise.all(reportWrites);
+        await reportStore.flush();
+        if (reportWriteError) throw reportWriteError;
+        return {
+            ...result,
+            ok: true,
+            reportPath: userReportHtmlPath(),
+            batchId,
+        };
+    } catch (error) {
+        return {ok: false, batchId, message: error.message};
+    } finally {
+        if (activeBrowserBatchRunner === runner) activeBrowserBatchRunner = null;
+    }
 });
 
 async function finishTestProcess({event, testCase, caseResultPath, stdoutLogRedactor, stderrLogRedactor, processFinishState, code, signal, message}) {
@@ -993,7 +1199,7 @@ ipcMain.handle("show-interactive-browser", async (_event, values = {}) => {
         mainWindow.addBrowserView(interactiveView);
     }
 
-    setInteractiveViewBounds(values.bounds);
+    setInteractiveViewBounds(values.bounds, values.TEST_RESOLUTION);
     await loadInteractiveView(interactiveUrl(APP_URL));
     return {ok: true};
 });
@@ -1015,7 +1221,7 @@ ipcMain.handle("resume-interactive-browser", async (_event, values) => {
         mainWindow.addBrowserView(interactiveView);
     }
 
-    setInteractiveViewBounds(values?.bounds || {});
+    setInteractiveViewBounds(values?.bounds || {}, values?.TEST_RESOLUTION);
     return {ok: true};
 });
 
@@ -1124,6 +1330,94 @@ function safeFileName(value) {
     );
 }
 
+function caseArtifactToken(value) {
+    return Buffer.from(String(value ?? ""), "utf8").toString("hex").slice(0, 48) || "case";
+}
+
+function normalizeBrowserBatchCaseIds(values) {
+    const source = Array.isArray(values) ? values : [];
+    const seen = new Set();
+    const ids = [];
+    for (const value of source) {
+        const id = String(value ?? "").trim();
+        if (!id || seen.has(id)) continue;
+        seen.add(id);
+        ids.push(id);
+    }
+    return ids;
+}
+
+function normalizePreviewType(value) {
+    const candidate = String(value || "live").trim().toLowerCase();
+    return ["live", "none", "interactive"].includes(candidate) ? candidate : "live";
+}
+
+function sendBrowserBatchEvent(event, value) {
+    try {
+        if (event?.sender && !event.sender.isDestroyed?.()) event.sender.send("browser-batch-event", value);
+    } catch {
+        // The renderer may be closing while owned children finish.
+    }
+}
+
+async function terminateOwnedBrowserChild(child, {wait = (milliseconds) => new Promise((resolve) => setTimeout(resolve, milliseconds)), graceMs = 250} = {}) {
+    if (!child) return;
+    if (child.exitCode !== null && child.exitCode !== undefined) return;
+    const target = Number.isInteger(child.pid)
+        ? process.platform === "win32" ? child.pid : -child.pid
+        : null;
+    const signal = (name) => {
+        try {
+            if (target === null) child.kill?.(name);
+            else process.kill(target, name);
+            return true;
+        } catch {
+            // Fall back to the specifically owned child if its detached group
+            // is already gone or cannot be signalled on this host.
+            try {
+                child.kill?.(name);
+                return true;
+            } catch {
+                return false;
+            }
+        }
+    };
+    if (!signal("SIGTERM")) return;
+    await wait(graceMs);
+    if (child.exitCode !== null && child.exitCode !== undefined) return;
+    signal("SIGKILL");
+}
+
+async function startBatchPreviewWatcher(previewPath, onFrame, onClear) {
+    let lastMtime = 0;
+    let busy = false;
+    let stopped = false;
+    onClear?.();
+
+    const capture = async () => {
+        if (busy || stopped) return;
+        busy = true;
+        try {
+            const stat = await fs.stat(previewPath);
+            if (stat.mtimeMs <= lastMtime) return;
+            lastMtime = stat.mtimeMs;
+            const image = await fs.readFile(previewPath);
+            onFrame?.(`data:image/png;base64,${image.toString("base64")}`);
+        } catch {
+            // The first screenshot is created after Playwright opens the page.
+        } finally {
+            busy = false;
+        }
+    };
+
+    const timer = setInterval(capture, 700);
+    void capture();
+    return () => {
+        stopped = true;
+        clearInterval(timer);
+    };
+}
+
 function testRunnerBinary() {
     if (!app.isPackaged && process.env.MYTV_NODE_BINARY) {
         return process.env.MYTV_NODE_BINARY;
@@ -1132,11 +1426,12 @@ function testRunnerBinary() {
     return process.execPath;
 }
 
-function setInteractiveViewBounds(bounds = {}) {
+function setInteractiveViewBounds(bounds = {}, resolution = testResolution) {
     if (!interactiveView) return;
 
-    const logicalWidth = 1920;
-    const logicalHeight = 1080;
+    const viewport = resolveTestViewport(resolution, testResolution);
+    const logicalWidth = viewport.width;
+    const logicalHeight = viewport.height;
     const containerWidth = Math.max(Math.round(bounds.width || logicalWidth), 1);
     const containerHeight = Math.max(Math.round(bounds.height || logicalHeight), 1);
     const scale = Math.min(containerWidth / logicalWidth, containerHeight / logicalHeight, 1);

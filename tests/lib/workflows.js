@@ -8,7 +8,7 @@ const selectorValidation = require("./selector-validation");
 const waits = require("./waits");
 const {createScopedDomScanner} = require("./dom-scan");
 const {createBatchBudget} = require("./batch-budget");
-const {acceptDeviceLimitPopupIfVisible} = require("./login-popups");
+const {acceptDeviceLimitPopupIfVisible, acceptUserConsentPopupIfVisible} = require("./login-popups");
 
 const {remotePress, remoteFocusById, remoteFocusByText, enterWithVirtualKeyboard, searchKeyboardInput, getFocusedState, expectFocusedText, expectFocusedElementToLookOrange} = navigation;
 const {
@@ -109,6 +109,7 @@ async function openAppAndEnterLoginPage(page, options, testInfo) {
 async function loginWithAccount(page, options, testInfo) {
     await remoteFocusById(page, "remote-login-method");
     await activateVerifiedTarget(page, {testInfo, name: "login-method", contractName: "menuItem", expectedId: "remote-login-method", delay: 1500});
+    await acceptUserConsentPopupIfVisible(page, testInfo);
 
     await expect(page.locator("#new_ui_login_input_label")).toContainText("Nhập số điện thoại / Tài khoản MyTV");
     await enterWithVirtualKeyboard(page, options.USERNAME);

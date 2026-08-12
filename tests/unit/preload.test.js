@@ -84,6 +84,20 @@ test("exposes the test configuration synchronization call", () => {
   assert.deepEqual(invokes, [["set-test-configuration", {PLAYER_CHECK_TIMEOUT_SECONDS: "12", TEST_CASE_MAX_TIME_MINUTES: "45"}]]);
 });
 
+test("exposes the Browser batch call and removable keyed event subscription", () => {
+  const {bridge, invokes, listeners} = loadPreload();
+  const events = [];
+
+  bridge.runBrowserBatch({selectedCaseIds: ["case-1"], TEST_RESOLUTION: "1280x720", SIMULTANEOUS_DEVICES: "2"});
+  const unsubscribe = bridge.onBrowserBatchEvent((value) => events.push(value));
+  listeners.get("browser-batch-event")(undefined, {type: "case-started", batchId: "batch-1", caseId: "case-1", slotId: 1});
+  unsubscribe();
+
+  assert.deepEqual(invokes, [["run-browser-batch", {selectedCaseIds: ["case-1"], TEST_RESOLUTION: "1280x720", SIMULTANEOUS_DEVICES: "2"}]]);
+  assert.deepEqual(events, [{type: "case-started", batchId: "batch-1", caseId: "case-1", slotId: 1}]);
+  assert.equal(listeners.has("browser-batch-event"), false);
+});
+
 test("exposes the running campaign loader through the narrow IPC bridge", () => {
   const {bridge, invokes} = loadPreload();
 
