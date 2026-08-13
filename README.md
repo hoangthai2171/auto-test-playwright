@@ -415,7 +415,7 @@ No Chromium archive is included in macOS or Windows artifacts. The
 and is not used by the Electron app.
 
 Browser case runs use the selected 1280x720 or 1920x1080 logical Playwright
-viewport (1280x720 by default). Both surfaces are 16:9; the fullscreen Electron
+viewport (1280x720 by default). Both surfaces are 16:9; the maximized Electron
 workspace scales them only inside the six smaller holders and does not change
 the page's logical viewport or carousel behavior.
 

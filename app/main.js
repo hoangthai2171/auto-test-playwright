@@ -94,7 +94,6 @@ function createWindow() {
         minHeight: 760,
         title: "MyTV Auto Test",
         show: false,
-        fullscreen: true,
         backgroundColor: "#101318",
         webPreferences: {
             preload: path.join(__dirname, "preload.js"),
@@ -104,6 +103,7 @@ function createWindow() {
         },
     });
 
+    mainWindow.maximize();
     revealWindowOnFirstPaint(mainWindow);
     mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
     createManagedWindowCloseController({

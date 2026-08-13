@@ -1,26 +1,26 @@
 {
   "app/main.js": {
-    "mtime": 1786501290.9533908,
-    "ast_hash": "36cdeec993c49d946bb56635e93aefb1",
+    "mtime": 1786611322.7789369,
+    "ast_hash": "b2959f89eb96d5dd4af6dc8a83ffc5c6",
     "semantic_hash": ""
   },
   "app/preload.js": {
-    "mtime": 1786499411.5238914,
+    "mtime": 1786505473.959261,
     "ast_hash": "c66b53b9bb8f155a76f042a2b75d4f28",
     "semantic_hash": ""
   },
   "app/renderer/renderer.js": {
-    "mtime": 1786501306.2653215,
-    "ast_hash": "5c53e29c3728b65561f45a306680eebc",
+    "mtime": 1786516688.3491824,
+    "ast_hash": "5dbabc2c0eebfca95e0436155938e857",
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1786348202.5056288,
-    "ast_hash": "402aebac5232b3463cbd80a0666172e4",
+    "mtime": 1786516792.6697564,
+    "ast_hash": "aac3d685234f5fa986a693c293ae7dc6",
     "semantic_hash": ""
   },
   "playwright.config.js": {
-    "mtime": 1786499424.7867565,
+    "mtime": 1786505473.9664235,
     "ast_hash": "24521de2441e0cc8e3cf4bb76e1cb806",
     "semantic_hash": ""
   },
@@ -45,7 +45,7 @@
     "semantic_hash": ""
   },
   "tests/fixtures/mytv-session-fixture.js": {
-    "mtime": 1786499433.5514572,
+    "mtime": 1786505473.9666433,
     "ast_hash": "579f1defcc4963897b1fc9947aefeff0",
     "semantic_hash": ""
   },
@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1786503944.8218973,
-    "ast_hash": "1e7a125f783e28fa73baf890630bb2f8",
+    "mtime": 1786516688.3466504,
+    "ast_hash": "d93f8ff79e34a24c2dbd248535ea56af",
     "semantic_hash": ""
   },
   "IDEA.md": {
@@ -110,12 +110,12 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1786503935.9549165,
-    "ast_hash": "2bfe88f55af588601c4ed78aa4c26299",
+    "mtime": 1786611322.895883,
+    "ast_hash": "28a78499667cef7eef56d8e419fd76bd",
     "semantic_hash": ""
   },
   "app/renderer/index.html": {
-    "mtime": 1786500987.373923,
+    "mtime": 1786505473.959447,
     "ast_hash": "3133d793090fa3c9a3bc90377e67893f",
     "semantic_hash": ""
   },
@@ -155,8 +155,8 @@
     "semantic_hash": ""
   },
   "app/flow-case-api.js": {
-    "mtime": 1785825896.6834292,
-    "ast_hash": "fca2a9fa1d1f2b37345f2e0266d5cd8e",
+    "mtime": 1786516688.3477077,
+    "ast_hash": "863b996d90535abda4feddd163c10884",
     "semantic_hash": ""
   },
   "app/lg-cli-archive-importer.js": {
@@ -370,12 +370,12 @@
     "semantic_hash": ""
   },
   "tests/lib/login-popups.js": {
-    "mtime": 1786503519.1934805,
+    "mtime": 1786505473.966857,
     "ast_hash": "f0ebf66041ffcaafe59873a643a63a94",
     "semantic_hash": ""
   },
   "tests/lib/mytv-helpers.legacy.js": {
-    "mtime": 1786503740.7520092,
+    "mtime": 1786505473.9671183,
     "ast_hash": "3a499fe2369f5867289f2f9b86fcfcde",
     "semantic_hash": ""
   },
@@ -395,7 +395,7 @@
     "semantic_hash": ""
   },
   "tests/lib/selectors.js": {
-    "mtime": 1786503537.6560063,
+    "mtime": 1786505473.9672735,
     "ast_hash": "47569b25fedccafce94c400426db572a",
     "semantic_hash": ""
   },
@@ -480,7 +480,7 @@
     "semantic_hash": ""
   },
   "tests/lib/tv-session/webos-mytv-automation.js": {
-    "mtime": 1786503804.6754365,
+    "mtime": 1786505473.9674509,
     "ast_hash": "1eae4e38b227875f4cf8d41c6bd64cb2",
     "semantic_hash": ""
   },
@@ -490,7 +490,7 @@
     "semantic_hash": ""
   },
   "tests/lib/workflows.js": {
-    "mtime": 1786503531.2629461,
+    "mtime": 1786505473.9677193,
     "ast_hash": "6c29bfab55a52842e757993f95ff8476",
     "semantic_hash": ""
   },
@@ -585,8 +585,8 @@
     "semantic_hash": ""
   },
   "tests/unit/flow-case-api.test.js": {
-    "mtime": 1785903233.0507543,
-    "ast_hash": "d2e7f901c43ba88e636f75483f3c1baa",
+    "mtime": 1786516688.3511608,
+    "ast_hash": "52396a00e7272158750304e5c09a85d6",
     "semantic_hash": ""
   },
   "tests/unit/lg-cli-archive-importer.test.js": {
@@ -635,7 +635,7 @@
     "semantic_hash": ""
   },
   "tests/unit/login-popups.test.js": {
-    "mtime": 1786503775.2518415,
+    "mtime": 1786505473.9680336,
     "ast_hash": "13037980cf0f3919529fe9b6fe7fd6ae",
     "semantic_hash": ""
   },
@@ -655,8 +655,8 @@
     "semantic_hash": ""
   },
   "tests/unit/renderer.test.js": {
-    "mtime": 1786501408.5089762,
-    "ast_hash": "27a97b8a3b9c0babc597065ba3a2773b",
+    "mtime": 1786611814.2727067,
+    "ast_hash": "ebeed908a4fc757310fccf442ad10bf2",
     "semantic_hash": ""
   },
   "tests/unit/run-close-guard.test.js": {
@@ -665,7 +665,7 @@
     "semantic_hash": ""
   },
   "tests/unit/selectors.test.js": {
-    "mtime": 1786503537.72284,
+    "mtime": 1786505473.9687748,
     "ast_hash": "ecd1c88289406f4afa82afaa5ccd52c9",
     "semantic_hash": ""
   },
@@ -785,7 +785,7 @@
     "semantic_hash": ""
   },
   "tests/unit/webos-mytv-automation.test.js": {
-    "mtime": 1786503775.3175826,
+    "mtime": 1786505473.9691668,
     "ast_hash": "fa5b519172517942b8e03285f13cb9f8",
     "semantic_hash": ""
   },
@@ -890,7 +890,7 @@
     "semantic_hash": ""
   },
   "tests/unit/preload.test.js": {
-    "mtime": 1786499419.6967404,
+    "mtime": 1786505473.9683027,
     "ast_hash": "3562dca4bee705d3c9f479bb1a265d48",
     "semantic_hash": ""
   },
@@ -1145,12 +1145,12 @@
     "semantic_hash": ""
   },
   "app/test-configuration.js": {
-    "mtime": 1786498791.160705,
+    "mtime": 1786505473.960259,
     "ast_hash": "c12ea75f361059c0835c7bc13655bd70",
     "semantic_hash": ""
   },
   "tests/unit/test-configuration.test.js": {
-    "mtime": 1786498807.7145393,
+    "mtime": 1786505473.9689116,
     "ast_hash": "3201da5aee49ba152d5e60bf2f4f61f6",
     "semantic_hash": ""
   },
@@ -1270,33 +1270,53 @@
     "semantic_hash": ""
   },
   "app/browser-batch-runner.js": {
-    "mtime": 1786500999.6517417,
+    "mtime": 1786505473.958788,
     "ast_hash": "4edd7558e0d7da4b51888ddea593f1b4",
     "semantic_hash": ""
   },
   "app/test-report-store.js": {
-    "mtime": 1786498938.1877158,
+    "mtime": 1786505473.9603724,
     "ast_hash": "c3babd71f0c834c5c452d37030adc361",
     "semantic_hash": ""
   },
   "tests/unit/browser-batch-runner.test.js": {
-    "mtime": 1786499012.0659015,
+    "mtime": 1786505473.9678874,
     "ast_hash": "c5b0b8416c4380c74f42edb1615f37db",
     "semantic_hash": ""
   },
   "tests/unit/playwright-config.test.js": {
-    "mtime": 1786499447.5557494,
+    "mtime": 1786505473.9681487,
     "ast_hash": "e82084c8208a96d150536b943c4802a8",
     "semantic_hash": ""
   },
   "tests/unit/test-report-store.test.js": {
-    "mtime": 1786499037.2210805,
+    "mtime": 1786505473.9690263,
     "ast_hash": "ae89477ba17f680e6fddc35e11498bad",
     "semantic_hash": ""
   },
   "docs/tinyworkers/20260811_160811_simultaneous-browser-tests.md": {
-    "mtime": 1786501443.4431071,
+    "mtime": 1786505473.9606445,
     "ast_hash": "5a01d0640c732a410584651328e3ec52",
+    "semantic_hash": ""
+  },
+  "app/campaign-flow-case-workflow.js": {
+    "mtime": 1786516688.3473828,
+    "ast_hash": "bcff67df4970cd3a54bf155346728162",
+    "semantic_hash": ""
+  },
+  "tests/unit/campaign-flow-case-workflow.test.js": {
+    "mtime": 1786516688.3508368,
+    "ast_hash": "dd40dd0812d279f3b23cddf04d723f3e",
+    "semantic_hash": ""
+  },
+  "docs/tinyworkers/20260812_105838_campaign-optional-folder-workflow.md": {
+    "mtime": 1786516688.3496346,
+    "ast_hash": "3bc634ccd1d0658b4d90b5c5fe84d95a",
+    "semantic_hash": ""
+  },
+  "graphify-out/memory/query_20260812_040456_how_must_the_mytv_campaign_workflow_change_so_a_se.md": {
+    "mtime": 1786516688.350416,
+    "ast_hash": "6e9696082242030fce870b7502f93886",
     "semantic_hash": ""
   }
 }

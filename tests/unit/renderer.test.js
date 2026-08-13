@@ -680,7 +680,7 @@ test("renders test cases as selectable table rows with a disabled empty batch ac
     assert.match(rows[0].textContent, /First case/);
     assert.equal(rows[0].querySelectorAll("button").length, 1);
     assert.equal(fixture.elements["selected-test-case-count"].textContent, "0 selected");
-    assert.equal(fixture.elements["run-button"].textContent, "Run Selected (0)");
+    assert.equal(fixture.elements["run-button"].getAttribute("aria-label"), "Run Selected (0)");
     assert.equal(fixture.elements["run-button"].disabled, true);
 });
 
@@ -3197,7 +3197,7 @@ test("index markup contains the case browser and no API-key or mode controls", (
     const logsHeader = html.match(/<div id="logs-modal"[\s\S]*?<header class="settings-header">([\s\S]*?)<\/header>/)?.[1] || "";
     assert.match(logsHeader, /id="logs-clear-button"[^>]*aria-label="Clear logs"/);
     assert.match(logsHeader, /class="logs-header-actions"[\s\S]*id="logs-close-button"/);
-    assert.match(html, /<label for="campaign-select">Chiến dịch<\/label>/);
+    assert.match(html, /<label for="campaign-select">Campaigns<\/label>/);
     assert.match(html, /id="refresh-campaigns-button"/);
     assert.ok(html.indexOf('id="campaign-select"') < html.indexOf('id="folder-select"'));
     assert.doesNotMatch(html, /id="settings-message"/);
@@ -3337,13 +3337,15 @@ test("styles workspace action tooltips below the status bar", () => {
     assert.match(css, /\.workspace-action-tooltip::after\s*\{[^}]*z-index:\s*2;[^}]*top:\s*calc\(100% \+ 8px\);/s);
 });
 
-test("uses the taller default Electron window size", () => {
+test("maximizes the Electron window before first-paint reveal", () => {
     const mainSource = fs.readFileSync(path.join(__dirname, "../../app/main.js"), "utf8");
 
     assert.match(mainSource, /new BrowserWindow\(\{[\s\S]*?width:\s*1240,[\s\S]*?height:\s*900,[\s\S]*?minWidth:\s*920,[\s\S]*?minHeight:\s*760,/);
     assert.match(mainSource, /show:\s*false,/);
-    assert.match(mainSource, /fullscreen:\s*true,/);
-    assert.match(mainSource, /revealWindowOnFirstPaint\(mainWindow\)/);
+    assert.doesNotMatch(mainSource, /fullscreen:\s*true,/);
+    const maximizeIndex = mainSource.indexOf("mainWindow.maximize();");
+    const revealIndex = mainSource.indexOf("revealWindowOnFirstPaint(mainWindow)");
+    assert.ok(maximizeIndex >= 0 && maximizeIndex < revealIndex);
 });
 
 test("ships the six-slot Browser workspace and resolution/device controls", () => {
