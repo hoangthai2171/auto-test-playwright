@@ -7,6 +7,8 @@ const TEST_RESOLUTION_OPTIONS = Object.freeze(["1280x720", "1920x1080"]);
 const DEFAULT_TEST_RESOLUTION = "1280x720";
 const SIMULTANEOUS_DEVICE_OPTIONS = Object.freeze([1, 2, 4, 6]);
 const DEFAULT_SIMULTANEOUS_DEVICES = 6;
+const APP_ENVIRONMENT_OPTIONS = Object.freeze(["online", "pilot", "stage"]);
+const DEFAULT_APP_ENVIRONMENT = "online";
 
 const TEST_VIEWPORTS = Object.freeze({
     "1280x720": Object.freeze({width: 1280, height: 720}),
@@ -55,6 +57,14 @@ function normalizeSimultaneousDevices(value, fallback = DEFAULT_SIMULTANEOUS_DEV
     return DEFAULT_SIMULTANEOUS_DEVICES;
 }
 
+function normalizeAppEnvironment(value, fallback = DEFAULT_APP_ENVIRONMENT) {
+    const candidate = String(value ?? "").trim().toLowerCase();
+    if (APP_ENVIRONMENT_OPTIONS.includes(candidate)) return candidate;
+    const normalizedFallback = String(fallback ?? "").trim().toLowerCase();
+    if (APP_ENVIRONMENT_OPTIONS.includes(normalizedFallback)) return normalizedFallback;
+    return DEFAULT_APP_ENVIRONMENT;
+}
+
 const configuration = Object.freeze({
     DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS,
     DEFAULT_TEST_CASE_MAX_TIME_MINUTES,
@@ -63,12 +73,15 @@ const configuration = Object.freeze({
     DEFAULT_TEST_RESOLUTION,
     SIMULTANEOUS_DEVICE_OPTIONS,
     DEFAULT_SIMULTANEOUS_DEVICES,
+    APP_ENVIRONMENT_OPTIONS,
+    DEFAULT_APP_ENVIRONMENT,
     TEST_VIEWPORTS,
     normalizePlayerCheckTimeoutSeconds,
     normalizeTestCaseMaxTimeMinutes,
     normalizeTestResolution,
     resolveTestViewport,
     normalizeSimultaneousDevices,
+    normalizeAppEnvironment,
 });
 
 if (typeof globalThis !== "undefined") globalThis.MYTV_TEST_CONFIGURATION = configuration;

@@ -7,9 +7,11 @@ const Module = require("node:module");
 function loadPreload() {
   const listeners = new Map();
   const invokes = [];
+  const sends = [];
   let bridge;
   const ipcRenderer = {
     invoke(...args) { invokes.push(args); },
+    send(...args) { sends.push(args); },
     on(channel, listener) { listeners.set(channel, listener); },
     removeListener(channel, listener) {
       if (listeners.get(channel) === listener) listeners.delete(channel);
@@ -31,8 +33,16 @@ function loadPreload() {
   } finally {
     Module._load = originalLoad;
   }
-  return {bridge, listeners, invokes};
+  return {bridge, listeners, invokes, sends};
 }
+
+test("exposes the renderer startup readiness signal", () => {
+  const {bridge, sends} = loadPreload();
+
+  bridge.signalRendererReady();
+
+  assert.deepEqual(sends, [["renderer-ready"]]);
+});
 
 test("exposes one removable subscription for safe managed-install progress", () => {
   const {bridge, listeners} = loadPreload();
@@ -88,12 +98,12 @@ test("exposes the Browser batch call and removable keyed event subscription", ()
   const {bridge, invokes, listeners} = loadPreload();
   const events = [];
 
-  bridge.runBrowserBatch({selectedCaseIds: ["case-1"], TEST_RESOLUTION: "1280x720", SIMULTANEOUS_DEVICES: "2"});
+  bridge.runBrowserBatch({selectedCaseIds: ["case-1"], TEST_RESOLUTION: "1280x720", SIMULTANEOUS_DEVICES: "2", APP_ENVIRONMENT: "pilot"});
   const unsubscribe = bridge.onBrowserBatchEvent((value) => events.push(value));
   listeners.get("browser-batch-event")(undefined, {type: "case-started", batchId: "batch-1", caseId: "case-1", slotId: 1});
   unsubscribe();
 
-  assert.deepEqual(invokes, [["run-browser-batch", {selectedCaseIds: ["case-1"], TEST_RESOLUTION: "1280x720", SIMULTANEOUS_DEVICES: "2"}]]);
+  assert.deepEqual(invokes, [["run-browser-batch", {selectedCaseIds: ["case-1"], TEST_RESOLUTION: "1280x720", SIMULTANEOUS_DEVICES: "2", APP_ENVIRONMENT: "pilot"}]]);
   assert.deepEqual(events, [{type: "case-started", batchId: "batch-1", caseId: "case-1", slotId: 1}]);
   assert.equal(listeners.has("browser-batch-event"), false);
 });

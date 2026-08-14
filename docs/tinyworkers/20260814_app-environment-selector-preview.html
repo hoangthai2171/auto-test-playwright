@@ -1,0 +1,670 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+  <title>MyTV Auto Test — App environment preview</title>
+  <style>
+    :root {
+      color-scheme: dark;
+      font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: #0f1116;
+      color: #f3f5f8;
+      --panel: #171a21;
+      --panel-deep: #0d0f14;
+      --panel-soft: #202530;
+      --border: #303745;
+      --muted: #98a2b3;
+      --blue: #69a7ff;
+      --green: #2f9e5b;
+      --amber: #e1a44a;
+      --purple: #9f86ff;
+    }
+
+    * { box-sizing: border-box; }
+
+    html,
+    body {
+      width: 100%;
+      height: 100%;
+      margin: 0;
+      overflow: hidden;
+      background: #0f1116;
+    }
+
+    body { min-width: 980px; }
+
+    button,
+    input,
+    select { font: inherit; }
+
+    button {
+      border: 0;
+      border-radius: 6px;
+      color: #f5f7fb;
+      cursor: pointer;
+      font-weight: 700;
+    }
+
+    button:disabled,
+    input:disabled { cursor: not-allowed; opacity: .45; }
+
+    .window {
+      display: grid;
+      grid-template-rows: 28px 48px minmax(0, 1fr);
+      width: 100%;
+      height: 100%;
+    }
+
+    .window-chrome {
+      display: flex;
+      align-items: center;
+      gap: 7px;
+      padding: 0 10px;
+      background: #f4f4f4;
+    }
+
+    .traffic-light {
+      width: 13px;
+      height: 13px;
+      border-radius: 50%;
+    }
+
+    .traffic-light.red { background: #ff5f57; }
+    .traffic-light.yellow { background: #febc2e; }
+    .traffic-light.green { background: #28c840; }
+
+    .window-title {
+      margin-left: 8px;
+      color: #5f6368;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .toolbar {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 24px;
+      padding: 0 18px;
+      border-bottom: 1px solid #2a2e37;
+      background: #15181e;
+    }
+
+    .app-brand {
+      display: grid;
+      gap: 2px;
+      min-width: 0;
+    }
+
+    .app-brand strong { font-size: 15px; line-height: 1.15; }
+    .app-brand span { color: var(--muted); font-size: 11px; }
+
+    .toolbar-actions,
+    .workspace-actions {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .toolbar-button,
+    .icon-button {
+      height: 34px;
+      padding: 0 14px;
+      border: 1px solid #3a414f;
+      background: #252b36;
+    }
+
+    .app-shell {
+      display: grid;
+      grid-template-columns: 458px minmax(0, 1fr);
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .sidebar {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 16px;
+      min-height: 0;
+      padding: 28px;
+      border-right: 1px solid #30343e;
+      background: #191c23;
+    }
+
+    .run-target-panel {
+      display: grid;
+      gap: 15px;
+      padding: 14px 12px 20px;
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      background: #12151b;
+    }
+
+    .run-target-panel h2,
+    .test-case-heading,
+    .log-heading { margin: 0; }
+
+    .run-target-panel h2 { font-size: 14px; }
+
+    .run-target-options {
+      display: flex;
+      gap: 18px;
+    }
+
+    .run-target-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 7px;
+      color: #d8dde7;
+      font-size: 13px;
+      font-weight: 700;
+    }
+
+    input[type="radio"],
+    input[type="checkbox"] { accent-color: #7bb7ff; }
+
+    .select-block { display: grid; gap: 8px; }
+
+    .select-label,
+    .test-case-heading,
+    .search-label {
+      color: #d4dae5;
+      font-size: 13px;
+      font-weight: 800;
+    }
+
+    select,
+    .search-input {
+      width: 100%;
+      height: 38px;
+      padding: 0 14px;
+      border: 1px solid #3b4351;
+      border-radius: 5px;
+      outline: 0;
+      background: #11141a;
+      color: #f3f5f8;
+    }
+
+    .refresh {
+      float: right;
+      width: 34px;
+      height: 34px;
+      margin-top: -7px;
+      border: 1px solid #3a414f;
+      background: #252b36;
+      font-size: 21px;
+      line-height: 1;
+    }
+
+    .get-cases {
+      width: 100%;
+      height: 40px;
+      margin-top: 3px;
+      background: #232731;
+      color: #9ca5b5;
+    }
+
+    .test-case-section {
+      display: grid;
+      grid-template-rows: auto auto minmax(0, 1fr);
+      gap: 10px;
+      min-height: 0;
+    }
+
+    .test-case-heading {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      color: #eef1f6;
+      font-size: 16px;
+    }
+
+    .selected-count { color: var(--muted); font-size: 12px; }
+    .search-label { display: grid; gap: 8px; font-size: 10px; text-transform: uppercase; }
+
+    .case-table-wrap {
+      min-height: 0;
+      overflow: hidden;
+      border: 1px solid #343b49;
+      border-radius: 5px;
+      background: #11141a;
+    }
+
+    .case-table {
+      width: 100%;
+      border-collapse: collapse;
+      table-layout: fixed;
+      font-size: 12px;
+    }
+
+    .case-table th,
+    .case-table td {
+      padding: 10px 9px;
+      border-bottom: 1px solid #2c323d;
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    .case-table th {
+      color: #9ca7b8;
+      font-size: 10px;
+      letter-spacing: .05em;
+      text-transform: uppercase;
+    }
+
+    .case-table th:first-child,
+    .case-table td:first-child { width: 38px; }
+    .case-table th:nth-child(2),
+    .case-table td:nth-child(2) { width: 52px; color: #aab4c3; }
+    .case-table th:nth-child(3) { width: auto; }
+    .case-table th:nth-child(4),
+    .case-table td:nth-child(4) { width: 76px; }
+    .case-table th:last-child,
+    .case-table td:last-child { width: 56px; color: #aab4c3; }
+
+    .case-row { cursor: pointer; }
+    .case-row:hover,
+    .case-row.selected { background: #193443; }
+    .case-name { color: #f2f4f8; font-weight: 700; line-height: 1.2; }
+
+    .detail-button {
+      height: 30px;
+      padding: 0 10px;
+      border: 1px solid #3f4858;
+      background: #252b36;
+      font-size: 11px;
+    }
+
+    .workspace {
+      display: grid;
+      grid-template-rows: 54px minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+    }
+
+    .status-bar {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      min-width: 0;
+      padding: 0 22px;
+      border-bottom: 1px solid #2b3039;
+      background: #15181e;
+    }
+
+    .status-dot {
+      width: 10px;
+      height: 10px;
+      flex: 0 0 auto;
+      border-radius: 50%;
+      background: #8c96a7;
+    }
+
+    .status-dot.running { background: #f5ba54; }
+    .status-text { flex: 0 0 auto; font-size: 14px; font-weight: 700; }
+
+    /* This is the control occupying the red-marked area in the supplied screenshot. */
+    .environment-picker {
+      display: flex;
+      align-items: center;
+      gap: 9px;
+      min-width: 0;
+      margin-left: 22px;
+      padding: 5px 9px;
+      border: 1px solid #394150;
+      border-radius: 6px;
+      background: #10131a;
+    }
+
+    .environment-picker legend {
+      width: auto;
+      padding: 0;
+      color: #9ba8bb;
+      font-size: 10px;
+      font-weight: 800;
+      letter-spacing: .06em;
+      text-transform: uppercase;
+    }
+
+    .environment-options {
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .environment-option {
+      display: inline-flex;
+      align-items: center;
+      gap: 4px;
+      min-height: 28px;
+      padding: 0 7px;
+      border: 1px solid transparent;
+      border-radius: 5px;
+      color: #bac4d3;
+      cursor: pointer;
+      font-size: 11px;
+      font-weight: 800;
+      letter-spacing: .02em;
+    }
+
+    .environment-option:hover { border-color: #4c576a; background: #202733; }
+    .environment-option:has(input:checked) { border-color: #5d9df0; background: #203b59; color: #f5f8ff; }
+    .environment-option input { margin: 0; }
+    .environment-option[data-environment="pilot"]:has(input:checked) { border-color: #b77d2c; background: #4b351a; }
+    .environment-option[data-environment="stage"]:has(input:checked) { border-color: #8065df; background: #332a58; }
+
+    .environment-note {
+      overflow: hidden;
+      max-width: 210px;
+      color: #8190a6;
+      font-size: 10px;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .workspace-actions {
+      flex: 0 0 auto;
+      margin-left: auto;
+    }
+
+    .workspace-selected-count { color: #b1bac8; font-size: 12px; font-weight: 700; }
+
+    .workspace-action {
+      display: inline-grid;
+      width: 34px;
+      height: 34px;
+      place-items: center;
+      border: 1px solid transparent;
+      border-radius: 6px;
+      font-size: 16px;
+    }
+
+    .workspace-action.run { background: var(--green); }
+    .workspace-action.stop { background: #9d4145; }
+    .workspace-action.retry { background: #2f68a9; }
+    .workspace-action.neutral { border-color: #3a414f; background: #252b36; }
+
+    .browser-preview {
+      display: grid;
+      grid-template-rows: minmax(0, 1fr) 240px;
+      gap: 14px;
+      min-width: 0;
+      min-height: 0;
+      padding: 20px 20px 0;
+      background: #0e1015;
+    }
+
+    .slot-grid {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(0, 1fr));
+      grid-template-rows: repeat(2, minmax(0, 1fr));
+      gap: 8px;
+      min-height: 0;
+    }
+
+    .slot {
+      display: grid;
+      grid-template-rows: 34px minmax(0, 1fr);
+      min-width: 0;
+      min-height: 0;
+      overflow: hidden;
+      border: 2px solid #3d4656;
+      border-radius: 5px;
+      background: #080a0e;
+    }
+
+    .slot-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 8px;
+      padding: 0 9px;
+      background: #12151c;
+      color: #d8dee9;
+      font-size: 12px;
+      font-weight: 700;
+    }
+
+    .slot-badge {
+      padding: 4px 6px;
+      border-radius: 3px;
+      background: #f3f5f8;
+      color: #657083;
+      font-size: 10px;
+    }
+
+    .slot-body {
+      display: grid;
+      place-items: center;
+      color: #606a7a;
+      font-size: 11px;
+    }
+
+    .log-panel {
+      display: grid;
+      grid-template-rows: 34px minmax(0, 1fr);
+      min-height: 0;
+      overflow: hidden;
+      border: 2px solid #4b99ff;
+      border-radius: 18px;
+      background: #080a0e;
+    }
+
+    .log-header {
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+      padding: 0 14px;
+      border-bottom: 1px solid #303744;
+    }
+
+    .log-heading { font-size: 12px; }
+    .log-selection { color: #68a8ff; font-size: 11px; }
+
+    .log-body {
+      display: grid;
+      place-items: start;
+      padding: 22px 20px;
+      color: #526074;
+      font-size: 11px;
+    }
+
+    .preview-badge {
+      position: fixed;
+      right: 14px;
+      bottom: 9px;
+      padding: 3px 7px;
+      border: 1px solid #3b4351;
+      border-radius: 4px;
+      background: #1d222b;
+      color: #9ca7b8;
+      font-size: 10px;
+      pointer-events: none;
+    }
+
+    @media (max-width: 1240px) {
+      body { min-width: 900px; }
+      .app-shell { grid-template-columns: 360px minmax(0, 1fr); }
+      .sidebar { padding: 20px; }
+      .environment-note { display: none; }
+      .environment-picker { margin-left: 10px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="window">
+    <div class="window-chrome" aria-hidden="true">
+      <span class="traffic-light red"></span>
+      <span class="traffic-light yellow"></span>
+      <span class="traffic-light green"></span>
+      <span class="window-title">MyTV Auto Test</span>
+    </div>
+
+    <header class="toolbar">
+      <div class="app-brand">
+        <strong>MyTV Auto Test</strong>
+        <span>Chạy Playwright test bằng giao diện desktop.</span>
+      </div>
+      <div class="toolbar-actions">
+        <button class="toolbar-button" type="button">Settings</button>
+        <button class="toolbar-button" type="button">Logs</button>
+      </div>
+    </header>
+
+    <main class="app-shell">
+      <aside class="sidebar">
+        <section class="run-target-panel" aria-labelledby="run-target-title">
+          <h2 id="run-target-title">Run target</h2>
+          <div class="run-target-options" role="radiogroup" aria-label="Run target">
+            <label class="run-target-option"><input id="target-browser" type="radio" name="target" value="browser" checked>Browser</label>
+            <label class="run-target-option"><input id="target-lg" type="radio" name="target" value="lg">LG</label>
+          </div>
+        </section>
+
+        <section class="select-block" aria-label="Case source">
+          <div class="select-label">Campaigns <button class="refresh" type="button" aria-label="Refresh campaigns">↻</button></div>
+          <select aria-label="Campaigns"><option>Select a campaign...</option></select>
+          <div class="select-label">Folders <button class="refresh" type="button" aria-label="Refresh folders">↻</button></div>
+          <select aria-label="Folders"><option>Select a folder...</option></select>
+          <button class="get-cases" type="button">Get test cases</button>
+        </section>
+
+        <section class="test-case-section" aria-labelledby="test-cases-title">
+          <div class="test-case-heading"><h2 id="test-cases-title">Test cases</h2><span id="selected-count" class="selected-count">0 selected</span></div>
+          <label class="search-label">Search by ID or name<input class="search-input" type="search" placeholder="Search test cases..."></label>
+          <div class="case-table-wrap">
+            <table class="case-table" aria-label="Test cases">
+              <thead><tr><th><input type="checkbox" aria-label="Select all"></th><th>ID</th><th>Name</th><th>Details</th><th>Status</th></tr></thead>
+              <tbody>
+                <tr class="case-row" data-case="1728"><td><input type="checkbox" aria-label="Select case 1728"></td><td>1728</td><td class="case-name">Play ngẫu nhiên trailer trang chủ</td><td><button class="detail-button" type="button">Detail</button></td><td>—</td></tr>
+                <tr class="case-row" data-case="1729"><td><input type="checkbox" aria-label="Select case 1729"></td><td>1729</td><td class="case-name">Play ngẫu nhiên Thịnh hành trang chủ</td><td><button class="detail-button" type="button">Detail</button></td><td>—</td></tr>
+                <tr class="case-row" data-case="1730"><td><input type="checkbox" aria-label="Select case 1730"></td><td>1730</td><td class="case-name">Play ngẫu nhiên Kênh yêu thích/ Kênh đề xuất trang chủ</td><td><button class="detail-button" type="button">Detail</button></td><td>—</td></tr>
+                <tr class="case-row" data-case="1731"><td><input type="checkbox" aria-label="Select case 1731"></td><td>1731</td><td class="case-name">Kiểm tra mục Thể loại/ Truyền hình</td><td><button class="detail-button" type="button">Detail</button></td><td>—</td></tr>
+                <tr class="case-row" data-case="1732"><td><input type="checkbox" aria-label="Select case 1732"></td><td>1732</td><td class="case-name">Kiểm tra mục Thể loại/ Thiếu nhi</td><td><button class="detail-button" type="button">Detail</button></td><td>—</td></tr>
+                <tr class="case-row" data-case="1733"><td><input type="checkbox" aria-label="Select case 1733"></td><td>1733</td><td class="case-name">Kiểm tra mục Thể loại/ Phim truyện</td><td><button class="detail-button" type="button">Detail</button></td><td>—</td></tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
+      </aside>
+
+      <section class="workspace" aria-label="Browser workspace">
+        <div class="status-bar">
+          <span class="status-dot" id="status-dot"></span>
+          <span class="status-text" id="status-text">Ready</span>
+
+          <fieldset class="environment-picker" id="environment-picker">
+            <legend>App environment</legend>
+            <div class="environment-options" role="radiogroup" aria-label="App environment">
+              <label class="environment-option" data-environment="online"><input type="radio" name="app-environment" value="online" checked>ONLINE</label>
+              <label class="environment-option" data-environment="pilot"><input type="radio" name="app-environment" value="pilot">PILOT</label>
+              <label class="environment-option" data-environment="stage"><input type="radio" name="app-environment" value="stage">STAGE</label>
+            </div>
+            <span class="environment-note" id="environment-note">Default production behavior</span>
+          </fieldset>
+
+          <div class="workspace-actions" aria-label="Test run actions">
+            <span id="workspace-selected-count" class="workspace-selected-count">0 selected</span>
+            <button class="workspace-action run" id="run-button" type="button" aria-label="Run selected">▶</button>
+            <button class="workspace-action stop" type="button" aria-label="Stop">■</button>
+            <button class="workspace-action retry" type="button" aria-label="Retry sync">↻</button>
+            <button class="workspace-action neutral" type="button" aria-label="Open report">▣</button>
+            <button class="workspace-action neutral" type="button" aria-label="Show folder">▰</button>
+          </div>
+        </div>
+
+        <section class="browser-preview">
+          <div class="slot-grid" aria-label="Browser test preview slots">
+            <article class="slot"><header class="slot-header"><span>— Idle</span><span class="slot-badge">Idle</span></header><div class="slot-body">Browser preview will appear here when a test starts.</div></article>
+            <article class="slot"><header class="slot-header"><span>— Idle</span><span class="slot-badge">Idle</span></header><div class="slot-body"></div></article>
+            <article class="slot"><header class="slot-header"><span>— Idle</span><span class="slot-badge">Idle</span></header><div class="slot-body"></div></article>
+            <article class="slot"><header class="slot-header"><span>— Idle</span><span class="slot-badge">Idle</span></header><div class="slot-body"></div></article>
+            <article class="slot"><header class="slot-header"><span>— Idle</span><span class="slot-badge">Idle</span></header><div class="slot-body"></div></article>
+            <article class="slot"><header class="slot-header"><span>— Idle</span><span class="slot-badge">Idle</span></header><div class="slot-body"></div></article>
+          </div>
+          <section class="log-panel" aria-labelledby="log-title">
+            <header class="log-header"><h2 class="log-heading" id="log-title">Playwright log</h2><span class="log-selection">Select a test case to view Playwright output</span></header>
+            <div class="log-body">Logs for the selected test case will appear here.</div>
+          </section>
+        </section>
+      </section>
+    </main>
+  </div>
+
+  <div class="preview-badge">Preview only · no real IPC</div>
+
+  <script>
+    (() => {
+      const environmentNotes = {
+        online: "Default production behavior",
+        pilot: "Authen Pilot bootstrap on Browser start",
+        stage: "ONLINE56 bootstrap on Browser start",
+      };
+      const picker = document.getElementById("environment-picker");
+      const note = document.getElementById("environment-note");
+      const status = document.getElementById("status-text");
+      const statusDot = document.getElementById("status-dot");
+      const targetInputs = [...document.querySelectorAll('input[name="target"]')];
+      const environmentInputs = [...document.querySelectorAll('input[name="app-environment"]')];
+      const rows = [...document.querySelectorAll(".case-row")];
+      const selectedCount = document.getElementById("selected-count");
+      const workspaceSelectedCount = document.getElementById("workspace-selected-count");
+      const runButton = document.getElementById("run-button");
+
+      const selectedEnvironment = () => environmentInputs.find((input) => input.checked)?.value || "online";
+      const selectedCases = () => rows.filter((row) => row.classList.contains("selected"));
+
+      function updateEnvironment() {
+        const value = selectedEnvironment();
+        note.textContent = environmentNotes[value];
+        picker.dataset.value = value;
+        status.title = `Selected app environment: ${value.toUpperCase()}`;
+      }
+
+      function updateSelection() {
+        const count = selectedCases().length;
+        selectedCount.textContent = `${count} selected`;
+        workspaceSelectedCount.textContent = `${count} selected`;
+        runButton.disabled = count === 0;
+      }
+
+      environmentInputs.forEach((input) => input.addEventListener("change", updateEnvironment));
+      rows.forEach((row) => {
+        const checkbox = row.querySelector("input[type=checkbox]");
+        checkbox.addEventListener("change", () => {
+          row.classList.toggle("selected", checkbox.checked);
+          updateSelection();
+        });
+        row.addEventListener("click", (event) => {
+          if (event.target.closest("button") || event.target.closest("input")) return;
+          checkbox.checked = !checkbox.checked;
+          row.classList.toggle("selected", checkbox.checked);
+          updateSelection();
+        });
+      });
+
+      targetInputs.forEach((input) => input.addEventListener("change", () => {
+        const browser = document.getElementById("target-browser").checked;
+        environmentInputs.forEach((environmentInput) => { environmentInput.disabled = !browser; });
+        note.textContent = browser ? environmentNotes[selectedEnvironment()] : "Browser-only setting · LG flow unchanged";
+        picker.setAttribute("aria-disabled", String(!browser));
+      }));
+
+      runButton.addEventListener("click", () => {
+        if (runButton.disabled) return;
+        const value = selectedEnvironment().toUpperCase();
+        status.textContent = `Running · ${value}`;
+        statusDot.classList.add("running");
+        environmentInputs.forEach((input) => { input.disabled = true; });
+        runButton.disabled = true;
+      });
+
+      updateEnvironment();
+      updateSelection();
+    })();
+  </script>
+</body>
+</html>

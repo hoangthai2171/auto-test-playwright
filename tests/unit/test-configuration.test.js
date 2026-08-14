@@ -10,11 +10,14 @@ const {
   DEFAULT_TEST_RESOLUTION,
   SIMULTANEOUS_DEVICE_OPTIONS,
   DEFAULT_SIMULTANEOUS_DEVICES,
+  APP_ENVIRONMENT_OPTIONS,
+  DEFAULT_APP_ENVIRONMENT,
   normalizePlayerCheckTimeoutSeconds,
   normalizeTestCaseMaxTimeMinutes,
   normalizeTestResolution,
   resolveTestViewport,
   normalizeSimultaneousDevices,
+  normalizeAppEnvironment,
 } = require("../../app/test-configuration");
 
 test("keeps the player-check timeout default at six seconds", () => {
@@ -83,4 +86,15 @@ test("uses the simultaneous-device allowlist and six-device default", () => {
     assert.equal(normalizeSimultaneousDevices(value), 6, `value: ${String(value)}`);
   }
   assert.equal(normalizeSimultaneousDevices("invalid", "4"), 4);
+});
+
+test("uses the online app environment default and a strict allowlist", () => {
+  assert.deepEqual(APP_ENVIRONMENT_OPTIONS, ["online", "pilot", "stage"]);
+  assert.equal(DEFAULT_APP_ENVIRONMENT, "online");
+  assert.equal(normalizeAppEnvironment(undefined), "online");
+  assert.equal(normalizeAppEnvironment(" PILOT "), "pilot");
+  assert.equal(normalizeAppEnvironment("stage"), "stage");
+  assert.equal(normalizeAppEnvironment("invalid"), "online");
+  assert.equal(normalizeAppEnvironment("invalid", "pilot"), "pilot");
+  assert.equal(normalizeAppEnvironment("invalid", "invalid"), "online");
 });

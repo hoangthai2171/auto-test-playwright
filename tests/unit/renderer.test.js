@@ -301,8 +301,11 @@ function createRendererFixture() {
         "form-message",
         "status-dot",
         "status-text",
+        "app-environment-status",
+        "app-environment-online",
+        "app-environment-pilot",
+        "app-environment-stage",
         "log-output",
-        "browser-mute-button",
         "browser-slot-grid",
         "browser-log-panel",
         "browser-selected-log",
@@ -417,7 +420,19 @@ function createRendererFixture() {
         input.checked = value === "browser";
     });
 
+    ["online", "pilot", "stage"].forEach((value) => {
+        const input = elements[`app-environment-${value}`];
+        input.tagName = "INPUT";
+        input.setAttribute("name", "app-environment");
+        input.value = value;
+        input.checked = value === "online";
+    });
+
     const runner = {
+        rendererReadyCalls: 0,
+        signalRendererReady() {
+            this.rendererReadyCalls += 1;
+        },
         loadTestCases: async () => ({ok: true, cases: []}),
         clearTestCaseCache: async () => ({ok: true}),
         loadFlowCaseCampaigns: async () => ({ok: true, campaigns: []}),
@@ -918,9 +933,14 @@ test("loads cases through IPC and renders the returned list", async () => {
     assert.match(fixture.elements["test-case-list"].textContent, /Local case/);
 });
 
-test("bootstraps from browser globals and restores cached cases without an injected document", async () => {
+test("bootstraps cached cases before synchronously restoring saved settings", async () => {
     assert.equal(loadError, undefined, loadError?.message);
     const fixture = createRendererFixture();
+    let storageReads = 0;
+    fixture.storage.getItem = () => {
+        storageReads += 1;
+        return null;
+    };
     fixture.runner.loadTestCases = async () => ({
         ok: true,
         source: "cache",
@@ -946,6 +966,8 @@ test("bootstraps from browser globals and restores cached cases without an injec
     }
 
     assert.match(fixture.elements["test-case-list"].textContent, /Cached startup case/);
+    assert.equal(fixture.runner.rendererReadyCalls, 1);
+    assert.equal(storageReads, 0);
 });
 
 test("restores the active folder when startup loads cached API cases", async () => {
@@ -1421,6 +1443,7 @@ test("loads and saves connection and network settings", () => {
     assert.equal(fixture.elements["api-timeout-input"].value, "45");
     assert.equal(fixture.elements["player-check-timeout-input"].value, "12");
     assert.equal(fixture.elements["test-case-max-time-input"].value, "45");
+    assert.equal(fixture.elements["app-environment-online"].checked, true);
     fixture.elements["gui-settings-save-button"].dispatchEvent("click");
     assert.equal(stored.API_TIMEOUT_SECONDS, "45");
     assert.equal(stored.PLAYER_CHECK_TIMEOUT_SECONDS, "12");
@@ -1429,6 +1452,25 @@ test("loads and saves connection and network settings", () => {
     assert.equal(stored.ENVIRONMENT, "API");
     assert.equal(stored.APP_URL, undefined);
     assert.equal(stored.DNS_HOST, undefined);
+});
+
+test("persists the selected Browser app environment and keeps it disabled for LG", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    const stored = [];
+    fixture.storage.setItem = (key, value) => stored.push([key, JSON.parse(value)]);
+    const controller = renderer.createRendererController(fixture);
+
+    fixture.elements["app-environment-pilot"].checked = true;
+    fixture.elements["app-environment-pilot"].dispatchEvent("change");
+
+    assert.equal(stored.at(-1)[1].APP_ENVIRONMENT, "pilot");
+    assert.equal(fixture.elements["app-environment-status"].textContent, "");
+
+    await controller.selectRunTarget("webos");
+
+    assert.ok(fixture.document.querySelectorAll('[name="app-environment"]').every((input) => input.disabled));
+    assert.match(fixture.elements["app-environment-status"].textContent, /Browser runner only/i);
 });
 
 test("saves and sanitizes Test configuration timeouts with an auto-hide success toast", async () => {
@@ -1532,9 +1574,12 @@ test("renders keyed Browser batch slots and keeps selected per-case logs after s
     const header = fixture.elements["select-all-test-cases"];
     header.checked = true;
     header.dispatchEvent("change", {target: header});
+    fixture.elements["app-environment-stage"].checked = true;
+    fixture.elements["app-environment-stage"].dispatchEvent("change");
     await controller.runSelectedCases({PREVIEW_TYPE: "live"});
 
     assert.deepEqual(payloads[0].selectedCaseIds, ["case-1", "case-2", "case-3"]);
+    assert.equal(payloads[0].APP_ENVIRONMENT, "stage");
     const slot = fixture.elements["browser-slot-grid"].querySelector('[data-slot-id="1"]');
     assert.match(slot.textContent, /case-3/);
     assert.match(slot.textContent, /Failed/);
@@ -2017,6 +2062,7 @@ test("submits only the generic test-run payload", async () => {
         PREVIEW_TYPE: "live",
         PLAYER_CHECK_TIMEOUT_SECONDS: "14",
         TEST_CASE_MAX_TIME_MINUTES: "30",
+        APP_ENVIRONMENT: "online",
     });
 });
 
@@ -2045,6 +2091,7 @@ test("runs selected cases sequentially and preserves the generic IPC payload", a
         PREVIEW_TYPE: "live",
         PLAYER_CHECK_TIMEOUT_SECONDS: "6",
         TEST_CASE_MAX_TIME_MINUTES: "30",
+        APP_ENVIRONMENT: "online",
     });
     assert.equal(fixture.elements["test-case-list-body"].querySelector('[data-test-case-status="case-1"]').textContent, "Running");
 
@@ -2292,7 +2339,6 @@ test("selecting LG removes a Browser preview and shows the LG preview state", as
     fixture.elements["browser-preview-image"].setAttribute("src", "data:image/png;base64,preview");
     fixture.elements["browser-preview-image"].className = "browser-preview-image";
     fixture.elements["interactive-browser"].className = "interactive-browser";
-    fixture.elements["browser-mute-button"].className = "preview-control";
     const controller = renderer.createRendererController(fixture);
 
     await controller.selectRunTarget("webos");
@@ -2300,7 +2346,6 @@ test("selecting LG removes a Browser preview and shows the LG preview state", as
     assert.equal(fixture.elements["browser-preview-image"].getAttribute("src"), null);
     assert.match(fixture.elements["browser-preview-image"].className, /hidden/);
     assert.match(fixture.elements["interactive-browser"].className, /hidden/);
-    assert.match(fixture.elements["browser-mute-button"].className, /hidden/);
     assert.match(fixture.elements["browser-log-panel"].className, /hidden/);
     assert.match(fixture.elements["browser-preview-empty"].className, /hidden/);
     assert.doesNotMatch(fixture.elements["lg-preview-empty"].className, /hidden/);
@@ -3305,6 +3350,12 @@ test("places labelled icon actions beside the workspace status", () => {
     const statusBar = html.match(/<div class="status-bar">([\s\S]*?)<\/div>\s*<section class="browser-preview">/)?.[1] || "";
 
     assert.match(statusBar, /id="status-text"/);
+    assert.match(statusBar, /id="app-environment-picker"/);
+    assert.match(statusBar, /name="app-environment" value="online" checked/);
+    assert.match(statusBar, /name="app-environment" value="pilot"/);
+    assert.match(statusBar, /name="app-environment" value="stage"/);
+    assert.ok(statusBar.indexOf('id="status-text"') < statusBar.indexOf('id="app-environment-picker"'));
+    assert.ok(statusBar.indexOf('id="app-environment-picker"') < statusBar.indexOf('class="workspace-actions"'));
     assert.match(statusBar, /id="workspace-selected-count"[^>]*>0 selected/);
     for (const [id, label] of [
         ["run-button", "Run Selected (0)"],
@@ -3320,6 +3371,7 @@ test("places labelled icon actions beside the workspace status", () => {
         assert.ok(statusBar.indexOf(`id="${id}"`, tooltipStart) > tooltipStart);
     }
     assert.doesNotMatch(html.match(/<form id="test-form"[\s\S]*?<\/form>/)?.[0] || "", /id="(?:run-button|stop-button|retry-sync-button|open-report-button|show-report-button)"/);
+    assert.doesNotMatch(html, /browser-preview-toolbar|browser-mute-button/);
 });
 
 test("keeps the run icon intact while updating its accessible action label", () => {
@@ -3346,6 +3398,7 @@ test("maximizes the Electron window before first-paint reveal", () => {
     const maximizeIndex = mainSource.indexOf("mainWindow.maximize();");
     const revealIndex = mainSource.indexOf("revealWindowOnFirstPaint(mainWindow)");
     assert.ok(maximizeIndex >= 0 && maximizeIndex < revealIndex);
+    assert.match(mainSource, /ipcMain\.on\("renderer-ready"/);
 });
 
 test("ships the six-slot Browser workspace and resolution/device controls", () => {
@@ -3358,7 +3411,8 @@ test("ships the six-slot Browser workspace and resolution/device controls", () =
     assert.match(html, /name="test-resolution" value="1920x1080"/);
     assert.match(html, /id="simultaneous-devices-select"/);
     assert.match(html, /<option value="6" selected>6 devices<\/option>/);
-    assert.match(css, /\.browser-preview\s*\{[^}]*grid-template-rows:\s*42px minmax\(0, 1fr\) 240px;/s);
+    assert.match(css, /\.browser-preview\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\) 240px;/s);
+    assert.doesNotMatch(css, /\.browser-preview-toolbar/);
     assert.match(css, /\.browser-slot-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*grid-template-rows:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
     assert.match(css, /\.browser-slot-grid\s*\{[^}]*gap:\s*6px;/s);
     assert.match(css, /\.browser-slot\s*\{[^}]*aspect-ratio:\s*16 \/ 9;[^}]*max-height:\s*100%;/s);
@@ -3366,6 +3420,18 @@ test("ships the six-slot Browser workspace and resolution/device controls", () =
     assert.match(css, /\.browser-slot-status\s*\{[^}]*background:\s*#fff;/s);
     assert.match(css, /\.browser-log-panel\s*\{[^}]*height:\s*240px;[^}]*min-height:\s*240px;[^}]*max-height:\s*240px;[^}]*overflow:\s*hidden;/s);
     assert.match(css, /\.browser-selected-log\s*\{[^}]*overflow:\s*auto;/s);
+});
+
+test("carries the allowlisted app environment through the Browser child boundary", () => {
+    const mainSource = fs.readFileSync(path.join(__dirname, "../../app/main.js"), "utf8");
+    const specSource = fs.readFileSync(path.join(__dirname, "../../tests/run-test-case-mytv.spec.js"), "utf8");
+
+    assert.match(mainSource, /normalizeAppEnvironment/);
+    assert.match(mainSource, /MYTV_APP_ENVIRONMENT:\s*appEnvironment/);
+    assert.match(mainSource, /APP_ENVIRONMENT:\s*appEnvironment/);
+    assert.match(mainSource, /MYTV_APP_ENVIRONMENT:\s*batchSettings\.APP_ENVIRONMENT/);
+    assert.match(specSource, /normalizeAppEnvironment\(process\.env\.MYTV_APP_ENVIRONMENT\)/);
+    assert.doesNotMatch(mainSource, /MYTV_APP_ENVIRONMENT:\s*values\./);
 });
 
 test("ships the normal application shell under the first loading overlay", () => {

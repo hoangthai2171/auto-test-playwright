@@ -79,6 +79,10 @@ six 16:9 holders; slots above the selected concurrency remain Idle, and each
 assigned holder routes keyed live frames/status/logs by batch, case, and slot.
 The lower Playwright log panel is fixed at 240px and scrolls its selected output
 internally; failed-test text must never resize or move the preview grid.
+The top workspace status bar owns a persisted Browser-only App environment
+selector with `ONLINE` as the default plus `PILOT` and `STAGE`. Main validates
+the enum and the generic Browser runner applies the fixed trusted page bootstrap
+before the first action; LG runs do not use it.
 Interactive BrowserView/CDP preview is allowed only for one selected Browser
 case; Live or None is required for a multi-case batch. LG runs reuse the same case selection,
 batch control, report, and result-submission flow, but require an explicitly
@@ -334,6 +338,9 @@ private fixture data.
 - `MYTV_SIMULTANEOUS_DEVICES` — validated Browser batch limit (`1`, `2`, `4`,
   or `6`); the main process owns scheduling and does not pass this to
   Playwright workers.
+- `MYTV_APP_ENVIRONMENT` — validated Browser app mode (`online`, `pilot`, or
+  `stage`; defaults to `online`) passed to the generic child. The trusted
+  runner uses it only for the fixed PILOT/STAGE page bootstrap.
 - `MYTV_PLAYER_CHECK_TIMEOUT_SECONDS` — sanitized positive-integer player-check wait used by the generic Browser runner; defaults to 6 seconds.
 - `MYTV_TEST_CASE_MAX_TIME_MINUTES` — sanitized positive-integer maximum duration for one generic Browser test case; defaults to 30 minutes and is configurable in Test configuration.
 - `PLAYWRIGHT_BROWSERS_PATH` — app-private per-user Playwright Chromium root,

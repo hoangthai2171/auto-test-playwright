@@ -9,6 +9,7 @@ const {waitForServiceScreenImages} = require("./lib/service-screenshot");
 const {
   normalizePlayerCheckTimeoutSeconds,
   normalizeTestCaseMaxTimeMinutes,
+  normalizeAppEnvironment,
 } = require("../app/test-configuration");
 
 const HOME_TRAILER_CASE_TIMEOUT_MS = 10 * 60 * 1000;
@@ -46,6 +47,7 @@ test("run server-driven MyTV test case", async ({page, options}, testInfo) => {
     result = await runTestCase(page, testInfo, testCase, {
       source,
       APP_URL: options.APP_URL,
+      APP_ENVIRONMENT: normalizeAppEnvironment(process.env.MYTV_APP_ENVIRONMENT),
       playerCheckTimeoutSeconds: normalizePlayerCheckTimeoutSeconds(process.env.MYTV_PLAYER_CHECK_TIMEOUT_SECONDS),
     });
     await capturePassedTestScreenshot(page, testInfo, result);

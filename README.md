@@ -109,7 +109,7 @@ used only as the local fallback when no latest cached API list is available.
 4. Use the refresh icon beside **Chiến dịch** to load running campaigns or the refresh icon beside **Folders** to load folders. Selecting a campaign automatically refreshes **Folders** with only that campaign's folders; clearing the campaign refreshes the unfiltered project folders. Select a campaign and click `Get test cases` to load every campaign copy without choosing a folder. A folder is optional in that mode; when selected, the app intersects the campaign list with that folder subtree. With no campaign selected, a folder is still required and cases come only from the selected folder.
 5. Search by case ID substring or name with the instant filter, then check one or more visible cases in the table.
 6. Use `Detail` to review metadata, expected result, and normalized actions.
-7. Click `Run Selected (N)`. The Browser workspace keeps six 16:9 preview holders visible; the configured number of slots runs immediately and later selected cases refill the first slot that becomes free. Each holder shows the full testcase ID, an ellipsized name when necessary, and a white status badge. Select a holder or testcase row to view that case's redacted Playwright log in the lower workspace panel. Slots above the configured simultaneous-device limit remain `Idle`.
+7. Choose the Browser **App environment** in the status bar (`ONLINE` by default, `PILOT`, or `STAGE`), then click `Run Selected (N)`. The Browser workspace keeps six 16:9 preview holders visible; the configured number of slots runs immediately and later selected cases refill the first slot that becomes free. Each holder shows the full testcase ID, an ellipsized name when necessary, and a white status badge. Select a holder or testcase row to view that case's redacted Playwright log in the lower workspace panel. Slots above the configured simultaneous-device limit remain `Idle`. The selector is Browser-only and is disabled while an LG target or an active run is selected.
 8. Open the test report after the batch finishes. Use `Details` for any test to
    see its expected result; passed tests also show their final viewport
    screenshot. `play_row` details list every tested poster with its name,
@@ -119,8 +119,9 @@ used only as the local fallback when no latest cached API list is available.
 
 The renderer captures checked case IDs in table order and sends one Browser batch
 request containing the ordered IDs, normalized resolution, simultaneous-device
-limit, player-check timeout, test-case maximum time, preview settings, and the
-active cache key to the main process. Folder and campaign API calls run through
+limit, player-check timeout, test-case maximum time, preview settings, the
+validated `APP_ENVIRONMENT`, and the active cache key to the main process.
+Folder and campaign API calls run through
 main-process IPC. A selected campaign loads cases from
 `GET /api/v1/projects/{projectId}/test-campaigns/{campaignId}/testcases` with
 the configured value in `X-FlowTest-Service-Token`; the new request does not add
@@ -160,6 +161,24 @@ capture in the compact report.
 Each generic case invokes the trusted app global `window.processLogOut` after
 execution, including failed cases. The cleanup is awaited and is isolated from
 the shared legacy session fixture.
+
+### Browser app environment
+
+The status-bar selector is persisted separately from the API `ENVIRONMENT`
+setting and defaults to `ONLINE`. The main process validates it again before
+starting a Browser child and passes only `MYTV_APP_ENVIRONMENT` to the generic
+runner. `ONLINE` keeps the normal production-mode flow. `PILOT` runs the fixed
+trusted page bootstrap below after the app URL loads and before the first case
+action, then waits for the reloaded app to be ready:
+
+```js
+gServerAAALink.setDomainAuthenUpdate("https://aaapilot1.mytv.vn/authen-ctl-v3", "https://aaapilot2.mytv.vn/authen-ctl-v3");
+gServerAAALink.setDevMode(APP_MODE.UPDATE);
+window.location = 'index.html';
+```
+
+`STAGE` runs `gServerAAALink.setDevMode(APP_MODE.ONLINE56)` followed by the
+same `index.html` reload and readiness wait. LG runs do not use this setting.
 
 If login displays the device-limit popup, the workflow monitors the asynchronous
 transition to profile selection, remotely selects `Tiếp tục`, and waits for that

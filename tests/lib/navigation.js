@@ -305,13 +305,62 @@ async function remoteFocusById(page, id, maxMoves = 50, options = {}) {
   });
 }
 
-async function remoteFocus(page, { isTarget, getTargetRect, maxMoves, preferredDirection, snapshotCache }) {
+async function remoteFocusBySelector(page, selector, maxMoves = 50, options = {}) {
+  await remoteFocus(page, {
+    maxMoves,
+    preferredDirection: options.preferredDirection,
+    snapshotCache: options.snapshotCache,
+    isTarget: () => false,
+    isTargetElement: () =>
+      page.evaluate((targetSelector) => {
+        const target = document.querySelector(targetSelector);
+        if (!target) return false;
+        const rect = target.getBoundingClientRect();
+        const style = getComputedStyle(target);
+        return (
+          target.classList.contains("focused") &&
+          rect.width > 0 &&
+          rect.height > 0 &&
+          style.display !== "none" &&
+          style.visibility !== "hidden" &&
+          Number(style.opacity) !== 0
+        );
+      }, selector),
+    getTargetRect: async () =>
+      page.evaluate((targetSelector) => {
+        const target = document.querySelector(targetSelector);
+        if (!target) return null;
+        const rect = target.getBoundingClientRect();
+        const style = getComputedStyle(target);
+        if (
+          rect.width <= 0 ||
+          rect.height <= 0 ||
+          style.display === "none" ||
+          style.visibility === "hidden" ||
+          Number(style.opacity) === 0
+        ) {
+          return null;
+        }
+        return {
+          x: rect.x,
+          y: rect.y,
+          width: rect.width,
+          height: rect.height,
+        };
+      }, selector),
+  });
+}
+
+async function remoteFocus(page, { isTarget, isTargetElement, getTargetRect, maxMoves, preferredDirection, snapshotCache }) {
   let targetRect = await getTargetRect();
   expect(targetRect).toBeTruthy();
 
   for (let attempt = 0; attempt < maxMoves; attempt++) {
     const state = await getFocusedState(page);
-    if (await Promise.resolve(isTarget(state))) return;
+    if (
+      (isTarget && (await Promise.resolve(isTarget(state)))) ||
+      (isTargetElement && (await Promise.resolve(isTargetElement())))
+    ) return;
 
     // Home rows can reflow while a remote key is being processed. Refresh the
     // target geometry before choosing the next direction so a stale first
@@ -332,7 +381,10 @@ async function remoteFocus(page, { isTarget, getTargetRect, maxMoves, preferredD
   // One final check: the last press may have landed on the target but the loop
   // ended before the next iteration could detect it.
   const finalState = await getFocusedState(page);
-  if (await Promise.resolve(isTarget(finalState))) return;
+  if (
+    (isTarget && (await Promise.resolve(isTarget(finalState)))) ||
+    (isTargetElement && (await Promise.resolve(isTargetElement())))
+  ) return;
 
   throw new Error(
     `Could not focus target with remote keys. Current focus: ${JSON.stringify(finalState)}`
@@ -442,4 +494,4 @@ async function getFocusedState(page) {
   }, FOCUS_SELECTORS);
 }
 
-module.exports={DEFAULT_REMOTE_PRESS_DELAY,remotePress,enterWithVirtualKeyboard,remoteFocusByVirtualKey,virtualKeyIds,searchKeyboardInput,remoteFocusByText,remoteFocusByKeyText,remoteFocusById,remoteFocus,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange,__internal:{chooseDirection,rangesOverlap,fallbackDirection,center}};
+module.exports={DEFAULT_REMOTE_PRESS_DELAY,remotePress,enterWithVirtualKeyboard,remoteFocusByVirtualKey,virtualKeyIds,searchKeyboardInput,remoteFocusByText,remoteFocusByKeyText,remoteFocusById,remoteFocusBySelector,remoteFocus,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange,__internal:{chooseDirection,rangesOverlap,fallbackDirection,center}};

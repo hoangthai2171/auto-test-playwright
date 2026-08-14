@@ -385,6 +385,73 @@ test("creates exactly the default handlers and logs in with action credentials i
   ]);
 });
 
+test("prepares the selected app environment before the first action and skips duplicate navigation", async () => {
+  const events = [];
+  const originalPrepare = workflows.prepareAppEnvironment;
+  workflows.prepareAppEnvironment = async (page, options, testInfo) => {
+    events.push(["prepareAppEnvironment", page, options.APP_ENVIRONMENT, testInfo]);
+  };
+  const helpers = createHandlerHelpers({
+    openAppAndEnterLoginPage: async (...args) => events.push(["openAppAndEnterLoginPage", ...args]),
+    loginWithAccount: async (...args) => events.push(["loginWithAccount", ...args]),
+    chooseFirstProfileAndEnterHome: async (...args) => events.push(["chooseFirstProfileAndEnterHome", ...args]),
+    closeHomePopupsAndVerifyHome: async (...args) => events.push(["closeHomePopupsAndVerifyHome", ...args]),
+  });
+  const page = {id: "page"};
+  const testInfo = createTestInfo();
+
+  try {
+    await runTestCase(page, testInfo, {
+      id: "pilot-case",
+      name: "Pilot case",
+      actions: [{action: "login", username: "user", password: "secret"}],
+    }, {
+      APP_URL: "https://example.test/",
+      APP_ENVIRONMENT: "PILOT",
+      helpers,
+      stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+    });
+  } finally {
+    workflows.prepareAppEnvironment = originalPrepare;
+  }
+
+  assert.equal(events[0][0], "prepareAppEnvironment");
+  assert.equal(events[0][2], "pilot");
+  assert.equal(events[1][0], "openAppAndEnterLoginPage");
+  assert.deepEqual(events[1][4], {skipNavigation: true});
+  assert.equal(events[2][0], "loginWithAccount");
+});
+
+test("blocks all actions when app environment preparation fails", async () => {
+  const originalPrepare = workflows.prepareAppEnvironment;
+  let actionCalls = 0;
+  workflows.prepareAppEnvironment = async () => {
+    throw new Error("bootstrap failed");
+  };
+  const helpers = createHandlerHelpers({
+    openAppAndEnterLoginPage: async () => { actionCalls += 1; },
+  });
+
+  try {
+    await assert.rejects(
+      () => runTestCase({}, createTestInfo(), {
+        id: "stage-case",
+        name: "Stage case",
+        actions: [{action: "login", username: "user", password: "secret"}],
+      }, {
+        APP_ENVIRONMENT: "stage",
+        helpers,
+        stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+      }),
+      /bootstrap failed/,
+    );
+  } finally {
+    workflows.prepareAppEnvironment = originalPrepare;
+  }
+
+  assert.equal(actionCalls, 0);
+});
+
 test("verifies a playback expectedResult after all actions complete", async () => {
   const waits = [];
   let playerReadyCalls = 0;

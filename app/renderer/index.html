@@ -121,6 +121,24 @@
                 <div class="status-bar">
                     <span id="status-dot" class="status-dot idle"></span>
                     <span id="status-text">Ready</span>
+                    <fieldset id="app-environment-picker" class="app-environment-picker">
+                        <legend>App environment</legend>
+                        <div class="app-environment-options" role="radiogroup" aria-label="App environment">
+                            <label class="app-environment-option">
+                                <input id="app-environment-online" type="radio" name="app-environment" value="online" checked />
+                                <span>ONLINE</span>
+                            </label>
+                            <label class="app-environment-option">
+                                <input id="app-environment-pilot" type="radio" name="app-environment" value="pilot" />
+                                <span>PILOT</span>
+                            </label>
+                            <label class="app-environment-option">
+                                <input id="app-environment-stage" type="radio" name="app-environment" value="stage" />
+                                <span>STAGE</span>
+                            </label>
+                        </div>
+                        <span id="app-environment-status" class="app-environment-status" role="status"></span>
+                    </fieldset>
                     <div class="workspace-actions" aria-label="Test run actions">
                         <span id="workspace-selected-count" class="workspace-selected-count">0 selected</span>
                         <span class="workspace-action-tooltip" data-tooltip="Run Selected (0)">
@@ -151,9 +169,6 @@
                     </div>
                 </div>
                 <section class="browser-preview">
-                    <div class="browser-preview-toolbar">
-                        <button type="button" id="browser-mute-button" class="preview-control hidden">Unmute</button>
-                    </div>
                     <div id="browser-slot-grid" class="browser-slot-grid" aria-label="Browser test preview slots"></div>
                     <section id="browser-log-panel" class="browser-log-panel" aria-labelledby="browser-log-title">
                         <header class="browser-log-header">

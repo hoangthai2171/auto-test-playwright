@@ -176,5 +176,12 @@
   "174": "lg-cli-operator-guide.md",
   "175": "createWebOsMyTvAutomation",
   "176": "IDEA.md",
-  "177": "lg-toolchain-manifest.test.js"
+  "177": "lg-toolchain-manifest.test.js",
+  "178": "test-case-action-runner.test.js",
+  "179": "findServiceIdInAllServices",
+  "180": "openLeftMenuFromHome",
+  "181": "openFocusedContentForPlayback",
+  "182": "navigation.test.js",
+  "183": "createdAt",
+  "184": "defaultPackageVersion"
 }

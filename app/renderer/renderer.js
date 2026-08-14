@@ -69,6 +69,7 @@ const DEFAULT_SETTINGS = {
     TEST_CASE_MAX_TIME_MINUTES: String(TEST_CONFIGURATION.DEFAULT_TEST_CASE_MAX_TIME_MINUTES),
     TEST_RESOLUTION: TEST_CONFIGURATION.DEFAULT_TEST_RESOLUTION,
     SIMULTANEOUS_DEVICES: String(TEST_CONFIGURATION.DEFAULT_SIMULTANEOUS_DEVICES),
+    APP_ENVIRONMENT: TEST_CONFIGURATION.DEFAULT_APP_ENVIRONMENT,
     PREVIEW_TYPE: "live",
     RUN_TARGET: "browser",
 };
@@ -104,7 +105,7 @@ const BROWSER_INSTALL_PROGRESS_STEPS = Object.freeze([
 
 const BROWSER_INSTALL_FAILURE_STATUSES = new Set(["DOWNLOAD_FAILED", "VERIFICATION_FAILED", "INSTALL_FAILED"]);
 
-function createRendererController({document, windowRef, runner, storage} = {}) {
+function createRendererController({document, windowRef, runner, storage, deferInitialSettings = false} = {}) {
     const doc = document || globalThis.document;
     const win = windowRef || globalThis.window;
     const api = runner || win?.mytvRunner;
@@ -121,6 +122,8 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const apiAuthorizationInput = get("api-authorization-input");
     const projectIdInput = get("project-id-input");
     const environmentSelect = get("environment-select");
+    const appEnvironmentInputs = doc?.querySelectorAll?.('[name="app-environment"]') || [];
+    const appEnvironmentStatus = get("app-environment-status");
     const apiTimeoutInput = get("api-timeout-input");
     const playerCheckTimeoutInput = get("player-check-timeout-input");
     const testCaseMaxTimeInput = get("test-case-max-time-input");
@@ -219,7 +222,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const statusText = get("status-text");
     const logOutput = get("log-output");
     const logsClearButton = get("logs-clear-button");
-    const browserMuteButton = get("browser-mute-button");
     const browserPreviewEmpty = get("browser-preview-empty");
     const browserPreviewImage = get("browser-preview-image");
     const lgPreviewEmpty = get("lg-preview-empty");
@@ -253,7 +255,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     let batchState = null;
     let activeCompletion = null;
     let activePreviewType = "live";
-    let browserMuted = true;
     let appToastTimer = null;
     let settings = {...DEFAULT_SETTINGS};
     let activeCampaignId = "";
@@ -271,6 +272,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     const browserCaseLogs = new Map();
     let pendingResultSubmission = null;
     let runTarget = "browser";
+    let formRunning = false;
     let tvDevices = [];
     let deviceDialogMode = "add";
     let editingDeviceId = "";
@@ -321,6 +323,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             TEST_CASE_MAX_TIME_MINUTES: String(TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(saved.TEST_CASE_MAX_TIME_MINUTES, TEST_CONFIGURATION.DEFAULT_TEST_CASE_MAX_TIME_MINUTES)),
             TEST_RESOLUTION: TEST_CONFIGURATION.normalizeTestResolution(saved.TEST_RESOLUTION, TEST_CONFIGURATION.DEFAULT_TEST_RESOLUTION),
             SIMULTANEOUS_DEVICES: String(TEST_CONFIGURATION.normalizeSimultaneousDevices(saved.SIMULTANEOUS_DEVICES, TEST_CONFIGURATION.DEFAULT_SIMULTANEOUS_DEVICES)),
+            APP_ENVIRONMENT: TEST_CONFIGURATION.normalizeAppEnvironment(saved.APP_ENVIRONMENT, TEST_CONFIGURATION.DEFAULT_APP_ENVIRONMENT),
             PREVIEW_TYPE: ["none", "live", "interactive"].includes(saved.PREVIEW_TYPE) ? saved.PREVIEW_TYPE : DEFAULT_SETTINGS.PREVIEW_TYPE,
             RUN_TARGET: saved.RUN_TARGET === "webos" ? "webos" : DEFAULT_SETTINGS.RUN_TARGET,
         };
@@ -334,6 +337,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
         if (testCaseMaxTimeInput) testCaseMaxTimeInput.value = settings.TEST_CASE_MAX_TIME_MINUTES;
         testResolutionInputs.forEach((input) => { input.checked = input.value === settings.TEST_RESOLUTION; });
+        appEnvironmentInputs.forEach((input) => { input.checked = input.value === settings.APP_ENVIRONMENT; });
         if (simultaneousDevicesSelect) simultaneousDevicesSelect.value = settings.SIMULTANEOUS_DEVICES;
         doc?.querySelectorAll?.('[name="preview-type"]').forEach((input) => {
             input.checked = input.value === activePreviewType;
@@ -385,6 +389,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
             TEST_RESOLUTION: resolution,
             SIMULTANEOUS_DEVICES: devices,
+            APP_ENVIRONMENT: TEST_CONFIGURATION.normalizeAppEnvironment(
+                [...appEnvironmentInputs].find((input) => input.checked)?.value,
+                settings.APP_ENVIRONMENT,
+            ),
             RUN_TARGET: runTarget,
         };
     }
@@ -1232,8 +1240,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     }
 
     function setFormRunning(isRunning) {
+        formRunning = Boolean(isRunning);
         form?.querySelectorAll?.("input, select, textarea").forEach((element) => {
             element.disabled = isRunning;
+        });
+        appEnvironmentInputs.forEach((input) => {
+            input.disabled = formRunning || runTarget !== "browser";
         });
         if (runButton) runButton.disabled = isRunning || getSelectedCaseIds().length === 0 || (runTarget === "browser" ? !browserToolchainReady : !canRunLg());
         if (stopButton) stopButton.disabled = !isRunning;
@@ -1250,6 +1262,12 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         doc?.querySelectorAll?.('[name="preview-type"]').forEach((input) => {
             input.disabled = runTarget !== "browser";
         });
+        appEnvironmentInputs.forEach((input) => {
+            input.disabled = formRunning || runTarget !== "browser";
+        });
+        if (appEnvironmentStatus) {
+            appEnvironmentStatus.textContent = runTarget === "webos" ? "Browser runner only." : "";
+        }
         if (previewTargetStatus) {
             previewTargetStatus.textContent = runTarget === "webos" ? "Preview type is available for the Browser runner only." : "";
             previewTargetStatus.classList.toggle("hidden", runTarget === "browser");
@@ -2329,6 +2347,10 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
                 settings.TEST_RESOLUTION,
             ),
             SIMULTANEOUS_DEVICES: String(TEST_CONFIGURATION.normalizeSimultaneousDevices(simultaneousDevicesSelect?.value, settings.SIMULTANEOUS_DEVICES)),
+            APP_ENVIRONMENT: TEST_CONFIGURATION.normalizeAppEnvironment(
+                [...appEnvironmentInputs].find((input) => input.checked)?.value,
+                settings.APP_ENVIRONMENT,
+            ),
             PREVIEW_TYPE: activePreviewType,
             RUN_TARGET: runTarget,
         };
@@ -2336,6 +2358,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         if (playerCheckTimeoutInput) playerCheckTimeoutInput.value = settings.PLAYER_CHECK_TIMEOUT_SECONDS;
         if (testCaseMaxTimeInput) testCaseMaxTimeInput.value = settings.TEST_CASE_MAX_TIME_MINUTES;
         testResolutionInputs.forEach((input) => { input.checked = input.value === settings.TEST_RESOLUTION; });
+        appEnvironmentInputs.forEach((input) => { input.checked = input.value === settings.APP_ENVIRONMENT; });
         if (simultaneousDevicesSelect) simultaneousDevicesSelect.value = settings.SIMULTANEOUS_DEVICES;
         store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
         const response = await syncTestConfiguration(
@@ -2413,6 +2436,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         const devices = String(TEST_CONFIGURATION.normalizeSimultaneousDevices(values.SIMULTANEOUS_DEVICES, settings.SIMULTANEOUS_DEVICES));
         const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(values.PLAYER_CHECK_TIMEOUT_SECONDS, settings.PLAYER_CHECK_TIMEOUT_SECONDS);
         const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(values.TEST_CASE_MAX_TIME_MINUTES, settings.TEST_CASE_MAX_TIME_MINUTES);
+        const appEnvironment = TEST_CONFIGURATION.normalizeAppEnvironment(values.APP_ENVIRONMENT, settings.APP_ENVIRONMENT);
         const payload = {
             selectedCaseIds: ids,
             PREVIEW_TYPE: previewType,
@@ -2420,6 +2444,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             SIMULTANEOUS_DEVICES: devices,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
             TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
+            APP_ENVIRONMENT: appEnvironment,
         };
         if (values.TEST_CASE_CACHE_KEY) payload.TEST_CASE_CACHE_KEY = String(values.TEST_CASE_CACHE_KEY);
         if (values.TEST_CASE_FOLDER_ID) payload.TEST_CASE_FOLDER_ID = String(values.TEST_CASE_FOLDER_ID);
@@ -2487,11 +2512,13 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     async function runSingleCase(testCaseId, values, currentBatch) {
         const playerTimeoutSeconds = TEST_CONFIGURATION.normalizePlayerCheckTimeoutSeconds(values.PLAYER_CHECK_TIMEOUT_SECONDS, settings.PLAYER_CHECK_TIMEOUT_SECONDS);
         const maxTimeMinutes = TEST_CONFIGURATION.normalizeTestCaseMaxTimeMinutes(values.TEST_CASE_MAX_TIME_MINUTES, settings.TEST_CASE_MAX_TIME_MINUTES);
+        const appEnvironment = TEST_CONFIGURATION.normalizeAppEnvironment(values.APP_ENVIRONMENT, settings.APP_ENVIRONMENT);
         const payload = {
             TEST_CASE_ID: String(testCaseId),
             PREVIEW_TYPE: values.PREVIEW_TYPE,
             PLAYER_CHECK_TIMEOUT_SECONDS: String(playerTimeoutSeconds),
             TEST_CASE_MAX_TIME_MINUTES: String(maxTimeMinutes),
+            APP_ENVIRONMENT: appEnvironment,
         };
         if (values.TEST_CASE_CACHE_KEY) payload.TEST_CASE_CACHE_KEY = String(values.TEST_CASE_CACHE_KEY);
         if (values.TEST_CASE_FOLDER_ID) payload.TEST_CASE_FOLDER_ID = String(values.TEST_CASE_FOLDER_ID);
@@ -2712,6 +2739,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
             SIMULTANEOUS_DEVICES: runSettings.SIMULTANEOUS_DEVICES,
             PLAYER_CHECK_TIMEOUT_SECONDS: runSettings.PLAYER_CHECK_TIMEOUT_SECONDS,
             TEST_CASE_MAX_TIME_MINUTES: runSettings.TEST_CASE_MAX_TIME_MINUTES,
+            APP_ENVIRONMENT: runSettings.APP_ENVIRONMENT,
             target: runTarget,
         };
         if (activeCacheKey) values.TEST_CASE_CACHE_KEY = activeCacheKey;
@@ -2739,7 +2767,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         }
         if (previewType === "interactive") {
             browserPreviewEmpty?.classList.add("hidden");
-            browserMuteButton?.classList.remove("hidden");
             await setBrowserMuted(true);
             await showInteractiveBrowser(values);
         }
@@ -2766,8 +2793,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     }
 
     async function setBrowserMuted(muted) {
-        browserMuted = muted;
-        if (browserMuteButton) browserMuteButton.textContent = muted ? "Unmute" : "Mute";
         await api.setInteractiveBrowserMuted(muted);
     }
 
@@ -2775,7 +2800,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         browserPreviewImage?.removeAttribute?.("src");
         browserPreviewImage?.classList.add("hidden");
         interactiveBrowser?.classList.add("hidden");
-        browserMuteButton?.classList.add("hidden");
         api.hideInteractiveBrowser?.();
         browserPreviewEmpty?.classList.remove("hidden");
     }
@@ -2958,6 +2982,14 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     webosTargetInput?.addEventListener?.("change", () => {
         void selectRunTarget("webos");
     });
+    appEnvironmentInputs.forEach((input) => {
+        input.addEventListener?.("change", () => {
+            const appEnvironment = TEST_CONFIGURATION.normalizeAppEnvironment(input.value, settings.APP_ENVIRONMENT);
+            settings = {...settings, APP_ENVIRONMENT: appEnvironment};
+            store?.setItem?.("mytv-auto-test-settings", JSON.stringify(settings));
+            syncRunTargetControls();
+        });
+    });
     tvDeviceAddButton?.addEventListener?.("click", () => {
         openTvDeviceDialog("add");
     });
@@ -3078,7 +3110,6 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
         closeModal(tvHelpModal);
         await resumeInteractiveBrowserAfterModal();
     });
-    browserMuteButton?.addEventListener?.("click", () => setBrowserMuted(!browserMuted));
     settingsNavItems.forEach((item) => item.addEventListener("click", () => selectSettingsPanel(item.dataset.settingsPanel)));
     win?.addEventListener?.("resize", () => {
         if (activePreviewType === "interactive") showInteractiveBrowserBounds();
@@ -3130,7 +3161,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
     });
 
     initializeBrowserSlots();
-    loadSettings();
+    if (!deferInitialSettings) loadSettings();
     void refreshDnsHostStatus();
     void loadBrowserToolchainStatus();
     if (runTarget === "webos") void selectRunTarget("webos", {persist: false});
@@ -3146,6 +3177,7 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 
     return {
         loadCases,
+        loadSettings,
         loadFolders,
         loadCampaigns,
         renderCampaigns,
@@ -3203,8 +3235,29 @@ function createRendererController({document, windowRef, runner, storage} = {}) {
 }
 
 function bootstrapRenderer(dependencies) {
-    const controller = createRendererController(dependencies);
-    controller.loadCases();
+    const controller = createRendererController({...(dependencies || {}), deferInitialSettings: true});
+    const rendererWindow = dependencies?.windowRef || globalThis.window;
+    const rendererApi = dependencies?.runner || rendererWindow?.mytvRunner;
+    const scheduleAfterInitialPaint = (callback) => {
+        if (typeof rendererWindow?.requestAnimationFrame === "function") {
+            rendererWindow.requestAnimationFrame(callback);
+            return;
+        }
+        const schedule = typeof rendererWindow?.setTimeout === "function" ? rendererWindow.setTimeout.bind(rendererWindow) : setTimeout;
+        schedule(callback, 0);
+    };
+    void Promise.resolve(controller.loadCases())
+        .finally(() => {
+            rendererApi?.signalRendererReady?.();
+            scheduleAfterInitialPaint(() => {
+                try {
+                    controller.loadSettings();
+                } catch (error) {
+                    console.error("Could not restore saved GUI settings:", error);
+                }
+            });
+        })
+        .catch(() => {});
     return controller;
 }
 

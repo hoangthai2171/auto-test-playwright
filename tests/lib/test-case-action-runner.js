@@ -3,7 +3,7 @@ const { expect } = require("playwright/test");
 const workflows = require("./workflows");
 const { normalizeVietnameseText } = require("./text-utils");
 const { captureCurrentAppScreenshot } = require("./artifacts");
-const { normalizePlayerCheckTimeoutSeconds } = require("../../app/test-configuration");
+const { normalizePlayerCheckTimeoutSeconds, normalizeAppEnvironment } = require("../../app/test-configuration");
 
 const PLAYER_RETURN_DELAY_MS = 2000;
 const VIEW_MORE_LABELS = new Set(["xem tat ca", "xem them", "view more"]);
@@ -504,7 +504,11 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
         USERNAME: action.username,
         PASSWORD: action.password,
       };
-      await helpers.openAppAndEnterLoginPage(page, account, testInfo);
+      if (options.appEnvironmentPrepared === true) {
+        await helpers.openAppAndEnterLoginPage(page, account, testInfo, {skipNavigation: true});
+      } else {
+        await helpers.openAppAndEnterLoginPage(page, account, testInfo);
+      }
       await helpers.loginWithAccount(page, account, testInfo);
       await helpers.chooseFirstProfileAndEnterHome(page, testInfo);
       await helpers.closeHomePopupsAndVerifyHome(page, testInfo);
@@ -637,10 +641,17 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
 }
 
 async function runTestCase(page, testInfo, testCase, options = {}) {
-  const helpers = options.helpers || require("./mytv-helpers");
-  const playerCheckTimeoutSeconds = normalizePlayerCheckTimeoutSeconds(options.playerCheckTimeoutSeconds);
-  const handlers = options.handlers || createDefaultActionHandlers({helpers, playerCheckTimeoutSeconds});
-  const stepRunner = options.stepRunner || helpers.runStep;
+  const executionOptions = {...options};
+  if (Object.prototype.hasOwnProperty.call(options, "APP_ENVIRONMENT")) {
+    executionOptions.APP_ENVIRONMENT = normalizeAppEnvironment(options.APP_ENVIRONMENT);
+    await workflows.prepareAppEnvironment(page, executionOptions, testInfo);
+    executionOptions.appEnvironmentPrepared = true;
+  }
+
+  const helpers = executionOptions.helpers || require("./mytv-helpers");
+  const playerCheckTimeoutSeconds = normalizePlayerCheckTimeoutSeconds(executionOptions.playerCheckTimeoutSeconds);
+  const handlers = executionOptions.handlers || createDefaultActionHandlers({helpers, playerCheckTimeoutSeconds});
+  const stepRunner = executionOptions.stepRunner || helpers.runStep;
 
   return createActionRunner({
     handlers,
@@ -652,7 +663,7 @@ async function runTestCase(page, testInfo, testCase, options = {}) {
     testInfo,
     testCase,
     {
-      ...options,
+      ...executionOptions,
       postRun: ({page: runPage, testInfo: runTestInfo, testCase: compiledTestCase, steps}) =>
         verifyExpectedResult({
           page: runPage,

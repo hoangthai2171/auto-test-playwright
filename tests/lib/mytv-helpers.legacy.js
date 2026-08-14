@@ -1,6 +1,7 @@
 const { test, expect } = require("playwright/test");
 const sharedPlayback = require("./playback");
 const {acceptUserConsentPopupIfVisible} = require("./login-popups");
+const {remoteFocusBySelector} = require("./navigation");
 
 const DEFAULT_OPTIONS = {
   APP_URL: "https://html5stage.mytv.vn/",
@@ -18,6 +19,7 @@ const DEFAULT_OPTIONS = {
 };
 
 const CLOSE_POPUP_TEXT = /^(Đóng|Huỷ|Hủy|Quay về|Quay về trang chủ)$/i;
+const WELCOME_LOGIN_BUTTON_SELECTOR = '#welcome-button [data-btn-type="1"]';
 
 function getTestOptions() {
   const options = {
@@ -54,24 +56,9 @@ async function openAppAndEnterLoginPage(page, options) {
     .catch(() => false);
 
   if (!isLoginTabsVisible && (getSubpage(page.url()) === "welcomePage" || (await isWelcomeScreen(page)))) {
-    await expectFocusedText(page, /đăng nhập|trải nghiệm/i);
+    await expect(page.locator(WELCOME_LOGIN_BUTTON_SELECTOR)).toBeVisible();
+    await remoteFocusBySelector(page, WELCOME_LOGIN_BUTTON_SELECTOR, 80);
     await expectFocusedElementToLookOrange(page).catch(() => {});
-
-    if (!(await getFocusedState(page)).text.match(/^Đăng nhập$/i)) {
-      await remoteFocusByText(page, /^Đăng nhập$/);
-    }
-
-    await remotePress(page, "Enter", 2000);
-  }
-
-  if (
-    !(await page
-      .locator("#login-tabs")
-      .isVisible()
-      .catch(() => false)) &&
-    (await hasVisibleText(page, /^Đăng nhập$/))
-  ) {
-    await remoteFocusByText(page, /^Đăng nhập$/);
     await remotePress(page, "Enter", 2000);
   }
 
@@ -721,8 +708,17 @@ async function hasVisibleText(page, text) {
 
 async function isWelcomeScreen(page) {
   return page.evaluate(() => {
-    const text = document.body?.innerText || "";
-    return text.includes("Đăng nhập") && text.includes("Trải nghiệm");
+    const container = document.querySelector("#welcome-button");
+    const loginButton = container?.querySelector('[data-btn-type="1"]');
+    const experienceButton = container?.querySelector('[data-btn-type="2"]');
+    return isVisible(container) && isVisible(loginButton) && isVisible(experienceButton);
+
+    function isVisible(element) {
+      if (!element) return false;
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    }
   });
 }
 

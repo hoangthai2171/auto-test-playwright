@@ -9,8 +9,9 @@ const waits = require("./waits");
 const {createScopedDomScanner} = require("./dom-scan");
 const {createBatchBudget} = require("./batch-budget");
 const {acceptDeviceLimitPopupIfVisible, acceptUserConsentPopupIfVisible} = require("./login-popups");
+const {applyAppEnvironment} = require("./app-environment");
 
-const {remotePress, remoteFocusById, remoteFocusByText, enterWithVirtualKeyboard, searchKeyboardInput, getFocusedState, expectFocusedText, expectFocusedElementToLookOrange} = navigation;
+const {remotePress, remoteFocusById, remoteFocusBySelector, remoteFocusByText, enterWithVirtualKeyboard, searchKeyboardInput, getFocusedState, expectFocusedText, expectFocusedElementToLookOrange} = navigation;
 const {
     collectVisibleContentRows,
     focusRequestedContentRow,
@@ -50,6 +51,7 @@ const DEFAULT_OPTIONS = {
 };
 
 const CLOSE_POPUP_TEXT = /^(Đóng|Huỷ|Hủy|Quay về|Quay về trang chủ)$/i;
+const WELCOME_LOGIN_BUTTON_SELECTOR = '#welcome-button [data-btn-type="1"]';
 
 function getTestOptions() {
     const options = {
@@ -73,8 +75,15 @@ function getTestOptions() {
         SEARCH_KEYWORD_PATTERN: options.SEARCH_KEYWORD ? containsTextPattern(options.SEARCH_KEYWORD) : null,
     };
 }
-async function openAppAndEnterLoginPage(page, options, testInfo) {
+async function prepareAppEnvironment(page, options, testInfo) {
     await gotoApp(page, options.APP_URL);
+    const result = await applyAppEnvironment(page, options.APP_ENVIRONMENT);
+    await waitForAppReady(page, testInfo);
+    return result;
+}
+
+async function openAppAndEnterLoginPage(page, options, testInfo, {skipNavigation = false} = {}) {
+    if (!skipNavigation) await gotoApp(page, options.APP_URL);
     await waitForAppReady(page, testInfo);
 
     const isLoginTabsVisible = await page
@@ -83,25 +92,10 @@ async function openAppAndEnterLoginPage(page, options, testInfo) {
         .catch(() => false);
 
     if (!isLoginTabsVisible && (getSubpage(page.url()) === "welcomePage" || (await isWelcomeScreen(page)))) {
-        await expectFocusedText(page, /đăng nhập|trải nghiệm/i);
+        await expect(page.locator(WELCOME_LOGIN_BUTTON_SELECTOR)).toBeVisible();
+        await remoteFocusBySelector(page, WELCOME_LOGIN_BUTTON_SELECTOR, 80);
         await expectFocusedElementToLookOrange(page).catch(() => {});
-
-        if (!(await getFocusedState(page)).text.match(/^Đăng nhập$/i)) {
-            await remoteFocusByText(page, /^Đăng nhập$/);
-        }
-
-        await activateVerifiedTarget(page, {testInfo, name: "login-welcome", contractName: "menuItem", expectedLabel: "Đăng nhập", delay: 2000});
-    }
-
-    if (
-        !(await page
-            .locator("#login-tabs")
-            .isVisible()
-            .catch(() => false)) &&
-        (await hasVisibleText(page, /^Đăng nhập$/))
-    ) {
-        await remoteFocusByText(page, /^Đăng nhập$/);
-        await activateVerifiedTarget(page, {testInfo, name: "login-entry", contractName: "menuItem", expectedLabel: "Đăng nhập", delay: 2000});
+        await remotePress(page, "Enter", 2000);
     }
 
     await expect(page.locator("#login-tabs")).toBeVisible();
@@ -943,7 +937,7 @@ async function observeAppReadyState(page) {
             return Boolean(rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && style.opacity !== "0");
         };
         const login = visible(document.querySelector("#login-tabs")) || /Nhập số điện thoại|Nhập mật khẩu/i.test(text);
-        const welcome = /welcomePage/i.test(hash) || (/Đăng nhập/i.test(text) && /Trải nghiệm/i.test(text));
+        const welcome = /welcomePage/i.test(hash) || visible(document.querySelector("#welcome-button"));
         const home = /homeNewUI/i.test(hash);
 
         return {
@@ -1041,8 +1035,17 @@ async function hasVisibleText(page, text) {
 
 async function isWelcomeScreen(page) {
     return page.evaluate(() => {
-        const text = document.body?.innerText || "";
-        return text.includes("Đăng nhập") && text.includes("Trải nghiệm");
+        const container = document.querySelector("#welcome-button");
+        const loginButton = container?.querySelector('[data-btn-type="1"]');
+        const experienceButton = container?.querySelector('[data-btn-type="2"]');
+        return isVisible(container) && isVisible(loginButton) && isVisible(experienceButton);
+
+        function isVisible(element) {
+            if (!element) return false;
+            const rect = element.getBoundingClientRect();
+            const style = getComputedStyle(element);
+            return rect.width > 0 && rect.height > 0 && style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+        }
     });
 }
 
@@ -2012,6 +2015,7 @@ function scoreWorkflowText(label, target) {
 module.exports = {
     getTestOptions,
     runStep,
+    prepareAppEnvironment,
     openAppAndEnterLoginPage,
     loginWithAccount,
     chooseFirstProfileAndEnterHome,
@@ -2044,6 +2048,8 @@ module.exports = {
         getVisiblePopup: playback.getVisiblePopup,
         observeServiceOpenState,
         observeServiceDestinationContent,
+        isWelcomeScreen,
+        WELCOME_LOGIN_BUTTON_SELECTOR,
         observeVisibleHomeScreen,
         getVisibleServicePopup,
         getVisibleServiceToast,

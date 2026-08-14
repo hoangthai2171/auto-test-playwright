@@ -115,6 +115,49 @@ test("app-open readiness rejects body text without a valid focused element", asy
   ).rejects.toMatchObject({code: "WAIT_TIMEOUT", waitName: "app-ready"});
 });
 
+test("welcome login navigation targets data-btn-type=1 across button layouts and labels", async ({page}) => {
+  await page.setContent(`
+    <style>
+      body { margin: 0; color: white; background: #111; }
+      #welcome-button { position: relative; width: 400px; height: 320px; }
+      #welcome-button button { position: absolute; left: 80px; width: 240px; height: 60px; }
+      #welcome-button [data-btn-type="2"] { top: 220px; }
+      #welcome-button [data-btn-type="1"] { top: 100px; }
+      #welcome-button .focused { outline: 2px solid orange; }
+      #login-tabs { display: none; width: 300px; height: 60px; }
+    </style>
+    <div id="welcome-button">
+      <button data-btn-type="1">Đăng nhập</button>
+      <button data-btn-type="2">Trải nghiệm ngay</button>
+    </div>
+    <div id="login-tabs">Login screen</div>
+    <script>
+      const buttons = Array.from(document.querySelectorAll("#welcome-button [data-btn-type]"));
+      let index = 1;
+      buttons[index].classList.add("focused");
+      document.addEventListener("keydown", (event) => {
+        if (event.key === "ArrowUp") index = Math.max(0, index - 1);
+        if (event.key === "ArrowDown") index = Math.min(buttons.length - 1, index + 1);
+        buttons.forEach((button, buttonIndex) => button.classList.toggle("focused", buttonIndex === index));
+        if (event.key === "Enter" && buttons[index].dataset.btnType === "1") {
+          document.querySelector("#welcome-button").style.display = "none";
+          document.querySelector("#login-tabs").style.display = "block";
+        }
+      });
+    </script>
+  `);
+  await page.evaluate(() => { location.hash = "#welcomePage"; });
+
+  await workflows.openAppAndEnterLoginPage(
+    page,
+    {APP_URL: "https://html5stage.mytv.vn/"},
+    undefined,
+    {skipNavigation: true}
+  );
+
+  await expect(page.locator("#login-tabs")).toBeVisible();
+});
+
 test("home readiness requires route, visible menu, content row, and focus", async ({page}) => {
   await setHome(page);
   const result = await workflows.__internal.waitForHomeReady(page, undefined, {timeout: 200, polling: 5});

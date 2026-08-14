@@ -45,3 +45,43 @@ test("refreshes target geometry while remote focus follows a reflowing row", asy
 
   assert.deepEqual(presses, ["ArrowDown", "ArrowUp"]);
 });
+
+test("focuses a selector target through remote navigation without reading its label", async () => {
+  let focused = {
+    id: "experience",
+    text: "Trải nghiệm ngay",
+    label: "Trải nghiệm ngay",
+    rect: {x: 100, y: 220, width: 180, height: 60},
+  };
+  let targetFocused = false;
+  const targetRect = {x: 100, y: 100, width: 180, height: 60};
+  const presses = [];
+
+  const page = {
+    evaluate: async (callback, argument) => {
+      const source = String(callback);
+      if (source.includes("classList.contains")) return targetFocused;
+      if (typeof argument === "string") return targetRect;
+      return focused;
+    },
+    keyboard: {
+      press: async (key) => {
+        presses.push(key);
+        if (key === "ArrowUp") {
+          targetFocused = true;
+          focused = {
+            id: "",
+            text: "Đăng nhập",
+            label: "Đăng nhập",
+            rect: targetRect,
+          };
+        }
+      },
+    },
+    waitForTimeout: async () => {},
+  };
+
+  await navigation.remoteFocusBySelector(page, '#welcome-button [data-btn-type="1"]', 2);
+
+  assert.deepEqual(presses, ["ArrowUp"]);
+});

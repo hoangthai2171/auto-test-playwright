@@ -63,6 +63,7 @@ const {
     normalizeTestCaseMaxTimeMinutes,
     normalizeTestResolution,
     normalizeSimultaneousDevices,
+    normalizeAppEnvironment,
     resolveTestViewport,
 } = require("./test-configuration");
 
@@ -72,6 +73,7 @@ const INTERACTIVE_BROWSER_DEBUG_PORT = Number(process.env.MYTV_INTERACTIVE_BROWS
 app.commandLine.appendSwitch("remote-debugging-port", String(INTERACTIVE_BROWSER_DEBUG_PORT));
 
 let mainWindow;
+let releaseWindowReveal = () => {};
 let runningProcess;
 let previewWatcher;
 let activeBrowserBatchRunner;
@@ -104,7 +106,7 @@ function createWindow() {
     });
 
     mainWindow.maximize();
-    revealWindowOnFirstPaint(mainWindow);
+    releaseWindowReveal = revealWindowOnFirstPaint(mainWindow);
     mainWindow.loadFile(path.join(__dirname, "renderer", "index.html"));
     createManagedWindowCloseController({
         window: mainWindow,
@@ -120,6 +122,11 @@ function createWindow() {
         },
     });
 }
+
+ipcMain.on("renderer-ready", (event) => {
+    if (event.sender !== mainWindow?.webContents) return;
+    releaseWindowReveal();
+});
 
 async function confirmWindowClose(reason) {
     const running = reason === "running" || reason === "running_and_unsynced_results";
@@ -893,6 +900,7 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         testCaseMaxTimeMinutes,
     );
     testResolution = normalizeTestResolution(values.TEST_RESOLUTION, testResolution);
+    const appEnvironment = normalizeAppEnvironment(values.APP_ENVIRONMENT);
 
     try {
         const cacheKey = String(values.TEST_CASE_CACHE_KEY || values.TEST_CASE_FOLDER_ID || "").trim();
@@ -931,6 +939,7 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         MYTV_PLAYER_CHECK_TIMEOUT_SECONDS: String(playerCheckTimeoutSeconds),
         MYTV_TEST_CASE_MAX_TIME_MINUTES: String(testCaseMaxTimeMinutes),
         MYTV_TEST_RESOLUTION: testResolution,
+        MYTV_APP_ENVIRONMENT: appEnvironment,
     };
 
     if (usesElectronAsNode) {
@@ -948,6 +957,7 @@ ipcMain.handle("run-test", async (event, values = {}) => {
         `User report: ${userReportHtmlFile}`,
         `Playwright debug report: ${reportDir}`,
         `Preview type: ${previewType}`,
+        `App environment: ${appEnvironment.toUpperCase()}`,
         previewType === "live" ? `Preview: ${previewPath}` : "",
         interactiveCdpUrl ? `Interactive CDP: ${interactiveCdpUrl}` : "",
         "",
@@ -1027,6 +1037,7 @@ ipcMain.handle("run-browser-batch", async (event, values = {}) => {
     const concurrency = normalizeSimultaneousDevices(values.SIMULTANEOUS_DEVICES, simultaneousDevices);
     const batchPlayerCheckTimeout = normalizePlayerCheckTimeoutSeconds(values.PLAYER_CHECK_TIMEOUT_SECONDS, playerCheckTimeoutSeconds);
     const batchMaxTimeMinutes = normalizeTestCaseMaxTimeMinutes(values.TEST_CASE_MAX_TIME_MINUTES, testCaseMaxTimeMinutes);
+    const appEnvironment = normalizeAppEnvironment(values.APP_ENVIRONMENT);
     testResolution = resolution;
     simultaneousDevices = concurrency;
     playerCheckTimeoutSeconds = batchPlayerCheckTimeout;
@@ -1037,6 +1048,7 @@ ipcMain.handle("run-browser-batch", async (event, values = {}) => {
         PLAYER_CHECK_TIMEOUT_SECONDS: String(batchPlayerCheckTimeout),
         TEST_CASE_MAX_TIME_MINUTES: String(batchMaxTimeMinutes),
         PREVIEW_TYPE: previewType,
+        APP_ENVIRONMENT: appEnvironment,
     });
 
     const browserRun = await browserRunLauncher.prepare();
@@ -1138,6 +1150,7 @@ ipcMain.handle("run-browser-batch", async (event, values = {}) => {
                 MYTV_TEST_CASE_MAX_TIME_MINUTES: batchSettings.TEST_CASE_MAX_TIME_MINUTES,
                 MYTV_TEST_RESOLUTION: batchSettings.TEST_RESOLUTION,
                 MYTV_SIMULTANEOUS_DEVICES: batchSettings.SIMULTANEOUS_DEVICES,
+                MYTV_APP_ENVIRONMENT: batchSettings.APP_ENVIRONMENT,
             };
             if (usesElectronAsNode) env.ELECTRON_RUN_AS_NODE = "1";
             else delete env.ELECTRON_RUN_AS_NODE;
