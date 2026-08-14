@@ -413,6 +413,26 @@ authorization already provided for this task.
   Syntax, Playwright-list, and diff checks also passed. `graphify update .`
   refreshed the code graph to 3064 nodes, 4737 edges, and 173 communities.
 
+### 2026-08-14 maximized-window preview overlap follow-up
+
+- Reproduced the supplied maximized-window layout at the renderer's effective
+  `1918x928` surface. Each 16:9 `.browser-slot` was `263.6px` tall while its
+  grid row was `253px`; centered overflow made the first row intersect the
+  second row. This was a renderer-card sizing issue, not a Playwright test
+  viewport or action-helper issue.
+- Added `max-height: 100%` to `.browser-slot`. Cards retain 16:9 sizing when
+  the row has room, but are constrained to their assigned grid track when the
+  fixed 240px log panel leaves less vertical space. Added a static renderer
+  contract and an AGENTS.md maintenance invariant for this guard.
+- Post-fix geometry checks at `1918x928`, `1920x1053`, `1280x693`, and
+  `1280x720` reported no row overlap; the screenshot-sized case retained the
+  requested 6px row gap and the log panel remained 240px tall with internal
+  scrolling.
+- `npm run test:unit` passed 693/693; syntax, Playwright-list, diff, and
+  `graphify update .` checks passed and generated graph artifacts are current.
+  The root cause and guard were saved to AgentMemory without storing
+  credentials or test report content.
+
 ## Handoff and Completion
 
 - Changed files: `tests/lib/content-rows.js`, `tests/lib/workflows.js`,

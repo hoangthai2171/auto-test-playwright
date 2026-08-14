@@ -538,8 +538,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_device_discovery",
-      "community": 109,
-      "community_name": "redactSensitiveText",
+      "community": 168,
+      "community_name": "device-discovery.js",
       "norm_label": "device-discovery.js"
     },
     {
@@ -549,8 +549,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "app_device_discovery_classifiederror",
-      "community": 109,
-      "community_name": "redactSensitiveText",
+      "community": 168,
+      "community_name": "device-discovery.js",
       "norm_label": "classifiederror()"
     },
     {
@@ -560,8 +560,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "app_device_discovery_requirereadonlyadapter",
-      "community": 109,
-      "community_name": "redactSensitiveText",
+      "community": 168,
+      "community_name": "device-discovery.js",
       "norm_label": "requirereadonlyadapter()"
     },
     {
@@ -571,8 +571,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "app_device_discovery_redacttext",
-      "community": 109,
-      "community_name": "redactSensitiveText",
+      "community": 168,
+      "community_name": "device-discovery.js",
       "norm_label": "redacttext()"
     },
     {
@@ -582,8 +582,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "app_device_discovery_readidentity",
-      "community": 109,
-      "community_name": "redactSensitiveText",
+      "community": 168,
+      "community_name": "device-discovery.js",
       "norm_label": "readidentity()"
     },
     {
@@ -593,8 +593,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "app_device_discovery_readinstalledapp",
-      "community": 109,
-      "community_name": "redactSensitiveText",
+      "community": 168,
+      "community_name": "device-discovery.js",
       "norm_label": "readinstalledapp()"
     },
     {
@@ -604,8 +604,8 @@
       "source_location": "L43",
       "_origin": "ast",
       "id": "app_device_discovery_createdevicediscovery",
-      "community": 109,
-      "community_name": "redactSensitiveText",
+      "community": 168,
+      "community_name": "device-discovery.js",
       "norm_label": "createdevicediscovery()"
     },
     {
@@ -2507,8 +2507,8 @@
       "source_location": "L50",
       "_origin": "ast",
       "id": "app_lg_managed_install_dependencies_approvedchromedriverartifact",
-      "community": 55,
-      "community_name": "lg-cli-archive-importer.js",
+      "community": 36,
+      "community_name": "selector-validation.js",
       "norm_label": "approvedchromedriverartifact()"
     },
     {
@@ -2870,8 +2870,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer",
-      "community": 129,
-      "community_name": "test-configuration.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "lg-toolchain-installer.js"
     },
     {
@@ -2881,8 +2881,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_trustedlgtoolchainbundle_trustedlgtoolchainmanifest",
-      "community": 129,
-      "community_name": "test-configuration.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "{trustedlgtoolchainbundle, trustedlgtoolchainmanifest}"
     },
     {
@@ -2892,8 +2892,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_trustedlgtoolchainnpmclosure",
-      "community": 129,
-      "community_name": "test-configuration.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "{trustedlgtoolchainnpmclosure}"
     },
     {
@@ -2903,8 +2903,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_safe_install_failures",
-      "community": 129,
-      "community_name": "test-configuration.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "safe_install_failures"
     },
     {
@@ -2914,8 +2914,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_safe_verification_results",
-      "community": 129,
-      "community_name": "test-configuration.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "safe_verification_results"
     },
     {
@@ -2925,8 +2925,8 @@
       "source_location": "L18",
       "_origin": "ast",
       "id": "app_lg_toolchain_installer_publicreview",
-      "community": 129,
-      "community_name": "test-configuration.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "publicreview()"
     },
     {
@@ -3112,8 +3112,8 @@
       "source_location": "L154",
       "_origin": "ast",
       "id": "app_lg_toolchain_manifest_trustedlgtoolchainbundle",
-      "community": 78,
-      "community_name": "tv-batch-runner.test.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "trustedlgtoolchainbundle()"
     },
     {
@@ -3123,8 +3123,8 @@
       "source_location": "L158",
       "_origin": "ast",
       "id": "app_lg_toolchain_manifest_trustedlgtoolchainmanifest",
-      "community": 78,
-      "community_name": "tv-batch-runner.test.js",
+      "community": 72,
+      "community_name": "dom-session.js",
       "norm_label": "trustedlgtoolchainmanifest()"
     },
     {
@@ -4553,8 +4553,8 @@
       "source_location": "L1339",
       "_origin": "ast",
       "id": "app_main_runlgcompatibilitycase",
-      "community": 109,
-      "community_name": "redactSensitiveText",
+      "community": 168,
+      "community_name": "device-discovery.js",
       "norm_label": "runlgcompatibilitycase()"
     },
     {
@@ -4663,8 +4663,8 @@
       "source_location": "L1501",
       "_origin": "ast",
       "id": "app_main_setinteractiveviewbounds",
-      "community": 85,
-      "community_name": "webos-target-registration.js",
+      "community": 0,
+      "community_name": "mytv-helpers.js",
       "norm_label": "setinteractiveviewbounds()"
     },
     {
@@ -4674,8 +4674,8 @@
       "source_location": "L1526",
       "_origin": "ast",
       "id": "app_main_loadinteractiveview",
-      "community": 85,
-      "community_name": "webos-target-registration.js",
+      "community": 0,
+      "community_name": "mytv-helpers.js",
       "norm_label": "loadinteractiveview()"
     },
     {
@@ -4718,8 +4718,8 @@
       "source_location": "L1571",
       "_origin": "ast",
       "id": "app_main_applyinteractiveviewzoom",
-      "community": 85,
-      "community_name": "webos-target-registration.js",
+      "community": 0,
+      "community_name": "mytv-helpers.js",
       "norm_label": "applyinteractiveviewzoom()"
     },
     {
@@ -5257,8 +5257,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "app_test_configuration_normalizeplayerchecktimeoutseconds",
-      "community": 20,
-      "community_name": "ai-row-selection.spec.js",
+      "community": 134,
+      "community_name": "Target selector and workspace behavior",
       "norm_label": "normalizeplayerchecktimeoutseconds()"
     },
     {
@@ -11340,8 +11340,8 @@
       "source_location": "L244",
       "_origin": "ast",
       "id": "tests_lib_artifacts_imagedataurl",
-      "community": 20,
-      "community_name": "ai-row-selection.spec.js",
+      "community": 110,
+      "community_name": "device-secret-store.test.js",
       "norm_label": "imagedataurl()"
     },
     {
@@ -12110,8 +12110,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_dom_scan_createscopeddomscanner",
-      "community": 43,
-      "community_name": "navigation.js",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "createscopeddomscanner()"
     },
     {
@@ -13958,8 +13958,8 @@
       "source_location": "L12",
       "_origin": "ast",
       "id": "tests_lib_navigation_normalizevietnamesetext",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "normalizevietnamesetext()"
     },
     {
@@ -14057,8 +14057,8 @@
       "source_location": "L155",
       "_origin": "ast",
       "id": "tests_lib_navigation_searchkeyboardinput",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "searchkeyboardinput()"
     },
     {
@@ -14585,8 +14585,8 @@
       "source_location": "L370",
       "_origin": "ast",
       "id": "tests_lib_selector_validation_getcontractlocator",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "getcontractlocator()"
     },
     {
@@ -14596,8 +14596,8 @@
       "source_location": "L384",
       "_origin": "ast",
       "id": "tests_lib_selector_validation_resolvecontractlocatorid",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "resolvecontractlocatorid()"
     },
     {
@@ -14794,8 +14794,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 68,
+      "community_name": "File structure",
       "norm_label": "target-action-runner.js"
     },
     {
@@ -14805,8 +14805,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_compiletestcase",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 68,
+      "community_name": "File structure",
       "norm_label": "{compiletestcase}"
     },
     {
@@ -14816,8 +14816,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_requireactioncapabilities",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 68,
+      "community_name": "File structure",
       "norm_label": "{requireactioncapabilities}"
     },
     {
@@ -14827,8 +14827,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_createtvmytvactionhandlers",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 68,
+      "community_name": "File structure",
       "norm_label": "{createtvmytvactionhandlers}"
     },
     {
@@ -14838,8 +14838,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_action_capabilities",
-      "community": 118,
-      "community_name": "lg-toolchain-installer.test.js",
+      "community": 68,
+      "community_name": "File structure",
       "norm_label": "action_capabilities"
     },
     {
@@ -14871,8 +14871,8 @@
       "source_location": "L57",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_notifystep",
-      "community": 76,
-      "community_name": "test-case-schema.js",
+      "community": 68,
+      "community_name": "File structure",
       "norm_label": "notifystep()"
     },
     {
@@ -14882,8 +14882,8 @@
       "source_location": "L66",
       "_origin": "ast",
       "id": "tests_lib_target_action_runner_runtargetactions",
-      "community": 76,
-      "community_name": "test-case-schema.js",
+      "community": 68,
+      "community_name": "File structure",
       "norm_label": "runtargetactions()"
     },
     {
@@ -15619,8 +15619,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "tv-batch-runner.js"
     },
     {
@@ -15630,8 +15630,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_tv_failure_kind_classifytvfailure",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "{tv_failure_kind, classifytvfailure}"
     },
     {
@@ -15641,8 +15641,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_assertcases",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "assertcases()"
     },
     {
@@ -15652,8 +15652,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_stoppedcase",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "stoppedcase()"
     },
     {
@@ -15663,8 +15663,8 @@
       "source_location": "L17",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_completedcase",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "completedcase()"
     },
     {
@@ -15674,8 +15674,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_errorresult",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "errorresult()"
     },
     {
@@ -15685,8 +15685,8 @@
       "source_location": "L36",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_requiremethod",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "requiremethod()"
     },
     {
@@ -15696,8 +15696,8 @@
       "source_location": "L41",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_requestoperatordecision",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "requestoperatordecision()"
     },
     {
@@ -15707,8 +15707,8 @@
       "source_location": "L47",
       "_origin": "ast",
       "id": "tests_lib_tv_batch_runner_runtvcasebatch",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "runtvcasebatch()"
     },
     {
@@ -15828,8 +15828,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_lib_tv_failure_classification",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "tv-failure-classification.js"
     },
     {
@@ -15839,8 +15839,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_lib_tv_failure_classification_tv_failure_kind",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "tv_failure_kind"
     },
     {
@@ -15850,8 +15850,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_lib_tv_failure_classification_business_codes",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "business_codes"
     },
     {
@@ -15861,8 +15861,8 @@
       "source_location": "L16",
       "_origin": "ast",
       "id": "tests_lib_tv_failure_classification_technical_codes",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "technical_codes"
     },
     {
@@ -15872,8 +15872,8 @@
       "source_location": "L33",
       "_origin": "ast",
       "id": "tests_lib_tv_failure_classification_classifytvfailure",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "classifytvfailure()"
     },
     {
@@ -16180,8 +16180,8 @@
       "source_location": "L32",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_assertinstalledappid",
-      "community": 83,
-      "community_name": "service-access.spec.js",
+      "community": 82,
+      "community_name": "AGENTS.md",
       "norm_label": "assertinstalledappid()"
     },
     {
@@ -16213,8 +16213,8 @@
       "source_location": "L68",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_endpointredactionsecrets",
-      "community": 83,
-      "community_name": "service-access.spec.js",
+      "community": 82,
+      "community_name": "AGENTS.md",
       "norm_label": "endpointredactionsecrets()"
     },
     {
@@ -16301,8 +16301,8 @@
       "source_location": "L160",
       "_origin": "ast",
       "id": "tests_lib_tv_session_webos_appium_session_createwebosappiumsession",
-      "community": 83,
-      "community_name": "service-access.spec.js",
+      "community": 82,
+      "community_name": "AGENTS.md",
       "norm_label": "createwebosappiumsession()"
     },
     {
@@ -16983,8 +16983,8 @@
       "source_location": "L151",
       "_origin": "ast",
       "id": "tests_lib_workflows_opentelevisionfromleftmenu",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "opentelevisionfromleftmenu()"
     },
     {
@@ -16994,8 +16994,8 @@
       "source_location": "L157",
       "_origin": "ast",
       "id": "tests_lib_workflows_openmoviefromleftmenu",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "openmoviefromleftmenu()"
     },
     {
@@ -17005,8 +17005,8 @@
       "source_location": "L163",
       "_origin": "ast",
       "id": "tests_lib_workflows_opensettingfromleftmenu",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "opensettingfromleftmenu()"
     },
     {
@@ -17016,8 +17016,8 @@
       "source_location": "L170",
       "_origin": "ast",
       "id": "tests_lib_workflows_opensearchfromleftmenu",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "opensearchfromleftmenu()"
     },
     {
@@ -17027,8 +17027,8 @@
       "source_location": "L177",
       "_origin": "ast",
       "id": "tests_lib_workflows_searchcontentbyname",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "searchcontentbyname()"
     },
     {
@@ -17038,8 +17038,8 @@
       "source_location": "L202",
       "_origin": "ast",
       "id": "tests_lib_workflows_openservicefromleftmenuorallservices",
-      "community": 63,
-      "community_name": "openMovieContentByName",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "openservicefromleftmenuorallservices()"
     },
     {
@@ -17170,8 +17170,8 @@
       "source_location": "L418",
       "_origin": "ast",
       "id": "tests_lib_workflows_getservicesearchnames",
-      "community": 63,
-      "community_name": "openMovieContentByName",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "getservicesearchnames()"
     },
     {
@@ -17269,8 +17269,8 @@
       "source_location": "L667",
       "_origin": "ast",
       "id": "tests_lib_workflows_capturerowplaybackscreenshot",
-      "community": 20,
-      "community_name": "ai-row-selection.spec.js",
+      "community": 110,
+      "community_name": "device-secret-store.test.js",
       "norm_label": "capturerowplaybackscreenshot()"
     },
     {
@@ -17335,8 +17335,8 @@
       "source_location": "L790",
       "_origin": "ast",
       "id": "tests_lib_workflows_searchandopenbestcontent",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "searchandopenbestcontent()"
     },
     {
@@ -17346,8 +17346,8 @@
       "source_location": "L815",
       "_origin": "ast",
       "id": "tests_lib_workflows_focusstablesearchresult",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "focusstablesearchresult()"
     },
     {
@@ -17357,8 +17357,8 @@
       "source_location": "L826",
       "_origin": "ast",
       "id": "tests_lib_workflows_isfocusedonsearchresult",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "isfocusedonsearchresult()"
     },
     {
@@ -17401,8 +17401,8 @@
       "source_location": "L891",
       "_origin": "ast",
       "id": "tests_lib_workflows_submitsearchfromvirtualkeyboard",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "submitsearchfromvirtualkeyboard()"
     },
     {
@@ -17467,8 +17467,8 @@
       "source_location": "L1000",
       "_origin": "ast",
       "id": "tests_lib_workflows_scopedscanrecords",
-      "community": 43,
-      "community_name": "navigation.js",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "scopedscanrecords()"
     },
     {
@@ -17566,8 +17566,8 @@
       "source_location": "L1099",
       "_origin": "ast",
       "id": "tests_lib_workflows_openleftmenufromhome",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "openleftmenufromhome()"
     },
     {
@@ -17577,8 +17577,8 @@
       "source_location": "L1114",
       "_origin": "ast",
       "id": "tests_lib_workflows_focusleftmenuitem",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "focusleftmenuitem()"
     },
     {
@@ -17588,8 +17588,8 @@
       "source_location": "L1120",
       "_origin": "ast",
       "id": "tests_lib_workflows_focussearchmenuitem",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "focussearchmenuitem()"
     },
     {
@@ -17599,8 +17599,8 @@
       "source_location": "L1126",
       "_origin": "ast",
       "id": "tests_lib_workflows_findleftmenuitemidbytext",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "findleftmenuitemidbytext()"
     },
     {
@@ -17610,8 +17610,8 @@
       "source_location": "L1147",
       "_origin": "ast",
       "id": "tests_lib_workflows_attachlocatorcontractmiss",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "attachlocatorcontractmiss()"
     },
     {
@@ -17621,8 +17621,8 @@
       "source_location": "L1155",
       "_origin": "ast",
       "id": "tests_lib_workflows_findleftmenuitemidbyfuzzytext",
-      "community": 63,
-      "community_name": "openMovieContentByName",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "findleftmenuitemidbyfuzzytext()"
     },
     {
@@ -17632,8 +17632,8 @@
       "source_location": "L1213",
       "_origin": "ast",
       "id": "tests_lib_workflows_findserviceidinallservices",
-      "community": 63,
-      "community_name": "openMovieContentByName",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "findserviceidinallservices()"
     },
     {
@@ -17665,8 +17665,8 @@
       "source_location": "L1369",
       "_origin": "ast",
       "id": "tests_lib_workflows_isleftmenuopen",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "isleftmenuopen()"
     },
     {
@@ -17720,8 +17720,8 @@
       "source_location": "L1687",
       "_origin": "ast",
       "id": "tests_lib_workflows_findbestsearchresult",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "findbestsearchresult()"
     },
     {
@@ -17753,8 +17753,8 @@
       "source_location": "L1909",
       "_origin": "ast",
       "id": "tests_lib_workflows_findvisibleserviceidbytitleattributescoped",
-      "community": 63,
-      "community_name": "openMovieContentByName",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "findvisibleserviceidbytitleattributescoped()"
     },
     {
@@ -17764,8 +17764,8 @@
       "source_location": "L1935",
       "_origin": "ast",
       "id": "tests_lib_workflows_collectvisibleallservicelabelsscoped",
-      "community": 43,
-      "community_name": "navigation.js",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "collectvisibleallservicelabelsscoped()"
     },
     {
@@ -17775,8 +17775,8 @@
       "source_location": "L1952",
       "_origin": "ast",
       "id": "tests_lib_workflows_findvisibleelementidbyfuzzylabelscoped",
-      "community": 63,
-      "community_name": "openMovieContentByName",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "findvisibleelementidbyfuzzylabelscoped()"
     },
     {
@@ -17786,8 +17786,8 @@
       "source_location": "L1985",
       "_origin": "ast",
       "id": "tests_lib_workflows_waitforscopedcandidate",
-      "community": 63,
-      "community_name": "openMovieContentByName",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "waitforscopedcandidate()"
     },
     {
@@ -17797,8 +17797,8 @@
       "source_location": "L1997",
       "_origin": "ast",
       "id": "tests_lib_workflows_scoreworkflowtext",
-      "community": 63,
-      "community_name": "openMovieContentByName",
+      "community": 1,
+      "community_name": "AGENTS.md",
       "norm_label": "scoreworkflowtext()"
     },
     {
@@ -17808,8 +17808,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_locator_contracts_spec",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "locator-contracts.spec.js"
     },
     {
@@ -17819,8 +17819,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_locator_contracts_spec_fs",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "fs"
     },
     {
@@ -17830,8 +17830,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_locator_contracts_spec_path",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "path"
     },
     {
@@ -17841,8 +17841,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_locator_contracts_spec_test_expect",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "{test, expect}"
     },
     {
@@ -17852,8 +17852,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_locator_contracts_spec_getcontractlocator_resolvecontractlocatorid_activateverifiedtarget",
-      "community": 11,
-      "community_name": "playAllItemsInFirstRow",
+      "community": 124,
+      "community_name": "login-popups.js",
       "norm_label": "{getcontractlocator, resolvecontractlocatorid, activateverifiedtarget}"
     },
     {
@@ -18050,8 +18050,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec",
-      "community": 124,
-      "community_name": "login-popups.js",
+      "community": 52,
+      "community_name": "content-rows.test.js",
       "norm_label": "readiness-pacing.spec.js"
     },
     {
@@ -18061,8 +18061,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_fs",
-      "community": 124,
-      "community_name": "login-popups.js",
+      "community": 52,
+      "community_name": "content-rows.test.js",
       "norm_label": "fs"
     },
     {
@@ -18072,8 +18072,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_path",
-      "community": 124,
-      "community_name": "login-popups.js",
+      "community": 52,
+      "community_name": "content-rows.test.js",
       "norm_label": "path"
     },
     {
@@ -18083,8 +18083,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_test_expect",
-      "community": 124,
-      "community_name": "login-popups.js",
+      "community": 52,
+      "community_name": "content-rows.test.js",
       "norm_label": "{test, expect}"
     },
     {
@@ -18094,8 +18094,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_api",
-      "community": 124,
-      "community_name": "login-popups.js",
+      "community": 52,
+      "community_name": "content-rows.test.js",
       "norm_label": "api"
     },
     {
@@ -18105,8 +18105,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_helpers",
-      "community": 124,
-      "community_name": "login-popups.js",
+      "community": 52,
+      "community_name": "content-rows.test.js",
       "norm_label": "helpers"
     },
     {
@@ -18116,8 +18116,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_workflows",
-      "community": 124,
-      "community_name": "login-popups.js",
+      "community": 52,
+      "community_name": "content-rows.test.js",
       "norm_label": "workflows"
     },
     {
@@ -18127,8 +18127,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_setscreen",
-      "community": 124,
-      "community_name": "login-popups.js",
+      "community": 52,
+      "community_name": "content-rows.test.js",
       "norm_label": "setscreen()"
     },
     {
@@ -18138,8 +18138,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "tests_readiness_pacing_spec_sethome",
-      "community": 124,
-      "community_name": "login-popups.js",
+      "community": 52,
+      "community_name": "content-rows.test.js",
       "norm_label": "sethome()"
     },
     {
@@ -18589,8 +18589,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_service_access_spec",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 169,
+      "community_name": "service-access.spec.js",
       "norm_label": "service-access.spec.js"
     },
     {
@@ -18600,8 +18600,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_service_access_spec_test_expect",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 169,
+      "community_name": "service-access.spec.js",
       "norm_label": "{test, expect}"
     },
     {
@@ -18611,8 +18611,8 @@
       "source_location": "L2",
       "_origin": "ast",
       "id": "tests_service_access_spec_assertserviceopened",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 169,
+      "community_name": "service-access.spec.js",
       "norm_label": "{assertserviceopened}"
     },
     {
@@ -18622,8 +18622,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_service_access_spec_setservicescreen",
-      "community": 1,
-      "community_name": "AGENTS.md",
+      "community": 169,
+      "community_name": "service-access.spec.js",
       "norm_label": "setservicescreen()"
     },
     {
@@ -19469,8 +19469,8 @@
       "source_location": "L71",
       "_origin": "ast",
       "id": "tests_unit_device_discovery_test_reset",
-      "community": 83,
-      "community_name": "service-access.spec.js",
+      "community": 82,
+      "community_name": "AGENTS.md",
       "norm_label": "reset()"
     },
     {
@@ -21658,8 +21658,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test",
-      "community": 78,
-      "community_name": "tv-batch-runner.test.js",
+      "community": 137,
+      "community_name": "lg-toolchain-manifest.test.js",
       "norm_label": "lg-toolchain-manifest.test.js"
     },
     {
@@ -21669,8 +21669,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_test",
-      "community": 78,
-      "community_name": "tv-batch-runner.test.js",
+      "community": 137,
+      "community_name": "lg-toolchain-manifest.test.js",
       "norm_label": "test"
     },
     {
@@ -21680,8 +21680,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_assert",
-      "community": 78,
-      "community_name": "tv-batch-runner.test.js",
+      "community": 137,
+      "community_name": "lg-toolchain-manifest.test.js",
       "norm_label": "assert"
     },
     {
@@ -21691,8 +21691,8 @@
       "source_location": "L6",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_createlgtoolchainmanifest_trustedlgcliarchive_trustedchromedriverarchive_trustedlgtoolchainbundle_trustedlgtoolchainmanifest",
-      "community": 78,
-      "community_name": "tv-batch-runner.test.js",
+      "community": 137,
+      "community_name": "lg-toolchain-manifest.test.js",
       "norm_label": "{createlgtoolchainmanifest, trustedlgcliarchive, trustedchromedriverarchive, trustedlgtoolchainbundle, trustedlgtoolchainmanifest}"
     },
     {
@@ -21702,8 +21702,8 @@
       "source_location": "L8",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_sha",
-      "community": 78,
-      "community_name": "tv-batch-runner.test.js",
+      "community": 137,
+      "community_name": "lg-toolchain-manifest.test.js",
       "norm_label": "sha"
     },
     {
@@ -21713,8 +21713,8 @@
       "source_location": "L11",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_automaticartifact",
-      "community": 78,
-      "community_name": "tv-batch-runner.test.js",
+      "community": 137,
+      "community_name": "lg-toolchain-manifest.test.js",
       "norm_label": "automaticartifact()"
     },
     {
@@ -21724,8 +21724,8 @@
       "source_location": "L15",
       "_origin": "ast",
       "id": "tests_unit_lg_toolchain_manifest_test_fixedmanifest",
-      "community": 78,
-      "community_name": "tv-batch-runner.test.js",
+      "community": 137,
+      "community_name": "lg-toolchain-manifest.test.js",
       "norm_label": "fixedmanifest()"
     },
     {
@@ -23979,8 +23979,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 167,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "tv-batch-runner.test.js"
     },
     {
@@ -23990,8 +23990,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_test",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 167,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "test"
     },
     {
@@ -24001,8 +24001,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_assert",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 167,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "assert"
     },
     {
@@ -24012,8 +24012,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_runtvcasebatch",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 167,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "{runtvcasebatch}"
     },
     {
@@ -24023,8 +24023,8 @@
       "source_location": "L7",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_technicalerror",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 167,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "technicalerror()"
     },
     {
@@ -24034,8 +24034,8 @@
       "source_location": "L13",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_businesserror",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 167,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "businesserror()"
     },
     {
@@ -24045,8 +24045,8 @@
       "source_location": "L23",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_executecase",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 167,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "executecase()"
     },
     {
@@ -24056,8 +24056,8 @@
       "source_location": "L28",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_recover",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 167,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "recover()"
     },
     {
@@ -24067,8 +24067,8 @@
       "source_location": "L65",
       "_origin": "ast",
       "id": "tests_unit_tv_batch_runner_test_requestdecision",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 167,
+      "community_name": "tv-batch-runner.test.js",
       "norm_label": "requestdecision()"
     },
     {
@@ -24144,8 +24144,8 @@
       "source_location": "L26",
       "_origin": "ast",
       "id": "tests_unit_tv_case_runner_test_logout",
-      "community": 76,
-      "community_name": "test-case-schema.js",
+      "community": 134,
+      "community_name": "Target selector and workspace behavior",
       "norm_label": "logout()"
     },
     {
@@ -24243,8 +24243,8 @@
       "source_location": "L64",
       "_origin": "ast",
       "id": "tests_unit_tv_device_ipc_test_refresh",
-      "community": 77,
-      "community_name": "tv-session.test.js",
+      "community": 55,
+      "community_name": "lg-cli-archive-importer.js",
       "norm_label": "refresh()"
     },
     {
@@ -24353,8 +24353,8 @@
       "source_location": "L1",
       "_origin": "ast",
       "id": "tests_unit_tv_failure_classification_test",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "tv-failure-classification.test.js"
     },
     {
@@ -24364,8 +24364,8 @@
       "source_location": "L3",
       "_origin": "ast",
       "id": "tests_unit_tv_failure_classification_test_test",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "test"
     },
     {
@@ -24375,8 +24375,8 @@
       "source_location": "L4",
       "_origin": "ast",
       "id": "tests_unit_tv_failure_classification_test_assert",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "assert"
     },
     {
@@ -24386,8 +24386,8 @@
       "source_location": "L5",
       "_origin": "ast",
       "id": "tests_unit_tv_failure_classification_test_classifytvfailure_tv_failure_kind",
-      "community": 4,
-      "community_name": "main.js",
+      "community": 150,
+      "community_name": "tv-batch-runner.js",
       "norm_label": "{classifytvfailure, tv_failure_kind}"
     },
     {
@@ -24606,8 +24606,8 @@
       "source_location": "L218",
       "_origin": "ast",
       "id": "tests_unit_tv_runner_test_cleanup",
-      "community": 83,
-      "community_name": "service-access.spec.js",
+      "community": 82,
+      "community_name": "AGENTS.md",
       "norm_label": "cleanup()"
     },
     {
@@ -24617,8 +24617,8 @@
       "source_location": "L219",
       "_origin": "ast",
       "id": "tests_unit_tv_runner_test_close",
-      "community": 83,
-      "community_name": "service-access.spec.js",
+      "community": 82,
+      "community_name": "AGENTS.md",
       "norm_label": "close()"
     },
     {
@@ -26308,7 +26308,7 @@
       "label": "Preview and CDP",
       "file_type": "document",
       "source_file": "AGENTS.md",
-      "source_location": "L431",
+      "source_location": "L436",
       "_origin": "ast",
       "id": "agents_preview_and_cdp",
       "community": 39,
@@ -26319,7 +26319,7 @@
       "label": "Adding or Changing Tests",
       "file_type": "document",
       "source_file": "AGENTS.md",
-      "source_location": "L443",
+      "source_location": "L448",
       "_origin": "ast",
       "id": "agents_adding_or_changing_tests",
       "community": 39,
@@ -26330,7 +26330,7 @@
       "label": "Validation Commands",
       "file_type": "document",
       "source_file": "AGENTS.md",
-      "source_location": "L461",
+      "source_location": "L466",
       "_origin": "ast",
       "id": "agents_validation_commands",
       "community": 39,
@@ -26341,7 +26341,7 @@
       "label": "Maintenance",
       "file_type": "document",
       "source_file": "AGENTS.md",
-      "source_location": "L479",
+      "source_location": "L484",
       "_origin": "ast",
       "id": "agents_maintenance",
       "community": 39,
@@ -26352,7 +26352,7 @@
       "label": "graphify",
       "file_type": "document",
       "source_file": "AGENTS.md",
-      "source_location": "L486",
+      "source_location": "L491",
       "_origin": "ast",
       "id": "agents_graphify",
       "community": 39,
@@ -33323,10 +33323,21 @@
       "norm_label": "2026-08-13 regression follow-up \u2014 cases 2287, 2288, 2290, and view-more"
     },
     {
+      "label": "2026-08-14 maximized-window preview overlap follow-up",
+      "file_type": "document",
+      "source_file": "docs/tinyworkers/20260813_202126_play-row-index-and-fixed-log-panel.md",
+      "source_location": "L416",
+      "_origin": "ast",
+      "id": "docs_tinyworkers_20260813_202126_play_row_index_and_fixed_log_panel_2026_08_14_maximized_window_preview_overlap_follow_up",
+      "community": 22,
+      "community_name": "IDEA.md",
+      "norm_label": "2026-08-14 maximized-window preview overlap follow-up"
+    },
+    {
       "label": "Handoff and Completion",
       "file_type": "document",
       "source_file": "docs/tinyworkers/20260813_202126_play-row-index-and-fixed-log-panel.md",
-      "source_location": "L414",
+      "source_location": "L436",
       "_origin": "ast",
       "id": "docs_tinyworkers_20260813_202126_play_row_index_and_fixed_log_panel_handoff_and_completion",
       "community": 22,
@@ -80771,7 +80782,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L443",
+      "source_location": "L448",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -80826,7 +80837,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L486",
+      "source_location": "L491",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -80848,7 +80859,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L479",
+      "source_location": "L484",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -80892,7 +80903,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L461",
+      "source_location": "L466",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_agents_md",
@@ -80969,7 +80980,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "AGENTS.md",
-      "source_location": "L431",
+      "source_location": "L436",
       "weight": 1.0,
       "_origin": "ast",
       "source": "agents_technical_patterns",
@@ -87591,7 +87602,7 @@
       "relation": "contains",
       "confidence": "EXTRACTED",
       "source_file": "docs/tinyworkers/20260813_202126_play-row-index-and-fixed-log-panel.md",
-      "source_location": "L414",
+      "source_location": "L436",
       "weight": 1.0,
       "_origin": "ast",
       "source": "docs_tinyworkers_20260813_202126_play_row_index_and_fixed_log_panel_harden_numeric_play_row_selection_and_fix_the_browser_log_panel_layout",
@@ -87816,6 +87827,17 @@
       "_origin": "ast",
       "source": "docs_tinyworkers_20260813_202126_play_row_index_and_fixed_log_panel_deviations_and_plan_updates",
       "target": "docs_tinyworkers_20260813_202126_play_row_index_and_fixed_log_panel_2026_08_13_regression_follow_up_cases_2287_2288_2290_and_view_more",
+      "confidence_score": 1.0
+    },
+    {
+      "relation": "contains",
+      "confidence": "EXTRACTED",
+      "source_file": "docs/tinyworkers/20260813_202126_play-row-index-and-fixed-log-panel.md",
+      "source_location": "L416",
+      "weight": 1.0,
+      "_origin": "ast",
+      "source": "docs_tinyworkers_20260813_202126_play_row_index_and_fixed_log_panel_deviations_and_plan_updates",
+      "target": "docs_tinyworkers_20260813_202126_play_row_index_and_fixed_log_panel_2026_08_14_maximized_window_preview_overlap_follow_up",
       "confidence_score": 1.0
     },
     {
@@ -88139,5 +88161,5 @@
     }
   ],
   "hyperedges": [],
-  "built_at_commit": "e35a958b1e5448687e1c045e0ccd14d778fc3062"
+  "built_at_commit": "902b62b23b7794d79481402780da2132a5d8dcb9"
 }

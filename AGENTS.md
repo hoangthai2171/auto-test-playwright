@@ -429,6 +429,9 @@ navigation to reveal offscreen targets. Do not hard-code one supported
 resolution into an action/helper.
 Electron may render that logical surface at a smaller visual scale inside the
 six preview holders, but it does not reduce the document viewport.
+The six Browser preview cards must remain inside their assigned 3x2 grid rows;
+retain the card row-bound (`max-height: 100%`) guard alongside the 16:9 sizing
+so maximized-window geometry cannot make adjacent rows overlap.
 
 ### Preview and CDP
 
