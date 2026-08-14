@@ -22,6 +22,7 @@ const {
     isFocusedOnContentItem,
     isFocusedOnRowItems,
     getFocusedContentMetadata,
+    getFocusedViewMoreMetadata,
     contentItemSignature,
     isFocusedNearRow,
     moveToNextFirstRowContent,
@@ -474,8 +475,20 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
     let stopReason = "row-exhausted";
     let budgetLimited = false;
     for (let index = 0; ; index++) {
-        await expectFocusedContent(page);
         const focusedItem = await getFocusedContentMetadata(page);
+        const viewMoreSkip = await skipFocusedViewMorePoster(page, {
+            focusedItem,
+            rowY: firstRowY,
+        });
+        if (viewMoreSkip.skipped) {
+            if (!viewMoreSkip.movedToNext) {
+                stopReason = "row-exhausted";
+                break;
+            }
+            continue;
+        }
+
+        await expectFocusedContent(page);
         const item = focusedItem.id ? focusedItem : items[index] || focusedItem;
         const signature = contentItemSignature(item);
 
@@ -616,7 +629,7 @@ function formatRowPlaybackFailureSummary(items) {
 }
 
 async function playItemsInRow(page, testInfo, options = {}) {
-    const rowIndex = Number.isInteger(options.rowIndex) ? options.rowIndex - 1 : undefined;
+    const rowIndex = normalizePlayRowIndex(options.rowIndex);
     const count = options.count === undefined ? 0 : options.count;
 
     return playAllItemsInFirstRow(page, testInfo, {
@@ -625,6 +638,26 @@ async function playItemsInRow(page, testInfo, options = {}) {
         itemLimit: count,
         unlimitedRuntime: options.count === undefined && options.runtimeBudgetMs === undefined,
     });
+}
+
+async function skipFocusedViewMorePoster(page, {focusedItem, rowY}) {
+    const focusedViewMore = await getFocusedViewMoreMetadata(page, rowY).catch(() => null);
+    if (!focusedViewMore) return {skipped: false, movedToNext: false};
+
+    // View-more is a navigation poster, not row content. Use the existing
+    // trusted marker detector and advance without sending Enter, so play_row
+    // never opens the category/service screen.
+    return {
+        skipped: true,
+        movedToNext: await moveToNextFirstRowContent(page, {
+            previousSignature: contentItemSignature(focusedItem),
+            rowY,
+        }),
+    };
+}
+
+function normalizePlayRowIndex(rowIndex) {
+    return Number.isInteger(rowIndex) ? rowIndex - 1 : undefined;
 }
 
 function getContentId(item) {
@@ -2022,5 +2055,7 @@ module.exports = {
         observeVisibleContentRows,
         isValidFocusedState,
         formatRowPlaybackFailureSummary,
+        normalizePlayRowIndex,
+        skipFocusedViewMorePoster,
     },
 };

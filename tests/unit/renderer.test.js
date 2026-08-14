@@ -3358,10 +3358,14 @@ test("ships the six-slot Browser workspace and resolution/device controls", () =
     assert.match(html, /name="test-resolution" value="1920x1080"/);
     assert.match(html, /id="simultaneous-devices-select"/);
     assert.match(html, /<option value="6" selected>6 devices<\/option>/);
+    assert.match(css, /\.browser-preview\s*\{[^}]*grid-template-rows:\s*42px minmax\(0, 1fr\) 240px;/s);
     assert.match(css, /\.browser-slot-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*grid-template-rows:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
+    assert.match(css, /\.browser-slot-grid\s*\{[^}]*gap:\s*6px;/s);
     assert.match(css, /\.browser-slot\s*\{[^}]*aspect-ratio:\s*16 \/ 9;/s);
     assert.match(css, /\.browser-slot-case-name\s*\{[^}]*min-width:\s*0;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s);
     assert.match(css, /\.browser-slot-status\s*\{[^}]*background:\s*#fff;/s);
+    assert.match(css, /\.browser-log-panel\s*\{[^}]*height:\s*240px;[^}]*min-height:\s*240px;[^}]*max-height:\s*240px;[^}]*overflow:\s*hidden;/s);
+    assert.match(css, /\.browser-selected-log\s*\{[^}]*overflow:\s*auto;/s);
 });
 
 test("ships the normal application shell under the first loading overlay", () => {

@@ -380,6 +380,181 @@ test("maps a numeric Home row to the zero-based homePage2 row id", async () => {
   assert.deepEqual(calls, [["focus", "homePage2_4_0"]]);
 });
 
+test("reveals an offscreen numeric Home row before direct focus", async () => {
+  const calls = [];
+  const inspections = [];
+  let targetInViewport = false;
+  const targetId = "homePage2_2_0";
+  const page = {
+    evaluate: async (callback, argument) => {
+      const source = String(callback);
+      if (Array.isArray(argument)) return {route: "/", container: "content"};
+      if (source.includes("homePageItems")) {
+        inspections.push(targetInViewport);
+        return {
+          hasHomePageRows: true,
+          targetId: targetInViewport ? targetId : "",
+        };
+      }
+      if (argument && Array.isArray(argument.rootSelectors)) {
+        return {
+          records: [{
+            id: targetId,
+            text: "Kênh 1",
+            attrs: {title: "Kênh 1", content_id: "content-1"},
+            poster: "poster-1.png",
+            backgroundImage: "",
+            rect: {x: 100, y: 200, width: 150, height: 200},
+            visible: true,
+          }],
+          headings: [{
+            id: "homePage2_2-heading",
+            text: "Kênh yêu thích",
+            rect: {x: 100, y: 100, width: 240, height: 30},
+            visible: true,
+          }],
+          metrics: {
+            rootFound: true,
+            usedFallback: false,
+            fallbackBlocked: false,
+            rootSelector: ".content-area",
+            rootCount: 1,
+            candidateCount: 1,
+            headingCount: 1,
+          },
+        };
+      }
+      if (typeof argument === "string") return argument === targetId;
+      return [];
+    },
+  };
+
+  contentRows.configureContentRows({
+    remotePress: async (_page, key) => {
+      calls.push(["press", key]);
+      if (key === "ArrowDown") targetInViewport = true;
+    },
+    remoteFocusById: async (_page, id) => calls.push(["focus", id]),
+  });
+
+  const row = await contentRows.focusRequestedContentRow(page, {rowIndex: 2});
+
+  assert.deepEqual(inspections, [false, true]);
+  assert.deepEqual(calls, [["press", "ArrowDown"], ["focus", targetId]]);
+  assert.equal(row.items[0].id, targetId);
+});
+
+test("waits for a numeric Home row to finish rendering after direct focus", async () => {
+  const calls = [];
+  const targetId = "homePage2_2_0";
+  let scannerCalls = 0;
+  let waitCalls = 0;
+  const page = {
+    evaluate: async (callback, argument) => {
+      const source = String(callback);
+      if (Array.isArray(argument)) return {route: "/", container: "content"};
+      if (source.includes("homePageItems")) {
+        return {hasHomePageRows: true, targetId};
+      }
+      if (argument && Array.isArray(argument.rootSelectors)) {
+        scannerCalls += 1;
+        if (scannerCalls === 1) {
+          return {
+            records: [],
+            headings: [],
+            metrics: {rootFound: true, usedFallback: false, fallbackBlocked: false, rootSelector: ".content-area", rootCount: 1, candidateCount: 0, headingCount: 0},
+          };
+        }
+        return {
+          records: [{
+            id: targetId,
+            text: "Kênh yêu thích",
+            attrs: {title: "Kênh yêu thích", content_id: "content-1"},
+            poster: "poster-1.png",
+            backgroundImage: "",
+            rect: {x: 100, y: 200, width: 150, height: 200},
+            visible: true,
+          }],
+          headings: [{
+            id: "homePage2_2-heading",
+            text: "Kênh yêu thích",
+            rect: {x: 100, y: 100, width: 240, height: 30},
+            visible: true,
+          }],
+          metrics: {rootFound: true, usedFallback: false, fallbackBlocked: false, rootSelector: ".content-area", rootCount: 1, candidateCount: 1, headingCount: 1},
+        };
+      }
+      if (typeof argument === "string") return argument === targetId;
+      return [];
+    },
+    waitForTimeout: async () => {
+      waitCalls += 1;
+    },
+  };
+
+  contentRows.configureContentRows({
+    remoteFocusById: async (_page, id) => calls.push(["focus", id]),
+    remotePress: async (_page, key) => calls.push(["press", key]),
+  });
+
+  const row = await contentRows.focusRequestedContentRow(page, {rowIndex: 2});
+
+  assert.equal(row.items[0].id, targetId);
+  assert.equal(scannerCalls, 2);
+  assert.equal(waitCalls, 1);
+  assert.deepEqual(calls, [["focus", targetId]]);
+});
+
+test("uses a stable Home row ID while a titleless poster is partially visible", async () => {
+  const calls = [];
+  const targetId = "homePage2_2_0";
+  const rowPrefix = "homePage2_2_";
+  const page = {
+    evaluate: async (callback, argument) => {
+      const source = String(callback);
+      if (Array.isArray(argument)) return {route: "/", container: "content"};
+      if (source.includes("homePageItems")) {
+        return {hasHomePageRows: true, targetId};
+      }
+      if (argument && Array.isArray(argument.rootSelectors)) {
+        return {
+          records: [],
+          headings: [],
+          metrics: {rootFound: true, usedFallback: false, fallbackBlocked: false, rootSelector: ".content-area", rootCount: 1, candidateCount: 0, headingCount: 0},
+        };
+      }
+      if (argument === rowPrefix) {
+        return {
+          title: "",
+          normalizedTitle: "",
+          rowY: 692,
+          items: [{
+            id: targetId,
+            title: "",
+            contentId: "content-1",
+            attributes: {},
+            poster: "poster-1.png",
+            rect: {x: 100, y: 692, width: 233, height: 131},
+            visible: true,
+          }],
+        };
+      }
+      if (typeof argument === "string") return argument === targetId;
+      return [];
+    },
+  };
+
+  contentRows.configureContentRows({
+    remoteFocusById: async (_page, id) => calls.push(["focus", id]),
+    remotePress: async (_page, key) => calls.push(["press", key]),
+  });
+
+  const row = await contentRows.focusRequestedContentRow(page, {rowIndex: 2});
+
+  assert.equal(row.items[0].id, targetId);
+  assert.deepEqual(calls, [["focus", targetId]]);
+});
+
 function createVirtualizedRowPage({totalItems, initialFocusedIndex}) {
   let focusedIndex = initialFocusedIndex;
   const calls = [];
@@ -473,6 +648,35 @@ test("returns from playback through the shared adaptive close helper", async () 
   assert.equal(closeOptions.boundaryTimeoutMs, 3000);
   assert.equal(typeof closeOptions.dismissUnexpectedPopup, "function");
   assert.deepEqual(waits, [ROW_RETURN_RENDER_DELAY_MS]);
+});
+
+test("stops row cleanup at Home even when focus returns to a different row", async () => {
+  let settled = false;
+  let closeOptions;
+  const page = {
+    evaluate: async (callback) => {
+      const source = String(callback);
+      if (source.includes("routeLooksLikePlayerOrDetail")) return {open: false, routeValue: "homeNewUI"};
+      if (source.includes("homeNewUI")) return true;
+      if (source.includes("querySelectorAll(\".focused\")")) return settled;
+      return false;
+    },
+    waitForTimeout: async () => {
+      settled = true;
+    },
+  };
+
+  contentRows.configureContentRows({
+    closePlayerOrDetail: async (_page, options) => {
+      closeOptions = options;
+      assert.equal(await options.isClosed(page), true);
+    },
+  });
+
+  await contentRows.returnToFirstRowContent(page, {item: null, rowY: 200});
+
+  assert.equal(typeof closeOptions.isClosed, "function");
+  assert.equal(settled, true);
 });
 
 test("opens a focused row poster through the verified content activation path", async () => {

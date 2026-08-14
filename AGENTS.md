@@ -77,6 +77,8 @@ process and returns only safe status fields. Browser runs require the separately
 confirmed managed Chromium installation. The Browser workspace always renders
 six 16:9 holders; slots above the selected concurrency remain Idle, and each
 assigned holder routes keyed live frames/status/logs by batch, case, and slot.
+The lower Playwright log panel is fixed at 240px and scrolls its selected output
+internally; failed-test text must never resize or move the preview grid.
 Interactive BrowserView/CDP preview is allowed only for one selected Browser
 case; Live or None is required for a multi-case batch. LG runs reuse the same case selection,
 batch control, report, and result-submission flow, but require an explicitly
@@ -405,15 +407,26 @@ the existing batch-budget behavior and row-return navigation when changing
 legacy playback helpers.
 
 Numeric Home row selection uses the stable `homePage2_<zero-based-row>_<item>`
-ID pattern rather than counting the `homePage1` promotional row. Row playback
-failure messages enumerate each failed content ID and name.
+ID pattern rather than counting the `homePage1` promotional row. An indexed
+Home target may be present in the DOM while offscreen, partially visible, or
+still missing its title/heading during lazy rendering; the resolver must reveal
+it through remote vertical navigation, wait for the target row's stable IDs and
+card geometry, and never fall back to row-title matching for a numeric request.
+Row playback skips the trusted `.view_more[item_view_more="1"]` navigation poster
+instead of activating or recording it. Row playback failure messages enumerate
+each failed content ID and name.
 
 After the shared player/detail close boundary is detected, row playback waits
 1.5 seconds for the previous screen's poster geometry to finish re-rendering
 before refocusing the current item or pressing Right for the next poster.
 
 Browser case runs use the validated 1280x720 or 1920x1080 logical Playwright
-viewport (1280x720 by default), matching the selected MyTV TV UI layout.
+viewport (1280x720 by default), matching the selected MyTV TV UI layout. The
+viewport is part of the app's responsive layout, so it can change which rows
+and posters are currently rendered; semantic actions must remain resolution-
+agnostic by deriving visibility from the runtime viewport and using remote
+navigation to reveal offscreen targets. Do not hard-code one supported
+resolution into an action/helper.
 Electron may render that logical surface at a smaller visual scale inside the
 six preview holders, but it does not reduce the document viewport.
 

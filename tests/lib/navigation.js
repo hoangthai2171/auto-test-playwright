@@ -82,7 +82,7 @@ async function remoteFocusByVirtualKey(page, char) {
           rect.height > 0 &&
           rect.top >= 0 &&
           rect.left >= 0 &&
-          rect.bottom <= (window.innerHeight || 1080) &&
+          rect.bottom <= (window.innerHeight || document.documentElement?.clientHeight || Number.MAX_SAFE_INTEGER) &&
           style.display !== "none" &&
           style.visibility !== "hidden" &&
           Number(style.opacity) !== 0

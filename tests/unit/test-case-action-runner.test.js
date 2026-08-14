@@ -1139,6 +1139,12 @@ test("plays a requested row using either its 1-based index or name", async () =>
   ]);
 });
 
+test("keeps the public play_row index conversion explicit", () => {
+  assert.equal(workflows.__internal.normalizePlayRowIndex(1), 0);
+  assert.equal(workflows.__internal.normalizePlayRowIndex(3), 2);
+  assert.equal(workflows.__internal.normalizePlayRowIndex(undefined), undefined);
+});
+
 test("formats row playback failures with content IDs and names", () => {
   const summary = workflows.__internal.formatRowPlaybackFailureSummary([
     {contentId: "158218", name: "Ăn Chạy Yêu"},

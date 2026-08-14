@@ -28,10 +28,12 @@ const ROW_HORIZONTAL_NAV_MAX_STEPS = 100;
 const ROW_RETURN_BOUNDARY_TIMEOUT_MS = 3000;
 const ROW_RETURN_RENDER_DELAY_MS = 1500;
 const HOME_PAGE_ROW_MAX_ATTEMPTS = 18;
+const HOME_PAGE_ROW_RENDER_TIMEOUT_MS = 5000;
+const HOME_PAGE_ROW_RENDER_POLLING_MS = 250;
 const VIEW_MORE_POSTER_SELECTOR = '.view_more[item_view_more="1"]';
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
-function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
+function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
 function remotePress(...args){return dependencies.remotePress(...args);}
 function remoteFocusById(...args){return dependencies.remoteFocusById(...args);}
 function remoteFocusByText(...args){return dependencies.remoteFocusByText(...args);}
@@ -639,9 +641,7 @@ async function findHomePageRowByIndex(page, rowIndex, {snapshotCache = createDom
     if (target?.targetId) {
       try {
         await remoteFocusById(page, target.targetId, 120, {snapshotCache});
-        snapshotCache.invalidate();
-        const rows = await collectVisibleContentRows(page, {snapshotCache});
-        const row = rows.find((candidate) => candidate.items.some((item) => item.id.startsWith(rowPrefix)));
+        const row = await waitForVisibleHomePageRow(page, rowPrefix, {snapshotCache});
         if (row) return row;
       } catch (error) {
         lastFocusError = error;
@@ -655,6 +655,107 @@ async function findHomePageRowByIndex(page, rowIndex, {snapshotCache = createDom
   return null;
 }
 
+async function waitForVisibleHomePageRow(page, rowPrefix, {snapshotCache, timeoutMs = HOME_PAGE_ROW_RENDER_TIMEOUT_MS} = {}) {
+  const deadline = Date.now() + timeoutMs;
+
+  while (true) {
+    snapshotCache?.invalidate("visible-content-rows");
+    const rows = await collectVisibleContentRows(page, {snapshotCache}).catch(() => []);
+    const row = rows.find((candidate) => candidate.items.some((item) => item.id.startsWith(rowPrefix)));
+    if (row) return row;
+
+    // The Home carousel can expose the target poster before its title/heading
+    // has finished rendering. The generic scanner intentionally requires a
+    // non-empty label, so use the stable homePage2 row ID as the fallback
+    // anchor while the card is already intersecting the viewport.
+    const directRow = await collectVisibleHomePageRow(page, rowPrefix).catch(() => null);
+    if (directRow) return directRow;
+
+    const remainingMs = deadline - Date.now();
+    if (remainingMs <= 0) return null;
+    const delayMs = Math.min(HOME_PAGE_ROW_RENDER_POLLING_MS, remainingMs);
+    if (typeof page.waitForTimeout === "function") {
+      await page.waitForTimeout(delayMs);
+    } else {
+      await new Promise((resolve) => setTimeout(resolve, delayMs));
+    }
+  }
+}
+
+async function collectVisibleHomePageRow(page, rowPrefix) {
+  return page.evaluate((prefix) => {
+    const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || Number.MAX_SAFE_INTEGER;
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || Number.MAX_SAFE_INTEGER;
+    const items = Array.from(document.querySelectorAll("[id]"))
+      .filter((element) => element.id.startsWith(prefix))
+      .map((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        const img = element.querySelector("img");
+        const attributes = {};
+        for (const name of [
+          "title",
+          "title_text",
+          "movie_name",
+          "vod_name",
+          "content_name",
+          "channel_name",
+          "service_title",
+          "alt",
+          "content_id",
+          "content-id",
+          "data-content-id",
+          "item_view_more",
+        ]) {
+          attributes[name] = element.getAttribute(name) || "";
+        }
+        return {
+          id: element.id,
+          title: [
+            attributes.title,
+            attributes.title_text,
+            attributes.movie_name,
+            attributes.vod_name,
+            attributes.content_name,
+            attributes.channel_name,
+            element.textContent || "",
+          ].join(" ").replace(/\s+/g, " ").trim(),
+          contentId: attributes.content_id || attributes["content-id"] || attributes["data-content-id"] ||
+            img?.getAttribute("content_id") || img?.getAttribute("content-id") || img?.getAttribute("data-content-id") || "",
+          attributes,
+          poster: img?.currentSrc || img?.src || extractCssUrl(style.backgroundImage || ""),
+          rect: {
+            x: Math.round(rect.x),
+            y: Math.round(rect.y),
+            width: Math.round(rect.width),
+            height: Math.round(rect.height),
+          },
+          visible: rect.width >= 100 && rect.height >= 80 &&
+            rect.right > 0 && rect.bottom > 0 &&
+            rect.left < viewportWidth && rect.top < viewportHeight &&
+            style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0,
+        };
+      })
+      .filter((item) => item.visible)
+      .sort((a, b) => a.rect.x - b.rect.x);
+
+    if (!items.length) return null;
+
+    const rowY = items.reduce((total, item) => total + item.rect.y, 0) / items.length;
+    return {
+      title: "",
+      normalizedTitle: "",
+      rowY,
+      items,
+    };
+
+    function extractCssUrl(value) {
+      const match = String(value || "").match(/url\(["']?(.+?)["']?\)/);
+      return match?.[1] || "";
+    }
+  }, rowPrefix);
+}
+
 async function inspectHomePageRowTarget(page, rowPrefix) {
   return page.evaluate((prefix) => {
     const homePageItems = Array.from(document.querySelectorAll("[id]"))
@@ -662,15 +763,24 @@ async function inspectHomePageRowTarget(page, rowPrefix) {
       .map((element) => {
         const rect = element.getBoundingClientRect();
         const style = getComputedStyle(element);
+        const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || Number.MAX_SAFE_INTEGER;
+        const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || Number.MAX_SAFE_INTEGER;
+        const laidOut = rect.width >= 100 && rect.height >= 80 &&
+          style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
         return {
           id: element.id,
           rect: {x: rect.x, y: rect.y, width: rect.width, height: rect.height},
-          laidOut: rect.width >= 100 && rect.height >= 80 &&
-            style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0,
+          laidOut,
+          // A Home row can be exposed only partially at the bottom edge. It
+          // is already a valid remote-navigation target at that point; wait
+          // for a fully visible card and the ArrowDown sequence can jump past
+          // the requested row and virtualize it out of the DOM.
+          inViewport: laidOut && rect.right > 0 && rect.bottom > 0 &&
+            rect.left < viewportWidth && rect.top < viewportHeight,
         };
       });
     const target = homePageItems
-      .filter((item) => item.id.startsWith(prefix) && item.laidOut)
+      .filter((item) => item.id.startsWith(prefix) && item.inViewport)
       .sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x)[0];
 
     return {
@@ -916,10 +1026,14 @@ async function isFocusedContentItem(page) {
     const rect = focused.getBoundingClientRect();
     const style = getComputedStyle(focused);
     const label = contentLabel(focused);
-    const viewportWidth = window.innerWidth || 1920;
-    const viewportHeight = window.innerHeight || 1080;
+    const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || Number.MAX_SAFE_INTEGER;
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || Number.MAX_SAFE_INTEGER;
     const menuText = /^(Tìm kiếm|Trang chủ|Truyền hình|Phim truyện|Thiếu nhi|Thể thao|Cá nhân|Tất cả dịch vụ)$/i;
-    const isMenuItem = focused.id.startsWith("menu_") || rect.x < 100;
+    // The content contract starts at x=80.  The 1280x720 Home layout places
+    // the first poster just inside that boundary; keeping a 100px focus gate
+    // incorrectly rejects an otherwise valid focused poster at that
+    // resolution after a row is revealed.
+    const isMenuItem = focused.id.startsWith("menu_") || rect.x < 80;
     const isIdentifiedPoster = focused.classList.contains("cate_content_item") ||
       focused.classList.contains("lw_r_item") ||
       /^homePage\d+_/u.test(focused.id);
@@ -927,7 +1041,7 @@ async function isFocusedContentItem(page) {
     return (
       rect.width >= 100 &&
       rect.height >= 80 &&
-      rect.x >= 100 &&
+      rect.x >= 80 &&
       rect.width <= 620 &&
       rect.height <= 460 &&
       rect.right > 0 &&
@@ -1207,11 +1321,21 @@ async function returnToFirstRowContent(page, { item, rowY }) {
     remotePress,
     observePopup: observeExitConfirmation,
     dismissUnexpectedPopup: dismissKnownPlaybackFailurePopup,
-    isClosed: async (candidatePage) => (
-      (await isFocusedContentItem(candidatePage)) &&
-      ((await isFocusedNearRow(candidatePage, rowY)) ||
-        (item?.id && (await isFocusedOnContentItem(candidatePage, item))))
-    ),
+    isClosed: async (candidatePage) => {
+      if (
+        (await isFocusedContentItem(candidatePage)) &&
+        ((await isFocusedNearRow(candidatePage, rowY)) ||
+          (item?.id && (await isFocusedOnContentItem(candidatePage, item))))
+      ) {
+        return true;
+      }
+
+      // The Home carousel can restore focus to a different visible row before
+      // the previous poster's geometry is rebuilt.  The route/content boundary
+      // is still safe here; waiting for the original poster would otherwise
+      // send Back again and can reach the app-exit dialog.
+      return isHomeRowReturnBoundary(candidatePage);
+    },
     maxBackPresses: playback.MAX_CLOSE_BACK_PRESSES,
     backDelayMs: 1800,
     boundaryTimeoutMs: ROW_RETURN_BOUNDARY_TIMEOUT_MS,
@@ -1227,6 +1351,28 @@ async function returnToFirstRowContent(page, { item, rowY }) {
   }
 
   await expectFocusedContent(page);
+}
+
+async function isHomeRowReturnBoundary(page) {
+  const playerObservation = await observePlayerOrDetailState(page).catch(() => ({open: true}));
+  if (playerObservation?.open === true) return false;
+
+  return page.evaluate(() => {
+    const routeValue = location.hash.replace(/^#/, "").split("?")[0];
+    if (!/^homeNewUI$/iu.test(routeValue)) return false;
+
+    return Array.from(document.querySelectorAll("[id]"))
+      .filter((element) => /^homePage[12]_\d+_\d+$/u.test(element.id))
+      .some((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return rect.width >= 100 && rect.height >= 80 &&
+          rect.right > 0 && rect.bottom > 0 &&
+          rect.left < (window.innerWidth || document.documentElement?.clientWidth || Number.MAX_SAFE_INTEGER) &&
+          rect.top < (window.innerHeight || document.documentElement?.clientHeight || Number.MAX_SAFE_INTEGER) &&
+          style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+      });
+  }).catch(() => false);
 }
 
 async function dismissKnownPlaybackFailurePopup(page, popup) {
@@ -1293,4 +1439,4 @@ function contentItemSignature(item) {
 }
 
 
-module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,ROW_RETURN_RENDER_DELAY_MS};
+module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,ROW_RETURN_RENDER_DELAY_MS};

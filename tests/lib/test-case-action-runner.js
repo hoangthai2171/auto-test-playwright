@@ -56,8 +56,8 @@ function visibleScreenTextPredicate(page, expected) {
       .replace(/[\u0300-\u036f]/g, "")
       .replace(/đ/gi, "d")
       .toLowerCase();
-    const viewportWidth = window.innerWidth || 1920;
-    const viewportHeight = window.innerHeight || 1080;
+    const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || Number.MAX_SAFE_INTEGER;
+    const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || Number.MAX_SAFE_INTEGER;
     const isVisibleChain = (element) => {
       for (let ancestor = element; ancestor && ancestor !== document.body; ancestor = ancestor.parentElement) {
         const style = getComputedStyle(ancestor);
