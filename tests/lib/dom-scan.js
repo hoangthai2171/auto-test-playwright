@@ -9,6 +9,7 @@ function createScopedDomScanner(page) {
     candidateSelector = "[id]",
     headingSelector = "h1,h2,h3,h4,[role='heading'],[data-row-title],[class*='heading'],[class*='title']",
     includeHeadings = false,
+    headingExcludeAncestorSelector = "",
     attributeNames = [],
     includeText = true,
     includePoster = false,
@@ -131,6 +132,17 @@ function createScopedDomScanner(page) {
       const records = collect(config.candidateSelector).map((element) => readRecord(element, config.geometry));
       const headings = config.includeHeadings
         ? collect(config.headingSelector)
+            // Per-item labels (status badges, countdowns, episode counters) can
+            // match the generic heading selector. They describe a single card,
+            // never a row, so callers can exclude anything living inside one.
+            .filter((element) => {
+              if (!config.headingExcludeAncestorSelector) return true;
+              try {
+                return !element.closest(config.headingExcludeAncestorSelector);
+              } catch {
+                return true;
+              }
+            })
             .map((element) => readRecord(element, config.headingGeometry))
             .filter((item) => item.visible && item.text && item.text.length <= 80)
         : [];
@@ -153,6 +165,7 @@ function createScopedDomScanner(page) {
       candidateSelector,
       headingSelector,
       includeHeadings,
+      headingExcludeAncestorSelector,
       attributeNames,
       includeText,
       includePoster,

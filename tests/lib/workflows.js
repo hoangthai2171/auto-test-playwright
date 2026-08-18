@@ -456,6 +456,9 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
     const items = targetRow.items;
     expect(items.length, "First row should contain playable items").toBeGreaterThan(0);
 
+    // The row container id identifies the row for every later membership
+    // check; firstRowY only backs screens that expose no row container.
+    const firstRowId = targetRow.rowId || "";
     const firstRowY = (await getFocusedContentMetadata(page)).rect?.y || targetRow.rowY || items[0].rect.y;
     const batchBudget = createBatchBudget({
         itemLimit: options.itemLimit,
@@ -472,6 +475,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
         const focusedItem = await getFocusedContentMetadata(page);
         const viewMoreSkip = await skipFocusedViewMorePoster(page, {
             focusedItem,
+            rowId: firstRowId,
             rowY: firstRowY,
         });
         if (viewMoreSkip.skipped) {
@@ -550,6 +554,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
             try {
                 await returnToFirstRowContent(page, {
                     item,
+                    rowId: firstRowId,
                     rowY: firstRowY,
                 });
             } catch (error) {
@@ -574,6 +579,7 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
 
         const movedToNext = await moveToNextFirstRowContent(page, {
             previousSignature: signature,
+            rowId: firstRowId,
             rowY: firstRowY,
         });
 
@@ -634,8 +640,8 @@ async function playItemsInRow(page, testInfo, options = {}) {
     });
 }
 
-async function skipFocusedViewMorePoster(page, {focusedItem, rowY}) {
-    const focusedViewMore = await getFocusedViewMoreMetadata(page, rowY).catch(() => null);
+async function skipFocusedViewMorePoster(page, {focusedItem, rowY, rowId}) {
+    const focusedViewMore = await getFocusedViewMoreMetadata(page, {rowId, rowY}).catch(() => null);
     if (!focusedViewMore) return {skipped: false, movedToNext: false};
 
     // View-more is a navigation poster, not row content. Use the existing
@@ -645,6 +651,7 @@ async function skipFocusedViewMorePoster(page, {focusedItem, rowY}) {
         skipped: true,
         movedToNext: await moveToNextFirstRowContent(page, {
             previousSignature: contentItemSignature(focusedItem),
+            rowId,
             rowY,
         }),
     };

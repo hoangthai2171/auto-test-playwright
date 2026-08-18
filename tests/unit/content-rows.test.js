@@ -5,6 +5,57 @@ const contentRows = require("../lib/content-rows");
 const {MAX_CLOSE_BACK_PRESSES} = require("../lib/playback");
 const {ROW_RETURN_RENDER_DELAY_MS} = contentRows;
 
+// getFocusedViewMoreMetadata probes with {targetRowY, targetRowId}; the marker
+// sweep adds a selector, so the probe is the argument without one.
+function isViewMoreProbe(argument) {
+  return Boolean(argument) && typeof argument === "object" &&
+    "targetRowId" in argument && !("selector" in argument);
+}
+
+test("matches a service card by its own label, not by the joined attribute blob", async () => {
+  // A service card carries content-id="0", so its joined title reads
+  // "0 Truyền hình" while its label attribute is the real name.
+  const serviceRow = {
+    rowId: "homePage2_6",
+    title: "Thể loại",
+    normalizedTitle: "the loai",
+    rowY: 700,
+    onScreen: true,
+    items: [
+      {id: "homePage2_6_0", title: "0 Truyền hình", label: "Truyền hình", attributes: {cate_name: "Truyền hình"}, rect: {x: 100, y: 700, width: 233, height: 131}, visible: true},
+      {id: "homePage2_6_10", title: "0 Karaoke", label: "Karaoke", attributes: {cate_name: "Karaoke"}, rect: {x: 2200, y: 700, width: 233, height: 131}, visible: false},
+    ],
+  };
+  const focusCalls = [];
+  const pressCalls = [];
+  let focusedId = "homePage2_6_14";
+  const page = {
+    waitForTimeout: async () => {},
+    evaluate: async (_callback, argument) => {
+      if (argument?.rowSelector) return {contract: argument.contract, rows: [serviceRow]};
+      if (typeof argument === "string") return argument === focusedId;
+      return null;
+    },
+  };
+
+  contentRows.configureContentRows({
+    getFocusedState: async () => ({id: focusedId, text: "", label: ""}),
+    remoteFocusById: async (_page, id) => {
+      focusCalls.push(id);
+      focusedId = id;
+    },
+    remotePress: async (_page, key) => pressCalls.push(key),
+  });
+
+  // Karaoke sits to the LEFT of the current focus, which a rightward scan
+  // could never reach.
+  const service = await contentRows.focusServiceCategoryItem(page, "Karaoke", {initialRow: serviceRow});
+
+  assert.equal(service.id, "homePage2_6_10");
+  assert.deepEqual(focusCalls, ["homePage2_6_10"]);
+  assert.deepEqual(pressCalls, []);
+});
+
 test("scans the Thể loại carousel until the requested service poster becomes visible", async () => {
   const rows = [
     {
@@ -140,13 +191,152 @@ test("accepts a category poster when its focused child has the requested service
   assert.deepEqual(calls, [["press", "ArrowRight"]]);
 });
 
+test("reads rows, titles and ids from the row containers instead of geometry", async () => {
+  const page = {
+    evaluate: async () => ({
+      contract: "cate_content_row",
+      rows: [
+        {
+          rowId: "homePage2_0",
+          title: "Phim mới nhất",
+          onScreen: true,
+          items: [
+            {id: "homePage2_0_0", title: "Poster 1", attributes: {}, isViewMore: false, rect: {x: 100, y: 683, width: 193, height: 288}, visible: true},
+            {id: "homePage2_0_9", title: "Poster 10", attributes: {}, isViewMore: false, rect: {x: 2000, y: 683, width: 193, height: 288}, visible: false},
+          ],
+        },
+        {
+          rowId: "homePage2_1",
+          title: "Đang xem",
+          onScreen: false,
+          items: [
+            {id: "homePage2_1_0", title: "Poster A", attributes: {}, isViewMore: false, rect: {x: 100, y: 1600, width: 193, height: 288}, visible: false},
+          ],
+        },
+      ],
+    }),
+  };
+
+  const rows = await contentRows.collectVisibleContentRows(page);
+
+  assert.equal(rows.length, 1);
+  assert.equal(rows[0].rowId, "homePage2_0");
+  assert.equal(rows[0].title, "Phim mới nhất");
+  assert.equal(rows[0].normalizedTitle, "phim moi nhat");
+  assert.deepEqual(rows[0].items.map((item) => item.id), ["homePage2_0_0"]);
+});
+
+test("keeps walking a row by container membership even when the row scrolls", async () => {
+  const calls = [];
+  let focusedIndex = 0;
+  let scrolled = false;
+  const page = {
+    waitForTimeout: async () => {},
+    evaluate: async (_callback, argument) => {
+      // Row membership query: the focused poster belongs to this container.
+      if (argument?.rowContainerId) return argument.rowContainerId === "homePage2_0";
+      if (typeof argument === "string") return true;
+      if (isViewMoreProbe(argument)) {
+        assert.equal(argument.targetRowId, "homePage2_0");
+        return focusedIndex === 2
+          ? {id: "homePage2_0_10", title: "", rect: {x: 949, y: 69, width: 203, height: 302}, isViewMore: true}
+          : null;
+      }
+      return null;
+    },
+  };
+
+  contentRows.configureContentRows({
+    getFocusedState: async () => ({
+      id: `homePage2_0_${focusedIndex}`,
+      text: "",
+      label: "",
+      // The row jumps 600px up mid-walk; membership must not care.
+      rect: {x: 100 + focusedIndex * 207, y: scrolled ? 69 : 683, width: 203, height: 302},
+    }),
+    remotePress: async (_page, key) => {
+      calls.push(key);
+      if (!scrolled) {
+        scrolled = true;
+        return;
+      }
+      focusedIndex = Math.min(2, focusedIndex + 1);
+    },
+    remoteFocusById: async () => {},
+  });
+
+  const focused = await contentRows.focusViewMorePosterInCurrentRow(page, {
+    rowId: "homePage2_0",
+    title: "Phim mới nhất",
+    rowY: 683,
+    items: [{id: "homePage2_0_0", title: "Poster 1", rect: {x: 100, y: 683, width: 193, height: 288}}],
+  }, {targetLabel: "Xem tất cả"});
+
+  assert.equal(focused.id, "homePage2_0_10");
+  assert.deepEqual(calls, ["ArrowRight", "ArrowRight", "ArrowRight"]);
+});
+
+test("fails the view-more walk when focus leaves the row container", async () => {
+  const page = {
+    waitForTimeout: async () => {},
+    evaluate: async (_callback, argument) => {
+      // Focus moved into a neighbouring row: containment says no.
+      if (argument?.rowContainerId) return false;
+      if (typeof argument === "string") return true;
+      if (isViewMoreProbe(argument)) return null;
+      return null;
+    },
+  };
+
+  contentRows.configureContentRows({
+    getFocusedState: async () => ({
+      id: "homePage2_1_0",
+      text: "",
+      label: "",
+      // Geometrically still on the old row line, structurally another row.
+      rect: {x: 100, y: 683, width: 203, height: 302},
+    }),
+    remotePress: async () => {},
+    remoteFocusById: async () => {},
+  });
+
+  await assert.rejects(
+    contentRows.focusViewMorePosterInCurrentRow(page, {
+      rowId: "homePage2_0",
+      title: "Phim mới nhất",
+      rowY: 683,
+      items: [{id: "homePage2_0_0", title: "Poster 1", rect: {x: 100, y: 683, width: 193, height: 288}}],
+    }, {targetLabel: "Xem tất cả"}),
+    /focus không còn ở hàng đã chọn/u
+  );
+});
+
+test("titles a row from the closest heading above it, not a label of the row above", () => {
+  // Home renders a status badge inside the previous row's poster ("Còn 05 : 17 : 40")
+  // that also falls inside the heading search window of the row below.
+  const headings = [
+    {text: "Thịnh hành", rect: {x: 100, y: 373, width: 1027, height: 30}},
+    {text: "Còn 05 : 17 : 40", rect: {x: 100, y: 537, width: 279, height: 36}},
+    {text: "Phim mới nhất", rect: {x: 100, y: 640, width: 1027, height: 30}},
+  ];
+
+  assert.equal(contentRows.findRowHeading(headings, 683)?.text, "Phim mới nhất");
+  assert.equal(contentRows.findRowHeading(headings, 417)?.text, "Thịnh hành");
+});
+
+test("leaves a row untitled when every heading is too far above it", () => {
+  const headings = [{text: "Phim mới nhất", rect: {x: 100, y: 100, width: 1027, height: 30}}];
+
+  assert.equal(contentRows.findRowHeading(headings, 400), undefined);
+});
+
 test("focuses a blank-name view-more poster through remote row navigation", async () => {
   let focusedIndex = 0;
   const calls = [];
   const page = {
     evaluate: async (_callback, argument) => {
       if (typeof argument === "string") return focusedIndex === 0;
-      if (typeof argument === "number") {
+      if (isViewMoreProbe(argument)) {
         return focusedIndex === 2
           ? {
               id: "view-more",
@@ -202,7 +392,7 @@ test("anchors the view-more walk on settled focus geometry while the row scrolls
     waitForTimeout: async () => {},
     evaluate: async (_callback, argument) => {
       if (typeof argument === "string") return focusedIndex === 0;
-      if (typeof argument === "number") {
+      if (isViewMoreProbe(argument)) {
         return focusedIndex === 2
           ? {id: "view-more", title: "", rect: {x: 460, y: 88, width: 150, height: 200}, isViewMore: true}
           : null;
@@ -242,7 +432,7 @@ test("re-anchors the row when a swallowed press leaves focus on a poster that sc
     waitForTimeout: async () => {},
     evaluate: async (_callback, argument) => {
       if (typeof argument === "string") return focusedIndex === 0;
-      if (typeof argument === "number") {
+      if (isViewMoreProbe(argument)) {
         return focusedIndex === 2
           ? {id: "view-more", title: "", rect: {x: 460, y: 88, width: 150, height: 200}, isViewMore: true}
           : null;
@@ -289,7 +479,7 @@ test("reports remote navigation failure when a known view-more poster cannot be 
   const page = {
     evaluate: async (_callback, argument) => {
       if (typeof argument === "string") return true;
-      if (typeof argument === "number") return null;
+      if (isViewMoreProbe(argument)) return null;
       return null;
     },
   };
@@ -322,13 +512,14 @@ test("reports a missing view-more poster when the row ends without the marker", 
   const page = {
     evaluate: async (_callback, argument) => {
       if (typeof argument === "string") return true;
-      if (typeof argument === "number") {
+      if (isViewMoreProbe(argument)) {
         metadataEvaluateCalls += 1;
         assert.ok(metadataEvaluateCalls <= 2);
         return null;
       }
       assert.deepEqual(argument, {
         targetRowY: 200,
+        targetRowId: "",
         selector: '.view_more[item_view_more="1"]',
       });
       return false;
@@ -429,9 +620,10 @@ test("maps a numeric Home row to the zero-based homePage2 row id", async () => {
   const page = {
     evaluate: async (_callback, argument) => {
       if (Array.isArray(argument)) return {route: "/", container: "content"};
-      if (typeof argument === "string") {
-        if (argument === "homePage2_4_0") return true;
-        requestedPrefix = argument;
+      if (typeof argument === "string") return argument === "homePage2_4_0";
+      if (argument?.prefix && !argument.cardSelector) {
+        requestedPrefix = argument.prefix;
+        assert.equal(argument.containerId, "homePage2_4");
         return {hasHomePageRows: true, targetId: "homePage2_4_0"};
       }
       if (argument && Array.isArray(argument.rootSelectors)) {
@@ -579,6 +771,8 @@ test("waits for a numeric Home row to finish rendering after direct focus", asyn
         };
       }
       if (typeof argument === "string") return argument === targetId;
+      // The direct row-container read finds nothing while the row renders.
+      if (argument?.cardSelector) return null;
       return [];
     },
     waitForTimeout: async () => {
@@ -617,8 +811,9 @@ test("uses a stable Home row ID while a titleless poster is partially visible", 
           metrics: {rootFound: true, usedFallback: false, fallbackBlocked: false, rootSelector: ".content-area", rootCount: 1, candidateCount: 0, headingCount: 0},
         };
       }
-      if (argument === rowPrefix) {
+      if (argument?.prefix === rowPrefix && argument.cardSelector) {
         return {
+          rowId: "homePage2_2",
           title: "",
           normalizedTitle: "",
           rowY: 692,

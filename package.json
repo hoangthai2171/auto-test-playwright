@@ -1,6 +1,6 @@
 {
   "name": "auto-test-playwright",
-  "version": "1.0.7",
+  "version": "1.0.8",
   "description": "MyTV automated test desktop runner",
   "main": "app/main.js",
   "scripts": {

@@ -31,6 +31,32 @@ const HOME_PAGE_ROW_MAX_ATTEMPTS = 18;
 const HOME_PAGE_ROW_RENDER_TIMEOUT_MS = 5000;
 const HOME_PAGE_ROW_RENDER_POLLING_MS = 250;
 const VIEW_MORE_POSTER_SELECTOR = '.view_more[item_view_more="1"]';
+// Content cards carry their own labels (status badges, countdown timers,
+// episode counters) that match the generic heading selector. They belong to a
+// single card, so they must never be read as a row heading.
+const CONTENT_ITEM_LABEL_ANCESTOR_SELECTOR = ".cate_content_item, [item_view_more]";
+// The app wraps every carousel in a row container that owns the row's title
+// element and its cards. Row identity, row membership and row titles are read
+// from this structure so they never depend on where a carousel is scrolled to.
+const ROW_CONTAINER_SELECTOR = ".cate_content_row";
+const ROW_TITLE_SELECTOR = ".cate_content_row_title";
+const CONTENT_CARD_SELECTOR = ".cate_content_item";
+const STRUCTURAL_ROW_CONTRACT = "cate_content_row";
+// Attributes that hold a card's own human label. The joined attribute blob used
+// for fuzzy content matching also contains ids and flags (a service card
+// carries content-id="0"), so an exact-match lookup needs this single value.
+const CARD_LABEL_ATTRIBUTES = Object.freeze([
+  "service_title",
+  "service_name",
+  "cate_name",
+  "title",
+  "title_text",
+  "content_name",
+  "channel_name",
+  "movie_name",
+  "vod_name",
+]);
+const ROW_HEADING_MAX_DISTANCE_PX = 150;
 const FOCUS_SETTLE_TOLERANCE_PX = 4;
 const FOCUS_SETTLE_TIMEOUT_MS = 3000;
 const FOCUS_SETTLE_POLL_MS = 120;
@@ -151,47 +177,37 @@ async function focusViewMorePosterInCurrentRow(page, row, options = {}) {
   }
 
   await focusFirstRowStart(page, firstItem, {snapshotCache});
-  // Focusing a Home row can vertically reflow the carousel into the active
-  // viewport with a smooth scroll. Reading the focused rect mid-animation
-  // anchors the row to a transient y coordinate, so wait for the focused
-  // poster geometry to stop moving first.
+  // Focusing a row can reflow the carousel into the active viewport with a
+  // smooth scroll, and the app drops keys sent mid-animation. Waiting for the
+  // focused element to stop moving is about key pacing only - the row itself
+  // is identified by its container below.
   let focusedState = await waitForFocusedGeometrySettled(page);
-  // The row snapshot was collected before that reflow, so anchor subsequent
-  // marker checks to the verified focused poster's current y coordinate
-  // instead of the stale snapshot geometry.
-  let rowY = resolveRowAnchorY(focusedState, row, firstItem);
-  if (!isFocusedStateOnRow(focusedState, rowY)) {
+  const rowScope = {rowId: row?.rowId || "", rowY: resolveRowAnchorY(focusedState, row, firstItem)};
+  if (!(await isFocusedOnRow(page, row, focusedState, rowScope.rowY))) {
     throw viewMoreFocusError(rowLabel, targetLabel, "focus không còn ở hàng đã chọn");
   }
 
   const visitedFocusStates = new Set([focusStateSignature(focusedState)]);
   for (let attempt = 0; attempt < ROW_HORIZONTAL_NAV_MAX_STEPS; attempt += 1) {
-    const focusedViewMore = await getFocusedViewMoreMetadata(page, rowY);
+    const focusedViewMore = await getFocusedViewMoreMetadata(page, rowScope);
     if (focusedViewMore) return focusedViewMore;
 
     const beforeSignature = focusStateSignature(focusedState);
-    const beforeAnchorId = focusedState?.id || firstItem.id;
     await remotePress(page, "ArrowRight", ROW_HORIZONTAL_NAV_DELAY, {snapshotCache});
     let nextState = await getFocusedState(page);
 
-    if (!isFocusedStateOnRow(nextState, rowY)) {
-      // The row can still be scrolling into the active viewport while the
-      // press is handled. Re-anchor the row when the settled focus is proven
-      // to still live in the same carousel, and only fail when it left it.
-      const settledState = await waitForFocusedGeometrySettled(page, {initialState: nextState});
-      const settledRowY = resolveRowAnchorY(settledState, row, firstItem);
-      const stillInRow =
-        isFocusedStateOnRow(settledState, settledRowY) &&
-        (await isFocusedInsideRowOf(page, [settledState?.id, beforeAnchorId, firstItem.id]));
-      if (!stillInRow) {
+    if (!(await isFocusedOnRow(page, row, nextState, rowScope.rowY))) {
+      // A row that is still scrolling can answer the press late. Re-check once
+      // the focused element stops moving before calling this a row exit.
+      nextState = await waitForFocusedGeometrySettled(page, {initialState: nextState});
+      rowScope.rowY = resolveRowAnchorY(nextState, row, firstItem);
+      if (!(await isFocusedOnRow(page, row, nextState, rowScope.rowY))) {
         throw viewMoreFocusError(rowLabel, targetLabel, "remote focus đã rời khỏi hàng");
       }
-      rowY = settledRowY;
-      nextState = settledState;
     }
 
     const nextSignature = focusStateSignature(nextState);
-    const nextViewMore = await getFocusedViewMoreMetadata(page, rowY);
+    const nextViewMore = await getFocusedViewMoreMetadata(page, rowScope);
     if (nextViewMore) return nextViewMore;
     if (nextSignature === beforeSignature || visitedFocusStates.has(nextSignature)) {
       throw viewMoreFocusError(
@@ -200,7 +216,7 @@ async function focusViewMorePosterInCurrentRow(page, row, options = {}) {
         await viewMoreNavigationFailureReason(
           page,
           row,
-          rowY,
+          rowScope,
           "remote focus không thể tiến tới poster cuối hàng",
         ),
       );
@@ -216,44 +232,66 @@ async function focusViewMorePosterInCurrentRow(page, row, options = {}) {
     await viewMoreNavigationFailureReason(
       page,
       row,
-      rowY,
+      rowScope,
       `đã vượt quá ${ROW_HORIZONTAL_NAV_MAX_STEPS} lần di chuyển`,
     ),
   );
 }
 
-async function viewMoreNavigationFailureReason(page, row, rowY, fallbackReason) {
+async function viewMoreNavigationFailureReason(page, row, scope, fallbackReason) {
   const rowItems = row?.items || [];
   const rowHasMarker = rowItems.some((item) => {
     const attributes = item?.attributes || {};
-    return String(attributes.item_view_more || item?.item_view_more || "").trim() === "1";
+    return item?.isViewMore === true ||
+      String(attributes.item_view_more || item?.item_view_more || "").trim() === "1";
   });
   if (rowHasMarker) return fallbackReason;
 
+  const rowId = typeof scope === "object" && scope !== null ? String(scope.rowId || "").trim() : "";
+  const rowY = typeof scope === "number"
+    ? scope
+    : Number(typeof scope === "object" && scope !== null ? scope.rowY || 0 : 0);
+
   try {
-    const hasMarker = await page.evaluate(({targetRowY, selector}) => {
-      return Array.from(document.querySelectorAll(selector)).some((poster) => {
+    const hasMarker = await page.evaluate(({targetRowY, targetRowId, selector}) => {
+      const container = targetRowId ? document.getElementById(targetRowId) : null;
+      const scopeRoot = container || document;
+      return Array.from(scopeRoot.querySelectorAll(selector)).some((poster) => {
         const rect = poster.getBoundingClientRect();
         const style = getComputedStyle(poster);
-        return rect.width > 0 && rect.height > 0 &&
-          style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0 &&
-          (targetRowY <= 0 || Math.abs(rect.y - targetRowY) <= 80);
+        const rendered = rect.width > 0 && rect.height > 0 &&
+          style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+        if (!rendered) return false;
+        // Scoping by row container makes the y window unnecessary.
+        return container ? true : targetRowY <= 0 || Math.abs(rect.y - targetRowY) <= 80;
       });
-    }, {targetRowY: rowY, selector: VIEW_MORE_POSTER_SELECTOR});
+    }, {targetRowY: rowY, targetRowId: rowId, selector: VIEW_MORE_POSTER_SELECTOR});
     return hasMarker ? fallbackReason : "Không tìm thấy poster view more";
   } catch {
     return fallbackReason;
   }
 }
 
-async function getFocusedViewMoreMetadata(page, rowY) {
-  return page.evaluate((targetRowY) => {
+// `scope` is either a row descriptor/{rowId} - the structural answer - or a
+// legacy rowY number used by screens without row containers.
+async function getFocusedViewMoreMetadata(page, scope) {
+  const rowId = typeof scope === "object" && scope !== null ? String(scope.rowId || "").trim() : "";
+  const rowY = typeof scope === "number"
+    ? scope
+    : Number(typeof scope === "object" && scope !== null ? scope.rowY || 0 : 0);
+
+  return page.evaluate(({targetRowY, targetRowId}) => {
     const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
     const poster = focused?.closest?.('.view_more[item_view_more="1"]');
     if (!poster || !isVisible(poster)) return null;
 
     const rect = poster.getBoundingClientRect();
-    if (targetRowY > 0 && Math.abs(rect.y - targetRowY) > 80) return null;
+    const container = targetRowId ? document.getElementById(targetRowId) : null;
+    if (container) {
+      if (!container.contains(poster)) return null;
+    } else if (targetRowY > 0 && Math.abs(rect.y - targetRowY) > 80) {
+      return null;
+    }
 
     const img = poster.querySelector("img");
     return {
@@ -277,7 +315,53 @@ async function getFocusedViewMoreMetadata(page, rowY) {
       return rect.width > 0 && rect.height > 0 &&
         style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
     }
-  }, rowY);
+  }, {targetRowY: rowY, targetRowId: rowId});
+}
+
+// A row is titled by the closest heading above it. Distance ordering matters on
+// Home: a label belonging to the row above can also fall inside this window and
+// would otherwise win the row title.
+function findRowHeading(headings, rowY) {
+  return headings
+    .filter((item) => item.rect.y < rowY && rowY - item.rect.y <= ROW_HEADING_MAX_DISTANCE_PX)
+    .sort((a, b) => (rowY - a.rect.y) - (rowY - b.rect.y))[0];
+}
+
+// Row membership is a containment question, not a distance question: the app
+// marks the focused element with `.focused`, and a row container owns its
+// cards. Returns null when the screen exposes no row id to test against, so
+// callers can fall back to the geometric predicate.
+async function isFocusedInsideRow(page, rowId) {
+  const targetId = String(rowId || "").trim();
+  if (!targetId || typeof page?.evaluate !== "function") return null;
+
+  try {
+    const result = await page.evaluate(({rowContainerId}) => {
+      const container = document.getElementById(rowContainerId);
+      if (!container) return null;
+
+      const focused = Array.from(document.querySelectorAll(".focused")).find((element) => {
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 &&
+          style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+      });
+      if (!focused) return false;
+
+      return container.contains(focused) || focused.contains(container);
+    }, {rowContainerId: targetId});
+    return typeof result === "boolean" ? result : null;
+  } catch {
+    return null;
+  }
+}
+
+// Prefers the structural answer and only falls back to the geometric window
+// on screens that expose no row container id.
+async function isFocusedOnRow(page, row, focusedState, rowY) {
+  const contained = await isFocusedInsideRow(page, row?.rowId);
+  if (contained !== null) return contained;
+  return isFocusedStateOnRow(focusedState, rowY);
 }
 
 function resolveRowAnchorY(focusedState, row, firstItem) {
@@ -320,40 +404,6 @@ function isSameFocusedGeometry(previousState, currentState) {
   );
 }
 
-// Proves the currently focused element still belongs to the same carousel as
-// one of the known row anchors, so a row that scrolled vertically is not
-// mistaken for focus escaping into a neighbouring row.
-async function isFocusedInsideRowOf(page, anchorIds = []) {
-  const ids = anchorIds.map((id) => String(id || "").trim()).filter(Boolean);
-  if (!ids.length || typeof page?.evaluate !== "function") return false;
-
-  try {
-    return Boolean(
-      await page.evaluate((anchorElementIds) => {
-        const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
-        if (!focused) return false;
-
-        return anchorElementIds.some((anchorId) => {
-          const anchor = document.getElementById(anchorId);
-          if (!anchor) return false;
-          if (anchor === focused || anchor.contains(focused) || focused.contains(anchor)) return true;
-          const container = anchor.parentElement;
-          return Boolean(container && container.contains(focused));
-        });
-
-        function isVisible(element) {
-          const rect = element.getBoundingClientRect();
-          const style = getComputedStyle(element);
-          return rect.width > 0 && rect.height > 0 &&
-            style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
-        }
-      }, ids)
-    );
-  } catch {
-    return false;
-  }
-}
-
 function viewMoreFocusError(rowLabel, targetLabel, reason) {
   return new Error(
     `Không thể focus poster view more "${targetLabel}" của hàng/cate "${rowLabel}": ${reason}`
@@ -371,26 +421,25 @@ async function focusIndexedContentRow(page, row, requestedItemIndex, options = {
   }
 
   await focusFirstRowStart(page, firstItem, options);
-  // Same reflow race as the view-more walk: the row can still be scrolling
-  // into the active viewport, so anchor on settled focus geometry instead of
-  // the pre-scroll snapshot.
+  // Waiting for the reflow to finish keeps the next key press from being
+  // dropped mid-scroll; row membership itself is checked structurally.
   let focusedState = await waitForFocusedGeometrySettled(page);
   const rowY = resolveRowAnchorY(focusedState, row, firstItem);
-  if (!isFocusedStateOnRow(focusedState, rowY)) {
+  if (!(await isFocusedOnRow(page, row, focusedState, rowY))) {
     throw new Error(
       `Hàng/cate "${rowLabel}" không giữ được focus trong hàng trước khi ` +
       `focus nội dung thứ ${requestedItemIndex}`
     );
   }
 
-  focusedState = await moveFocusedRowToStart(page, focusedState, rowY, rowLabel, options);
+  focusedState = await moveFocusedRowToStart(page, focusedState, rowY, rowLabel, {...options, row});
   let reachedIndex = 1;
   for (let index = 1; index < requestedItemIndex; index += 1) {
     const beforeSignature = focusStateSignature(focusedState);
     await remotePress(page, "ArrowRight", ROW_HORIZONTAL_NAV_DELAY, {snapshotCache: options.snapshotCache});
     const nextState = await getFocusedState(page);
 
-    if (!isFocusedStateOnRow(nextState, rowY)) {
+    if (!(await isFocusedOnRow(page, row, nextState, rowY))) {
       throw indexedRowFocusError(rowLabel, requestedItemIndex, reachedIndex, "remote focus left the row");
     }
     if (focusStateSignature(nextState) === beforeSignature) {
@@ -414,16 +463,17 @@ async function focusIndexedContentRow(page, row, requestedItemIndex, options = {
 }
 
 async function moveFocusedRowToStart(page, focusedState, rowY, rowLabel, options = {}) {
+  const row = options.row;
   let currentState = focusedState;
   for (let attempt = 0; attempt < ROW_HORIZONTAL_NAV_MAX_STEPS; attempt += 1) {
     const beforeSignature = focusStateSignature(currentState);
     await remotePress(page, "ArrowLeft", ROW_HORIZONTAL_NAV_DELAY, {snapshotCache: options.snapshotCache});
     const nextState = await getFocusedState(page);
 
-    if (!isFocusedStateOnRow(nextState, rowY)) {
+    if (!(await isFocusedOnRow(page, row, nextState, rowY))) {
       await remotePress(page, "ArrowRight", ROW_HORIZONTAL_NAV_DELAY, {snapshotCache: options.snapshotCache});
       const restoredState = await getFocusedState(page);
-      if (!isFocusedStateOnRow(restoredState, rowY)) {
+      if (!(await isFocusedOnRow(page, row, restoredState, rowY))) {
         throw new Error(
           `Hàng/cate "${rowLabel}" không thể khôi phục focus sau khi tìm điểm bắt đầu của hàng`
         );
@@ -472,6 +522,22 @@ function indexedRowFocusError(rowLabel, requestedItemIndex, reachedIndex, reason
 async function findServiceCategoryRow(page, targetPattern) {
   if (targetPattern !== "the loai") return null;
 
+  // Prefer the row container when this screen exposes one: the service row is
+  // then identified by its own title element like any other row.
+  const structuralRows = await collectStructuralContentRows(page).catch(() => null);
+  const structuralMatch = (structuralRows || []).find(
+    (row) => row.normalizedTitle === targetPattern
+  );
+  if (structuralMatch) {
+    return {
+      rowId: structuralMatch.rowId,
+      title: "Thể loại",
+      rowY: structuralMatch.rowY,
+      items: structuralMatch.items,
+    };
+  }
+
+  // Screens without that contract still need the heading-relative sweep.
   return page.evaluate(() => {
     const headings = Array.from(document.querySelectorAll("body *"))
       .map((element) => {
@@ -569,11 +635,26 @@ async function focusServiceCategoryItem(page, serviceName, options = {}) {
   const visitedFocusIds = new Set();
   let row = options.initialRow || await findServiceCategoryRow(page, "the loai");
 
+  // When the row container is available, every service card in the row is
+  // addressable by id - including cards scrolled out of the carousel and cards
+  // to the left of the current focus, which a rightward scan can never reach.
+  const directTarget = await findServiceCardInRowContainer(page, row?.rowId, serviceName);
+  if (directTarget) {
+    try {
+      await focusFirstRowStart(page, directTarget, {snapshotCache, allowServiceFocus: true});
+      if (isFocusedServiceItem(await getFocusedState(page), directTarget)) return directTarget;
+      if (await isFocusedOnContentItem(page, directTarget)) return directTarget;
+    } catch {
+      // Fall through to the remote scan below.
+    }
+  }
+
   for (let attempt = 0; attempt <= SERVICE_CATEGORY_MAX_SCAN_STEPS; attempt++) {
     const service = findServiceItemByName(row?.items, serviceName);
     const before = await getFocusedState(page);
     for (const item of row?.items || []) {
-      if (item?.title) observedServices.add(item.title);
+      const observed = item?.label || item?.title;
+      if (observed) observedServices.add(observed);
     }
     if (service && isFocusedServiceItem(before, service)) return service;
 
@@ -595,22 +676,49 @@ async function focusServiceCategoryItem(page, serviceName, options = {}) {
   );
 }
 
+// Looks through every card of the row container, not just the on-screen window.
+async function findServiceCardInRowContainer(page, rowId, serviceName) {
+  if (!rowId) return null;
+
+  const rows = await collectStructuralContentRows(page, {
+    includeOffScreenRows: true,
+    includeOffScreenItems: true,
+  }).catch(() => null);
+  const row = (rows || []).find((candidate) => candidate.rowId === rowId);
+  const service = findServiceItemByName(row?.items, serviceName);
+  return service?.id ? service : null;
+}
+
 function findServiceItemByName(items, serviceName) {
   const target = normalizeVietnameseText(serviceName);
-  return (items || []).find((item) =>
-    item?.id && normalizeVietnameseText(item?.title || "") === target
-  ) || null;
+  return (items || []).find((item) => {
+    if (!item?.id) return false;
+    return serviceItemLabels(item).some((label) => normalizeVietnameseText(label) === target);
+  }) || null;
+}
+
+// A service card can be described by its explicit label, by one of its label
+// attributes, or - on the geometric path - by the single title the scanner
+// built. All are exact-match candidates; nothing here is fuzzy, so
+// "Thể thao" never selects "Thể thao TV".
+function serviceItemLabels(item) {
+  const attributes = item?.attributes || {};
+  return [
+    item?.label,
+    item?.title,
+    ...CARD_LABEL_ATTRIBUTES.map((name) => attributes[name]),
+  ].filter((value) => String(value || "").trim());
 }
 
 function isFocusedServiceItem(focused, service) {
   if (!focused || !service) return false;
   if (focused.id && focused.id === service.id) return true;
 
-  const serviceTitle = normalizeVietnameseText(service.title || "");
-  if (!serviceTitle) return false;
+  const serviceLabels = serviceItemLabels(service).map((value) => normalizeVietnameseText(value));
+  if (!serviceLabels.length) return false;
   return [focused.text, focused.label]
     .map((value) => normalizeVietnameseText(value))
-    .some((value) => value === serviceTitle);
+    .some((value) => value && serviceLabels.includes(value));
 }
 
 async function focusFirstItemInCurrentContentRow(page, options = {}) {
@@ -628,6 +736,11 @@ async function focusFirstItemInCurrentContentRow(page, options = {}) {
   async function findFocusedRow(candidates) {
     for (const row of candidates) {
       if (await isFocusedOnRowItems(page, row.items)) return row;
+    }
+    // Focus can sit on a card the visible-item window missed; the row
+    // container still answers definitively.
+    for (const row of candidates) {
+      if ((await isFocusedInsideRow(page, row.rowId)) === true) return row;
     }
 
     const focused = await getFocusedState(page).catch(() => null);
@@ -657,7 +770,7 @@ async function findVisibleContentItemByName(page, name, {type = "content", snaps
       score: scoreContentItemMatch(candidate.item.title, normalizedTarget),
     }))
     .filter((candidate) => candidate.score > 0)
-    .sort((a, b) => b.score - a.score || a.row.rowY - b.row.rowY || a.itemIndex - b.itemIndex)[0];
+    .sort((a, b) => b.score - a.score || a.rowIndex - b.rowIndex || a.itemIndex - b.itemIndex)[0];
 
   if (!match) {
     throw new Error(
@@ -777,11 +890,15 @@ async function waitForVisibleHomePageRow(page, rowPrefix, {snapshotCache, timeou
 }
 
 async function collectVisibleHomePageRow(page, rowPrefix) {
-  return page.evaluate((prefix) => {
+  return page.evaluate(({prefix, containerId, cardSelector}) => {
     const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || Number.MAX_SAFE_INTEGER;
     const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || Number.MAX_SAFE_INTEGER;
-    const items = Array.from(document.querySelectorAll("[id]"))
-      .filter((element) => element.id.startsWith(prefix))
+    // Prefer the row container: it owns exactly this row's cards, in order.
+    const container = containerId ? document.getElementById(containerId) : null;
+    const cards = container
+      ? Array.from(container.querySelectorAll(cardSelector))
+      : Array.from(document.querySelectorAll("[id]")).filter((element) => element.id.startsWith(prefix));
+    const items = cards
       .map((element) => {
         const rect = element.getBoundingClientRect();
         const style = getComputedStyle(element);
@@ -830,14 +947,17 @@ async function collectVisibleHomePageRow(page, rowPrefix) {
             style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0,
         };
       })
-      .filter((item) => item.visible)
-      .sort((a, b) => a.rect.x - b.rect.x);
+      // Cards stay in document order, which is the row's reading order.
+      .filter((item) => item.visible);
 
     if (!items.length) return null;
 
-    const rowY = items.reduce((total, item) => total + item.rect.y, 0) / items.length;
+    const titleElement = container?.querySelector(".cate_content_row_title");
+    const title = (titleElement?.textContent || "").replace(/\s+/g, " ").trim();
+    const rowY = items[0]?.rect?.y || 0;
     return {
-      title: "",
+      rowId: container?.id || "",
+      title,
       normalizedTitle: "",
       rowY,
       items,
@@ -847,11 +967,21 @@ async function collectVisibleHomePageRow(page, rowPrefix) {
       const match = String(value || "").match(/url\(["']?(.+?)["']?\)/);
       return match?.[1] || "";
     }
-  }, rowPrefix);
+  }, {
+    prefix: rowPrefix,
+    containerId: homePageRowContainerId(rowPrefix),
+    cardSelector: CONTENT_CARD_SELECTOR,
+  });
+}
+
+// "homePage2_3_" addresses the cards of row container "homePage2_3".
+function homePageRowContainerId(rowPrefix) {
+  return String(rowPrefix || "").replace(/_$/u, "");
 }
 
 async function inspectHomePageRowTarget(page, rowPrefix) {
-  return page.evaluate((prefix) => {
+  return page.evaluate(({prefix, containerId}) => {
+    const container = containerId ? document.getElementById(containerId) : null;
     const homePageItems = Array.from(document.querySelectorAll("[id]"))
       .filter((element) => /^homePage2_\d+_\d+$/u.test(element.id))
       .map((element) => {
@@ -873,15 +1003,19 @@ async function inspectHomePageRowTarget(page, rowPrefix) {
             rect.left < viewportWidth && rect.top < viewportHeight,
         };
       });
-    const target = homePageItems
-      .filter((item) => item.id.startsWith(prefix) && item.inViewport)
-      .sort((a, b) => a.rect.y - b.rect.y || a.rect.x - b.rect.x)[0];
+    const rowCardIds = container
+      ? Array.from(container.querySelectorAll("[id]")).map((element) => element.id)
+      : null;
+    const belongsToRow = (id) => (rowCardIds ? rowCardIds.includes(id) : id.startsWith(prefix));
+    // Document order is the row's own order, so the first on-screen card needs
+    // no coordinate comparison.
+    const target = homePageItems.find((item) => belongsToRow(item.id) && item.inViewport);
 
     return {
       hasHomePageRows: homePageItems.some((item) => item.laidOut),
       targetId: target?.id || "",
     };
-  }, rowPrefix);
+  }, {prefix: rowPrefix, containerId: homePageRowContainerId(rowPrefix)});
 }
 
 async function findLastContentRow(page, {snapshotCache = createDomSnapshotCache()} = {}) {
@@ -917,12 +1051,14 @@ async function findLastContentRow(page, {snapshotCache = createDomSnapshotCache(
 
 function findBestContentRowMatch(rows, targetPattern) {
   return rows
-    .map((row) => ({
+    .map((row, index) => ({
       row,
+      index,
       score: scoreNormalizedTextMatch(row.normalizedTitle || normalizeVietnameseText(row.title || ""), targetPattern),
     }))
     .filter((item) => item.score > 0)
-    .sort((a, b) => b.score - a.score || a.row.rowY - b.row.rowY)[0]?.row;
+    // Ties break on document order, which is stable regardless of scroll state.
+    .sort((a, b) => b.score - a.score || a.index - b.index)[0]?.row;
 }
 
 function scoreNormalizedTextMatch(label, target) {
@@ -943,6 +1079,113 @@ function scoreNormalizedTextMatch(label, target) {
   return 0;
 }
 
+// Reads on-screen rows straight from the row containers. Returns null when the
+// screen does not expose the contract, so callers fall back to the generic
+// geometric scanner.
+async function collectStructuralContentRows(page, options = {}) {
+  if (typeof page?.evaluate !== "function") return null;
+
+  let result;
+  try {
+    result = await page.evaluate((config) => {
+      const isRendered = (element) => {
+        if (!element) return false;
+        const rect = element.getBoundingClientRect();
+        const style = getComputedStyle(element);
+        return rect.width > 0 && rect.height > 0 &&
+          style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+      };
+      // On screen means the element currently intersects the viewport. This is
+      // a rendering question, not an identity question: a card scrolled out of
+      // the carousel is still the same card in the same row.
+      const isOnScreen = (element) => {
+        if (!isRendered(element)) return false;
+        const rect = element.getBoundingClientRect();
+        const viewportWidth = window.innerWidth || document.documentElement?.clientWidth || Number.MAX_SAFE_INTEGER;
+        const viewportHeight = window.innerHeight || document.documentElement?.clientHeight || Number.MAX_SAFE_INTEGER;
+        return rect.right > 0 && rect.bottom > 0 && rect.left < viewportWidth && rect.top < viewportHeight;
+      };
+
+      const rows = Array.from(document.querySelectorAll(config.rowSelector)).map((container) => {
+        const titleElement = container.querySelector(config.titleSelector);
+        const cards = Array.from(container.querySelectorAll(config.cardSelector));
+
+        return {
+          rowId: container.id || "",
+          title: (titleElement?.textContent || "").replace(/\s+/g, " ").trim(),
+          onScreen: isOnScreen(container),
+          items: cards.map((card) => {
+            const rect = card.getBoundingClientRect();
+            const attributes = {};
+            for (const name of config.attributeNames) {
+              attributes[name] = card.getAttribute(name) || "";
+            }
+            const image = card.querySelector("img");
+            const text = (card.textContent || "").replace(/\s+/g, " ").trim();
+            const joinedTitle = [...Object.values(attributes), text]
+              .join(" ")
+              .replace(/\s+/g, " ")
+              .trim();
+            const label = config.labelAttributeNames
+              .map((name) => (card.getAttribute(name) || "").replace(/\s+/g, " ").trim())
+              .find(Boolean) || (image?.getAttribute("alt") || "").trim() || text;
+
+            return {
+              id: card.id || "",
+              title: joinedTitle,
+              label,
+              contentId: attributes.content_id || attributes["content-id"] || attributes["data-content-id"] || "",
+              attributes,
+              poster: image?.currentSrc || image?.src || "",
+              isViewMore: card.getAttribute("item_view_more") === "1",
+              rect: {
+                x: Math.round(rect.x),
+                y: Math.round(rect.y),
+                width: Math.round(rect.width),
+                height: Math.round(rect.height),
+              },
+              visible: isOnScreen(card),
+            };
+          }),
+        };
+      });
+
+      return {contract: config.contract, rows};
+    }, {
+      rowSelector: ROW_CONTAINER_SELECTOR,
+      titleSelector: ROW_TITLE_SELECTOR,
+      cardSelector: CONTENT_CARD_SELECTOR,
+      contract: STRUCTURAL_ROW_CONTRACT,
+      attributeNames: CONTENT_ITEM_CONTRACT.attributes || [],
+      labelAttributeNames: CARD_LABEL_ATTRIBUTES,
+    });
+  } catch {
+    return null;
+  }
+
+  if (result?.contract !== STRUCTURAL_ROW_CONTRACT || !Array.isArray(result.rows)) return null;
+
+  const rows = result.rows
+    .map((row) => {
+      const items = options.includeOffScreenItems === true
+        ? row.items
+        : row.items.filter((item) => item.visible);
+      return {
+        rowId: row.rowId,
+        title: row.title,
+        normalizedTitle: normalizeVietnameseText(row.title),
+        // Kept for reporting and for the geometric fallback helpers; row
+        // identity itself comes from rowId, never from this value.
+        rowY: items[0]?.rect?.y ?? row.items[0]?.rect?.y ?? 0,
+        onScreen: row.onScreen,
+        items,
+      };
+    })
+    .filter((row) => row.items.length > 0);
+
+  return options.includeOffScreenRows === true ? rows : rows.filter((row) => row.onScreen);
+}
+
 async function collectVisibleContentRows(page, options = {}) {
   const snapshotCache = options.snapshotCache;
   const snapshotIdentity = snapshotCache
@@ -951,11 +1194,18 @@ async function collectVisibleContentRows(page, options = {}) {
   const cached = snapshotCache?.get("visible-content-rows", snapshotIdentity);
   if (cached?.rows) return cached.rows;
 
+  const structuralRows = await collectStructuralContentRows(page, options);
+  if (structuralRows?.length) {
+    if (snapshotCache) snapshotCache.set("visible-content-rows", snapshotIdentity, {rows: structuralRows});
+    return structuralRows;
+  }
+
   const scanner = createScopedDomScanner(page);
   const scan = await scanner.scan({
     contractName: "contentContainer",
     candidateSelector: "[id]",
     includeHeadings: true,
+    headingExcludeAncestorSelector: CONTENT_ITEM_LABEL_ANCESTOR_SELECTOR,
     attributeNames: CONTENT_ITEM_CONTRACT.attributes || [],
     includeText: true,
     includePoster: true,
@@ -1031,9 +1281,7 @@ async function collectVisibleContentRows(page, options = {}) {
   const rows = rowBuckets
     .map((row) => {
       row.items = dedupeByPosition(row.items).slice(0, 30);
-      const heading = headings
-        .filter((item) => item.rect.y < row.rowY && row.rowY - item.rect.y <= 150)
-        .sort((a, b) => row.rowY - b.rect.y - (row.rowY - a.rect.y))[0];
+      const heading = findRowHeading(headings, row.rowY);
       row.title = heading?.text || "";
       row.normalizedTitle = normalizeVietnameseText(row.title);
       return row;
@@ -1410,7 +1658,7 @@ async function returnFromPlayerOrDetail(page) {
   });
 }
 
-async function returnToFirstRowContent(page, { item, rowY }) {
+async function returnToFirstRowContent(page, { item, rowY, rowId }) {
   await dependencies.closePlayerOrDetail(page, {
     remotePress,
     observePopup: observeExitConfirmation,
@@ -1418,7 +1666,7 @@ async function returnToFirstRowContent(page, { item, rowY }) {
     isClosed: async (candidatePage) => {
       if (
         (await isFocusedContentItem(candidatePage)) &&
-        ((await isFocusedNearRow(candidatePage, rowY)) ||
+        ((await isFocusedNearRow(candidatePage, {rowId, rowY})) ||
           (item?.id && (await isFocusedOnContentItem(candidatePage, item))))
       ) {
         return true;
@@ -1492,13 +1740,13 @@ async function dismissKnownPlaybackFailurePopup(page, popup) {
   return true;
 }
 
-async function moveToNextFirstRowContent(page, { previousSignature, rowY }) {
+async function moveToNextFirstRowContent(page, { previousSignature, rowY, rowId }) {
   const currentFocused = await getFocusedContentMetadata(page).catch(() => ({rect: null}));
-  const currentRowY = currentFocused.rect?.y || rowY;
+  const rowScope = {rowId: rowId || "", rowY: currentFocused.rect?.y || rowY};
   for (let attempt = 0; attempt < 3; attempt++) {
     await remotePress(page, "ArrowRight", 800);
 
-    if (!(await isFocusedContentItem(page)) || !(await isFocusedNearRow(page, currentRowY))) {
+    if (!(await isFocusedContentItem(page)) || !(await isFocusedNearRow(page, rowScope))) {
       return false;
     }
 
@@ -1511,7 +1759,15 @@ async function moveToNextFirstRowContent(page, { previousSignature, rowY }) {
   return false;
 }
 
-async function isFocusedNearRow(page, rowY) {
+// `scope` is a row descriptor/{rowId, rowY} or a legacy rowY number.
+async function isFocusedNearRow(page, scope) {
+  const rowId = typeof scope === "object" && scope !== null ? scope.rowId : "";
+  const contained = await isFocusedInsideRow(page, rowId);
+  if (contained !== null) return contained;
+
+  const rowY = typeof scope === "number"
+    ? scope
+    : Number(typeof scope === "object" && scope !== null ? scope.rowY || 0 : 0);
   return page.evaluate((targetY) => {
     const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
     if (!focused) return false;
@@ -1533,4 +1789,4 @@ function contentItemSignature(item) {
 }
 
 
-module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,ROW_RETURN_RENDER_DELAY_MS};
+module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,findRowHeading,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,ROW_RETURN_RENDER_DELAY_MS};
