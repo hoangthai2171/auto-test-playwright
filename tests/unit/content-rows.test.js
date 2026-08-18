@@ -191,6 +191,100 @@ test("focuses a blank-name view-more poster through remote row navigation", asyn
   assert.deepEqual(calls, [["press", "ArrowRight"], ["press", "ArrowRight"]]);
 });
 
+test("anchors the view-more walk on settled focus geometry while the row scrolls up", async () => {
+  const calls = [];
+  let focusedIndex = 0;
+  let focusReads = 0;
+  // The Home row is still smooth-scrolling into the active viewport when the
+  // first focus rect is read: y moves from 657 to 88 before it settles.
+  const focusedY = () => (focusReads++ === 0 ? 657 : 88);
+  const page = {
+    waitForTimeout: async () => {},
+    evaluate: async (_callback, argument) => {
+      if (typeof argument === "string") return focusedIndex === 0;
+      if (typeof argument === "number") {
+        return focusedIndex === 2
+          ? {id: "view-more", title: "", rect: {x: 460, y: 88, width: 150, height: 200}, isViewMore: true}
+          : null;
+      }
+      return null;
+    },
+  };
+
+  contentRows.configureContentRows({
+    getFocusedState: async () => ({
+      id: `poster-${focusedIndex}`,
+      text: "",
+      label: "",
+      rect: {x: 100 + focusedIndex * 180, y: focusedY(), width: 150, height: 200},
+    }),
+    remotePress: async (_page, key) => {
+      calls.push(["press", key]);
+      focusedIndex = Math.min(2, focusedIndex + 1);
+    },
+  });
+
+  const focused = await contentRows.focusViewMorePosterInCurrentRow(page, {
+    title: "Phim mới nhất",
+    rowY: 683,
+    items: [{id: "poster-0", title: "Poster 1", rect: {x: 100, y: 683, width: 150, height: 200}}],
+  }, {targetLabel: "Xem tất cả"});
+
+  assert.equal(focused.id, "view-more");
+  assert.deepEqual(calls, [["press", "ArrowRight"], ["press", "ArrowRight"]]);
+});
+
+test("re-anchors the row when a swallowed press leaves focus on a poster that scrolled", async () => {
+  const calls = [];
+  let focusedIndex = 0;
+  let scrolledUp = false;
+  const page = {
+    waitForTimeout: async () => {},
+    evaluate: async (_callback, argument) => {
+      if (typeof argument === "string") return focusedIndex === 0;
+      if (typeof argument === "number") {
+        return focusedIndex === 2
+          ? {id: "view-more", title: "", rect: {x: 460, y: 88, width: 150, height: 200}, isViewMore: true}
+          : null;
+      }
+      // Row-container proof for the re-anchor branch.
+      if (Array.isArray(argument)) return argument.includes(`poster-${focusedIndex}`);
+      return null;
+    },
+  };
+
+  contentRows.configureContentRows({
+    getFocusedState: async () => ({
+      id: `poster-${focusedIndex}`,
+      text: "",
+      label: "",
+      rect: {x: 100 + focusedIndex * 180, y: scrolledUp ? 88 : 657, width: 150, height: 200},
+    }),
+    remotePress: async (_page, key) => {
+      calls.push(["press", key]);
+      // The app swallows the first press to finish the vertical scroll.
+      if (!scrolledUp) {
+        scrolledUp = true;
+        return;
+      }
+      focusedIndex = Math.min(2, focusedIndex + 1);
+    },
+  });
+
+  const focused = await contentRows.focusViewMorePosterInCurrentRow(page, {
+    title: "Phim mới nhất",
+    rowY: 683,
+    items: [{id: "poster-0", title: "Poster 1", rect: {x: 100, y: 683, width: 150, height: 200}}],
+  }, {targetLabel: "Xem tất cả"});
+
+  assert.equal(focused.id, "view-more");
+  assert.deepEqual(calls, [
+    ["press", "ArrowRight"],
+    ["press", "ArrowRight"],
+    ["press", "ArrowRight"],
+  ]);
+});
+
 test("reports remote navigation failure when a known view-more poster cannot be reached", async () => {
   const page = {
     evaluate: async (_callback, argument) => {

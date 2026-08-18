@@ -31,6 +31,9 @@ const HOME_PAGE_ROW_MAX_ATTEMPTS = 18;
 const HOME_PAGE_ROW_RENDER_TIMEOUT_MS = 5000;
 const HOME_PAGE_ROW_RENDER_POLLING_MS = 250;
 const VIEW_MORE_POSTER_SELECTOR = '.view_more[item_view_more="1"]';
+const FOCUS_SETTLE_TOLERANCE_PX = 4;
+const FOCUS_SETTLE_TIMEOUT_MS = 3000;
+const FOCUS_SETTLE_POLL_MS = 120;
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
 function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
@@ -148,15 +151,15 @@ async function focusViewMorePosterInCurrentRow(page, row, options = {}) {
   }
 
   await focusFirstRowStart(page, firstItem, {snapshotCache});
-  let focusedState = await getFocusedState(page);
   // Focusing a Home row can vertically reflow the carousel into the active
-  // viewport. The row snapshot was collected before that reflow, so anchor
-  // subsequent marker checks to the verified focused poster's current y
-  // coordinate instead of the stale snapshot geometry.
-  const focusedRowY = focusedState?.rect?.y;
-  const rowY = Number.isFinite(focusedRowY) && focusedState?.rect?.height >= 80
-    ? focusedRowY
-    : row.rowY || firstItem.rect?.y || 0;
+  // viewport with a smooth scroll. Reading the focused rect mid-animation
+  // anchors the row to a transient y coordinate, so wait for the focused
+  // poster geometry to stop moving first.
+  let focusedState = await waitForFocusedGeometrySettled(page);
+  // The row snapshot was collected before that reflow, so anchor subsequent
+  // marker checks to the verified focused poster's current y coordinate
+  // instead of the stale snapshot geometry.
+  let rowY = resolveRowAnchorY(focusedState, row, firstItem);
   if (!isFocusedStateOnRow(focusedState, rowY)) {
     throw viewMoreFocusError(rowLabel, targetLabel, "focus không còn ở hàng đã chọn");
   }
@@ -167,15 +170,29 @@ async function focusViewMorePosterInCurrentRow(page, row, options = {}) {
     if (focusedViewMore) return focusedViewMore;
 
     const beforeSignature = focusStateSignature(focusedState);
+    const beforeAnchorId = focusedState?.id || firstItem.id;
     await remotePress(page, "ArrowRight", ROW_HORIZONTAL_NAV_DELAY, {snapshotCache});
-    const nextState = await getFocusedState(page);
+    let nextState = await getFocusedState(page);
+
+    if (!isFocusedStateOnRow(nextState, rowY)) {
+      // The row can still be scrolling into the active viewport while the
+      // press is handled. Re-anchor the row when the settled focus is proven
+      // to still live in the same carousel, and only fail when it left it.
+      const settledState = await waitForFocusedGeometrySettled(page, {initialState: nextState});
+      const settledRowY = resolveRowAnchorY(settledState, row, firstItem);
+      const stillInRow =
+        isFocusedStateOnRow(settledState, settledRowY) &&
+        (await isFocusedInsideRowOf(page, [settledState?.id, beforeAnchorId, firstItem.id]));
+      if (!stillInRow) {
+        throw viewMoreFocusError(rowLabel, targetLabel, "remote focus đã rời khỏi hàng");
+      }
+      rowY = settledRowY;
+      nextState = settledState;
+    }
+
     const nextSignature = focusStateSignature(nextState);
     const nextViewMore = await getFocusedViewMoreMetadata(page, rowY);
     if (nextViewMore) return nextViewMore;
-
-    if (!isFocusedStateOnRow(nextState, rowY)) {
-      throw viewMoreFocusError(rowLabel, targetLabel, "remote focus đã rời khỏi hàng");
-    }
     if (nextSignature === beforeSignature || visitedFocusStates.has(nextSignature)) {
       throw viewMoreFocusError(
         rowLabel,
@@ -263,6 +280,80 @@ async function getFocusedViewMoreMetadata(page, rowY) {
   }, rowY);
 }
 
+function resolveRowAnchorY(focusedState, row, firstItem) {
+  const focusedRowY = focusedState?.rect?.y;
+  return Number.isFinite(focusedRowY) && focusedState?.rect?.height >= 80
+    ? focusedRowY
+    : row?.rowY || firstItem?.rect?.y || 0;
+}
+
+// Remote focus moves are answered by smooth scroll/scale animations, so a rect
+// read right after a key press can be a transient mid-animation value. Poll
+// until two consecutive reads describe the same element at the same geometry.
+async function waitForFocusedGeometrySettled(page, options = {}) {
+  const timeoutMs = options.timeoutMs ?? FOCUS_SETTLE_TIMEOUT_MS;
+  const pollMs = options.pollMs ?? FOCUS_SETTLE_POLL_MS;
+  const startedAt = Date.now();
+  let previousState = options.initialState || (await getFocusedState(page));
+
+  while (Date.now() - startedAt < timeoutMs) {
+    if (typeof page?.waitForTimeout === "function") {
+      await page.waitForTimeout(pollMs);
+    }
+    const currentState = await getFocusedState(page);
+    if (isSameFocusedGeometry(previousState, currentState)) return currentState;
+    previousState = currentState;
+    if (typeof page?.waitForTimeout !== "function") break;
+  }
+
+  return previousState;
+}
+
+function isSameFocusedGeometry(previousState, currentState) {
+  if ((previousState?.id || "") !== (currentState?.id || "")) return false;
+  if ((previousState?.text || "") !== (currentState?.text || "")) return false;
+  const previousRect = previousState?.rect;
+  const currentRect = currentState?.rect;
+  if (!previousRect || !currentRect) return false;
+  return ["x", "y", "width", "height"].every(
+    (key) => Math.abs((previousRect[key] || 0) - (currentRect[key] || 0)) <= FOCUS_SETTLE_TOLERANCE_PX
+  );
+}
+
+// Proves the currently focused element still belongs to the same carousel as
+// one of the known row anchors, so a row that scrolled vertically is not
+// mistaken for focus escaping into a neighbouring row.
+async function isFocusedInsideRowOf(page, anchorIds = []) {
+  const ids = anchorIds.map((id) => String(id || "").trim()).filter(Boolean);
+  if (!ids.length || typeof page?.evaluate !== "function") return false;
+
+  try {
+    return Boolean(
+      await page.evaluate((anchorElementIds) => {
+        const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
+        if (!focused) return false;
+
+        return anchorElementIds.some((anchorId) => {
+          const anchor = document.getElementById(anchorId);
+          if (!anchor) return false;
+          if (anchor === focused || anchor.contains(focused) || focused.contains(anchor)) return true;
+          const container = anchor.parentElement;
+          return Boolean(container && container.contains(focused));
+        });
+
+        function isVisible(element) {
+          const rect = element.getBoundingClientRect();
+          const style = getComputedStyle(element);
+          return rect.width > 0 && rect.height > 0 &&
+            style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+        }
+      }, ids)
+    );
+  } catch {
+    return false;
+  }
+}
+
 function viewMoreFocusError(rowLabel, targetLabel, reason) {
   return new Error(
     `Không thể focus poster view more "${targetLabel}" của hàng/cate "${rowLabel}": ${reason}`
@@ -280,8 +371,11 @@ async function focusIndexedContentRow(page, row, requestedItemIndex, options = {
   }
 
   await focusFirstRowStart(page, firstItem, options);
-  const rowY = row.rowY || firstItem.rect?.y || 0;
-  let focusedState = await getFocusedState(page);
+  // Same reflow race as the view-more walk: the row can still be scrolling
+  // into the active viewport, so anchor on settled focus geometry instead of
+  // the pre-scroll snapshot.
+  let focusedState = await waitForFocusedGeometrySettled(page);
+  const rowY = resolveRowAnchorY(focusedState, row, firstItem);
   if (!isFocusedStateOnRow(focusedState, rowY)) {
     throw new Error(
       `Hàng/cate "${rowLabel}" không giữ được focus trong hàng trước khi ` +
