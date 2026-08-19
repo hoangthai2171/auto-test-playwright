@@ -56,6 +56,13 @@ textarea {
   white-space: nowrap;
 }
 
+.app-brand .app-version {
+  color: #7b8494;
+  font-size: 11px;
+  font-weight: 500;
+  white-space: nowrap;
+}
+
 .toolbar-actions {
   display: flex;
   flex: 0 0 auto;
@@ -1754,15 +1761,4 @@ button:disabled {
   border-color: #b64d58;
   background: #3a1d24;
   color: #ffb3b3;
-}
-
-.app-version {
-  position: fixed;
-  bottom: 8px;
-  right: 12px;
-  color: #7b8494;
-  font-size: 11px;
-  font-weight: 500;
-  z-index: 1000;
-  pointer-events: none;
 }

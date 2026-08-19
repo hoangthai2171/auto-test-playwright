@@ -2,6 +2,11 @@
 
 This file provides guidance to Claude Code (claude.ai/code) when working with code in this repository.
 
+## AgentMemory
+
+Before a non-trivial task, use AgentMemory recall/smart-search for relevant decisions, affected files, test history, and failed approaches. Treat recalled items as leads and verify them against the current code.
+Save durable decisions, non-obvious fixes, and reusable test lessons. Never save secrets, credentials, production dumps, or private customer data.
+
 ## Project Overview
 
 MyTV Auto Test is a Playwright test-automation suite for the MyTV HTML5 TV web app, wrapped in an

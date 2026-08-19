@@ -3392,6 +3392,7 @@ test("index markup contains the case browser and no API-key or mode controls", (
 
 test("keeps the app brand in the header and settings controls on the right", () => {
     const html = fs.readFileSync(path.join(__dirname, "../../app/renderer/index.html"), "utf8");
+    const css = fs.readFileSync(path.join(__dirname, "../../app/renderer/styles.css"), "utf8");
 
     const header = html.match(/<header class="toolbar">([\s\S]*?)<\/header>/)?.[1] || "";
     const sidebar = html.match(/<aside class="sidebar">([\s\S]*?)<\/aside>/)?.[1] || "";
@@ -3401,6 +3402,10 @@ test("keeps the app brand in the header and settings controls on the right", () 
     assert.match(header, /Chạy Playwright test bằng giao diện desktop\./);
     assert.match(header, /id="settings-button"/);
     assert.match(header, /id="logs-button"/);
+    assert.match(header, /<strong>MyTV Auto Test <span id="app-version" class="app-version"><\/span><\/strong>/);
+    assert.equal(html.match(/id="app-version"/g)?.length, 1);
+    assert.match(css, /\.app-brand \.app-version\s*\{[^}]*font-size:\s*11px;/s);
+    assert.doesNotMatch(css, /\.app-version\s*\{[^}]*position:\s*fixed;/s);
     assert.doesNotMatch(sidebar, /MyTV Auto Test|Chạy Playwright test bằng giao diện desktop\.|app-brand/);
 });
 
