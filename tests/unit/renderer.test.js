@@ -311,6 +311,8 @@ function createRendererFixture() {
         "browser-selected-log",
         "browser-log-selection",
         "browser-log-empty",
+        "browser-log-copy-button",
+        "browser-log-copy-label",
         "browser-preview-empty",
         "browser-preview-image",
         "lg-preview-empty",
@@ -489,6 +491,12 @@ function createRendererFixture() {
         stopTest: async () => ({ok: true}),
         openReport: () => {},
         showReportFolder: () => {},
+        clipboardWrites: [],
+        clipboardResult: {ok: true},
+        async copyTextToClipboard(text) {
+            this.clipboardWrites.push(text);
+            return this.clipboardResult;
+        },
         showInteractiveBrowser: async () => {},
         hideInteractiveBrowser: async () => {},
         suspendInteractiveBrowser: async () => {},
@@ -1606,6 +1614,57 @@ test("bounds retained Browser logs and marks discarded output", () => {
     assert.match(fixture.elements["browser-selected-log"].textContent, /Older Playwright output truncated/);
     assert.ok(fixture.elements["browser-selected-log"].textContent.length < 121000);
     assert.equal(typeof batchEvent, "function");
+});
+
+test("copies the selected Playwright log from the panel header and reports failures", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    const controller = renderer.createRendererController(fixture);
+    const copyButton = fixture.elements["browser-log-copy-button"];
+    const copyLabel = fixture.elements["browser-log-copy-label"];
+    controller.renderCaseList([{id: "case-1", name: "Case", actions: []}]);
+    controller.renderBrowserBatchEvent({type: "batch-started", batchId: "batch-copy", caseIds: ["case-1"]});
+    controller.renderBrowserBatchEvent({type: "case-assigned", batchId: "batch-copy", caseId: "case-1", slotId: 1});
+
+    assert.equal(copyButton.disabled, true);
+
+    controller.renderBrowserBatchEvent({type: "case-log", batchId: "batch-copy", caseId: "case-1", slotId: 1, text: "password: secret\nready\n"});
+    controller.selectBrowserLogCase("case-1");
+
+    assert.equal(copyButton.disabled, false);
+
+    await controller.copyBrowserLogToClipboard();
+
+    assert.equal(fixture.runner.clipboardWrites.length, 1);
+    assert.equal(fixture.runner.clipboardWrites[0], fixture.elements["browser-selected-log"].textContent);
+    assert.doesNotMatch(fixture.runner.clipboardWrites[0], /secret/);
+    assert.equal(copyLabel.textContent, "Copied");
+    assert.equal(copyButton.classList.contains("browser-log-copy-done"), true);
+
+    controller.renderBrowserBatchEvent({type: "case-log", batchId: "batch-copy", caseId: "case-1", slotId: 1, text: "more output\n"});
+
+    assert.equal(copyLabel.textContent, "Copied");
+
+    fixture.runner.clipboardResult = {ok: false, message: "Nothing to copy."};
+    await controller.copyBrowserLogToClipboard();
+
+    assert.equal(fixture.runner.clipboardWrites.length, 2);
+    assert.match(fixture.elements["form-message"].textContent, /Could not copy the Playwright log/);
+});
+
+test("places a copy control at the end of the Playwright log header", () => {
+    const html = fs.readFileSync(path.join(__dirname, "../../app/renderer/index.html"), "utf8");
+    const css = fs.readFileSync(path.join(__dirname, "../../app/renderer/styles.css"), "utf8");
+    const preload = fs.readFileSync(path.join(__dirname, "../../app/preload.js"), "utf8");
+    const mainSource = fs.readFileSync(path.join(__dirname, "../../app/main.js"), "utf8");
+    const header = html.match(/<header class="browser-log-header">([\s\S]*?)<\/header>/)?.[1] || "";
+
+    assert.match(header, /id="browser-log-copy-button"[^>]*disabled[^>]*aria-label="Copy Playwright log"/);
+    assert.ok(header.indexOf('id="browser-log-selection"') < header.indexOf('id="browser-log-copy-button"'));
+    assert.match(css, /#browser-log-selection\s*\{[^}]*margin-left:\s*auto;/s);
+    assert.match(css, /\.browser-log-copy\s*\{[^}]*align-self:\s*center;/s);
+    assert.match(preload, /copyTextToClipboard: \(text\) => ipcRenderer\.invoke\("copy-text-to-clipboard", text\)/);
+    assert.match(mainSource, /ipcMain\.handle\("copy-text-to-clipboard"[\s\S]*?clipboard\.writeText\(text\)/);
 });
 
 test("submits ordered completed Browser batch results after keyed events settle", async () => {
@@ -3411,14 +3470,15 @@ test("ships the six-slot Browser workspace and resolution/device controls", () =
     assert.match(html, /name="test-resolution" value="1920x1080"/);
     assert.match(html, /id="simultaneous-devices-select"/);
     assert.match(html, /<option value="6" selected>6 devices<\/option>/);
-    assert.match(css, /\.browser-preview\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\) 240px;/s);
+    assert.match(css, /\.browser-preview\s*\{[^}]*grid-template-rows:\s*minmax\(0, 1fr\) clamp\(198px, 24%, 318px\);/s);
     assert.doesNotMatch(css, /\.browser-preview-toolbar/);
     assert.match(css, /\.browser-slot-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*grid-template-rows:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
     assert.match(css, /\.browser-slot-grid\s*\{[^}]*gap:\s*6px;/s);
     assert.match(css, /\.browser-slot\s*\{[^}]*aspect-ratio:\s*16 \/ 9;[^}]*max-height:\s*100%;/s);
     assert.match(css, /\.browser-slot-case-name\s*\{[^}]*min-width:\s*0;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s);
     assert.match(css, /\.browser-slot-status\s*\{[^}]*background:\s*#fff;/s);
-    assert.match(css, /\.browser-log-panel\s*\{[^}]*height:\s*240px;[^}]*min-height:\s*240px;[^}]*max-height:\s*240px;[^}]*overflow:\s*hidden;/s);
+    assert.match(css, /\.browser-log-panel\s*\{[^}]*min-height:\s*180px;[^}]*overflow:\s*hidden;/s);
+    assert.doesNotMatch(css, /\.browser-log-panel\s*\{[^}]*max-height:/s);
     assert.match(css, /\.browser-selected-log\s*\{[^}]*overflow:\s*auto;/s);
 });
 

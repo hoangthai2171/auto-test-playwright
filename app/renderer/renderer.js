@@ -75,6 +75,7 @@ const DEFAULT_SETTINGS = {
 };
 
 const SAVE_TOAST_DURATION_MS = 3000;
+const COPY_LOG_FEEDBACK_DURATION_MS = 1600;
 const MAX_BROWSER_PREVIEW_SLOTS = 6;
 const MAX_BROWSER_LOG_LENGTH = 120000;
 const BROWSER_LOG_TRUNCATION_MARKER = "[Older Playwright output truncated. Newest output retained.]\n";
@@ -232,6 +233,8 @@ function createRendererController({document, windowRef, runner, storage, deferIn
     const browserSelectedLog = get("browser-selected-log");
     const browserLogSelection = get("browser-log-selection");
     const browserLogEmpty = get("browser-log-empty");
+    const browserLogCopyButton = get("browser-log-copy-button");
+    const browserLogCopyLabel = get("browser-log-copy-label");
     const legacyPreview = doc?.querySelector?.(".legacy-browser-preview");
     const lgRunConfirmationDialog = get("lg-run-confirmation-dialog");
     const lgRunConfirmationCount = get("lg-run-confirmation-count");
@@ -268,6 +271,7 @@ function createRendererController({document, windowRef, runner, storage, deferIn
     let activeBrowserBatchId = "";
     let activeBrowserBatchSettings = null;
     let activeLogCaseId = "";
+    let browserLogCopyResetTimer = null;
     const browserSlots = new Map();
     const browserCaseLogs = new Map();
     let pendingResultSubmission = null;
@@ -689,6 +693,7 @@ function createRendererController({document, windowRef, runner, storage, deferIn
             row.classList.toggle("browser-log-selected", String(row.dataset.testCaseId) === id);
         });
         browserSlots.forEach(renderBrowserSlot);
+        resetBrowserLogCopyLabel();
         refreshBrowserLogPanel();
     }
 
@@ -698,6 +703,43 @@ function createRendererController({document, windowRef, runner, storage, deferIn
         const text = activeLogCaseId ? browserCaseLogs.get(activeLogCaseId) || "" : "";
         if (browserSelectedLog) browserSelectedLog.textContent = text;
         browserLogEmpty?.classList?.toggle?.("hidden", Boolean(text));
+        if (browserLogCopyButton) browserLogCopyButton.disabled = !text;
+        if (!text) resetBrowserLogCopyLabel();
+    }
+
+    function resetBrowserLogCopyLabel() {
+        if (browserLogCopyResetTimer !== null) {
+            if (typeof win?.clearTimeout === "function") win.clearTimeout(browserLogCopyResetTimer);
+            else clearTimeout(browserLogCopyResetTimer);
+            browserLogCopyResetTimer = null;
+        }
+        if (browserLogCopyLabel) browserLogCopyLabel.textContent = "Copy";
+        browserLogCopyButton?.classList?.remove?.("browser-log-copy-done");
+    }
+
+    async function copyBrowserLogToClipboard() {
+        const text = activeLogCaseId ? browserCaseLogs.get(activeLogCaseId) || "" : "";
+        if (!text) return;
+        let copied = false;
+        try {
+            const result = await api?.copyTextToClipboard?.(text);
+            copied = Boolean(result?.ok);
+        } catch {
+            copied = false;
+        }
+        if (!copied) {
+            setFormMessage("Could not copy the Playwright log to the clipboard.", "error");
+            return;
+        }
+        resetBrowserLogCopyLabel();
+        if (browserLogCopyLabel) browserLogCopyLabel.textContent = "Copied";
+        browserLogCopyButton?.classList?.add?.("browser-log-copy-done");
+        const schedule = typeof win?.setTimeout === "function" ? win.setTimeout.bind(win) : setTimeout;
+        browserLogCopyResetTimer = schedule(() => {
+            browserLogCopyResetTimer = null;
+            if (browserLogCopyLabel) browserLogCopyLabel.textContent = "Copy";
+            browserLogCopyButton?.classList?.remove?.("browser-log-copy-done");
+        }, COPY_LOG_FEEDBACK_DURATION_MS);
     }
 
     function appendBrowserCaseLog(event) {
@@ -2921,6 +2963,7 @@ function createRendererController({document, windowRef, runner, storage, deferIn
     });
     get("open-report-button")?.addEventListener?.("click", () => api.openReport());
     get("show-report-button")?.addEventListener?.("click", () => api.showReportFolder());
+    browserLogCopyButton?.addEventListener?.("click", () => void copyBrowserLogToClipboard());
     get("settings-button")?.addEventListener?.("click", async () => {
         await suspendInteractiveBrowserForModal();
         selectSettingsPanel("gui");
@@ -3194,6 +3237,7 @@ function createRendererController({document, windowRef, runner, storage, deferIn
         runBrowserBatch,
         renderBrowserBatchEvent,
         selectBrowserLogCase,
+        copyBrowserLogToClipboard,
         runSelectedCases,
         retryResultSync,
         selectRunTarget,

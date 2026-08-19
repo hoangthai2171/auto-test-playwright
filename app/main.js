@@ -2,7 +2,7 @@ const path = require("node:path");
 const fs = require("node:fs/promises");
 const {spawn} = require("node:child_process");
 const {randomUUID} = require("node:crypto");
-const {app, BrowserView, BrowserWindow, dialog, ipcMain, safeStorage, shell} = require("electron");
+const {app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, safeStorage, shell} = require("electron");
 const {loadLocalTestCases, loadCachedTestCases, findTestCaseById} = require("../tests/lib/test-case-source");
 const {validateTestCaseList} = require("../tests/lib/test-case-schema");
 const {redactSensitiveText, createLogRedactor} = require("./credential-redaction");
@@ -1326,6 +1326,13 @@ ipcMain.handle("open-report", async () => {
 
 ipcMain.handle("show-report-folder", async () => {
     shell.showItemInFolder(reportPath());
+    return {ok: true};
+});
+
+ipcMain.handle("copy-text-to-clipboard", async (_event, value) => {
+    const text = typeof value === "string" ? value : String(value ?? "");
+    if (!text) return {ok: false, message: "Nothing to copy."};
+    clipboard.writeText(text);
     return {ok: true};
 });
 
