@@ -7,6 +7,9 @@ const { normalizePlayerCheckTimeoutSeconds, normalizeAppEnvironment } = require(
 
 const PLAYER_RETURN_DELAY_MS = 2000;
 const VIEW_MORE_LABELS = new Set(["xem tat ca", "xem them", "view more"]);
+// Actions that already checked a player for every poster they visited, so the
+// expected-result pass must not re-open one.
+const ROW_PLAYBACK_ACTIONS = new Set(["play_row", "play_all_contents"]);
 
 function attachJson(testInfo, name, value) {
   if (!testInfo || typeof testInfo.attach !== "function") return Promise.resolve();
@@ -298,8 +301,9 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
   if (kind === "player") {
     const rowPlaybackStep = [...(steps || [])]
       .reverse()
-      .find((step) => step?.action === "play_row" && step?.status === "passed" &&
-        step?.result?.type === "play_row");
+      .find((step) => step?.status === "passed" &&
+        ROW_PLAYBACK_ACTIONS.has(step?.action) &&
+        step?.result?.type === step?.action);
     if (rowPlaybackStep) {
       return {
         type: "row_playback",
@@ -621,6 +625,12 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
         rowIndex: action.rowIndex,
         rowName: action.rowName,
         count: action.count,
+        ...playbackWaitOptions,
+      }),
+    play_all_contents: ({ page, testInfo, action }) =>
+      helpers.playAllListPageContents(page, testInfo, {
+        count: action.count,
+        rowCount: action.rowCount,
         ...playbackWaitOptions,
       }),
     play_home_trailers: ({ page, testInfo }) =>

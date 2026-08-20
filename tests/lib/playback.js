@@ -446,15 +446,26 @@ async function getVisiblePopup(page) {
       );
     });
 
-    const closeButton = visibleElements.find((element) => closePattern.test(elementText(element)));
-    const errorElement = visibleElements.find((element) => errorPattern.test(elementText(element)));
+    // A match only counts when it lives inside a real dialog container. Page
+    // content is not a popup: a film synopsis such as "Một gia đình không thể
+    // rời đi" matches the error wording, and without this gate a healthy player
+    // showing that content was reported as a playback failure. Every popup the
+    // app renders carries popup/dialog/alert in its id or class, so requiring
+    // that container keeps real dialogs detected while page text is ignored.
+    const closeButton = visibleElements.find(
+      (element) => closePattern.test(elementText(element)) && findPopupRoot(element)
+    );
+    const errorElement = visibleElements.find(
+      (element) => errorPattern.test(elementText(element)) && findPopupRoot(element)
+    );
 
     if (!closeButton && !errorElement) return null;
 
     const root =
       [closeButton, errorElement]
         .filter(Boolean)
-        .map((element) => closestPopupRoot(element))
+        .map((element) => findPopupRoot(element))
+        .filter(Boolean)
         .sort((a, b) => {
           const aRect = a.getBoundingClientRect();
           const bRect = b.getBoundingClientRect();
@@ -470,29 +481,17 @@ async function getVisiblePopup(page) {
       closeText: closeButton ? elementText(closeButton) : "",
     };
 
-    function closestPopupRoot(element) {
-      let current = element;
-      while (current?.parentElement && current.parentElement !== document.body) {
-        if (looksLikePopupRoot(current)) {
-          return current;
-        }
-
-        const rect = current.getBoundingClientRect();
-        const parentRect = current.parentElement.getBoundingClientRect();
-        if (
-          parentRect.width >= rect.width &&
-          parentRect.height >= rect.height &&
-          parentRect.width <= window.innerWidth &&
-          parentRect.height <= window.innerHeight
-        ) {
-          current = current.parentElement;
-          continue;
-        }
-
-        break;
+    // The outermost ancestor-or-self that the app marks as a dialog, or null when
+    // the element is ordinary page content. Outermost matters for diagnostics: a
+    // dialog's own button can carry the marker too (#btn_alert_v2_ok), and
+    // stopping there would report the button label instead of the message.
+    function findPopupRoot(element) {
+      let root = null;
+      for (let current = element; current && current !== document.body; current = current.parentElement) {
+        if (looksLikePopupRoot(current)) root = current;
       }
 
-      return current;
+      return root;
     }
 
     function looksLikePopupRoot(element) {

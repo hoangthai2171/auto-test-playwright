@@ -13,6 +13,8 @@
     "test": "playwright test",
     "test:unit": "node --test tests/unit/*.test.js",
     "test:tv:contract": "node --test tests/run-test-case-tv.spec.js",
+    "test:list:contract": "npx playwright test tests/play-all-contents-contract.spec.js",
+    "test:popup:contract": "npx playwright test tests/visible-popup-contract.spec.js",
     "test:headed": "node scripts/run-headed.js",
     "tv:poc:tizen:setup": "node scripts/real-tv-appium/tizen-poc.js setup",
     "tv:poc:tizen:doctor": "node scripts/real-tv-appium/tizen-poc.js doctor",

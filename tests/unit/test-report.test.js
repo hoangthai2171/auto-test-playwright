@@ -147,6 +147,58 @@ test("reports every play_row item with content ID, result, and screenshot", () =
   assert.match(html, /data:image\/png;base64,second/);
 });
 
+test("reports play_all_contents posters in the row playback table", () => {
+  const entry = buildTestReportEntry({
+    testCaseId: "case-list",
+    testCaseName: "Play list page",
+    exitCode: 0,
+    caseResult: {
+      testCaseId: "case-list",
+      name: "Play list page",
+      status: "passed",
+      steps: [{
+        action: "play_all_contents",
+        status: "passed",
+        result: {
+          type: "play_all_contents",
+          route: "specialModuleList",
+          results: [
+            {
+              index: 1,
+              id: "specialModuleListRow_0_0",
+              contentId: "162566",
+              name: "Liễu Chu Ký",
+              poster: "https://example.test/first.jpg",
+              status: "playable",
+              result: "pass",
+              screenshotDataUrl: "data:image/png;base64,list",
+            },
+          ],
+        },
+      }],
+    },
+  });
+
+  assert.deepEqual(entry.rowPlaybackItems, [{
+    index: 1,
+    id: "specialModuleListRow_0_0",
+    contentId: "162566",
+    name: "Liễu Chu Ký",
+    poster: "https://example.test/first.jpg",
+    status: "playable",
+    result: "pass",
+    screenshot: "data:image/png;base64,list",
+    screenshotName: "",
+    error: "",
+  }]);
+  assert.deepEqual(entry.failedItems, []);
+
+  const html = renderUserReport(upsertTestReport(createEmptyReport(), entry));
+  assert.match(html, /Row Playback Results/);
+  assert.match(html, /Liễu Chu Ký/);
+  assert.match(html, /data:image\/png;base64,list/);
+});
+
 test("keeps every Home trailer name, status, and player screenshot on success", () => {
   const entry = buildTestReportEntry({
     testCaseId: "home-trailers-passed",

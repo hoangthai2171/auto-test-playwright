@@ -56,13 +56,26 @@ const CARD_LABEL_ATTRIBUTES = Object.freeze([
   "movie_name",
   "vod_name",
 ]);
+// A content-list page (specialModuleList, specialModuleListV2, shortHome) renders
+// the same `.cate_content_row`/`.cate_content_item` structure as a service page,
+// but as a grid whose ids encode the data position: `<idName>_<row>_<col>`.  Rows
+// scrolled out of the visible window are detached from the DOM and the page loads
+// the next batch of rows while focus approaches the end, so list-page traversal
+// has to step with the remote and read the position back instead of collecting
+// every row up front.
+const LIST_PAGE_ITEM_ID_PATTERN = /^(.*)_(\d+)_(\d+)$/u;
+const LIST_PAGE_STEP_DELAY_MS = 700;
+// A vertical step can be dropped while the page is fetching the next batch of
+// rows, so a failed step is retried before the grid is called exhausted.
+const LIST_PAGE_STEP_MAX_ATTEMPTS = 4;
+const LIST_PAGE_STEP_RETRY_DELAY_MS = 1500;
 const ROW_HEADING_MAX_DISTANCE_PX = 150;
 const FOCUS_SETTLE_TOLERANCE_PX = 4;
 const FOCUS_SETTLE_TIMEOUT_MS = 3000;
 const FOCUS_SETTLE_POLL_MS = 120;
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
-function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback};}
+function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,getFocusedListPagePosition,expectFocusedListPageContent,focusListPageGridStart,moveToNextListPageContent,returnToListPageContent};}
 function remotePress(...args){return dependencies.remotePress(...args);}
 function remoteFocusById(...args){return dependencies.remoteFocusById(...args);}
 function remoteFocusByText(...args){return dependencies.remoteFocusByText(...args);}
@@ -1789,4 +1802,203 @@ function contentItemSignature(item) {
 }
 
 
-module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,findRowHeading,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,ROW_RETURN_RENDER_DELAY_MS};
+// The focused card's grid position. `null` means focus is not on a list-page
+// grid card at all (a header control, the left menu, or nothing focused), which
+// callers treat as "the grid is not reachable from here" rather than as row 0.
+async function getFocusedListPagePosition(page) {
+  return page.evaluate((pattern) => {
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
+    if (!focused) return null;
+
+    const card = focused.classList.contains("cate_content_item")
+      ? focused
+      : focused.closest?.(".cate_content_item");
+    if (!card || !isVisible(card)) return null;
+
+    const match = new RegExp(pattern, "u").exec(card.id || "");
+    if (!match) return null;
+
+    const rowContainer = document.getElementById(`${match[1]}_${match[2]}`);
+    const rect = card.getBoundingClientRect();
+
+    return {
+      id: card.id,
+      idPrefix: match[1],
+      row: Number(match[2]),
+      col: Number(match[3]),
+      rowId: rowContainer?.id || "",
+      rowItemCount: rowContainer
+        ? rowContainer.querySelectorAll(".cate_content_item").length
+        : 0,
+      rect: {
+        x: Math.round(rect.x),
+        y: Math.round(rect.y),
+        width: Math.round(rect.width),
+        height: Math.round(rect.height),
+      },
+    };
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 &&
+        style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    }
+  }, LIST_PAGE_ITEM_ID_PATTERN.source);
+}
+
+// A list-page grid card is identified by its structure - a `.cate_content_item`
+// whose id encodes a grid position - not by the Home/service focus geometry
+// window. The leftmost column of a list page sits left of that window's x=80
+// boundary at 1280x720, so the geometric gate would reject a genuinely focused
+// card.
+async function expectFocusedListPageContent(page) {
+  let position = null;
+  await expect
+    .poll(async () => {
+      position = await getFocusedListPagePosition(page).catch(() => null);
+      return Boolean(position);
+    }, {timeout: 10000})
+    .toBe(true);
+  return position;
+}
+
+// Playback order is the reading order of the page, so traversal always starts at
+// the first card of the first row even when the page restored focus elsewhere.
+async function focusListPageGridStart(page, options = {}) {
+  const focused = await getFocusedListPagePosition(page).catch(() => null);
+  if (focused && focused.row === 0 && focused.col === 0) return focused;
+
+  const rows = await collectStructuralContentRows(page, {
+    includeOffScreenItems: true,
+    includeOffScreenRows: true,
+    ...options,
+  });
+  const firstItem = (rows || [])
+    .flatMap((row) => row.items || [])
+    .map((item) => ({item, position: LIST_PAGE_ITEM_ID_PATTERN.exec(item?.id || "")}))
+    .filter((candidate) => candidate.position)
+    .sort((a, b) =>
+      Number(a.position[2]) - Number(b.position[2]) ||
+      Number(a.position[3]) - Number(b.position[3])
+    )[0]?.item;
+  if (!firstItem?.id) {
+    throw new Error("Trang danh sách không có poster nội dung nào để bắt đầu");
+  }
+
+  await focusFirstRowStart(page, firstItem, {});
+  const position = await getFocusedListPagePosition(page).catch(() => null);
+  if (!position) {
+    throw new Error(
+      `Không thể focus poster đầu tiên "${firstItem.id}" của trang danh sách`
+    );
+  }
+  return position;
+}
+
+async function stepListPageFocus(page, key, accept, {attempts = LIST_PAGE_STEP_MAX_ATTEMPTS} = {}) {
+  for (let attempt = 0; attempt < attempts; attempt += 1) {
+    if (attempt > 0) {
+      // A press answered late must not be answered with another press, or the
+      // grid would move twice and skip a poster.
+      const settled = await getFocusedListPagePosition(page).catch(() => null);
+      if (settled && accept(settled)) return settled;
+    }
+
+    await remotePress(page, key, LIST_PAGE_STEP_DELAY_MS);
+    const next = await getFocusedListPagePosition(page).catch(() => null);
+    if (next && accept(next)) return next;
+    if (attempt + 1 < attempts) await page.waitForTimeout(LIST_PAGE_STEP_RETRY_DELAY_MS);
+  }
+  return null;
+}
+
+// Advances one card in reading order and returns the new position, or `null`
+// when the grid has no further card.  Horizontal movement stops at the end of a
+// row (the page never wraps), and vertical movement keeps the previous column
+// because the grid focuses in parallel, so the next row is walked back to its
+// leftmost card.
+async function moveToNextListPageContent(page, position) {
+  const current = position || (await getFocusedListPagePosition(page).catch(() => null));
+  if (!current) return null;
+
+  const atRowEnd = current.rowItemCount > 0 && current.col >= current.rowItemCount - 1;
+  if (!atRowEnd) {
+    const nextInRow = await stepListPageFocus(
+      page,
+      "ArrowRight",
+      (candidate) => candidate.row === current.row && candidate.col > current.col
+    );
+    if (nextInRow) return nextInRow;
+  }
+
+  const nextRow = await stepListPageFocus(
+    page,
+    "ArrowDown",
+    (candidate) => candidate.row > current.row
+  );
+  if (!nextRow) return null;
+
+  let rowStart = nextRow;
+  for (let step = 0; step < ROW_HORIZONTAL_NAV_MAX_STEPS && rowStart.col > 0; step += 1) {
+    const afterLeft = await stepListPageFocus(
+      page,
+      "ArrowLeft",
+      (candidate) => candidate.row === rowStart.row && candidate.col < rowStart.col,
+      {attempts: 2}
+    );
+    if (!afterLeft) break;
+    rowStart = afterLeft;
+  }
+
+  return rowStart;
+}
+
+async function isListPageReturnBoundary(page, routes = []) {
+  const playerObservation = await observePlayerOrDetailState(page).catch(() => ({open: true}));
+  if (playerObservation?.open === true) return false;
+
+  return page.evaluate((allowedRoutes) => {
+    const routeValue = location.hash.replace(/^#/, "").split("?")[0];
+    if (allowedRoutes.length && !allowedRoutes.includes(routeValue)) return false;
+
+    return Array.from(document.querySelectorAll(".cate_content_item")).some((card) => {
+      const rect = card.getBoundingClientRect();
+      const style = getComputedStyle(card);
+      return rect.width > 0 && rect.height > 0 &&
+        style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    });
+  }, routes).catch(() => false);
+}
+
+// The list page restores its own row/column when the player closes, so the
+// boundary check accepts either the original card or any rebuilt list-page grid.
+async function returnToListPageContent(page, {item, routes = []} = {}) {
+  await dependencies.closePlayerOrDetail(page, {
+    remotePress,
+    observePopup: observeExitConfirmation,
+    dismissUnexpectedPopup: dismissKnownPlaybackFailurePopup,
+    isClosed: async (candidatePage) => {
+      const position = await getFocusedListPagePosition(candidatePage).catch(() => null);
+      if (position && item?.id && (await isFocusedOnContentItem(candidatePage, item))) {
+        return true;
+      }
+
+      return isListPageReturnBoundary(candidatePage, routes);
+    },
+    maxBackPresses: playback.MAX_CLOSE_BACK_PRESSES,
+    backDelayMs: 1800,
+    boundaryTimeoutMs: ROW_RETURN_BOUNDARY_TIMEOUT_MS,
+  });
+
+  await page.waitForTimeout(ROW_RETURN_RENDER_DELAY_MS);
+
+  if (item?.id) {
+    await remoteFocusById(page, item.id, 20).catch(() => {});
+  }
+
+  await expectFocusedListPageContent(page);
+}
+
+
+module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,findRowHeading,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,getFocusedListPagePosition,expectFocusedListPageContent,focusListPageGridStart,moveToNextListPageContent,returnToListPageContent,isListPageReturnBoundary,ROW_RETURN_RENDER_DELAY_MS};

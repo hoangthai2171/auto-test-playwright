@@ -110,3 +110,22 @@ test("rejects Browser-only Home-trailer action before a TV session is created", 
       && /browserHomeTrailers/u.test(error.message)
   );
 });
+
+test("rejects Browser-only list playback before a TV session is created", () => {
+  assert.throws(
+    () => validateTargetCaseCapabilities({
+      id: "list-playback-browser-only",
+      name: "Play list page",
+      actions: [{action: "play_all_contents"}],
+    }, {
+      domInspection: true,
+      visualCapture: true,
+      targetSemanticActions: true,
+      playerInspection: true,
+    }),
+    (error) => error.code === "ACTION_CAPABILITY_UNSUPPORTED"
+      && error.caseId === "list-playback-browser-only"
+      && error.actionIndex === 0
+      && /browserListPlayback/u.test(error.message)
+  );
+});

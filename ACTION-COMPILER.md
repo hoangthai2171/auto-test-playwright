@@ -20,13 +20,16 @@ hợp lệ trước khi gửi cho MyTV Auto Test.
 Với từng dòng không rỗng, theo thứ tự: (1) chỉ bỏ tiền tố tùy chọn như `B1.`;
 (2) giữ dòng gốc để báo lỗi và giữ nguyên tên, dịch vụ, credential;
 (3) viết thường, bỏ dấu, đổi `đ`/`Đ` thành `d`, chuẩn hóa khoảng trắng;
-(4) khớp chính xác một grammar được hỗ trợ và phát sinh đúng một action;
+(4) khớp chính xác một grammar được hỗ trợ và phát sinh action theo grammar đó;
 (5) validate toàn bộ danh sách trước khi gửi.
 
 Nếu dòng `unsupported`, `malformed` hoặc `ambiguous`, từ chối cả testcase. Lỗi
 phải có `case ID`, số dòng, dòng gốc và lý do. Mỗi dòng chỉ có một lệnh; lệnh
-nối bằng `và`, `rồi`, `sau đó`, dấu phẩy hoặc lệnh khác là mơ hồ. Tên tìm kiếm
-giữ dạng dễ đọc; runtime chuẩn hóa ASCII và nhập từng ký tự bằng bàn phím ảo.
+nối bằng `và`, `rồi`, `sau đó`, dấu phẩy hoặc lệnh khác là mơ hồ. Một lệnh phát
+sinh đúng một action, trừ đúng một ngoại lệ đã được khai báo: dòng “bấm/chọn vào
+poster/item” là một lệnh remote gồm focus và OK nên phát sinh `focus_text` +
+`press_ok` (xem bảng grammar). Tên tìm kiếm giữ dạng dễ đọc; runtime chuẩn hóa
+ASCII và nhập từng ký tự bằng bàn phím ảo.
 
 ### Credential đăng nhập
 
@@ -58,12 +61,14 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 | `focus_row` | `Di chuyển đến dòng cate/subcate/row "<row>"`; `... focus vào poster đầu tiên ... "<row>"`; hoặc `... poster <type> thứ <n> ... "<row>"` | `rowName`; câu có số thêm `itemIndex` dương, 1-based. |
 | `focus_row_first_item` | `Di chuyển focus đến ... đầu tiên bên trái` (kể cả `subcate` hiện tại) | Focus item trái nhất của row hiện tại, không phụ thuộc loại nội dung. |
 | `focus_text` | `Focus vào mục/item "<text>"`; `Di chuyển [đến] [và] focus vào mục/item "<text>"`; hoặc focus nút `Xem ngay` của trailer Home | `text`; sau `focus_row` ở row `Thể loại`, quét poster dịch vụ. `Xem tất cả`, `Xem thêm`, `View more` dùng poster view-more tin cậy, không fallback menu trái. |
+| `focus_text` (+ `press_ok`) | `Bấm/Chọn/Nhấn vào mục/item/poster "<text>"` | Phát sinh `focus_text`; thêm `press_ok` trừ khi dòng kế tiếp đã là lệnh OK, để không Enter hai lần. |
 | `press_ok` | `Bấm/Chọn/Nhấn [phím] OK` hoặc `enter` | `{"action":"press_ok"}`; poster dịch vụ Home phải qua kiểm tra activation. |
 | `open_search` | `Vào tìm kiếm`, `Vào trang tìm kiếm`, `Vào trang tìm kiếm nội dung` | `{"action":"open_search"}` |
 | `search_content` | `Tìm/Tìm kiếm/Search <phim\|movie\|kênh\|channel\|nội dung\|content> "<name>"` | `type` là `movie`, `channel` hoặc `content`; tìm sau khi nhập bàn phím ảo. |
 | `play_content` | `Phát/Play <phim\|kênh\|nội dung> "<name>"` | Giữ tên gốc và type; chỉ item đang hiển thị, không tìm kiếm toàn cục. |
 | `play_search_result` | `Phát/Play <type> tìm được/vừa tìm/tìm thấy` | Có thể kèm `type`; dùng sau `search_content` nếu chưa xác lập result. |
 | `play_row` | `Phát/Play <n\|tất cả\|toàn bộ> [nội dung] [phim\|kênh] của hàng cate thứ <rowIndex>` hoặc `... hàng cate "<rowName>"` | `<n>` thành `count`; `tất cả`/`toàn bộ` bỏ count; đúng một row selector, không `type`; index Home bỏ row quảng bá. |
+| `play_all_contents` | `Phát/Play/Chạy <toàn bộ\|tất cả> [nội dung\|poster\|phim\|kênh] trong/ở/tại/của [trang] danh sách`; `... <n> dòng [đầu tiên] trong danh sách`; `... <n> <poster\|nội dung> [đầu tiên] trong danh sách` | Không tham số = phát hết trang danh sách; `<n> dòng` thành `rowCount`; `<n> poster/nội dung` thành `count`; không có row selector. |
 | `play_home_trailers` | `Chạy/Phát/Play (toàn bộ\|tất cả\|các) (trailer\|trailler) (ở\|trên\|tại) (trang chủ\|Home)` | `{"action":"play_home_trailers"}`; chỉ Browser, không cố định số lượng. |
 | `assert_screen` | Không có fallback grammar | Chỉ action tường minh từ server: `{"action":"assert_screen","text":"..."}`. |
 | `press_back` | `Quay lại`, `Quay về`, `Nhấn back` | `{"action":"press_back"}`; lặp phải dùng `count`. |
@@ -90,6 +95,19 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
   dòng cuối `qaDescription`, sao chép nguyên dòng vào `expectedResult`, không
   compile thành `open_service`/`press_ok`. Activation cần destination ngoài
   Home có row nội dung và không có toast/tooltip tự ẩn hoặc popup lỗi.
+- `play_all_contents` chỉ chạy trên trang danh sách nội dung mở từ poster view
+  more, route phải là `specialModuleList`, `specialModuleListV2` hoặc `shortHome`;
+  route khác (kể cả Home) fail closed. Riêng `channel-list` bị từ chối bằng lỗi
+  riêng vì row/item của trang kênh có format khác và cần bài test khác. Runtime
+  đi theo thứ tự đọc: từ trái sang phải trong một dòng, hết dòng thì xuống dòng
+  dưới và về poster ngoài cùng bên trái. Trang danh sách detach dòng đã cuộn khỏi
+  màn hình và gọi API load more khi focus xuống gần cuối, nên runtime bước bằng
+  remote rồi đọc lại vị trí `<idName>_<row>_<col>`, thử lại phím bị bỏ trong lúc
+  load more, và chỉ kết luận hết danh sách khi phím xuống không còn đổi dòng.
+  Poster view more trong trang danh sách bị bỏ qua, không Enter. Mỗi poster đều
+  có screenshot và trạng thái; lỗi một poster không dừng cả danh sách, action fail
+  nếu có poster fail hoặc không poster nào phát được. `count`/`rowCount` là giới
+  hạn duy nhất; không có giới hạn thời gian ngầm.
 - `play_home_trailers` đọc title promo tin cậy, remote tới `Xem ngay`, chụp
   screenshot và quay Home đến khi hết/lặp. Video khỏe là `playable`, Album
   detail nhìn thấy là `album_opened`, còn lại `failed`; giữ tên, status, loại
@@ -98,12 +116,13 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 
 ## Danh sách action cho phép và validate
 
-Chỉ chấp nhận đúng 16 giá trị:
+Chỉ chấp nhận đúng 17 giá trị:
 
 ```text
 login, open_home, focus_row, focus_row_first_item, focus_text, press_ok,
 open_service, open_search, search_content, play_content, play_search_result,
-play_row, play_home_trailers, assert_screen, press_back, wait_for_ready
+play_row, play_all_contents, play_home_trailers, assert_screen, press_back,
+wait_for_ready
 ```
 
 | Action | Bắt buộc | Tùy chọn |
@@ -116,11 +135,14 @@ play_row, play_home_trailers, assert_screen, press_back, wait_for_ready
 | `search_content`, `play_content` | `name`, `type` | — |
 | `play_search_result` | — | `type` |
 | `play_row` | đúng một trong `rowIndex`, `rowName` | `count` |
+| `play_all_contents` | — | nhiều nhất một trong `count`, `rowCount` |
 | `press_back` | — | `count` |
 | `wait_for_ready` | `name` | — |
 
-`type` chỉ là `channel`, `movie`, `content`; `rowIndex`, `itemIndex`, `count`
-là số nguyên dương; `press_back.count` không âm. Các field tên, row, service,
+`type` chỉ là `channel`, `movie`, `content`; `rowIndex`, `itemIndex`, `count`,
+`rowCount` là số nguyên dương; `press_back.count` không âm.
+`play_all_contents` không nhận cùng lúc `count` và `rowCount`, và không nhận
+`rowIndex`/`rowName`. Các field tên, row, service,
 text và credential phải là chuỗi không rỗng. Từ chối field lạ như `selector`,
 `module`, `handler`, `function` và mọi mã thực thi.
 

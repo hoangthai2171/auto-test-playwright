@@ -365,6 +365,7 @@ test("creates exactly the default handlers and logs in with action credentials i
     "open_home",
     "open_search",
     "open_service",
+    "play_all_contents",
     "play_content",
     "play_home_trailers",
     "play_row",
@@ -510,6 +511,35 @@ test("treats a successful exhaustive play_row as the playback expected result", 
     type: "row_playback",
     verified: "All selected row posters were checked and returned to the row",
     itemCount: 2,
+  });
+});
+
+test("treats a successful play_all_contents as the playback expected result", async () => {
+  const result = await runTestCase({id: "page"}, createTestInfo(), {
+    id: "expected-list-player",
+    name: "Expected list playback",
+    expectedResult: "Play bình thường",
+    actions: [{action: "play_all_contents"}],
+  }, {
+    helpers: createHandlerHelpers(),
+    handlers: {
+      play_all_contents: async () => ({
+        type: "play_all_contents",
+        route: "specialModuleList",
+        results: [
+          {index: 1, status: "playable"},
+          {index: 2, status: "playable"},
+          {index: 3, status: "playable"},
+        ],
+      }),
+    },
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  assert.deepEqual(result.steps.at(-1).result, {
+    type: "row_playback",
+    verified: "All selected row posters were checked and returned to the row",
+    itemCount: 3,
   });
 });
 
@@ -1204,6 +1234,50 @@ test("plays a requested row using either its 1-based index or name", async () =>
     [page, testInfo, {rowIndex: 2, rowName: undefined, count: 3}],
     [page, testInfo, {rowIndex: undefined, rowName: "VTV", count: undefined}],
   ]);
+});
+
+test("plays list-page contents with the requested poster or row bound", async () => {
+  const calls = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      playAllListPageContents: async (...args) => calls.push(args),
+    }),
+  });
+  const page = {id: "page"};
+  const testInfo = {id: "test-info"};
+
+  await handlers.play_all_contents({page, testInfo, action: {action: "play_all_contents"}});
+  await handlers.play_all_contents({
+    page,
+    testInfo,
+    action: {action: "play_all_contents", count: 7},
+  });
+  await handlers.play_all_contents({
+    page,
+    testInfo,
+    action: {action: "play_all_contents", rowCount: 3},
+  });
+
+  assert.deepEqual(calls, [
+    [page, testInfo, {count: undefined, rowCount: undefined}],
+    [page, testInfo, {count: 7, rowCount: undefined}],
+    [page, testInfo, {count: undefined, rowCount: 3}],
+  ]);
+});
+
+test("rejects play_all_contents outside a supported content-list route", () => {
+  assert.equal(
+    workflows.__internal.assertSupportedListPageRoute("specialModuleListV2"),
+    "specialModuleListV2"
+  );
+  assert.throws(
+    () => workflows.__internal.assertSupportedListPageRoute("channel-list"),
+    /channel-list/u
+  );
+  assert.throws(
+    () => workflows.__internal.assertSupportedListPageRoute("homeNewUI"),
+    /homeNewUI/u
+  );
 });
 
 test("keeps the public play_row index conversion explicit", () => {

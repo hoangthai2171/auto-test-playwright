@@ -109,7 +109,10 @@ function isHomeTrailerCase(testCase) {
 
 function isExhaustivePlayRowCase(testCase) {
   return Boolean(testCase?.actions?.some((action) =>
-    action?.action === "play_row" && action.count === undefined
+    (action?.action === "play_row" && action.count === undefined) ||
+    (action?.action === "play_all_contents" &&
+      action.count === undefined &&
+      action.rowCount === undefined)
   ));
 }
 

@@ -163,6 +163,18 @@ test("validates named playback actions", () => {
     () => validateAction({action: "play_home_trailers", count: 2}),
     /unknown field.*count/i
   );
+  assert.deepEqual(
+    validateAction({action: "play_all_contents"}),
+    {action: "play_all_contents"}
+  );
+  assert.deepEqual(
+    validateAction({action: "play_all_contents", count: 12}),
+    {action: "play_all_contents", count: 12}
+  );
+  assert.deepEqual(
+    validateAction({action: "play_all_contents", rowCount: 3}),
+    {action: "play_all_contents", rowCount: 3}
+  );
 });
 
 test("validates global search actions", () => {
@@ -197,6 +209,22 @@ test("rejects malformed playback action targets", () => {
   assert.throws(
     () => validateAction({action: "play_row", rowName: "VTV", count: 0}),
     /count.*positive/i
+  );
+  assert.throws(
+    () => validateAction({action: "play_all_contents", count: 2, rowCount: 1}),
+    /at most one.*count.*rowCount/i
+  );
+  assert.throws(
+    () => validateAction({action: "play_all_contents", count: 0}),
+    /count.*positive/i
+  );
+  assert.throws(
+    () => validateAction({action: "play_all_contents", rowCount: -1}),
+    /rowCount.*positive/i
+  );
+  assert.throws(
+    () => validateAction({action: "play_all_contents", rowName: "VTV"}),
+    /unknown field.*rowName/i
   );
 });
 

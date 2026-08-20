@@ -1,9 +1,13 @@
+// Actions whose per-poster results are rendered as the playback table instead of
+// the generic failed-item list.
+const ROW_PLAYBACK_ACTIONS = new Set(["play_row", "play_all_contents"]);
+
 function collectFailedItems(caseResult) {
   const items = [];
   const seen = new Set();
 
   for (const step of caseResult?.steps || []) {
-    if (step?.action === "play_row") continue;
+    if (ROW_PLAYBACK_ACTIONS.has(step?.action)) continue;
     collect(step?.result);
     collect(step?.details);
   }
@@ -37,7 +41,7 @@ function collectRowPlaybackItems(caseResult) {
   const seen = new Set();
 
   for (const step of caseResult?.steps || []) {
-    if (step?.action !== "play_row") continue;
+    if (!ROW_PLAYBACK_ACTIONS.has(step?.action)) continue;
     collect(step?.result);
     collect(step?.details);
   }

@@ -11,6 +11,7 @@ const ALLOWED_ACTIONS = new Set([
   "play_content",
   "play_search_result",
   "play_row",
+  "play_all_contents",
   "play_home_trailers",
   "assert_screen",
   "press_back",
@@ -32,6 +33,7 @@ const ACTION_KEYS = {
   play_content: ["action", "name", "type"],
   play_search_result: ["action", "type"],
   play_row: ["action", "rowIndex", "rowName", "count"],
+  play_all_contents: ["action", "count", "rowCount"],
   play_home_trailers: ["action"],
   assert_screen: ["action", "text"],
   press_back: ["action", "count"],
@@ -141,6 +143,23 @@ function validateAction(action, path = "action") {
       (!Number.isInteger(action.count) || action.count < 1)
     ) {
       throw new Error(`${path}.count must be a positive integer when provided`);
+    }
+  }
+
+  if (action.action === "play_all_contents") {
+    const hasCount = hasOwn(action, "count");
+    const hasRowCount = hasOwn(action, "rowCount");
+
+    if (hasCount && hasRowCount) {
+      throw new Error(`${path} must define at most one of count or rowCount`);
+    }
+
+    if (hasCount && (!Number.isInteger(action.count) || action.count < 1)) {
+      throw new Error(`${path}.count must be a positive integer when provided`);
+    }
+
+    if (hasRowCount && (!Number.isInteger(action.rowCount) || action.rowCount < 1)) {
+      throw new Error(`${path}.rowCount must be a positive integer when provided`);
     }
   }
 

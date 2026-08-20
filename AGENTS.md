@@ -254,6 +254,24 @@ The supported action allowlist is:
   attempted poster is recorded and a failed poster does not stop later items.
   On Home, numeric row indexes exclude the single `homePage1` promotional row:
   public `rowIndex: N` resolves to the `homePage2_(N-1)_*` item IDs.
+- `play_all_contents`: Browser-only action that plays the content-list page
+  opened from a `Xem tất cả` poster. It is the multi-row counterpart of
+  `play_row`: the list page is a grid, and playback follows reading order - left
+  to right inside a row, then down to the leftmost poster of the next row.
+  Optional positive `count` limits the number of posters in that order; optional
+  positive `rowCount` limits the number of rows; the two are mutually exclusive
+  and neither means the whole list. The action requires the current route to be
+  `specialModuleList`, `specialModuleListV2`, or `shortHome`, rejects
+  `channel-list` with a dedicated message (its rows and items use the channel
+  format and need their own test), and fails closed on any other screen. The
+  list page detaches rows scrolled out of the visible window and calls its
+  load-more API as focus nears the end of the grid, so traversal steps with the
+  remote, re-reads the focused `<idName>_<row>_<col>` position, retries a step
+  dropped during a load-more fetch, and ends only when a Down press no longer
+  changes rows. View-more posters inside the list are stepped over without an
+  Enter. Per-poster evidence, continue-after-failure behavior, and the row
+  playback report table match `play_row`; `count`/`rowCount` are the only bound,
+  with no implicit runtime budget.
 - `play_home_trailers`: Browser-only parameterless action that tests every
   distinct Home promotional trailer through remote `Xem ngay` → player or
   Album-detail check → Back navigation. It reads the trailer name from the

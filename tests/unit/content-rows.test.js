@@ -1087,3 +1087,135 @@ test("retries row focus while a visible row is still settling", async () => {
 
   assert.equal(remoteFocusCalls, 2);
 });
+
+// A content-list page is a grid: Right stops at the end of a row, Down keeps the
+// column (parallel focus) and stops at the last row, Left stops at column 0.
+function createListPageGridPage(rowLengths, options = {}) {
+  const state = {row: 0, col: 0, presses: [], swallow: options.swallow || 0};
+  const rows = [...rowLengths];
+
+  const page = {
+    waitForTimeout: async () => {},
+    evaluate: async (_callback, argument) => {
+      if (typeof argument !== "string") return null;
+      return {
+        id: `specialModuleListRow_${state.row}_${state.col}`,
+        idPrefix: "specialModuleListRow",
+        row: state.row,
+        col: state.col,
+        rowId: `specialModuleListRow_${state.row}`,
+        rowItemCount: rows[state.row],
+        rect: {x: 100, y: 200 + state.row * 300, width: 233, height: 131},
+      };
+    },
+  };
+
+  contentRows.configureContentRows({
+    remotePress: async (_page, key) => {
+      state.presses.push(key);
+      if (state.swallow > 0) {
+        // The page drops keys while it fetches the next batch of rows.
+        state.swallow -= 1;
+        return;
+      }
+      if (key === "ArrowRight" && state.col < rows[state.row] - 1) state.col += 1;
+      else if (key === "ArrowLeft" && state.col > 0) state.col -= 1;
+      else if (key === "ArrowDown" && state.row < rows.length - 1) {
+        state.row += 1;
+        state.col = Math.min(state.col, rows[state.row] - 1);
+      }
+      if (typeof options.onPress === "function") options.onPress(state, rows);
+    },
+  });
+
+  return {page, state, rows};
+}
+
+test("walks a list-page grid left to right, top to bottom", async () => {
+  const {page} = createListPageGridPage([3, 2]);
+  const visited = [];
+  let position = await contentRows.getFocusedListPagePosition(page);
+
+  while (position) {
+    visited.push(`${position.row}_${position.col}`);
+    position = await contentRows.moveToNextListPageContent(page, position);
+  }
+
+  assert.deepEqual(visited, ["0_0", "0_1", "0_2", "1_0", "1_1"]);
+});
+
+test("retries a swallowed vertical step instead of ending the list early", async () => {
+  // The grid drops the first Down press while it loads the next rows.
+  const {page, state} = createListPageGridPage([1, 1], {swallow: 1});
+  const first = await contentRows.getFocusedListPagePosition(page);
+  const next = await contentRows.moveToNextListPageContent(page, first);
+
+  assert.equal(next.row, 1);
+  assert.equal(state.presses.filter((key) => key === "ArrowDown").length, 2);
+});
+
+test("keeps playing rows that load-more appends while focus moves down", async () => {
+  const {page, rows} = createListPageGridPage([2, 2], {
+    onPress: (state, currentRows) => {
+      // The page fetches the next page when focus reaches the last row.
+      if (state.row === currentRows.length - 1 && currentRows.length < 3) currentRows.push(2);
+    },
+  });
+  const visited = [];
+  let position = await contentRows.getFocusedListPagePosition(page);
+
+  while (position) {
+    visited.push(`${position.row}_${position.col}`);
+    position = await contentRows.moveToNextListPageContent(page, position);
+  }
+
+  assert.equal(rows.length, 3);
+  assert.deepEqual(visited, ["0_0", "0_1", "1_0", "1_1", "2_0", "2_1"]);
+});
+
+test("reports no next content once the last poster of the last row is reached", async () => {
+  const {page} = createListPageGridPage([1]);
+  const position = await contentRows.getFocusedListPagePosition(page);
+
+  assert.equal(await contentRows.moveToNextListPageContent(page, position), null);
+});
+
+test("does not press twice when the grid answers a step late", async () => {
+  // The press lands, but the page reports the old position on the first read.
+  const state = {row: 0, col: 0, reads: 0, presses: []};
+  const page = {
+    waitForTimeout: async () => {},
+    evaluate: async (_callback, argument) => {
+      if (typeof argument !== "string") return null;
+      state.reads += 1;
+      const col = state.reads <= 1 ? 0 : state.col;
+      return {
+        id: `specialModuleListRow_0_${col}`,
+        idPrefix: "specialModuleListRow",
+        row: 0,
+        col,
+        rowId: "specialModuleListRow_0",
+        rowItemCount: 3,
+        rect: {x: 100, y: 200, width: 233, height: 131},
+      };
+    },
+  };
+
+  contentRows.configureContentRows({
+    remotePress: async (_page, key) => {
+      state.presses.push(key);
+      if (key === "ArrowRight" && state.col < 2) state.col += 1;
+    },
+  });
+
+  const next = await contentRows.moveToNextListPageContent(page, {
+    id: "specialModuleListRow_0_0",
+    row: 0,
+    col: 0,
+    rowId: "specialModuleListRow_0",
+    rowItemCount: 3,
+  });
+
+  assert.equal(next.col, 1);
+  assert.deepEqual(state.presses, ["ArrowRight"]);
+});

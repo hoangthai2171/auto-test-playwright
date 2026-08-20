@@ -191,6 +191,77 @@ test("compiles all and limited row playback steps with 1-based row indexes", () 
   );
 });
 
+test("compiles list-page playback steps with poster and row bounds", () => {
+  assert.deepEqual(
+    compileQaDescription(
+      "B1. Play toàn bộ nội dung trong danh sách\n" +
+      "B2. Phát tất cả nội dung trong trang danh sách\n" +
+      "B3. Play 3 dòng đầu tiên trong danh sách\n" +
+      "B4. Phát 10 poster đầu tiên trong danh sách\n" +
+      "B5. Play 5 nội dung đầu trong danh sách"
+    ),
+    [
+      {action: "play_all_contents"},
+      {action: "play_all_contents"},
+      {action: "play_all_contents", rowCount: 3},
+      {action: "play_all_contents", count: 10},
+      {action: "play_all_contents", count: 5},
+    ]
+  );
+});
+
+test("compiles the view-more list description into focus, OK and list playback", () => {
+  assert.deepEqual(
+    compileQaDescription(
+      "B1. Đăng nhập vào app với tài khoản ts1/111222\n" +
+      "B2. Vào trang chủ ứng dụng\n" +
+      'B3. Di chuyển đến dòng cate "Thể loại"\n' +
+      'B4. Chọn vào item "Phim truyện"\n' +
+      "B5. Bấm OK\n" +
+      'B6. Di chuyển đến dòng cate "Phim gì tối nay"\n' +
+      'B7. Bấm vào poster "Xem tất cả"\n' +
+      "B8. Play toàn bộ nội dung trong danh sách",
+      {caseId: "list-page-case"}
+    ),
+    [
+      {action: "login", username: "ts1", password: "111222"},
+      {action: "open_home"},
+      {action: "focus_row", rowName: "Thể loại"},
+      {action: "focus_text", text: "Phim truyện"},
+      {action: "press_ok"},
+      {action: "focus_row", rowName: "Phim gì tối nay"},
+      {action: "focus_text", text: "Xem tất cả"},
+      {action: "press_ok"},
+      {action: "play_all_contents"},
+    ]
+  );
+});
+
+test("never activates a pressed poster twice when the OK step is spelled out", () => {
+  assert.deepEqual(
+    compileQaDescription(
+      'B1. Bấm vào poster "Xem tất cả"\n' +
+      "B2. Nhấn OK\n" +
+      'B3. Chọn vào item "Phim truyện"'
+    ),
+    [
+      {action: "focus_text", text: "Xem tất cả"},
+      {action: "press_ok"},
+      {action: "focus_text", text: "Phim truyện"},
+      {action: "press_ok"},
+    ]
+  );
+});
+
+test("preserves the original line when list-page wording is incomplete", () => {
+  const originalLine = "B1. Play toàn bộ nội dung";
+
+  assert.throws(
+    () => compileQaDescription(originalLine, {caseId: "list-page-near-miss"}),
+    (error) => error.message.includes(originalLine)
+  );
+});
+
 test("compiles all Home-trailer wording variants to one action", () => {
   const verbs = ["Chạy", "Phát", "Play"];
   const quantities = ["toàn bộ", "tất cả", "các"];

@@ -29,9 +29,14 @@ const {
     moveToNextFirstRowContent,
     returnToFirstRowContent,
     openFocusedContentForPlayback,
+    getFocusedListPagePosition,
+    expectFocusedListPageContent,
+    focusListPageGridStart,
+    moveToNextListPageContent,
+    returnToListPageContent,
 } = contentRows;
 const {getPlayerState, inspectPlaybackAfterWait, PLAYER_PLAYBACK_WAIT_SECONDS} = playback;
-const {runStep, attachCurrentAppScreenshot, attachMovieSearchFailureArtifacts, attachSearchNoResultArtifacts, attachFailureArtifacts, attachFirstRowPlaybackReport, renderPlaybackResultsHtml, renderPlaybackErrorCell, imageDataUrl, safeArtifactName} = artifacts;
+const {runStep, attachCurrentAppScreenshot, attachMovieSearchFailureArtifacts, attachSearchNoResultArtifacts, attachFailureArtifacts, attachPlaybackBatchReport, attachFirstRowPlaybackReport, renderPlaybackResultsHtml, renderPlaybackErrorCell, imageDataUrl, safeArtifactName} = artifacts;
 const {activateVerifiedTarget, assertSelectorHealth, getContractLocator, resolveContractLocatorId} = selectorValidation;
 const {waitForFocusState, waitForContentVisible} = waits;
 
@@ -640,6 +645,219 @@ async function playItemsInRow(page, testInfo, options = {}) {
     });
 }
 
+// Content-list pages reached from a "Xem tất cả" poster. `channel-list` is
+// deliberately excluded: it builds rows and items in its own channel format and
+// needs its own test.
+const LIST_PAGE_CONTENT_ROUTES = Object.freeze([
+    "specialModuleList",
+    "specialModuleListV2",
+    "shortHome",
+]);
+const CHANNEL_LIST_ROUTE = "channel-list";
+
+function assertSupportedListPageRoute(route) {
+    const routeValue = String(route || "").trim();
+    if (LIST_PAGE_CONTENT_ROUTES.includes(routeValue)) return routeValue;
+
+    if (routeValue === CHANNEL_LIST_ROUTE) {
+        throw new Error(
+            `Trang danh sách kênh "${CHANNEL_LIST_ROUTE}" chưa được hỗ trợ bởi play_all_contents: ` +
+                "row và item của trang này có format riêng nên cần một bài test khác"
+        );
+    }
+
+    throw new Error(
+        "play_all_contents phải chạy trên trang danh sách nội dung " +
+            `(${LIST_PAGE_CONTENT_ROUTES.join(", ")}); màn hình hiện tại là ` +
+            `"${routeValue || "không xác định"}"`
+    );
+}
+
+async function playAllListPageContents(page, testInfo, options = {}) {
+    const waitSeconds = Number(options.waitSeconds || PLAYER_PLAYBACK_WAIT_SECONDS);
+    const route = assertSupportedListPageRoute(getSubpageSafe(page?.url?.()));
+    const rowLimit = Number.isInteger(options.rowCount) && options.rowCount > 0
+        ? options.rowCount
+        : undefined;
+
+    await waitForContentVisible(page, {
+        name: "list-page-content",
+        testInfo,
+        getContentState: observeVisibleContentRows,
+        getFocusedState,
+        reason: "no visible list-page content row was ready before list playback",
+    });
+
+    const batchBudget = createBatchBudget({
+        itemLimit: options.count === undefined ? 0 : options.count,
+        // The requested scope is the bound here - a poster count, a row count, or
+        // the whole list.  A wall-clock budget would silently truncate what the
+        // case asked for, so it only applies when a caller sets one explicitly.
+        runtimeBudgetMs: options.runtimeBudgetMs === undefined
+            ? Number.POSITIVE_INFINITY
+            : options.runtimeBudgetMs,
+    });
+
+    const results = [];
+    const seenItems = new Set();
+    let attempted = 0;
+    let stopReason = "list-exhausted";
+    let budgetLimited = false;
+    let position = await focusListPageGridStart(page);
+
+    for (let index = 0; position; index += 1) {
+        if (rowLimit !== undefined && position.row >= rowLimit) {
+            stopReason = "row-limit";
+            break;
+        }
+
+        const focusedItem = await getFocusedContentMetadata(page);
+        const focusedViewMore = await getFocusedViewMoreMetadata(page, {
+            rowId: position.rowId,
+            rowY: position.rect?.y,
+        }).catch(() => null);
+        if (focusedViewMore) {
+            // A view-more poster navigates to another list; it is not content, so
+            // it is stepped over without ever being activated.
+            position = await advanceListPagePosition(page, position);
+            continue;
+        }
+
+        await expectFocusedListPageContent(page);
+        const item = focusedItem.id ? focusedItem : {id: position.id, title: "", poster: ""};
+        const signature = contentItemSignature(item);
+
+        if (seenItems.has(signature)) {
+            stopReason = "duplicate-item";
+            break;
+        }
+
+        const startDecision = batchBudget.canStart({
+            completed: results.length,
+            attempted,
+            estimatedDurationMs: waitSeconds * 1000,
+        });
+        if (!startDecision.allowed) {
+            stopReason = startDecision.reason;
+            budgetLimited = true;
+            break;
+        }
+
+        attempted += 1;
+        seenItems.add(signature);
+        const label = item.title || `Item ${index + 1}`;
+        const rowNumber = position.row + 1;
+        const columnNumber = position.col + 1;
+
+        await test.step(`Play list item ${index + 1} (dòng ${rowNumber}, poster ${columnNumber}): ${label}`, async () => {
+            const result = {
+                index: index + 1,
+                id: item.id || "",
+                contentId: getContentId(item),
+                name: label,
+                title: label,
+                poster: item.poster || "",
+                rowNumber,
+                columnNumber,
+                status: "unknown",
+                result: "fail",
+                errorPopup: "",
+                screenshot: "",
+                screenshotDataUrl: "",
+            };
+
+            try {
+                await expectFocusedListPageContent(page);
+                await testInfo.attach(`${safeArtifactName(`list-page-${index + 1}-focused-item`)}.json`, {
+                    body: JSON.stringify({item, position}, null, 2),
+                    contentType: "application/json",
+                });
+                await openFocusedContentForPlayback(page, testInfo, item);
+
+                const playback = await inspectPlaybackAfterWait(page, waitSeconds);
+                result.status = playback.ok ? "playable" : "failed";
+                result.result = playback.ok ? "pass" : "fail";
+                result.errorPopup = playback.popup?.text || playback.playerState?.reason || "";
+                result.playerState = playback.playerState;
+
+                await captureRowPlaybackScreenshot(page, testInfo, result, label, "player", "list-page");
+            } catch (error) {
+                result.status = "failed";
+                result.result = "fail";
+                result.errorPopup = error?.message || String(error);
+                await captureRowPlaybackScreenshot(page, testInfo, result, label, "error", "list-page");
+            }
+
+            try {
+                await returnToListPageContent(page, {item, routes: LIST_PAGE_CONTENT_ROUTES});
+            } catch (error) {
+                // One poster must not erase the evidence already collected or abort
+                // the rest of the list.  The return helper dismisses recognized
+                // playback dialogs; anything else is recorded here and the caller
+                // decides whether the list is still safely recoverable.
+                result.status = "failed";
+                result.result = "fail";
+                result.cleanupError = error?.message || String(error);
+                if (!result.errorPopup) result.errorPopup = result.cleanupError;
+                if (!result.screenshotDataUrl) {
+                    await captureRowPlaybackScreenshot(page, testInfo, result, label, "cleanup-error", "list-page");
+                }
+            }
+
+            result.result = result.status === "playable" ? "pass" : "fail";
+            results.push(result);
+        });
+
+        position = await advanceListPagePosition(page, position);
+    }
+
+    const budgetReport = batchBudget.report({
+        completed: results.length,
+        attempted,
+        reason: stopReason,
+        budgetLimited,
+    });
+    await testInfo.attach("list-page-playback-budget.json", {
+        body: JSON.stringify({route, rowLimit: rowLimit ?? null, ...budgetReport}, null, 2),
+        contentType: "application/json",
+    });
+    await attachPlaybackBatchReport(testInfo, results, {
+        prefix: "list-page-playback",
+        heading: "List-page playback results",
+        includeScreenshot: true,
+        screenshotHeading: "Player/error screenshot",
+    });
+
+    const playableCount = results.filter((item) => item.status === "playable").length;
+    const failedItems = results.filter((item) => item.status === "failed");
+    if (failedItems.length > 0 || playableCount === 0) {
+        const failureSummary = formatRowPlaybackFailureSummary(failedItems);
+        const error = new Error(
+            failedItems.length > 0
+                ? failedItems.length + " list content item(s) failed to play:\n" + failureSummary
+                : "At least one list content item should play successfully"
+        );
+        error.details = {
+            route,
+            results,
+            failedItems,
+            budget: budgetReport,
+            exhaustive: options.count === undefined && rowLimit === undefined,
+        };
+        throw error;
+    }
+
+    return {type: "play_all_contents", route, results, budget: budgetReport};
+}
+
+// After a player closes, the list page rebuilds its rows and restores its own
+// row/column.  Stepping from the live focus keeps traversal aligned with what the
+// page actually restored instead of a position captured before playback.
+async function advanceListPagePosition(page, previousPosition) {
+    const livePosition = await getFocusedListPagePosition(page).catch(() => null);
+    return moveToNextListPageContent(page, livePosition || previousPosition);
+}
+
 async function skipFocusedViewMorePoster(page, {focusedItem, rowY, rowId}) {
     const focusedViewMore = await getFocusedViewMoreMetadata(page, {rowId, rowY}).catch(() => null);
     if (!focusedViewMore) return {skipped: false, movedToNext: false};
@@ -665,11 +883,11 @@ function getContentId(item) {
     return String(item?.contentId || item?.attributes?.content_id || item?.attributes?.["content-id"] || item?.attributes?.["data-content-id"] || "").trim();
 }
 
-async function captureRowPlaybackScreenshot(page, testInfo, result, label, suffix = "player") {
+async function captureRowPlaybackScreenshot(page, testInfo, result, label, suffix = "player", prefix = "first-row") {
     if (result.screenshotDataUrl) return;
 
     try {
-        const screenshotName = `${safeArtifactName(`first-row-${result.index}-${label}-${suffix}`)}.png`;
+        const screenshotName = `${safeArtifactName(`${prefix}-${result.index}-${label}-${suffix}`)}.png`;
         const screenshot = await page.screenshot({fullPage: false});
         if (testInfo?.attach) {
             await testInfo.attach(screenshotName, {
@@ -2041,6 +2259,7 @@ module.exports = {
     openFirstMovieContent,
     playAllItemsInFirstRow,
     playItemsInRow,
+    playAllListPageContents,
     playVisibleContentByName,
     playFocusedSearchResult,
     assertChannelPlayback: playback.assertChannelPlayback,
@@ -2070,5 +2289,8 @@ module.exports = {
         formatRowPlaybackFailureSummary,
         normalizePlayRowIndex,
         skipFocusedViewMorePoster,
+        assertSupportedListPageRoute,
+        advanceListPagePosition,
+        LIST_PAGE_CONTENT_ROUTES,
     },
 };

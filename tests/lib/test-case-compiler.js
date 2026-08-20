@@ -26,6 +26,11 @@ function ambiguousStepError(context, originalLine) {
   );
 }
 
+// A description can spell the OK press on its own line, or fold it into the
+// "Bấm vào <poster>" wording. The lookahead below decides which line owns the
+// activation so a poster is never activated twice.
+const OK_STEP_PATTERN = /^(?:nhan|bam|chon)(?: chon)?(?: phim)? (?:ok|enter)[.!?…。！？]*$/u;
+
 const STEP_COMPILERS = [
   {
     matches(normalizedLine) {
@@ -187,6 +192,54 @@ const STEP_COMPILERS = [
       }
 
       return {action: "focus_row_first_item"};
+    },
+  },
+  {
+    matches(normalizedLine) {
+      return /^(?:chon|bam|nhan)\s+vao\s+(?:muc|item|poster)\s+["“].+?["”][.!?…。！？]*$/u.test(normalizedLine);
+    },
+    compile(preparedLine, normalizedLine, context = {}) {
+      const normalizedMatch = normalizedLine.match(
+        /^(?:chon|bam|nhan)\s+vao\s+(?:muc|item|poster)\s+["“](.+?)["”][.!?…。！？]*$/u
+      );
+      const preparedMatch = preparedLine.match(
+        /^(?:chọn|bấm|nhấn)\s+vào\s+(?:mục|item|poster)\s+["“](.+?)["”][.!?…。！？]*$/iu
+      );
+
+      if (!normalizedMatch) return null;
+
+      const focus = {
+        action: "focus_text",
+        text: (preparedMatch?.[1] || normalizedMatch[1]).trim(),
+      };
+
+      // On a remote, pressing a poster is focus plus activation. When the next
+      // step already spells the OK press, that step owns the activation.
+      if (OK_STEP_PATTERN.test(context.nextNormalizedLine || "")) return focus;
+      return [focus, {action: "press_ok"}];
+    },
+  },
+  {
+    matches(normalizedLine) {
+      return /^(?:phat|play|chay)\s+(?:toan bo|tat ca|\d+)\s+.*\b(?:trang )?danh sach\b/u.test(normalizedLine);
+    },
+    compile(_preparedLine, normalizedLine) {
+      const allMatch = normalizedLine.match(
+        /^(?:phat|play|chay)\s+(?:toan bo|tat ca)(?:\s+(?:noi dung|poster|phim|kenh))?\s+(?:trong|o|tai|cua)\s+(?:trang\s+)?danh sach[.!?…。！？]*$/u
+      );
+      if (allMatch) return {action: "play_all_contents"};
+
+      const rowMatch = normalizedLine.match(
+        /^(?:phat|play|chay)\s+(\d+)\s+dong(?:\s+dau(?: tien)?)?\s+(?:trong|o|tai|cua)\s+(?:trang\s+)?danh sach[.!?…。！？]*$/u
+      );
+      if (rowMatch) return {action: "play_all_contents", rowCount: Number(rowMatch[1])};
+
+      const itemMatch = normalizedLine.match(
+        /^(?:phat|play|chay)\s+(\d+)\s+(?:poster|noi dung)(?:\s+dau(?: tien)?)?\s+(?:trong|o|tai|cua)\s+(?:trang\s+)?danh sach[.!?…。！？]*$/u
+      );
+      if (itemMatch) return {action: "play_all_contents", count: Number(itemMatch[1])};
+
+      return null;
     },
   },
   {
@@ -369,7 +422,7 @@ function hasTrailingCommand(normalizedLine) {
   );
 }
 
-function compileLine(originalLine, context, actionIndex) {
+function compileLine(originalLine, context, actionIndex, nextLine) {
   const preparedLine = prepareStepLine(originalLine);
   const normalizedLine = normalizeVietnameseText(preparedLine);
   const serviceCompiler = STEP_COMPILERS.find((compiler) => compiler.isService);
@@ -391,13 +444,24 @@ function compileLine(originalLine, context, actionIndex) {
     throw unsupportedStepError(context, originalLine);
   }
 
-  const action = matchingCompilers[0].compile(preparedLine, normalizedLine);
+  const compiled = matchingCompilers[0].compile(preparedLine, normalizedLine, {
+    nextNormalizedLine: nextLine === undefined
+      ? ""
+      : normalizeVietnameseText(prepareStepLine(nextLine)),
+  });
 
-  if (!action) {
+  if (!compiled) {
     throw unsupportedStepError(context, originalLine);
   }
 
-  return validateAction(action, `compiledActions[${actionIndex}]`);
+  const actions = Array.isArray(compiled) ? compiled : [compiled];
+  if (!actions.length) {
+    throw unsupportedStepError(context, originalLine);
+  }
+
+  return actions.map((action, offset) =>
+    validateAction(action, `compiledActions[${actionIndex + offset}]`)
+  );
 }
 
 function compileQaDescription(qaDescription, context = {}) {
@@ -411,9 +475,12 @@ function compileQaDescription(qaDescription, context = {}) {
     .split(/\r?\n/u)
     .filter((line) => line.trim().length > 0);
 
-  return lines.map((line, actionIndex) =>
-    compileLine(line, context, actionIndex)
-  );
+  const actions = [];
+  lines.forEach((line, lineIndex) => {
+    actions.push(...compileLine(line, context, actions.length, lines[lineIndex + 1]));
+  });
+
+  return actions;
 }
 
 function compileTestCase(testCase) {

@@ -229,6 +229,7 @@ initial action vocabulary is:
 - `play_content`
 - `play_search_result`
 - `play_row`
+- `play_all_contents`
 - `play_home_trailers`
 - `assert_screen`
 - `press_back`
@@ -242,6 +243,29 @@ before the next poster is focused. A recognized playback/unsupported-device
 dialog is recorded as that poster's failure and dismissed safely so the row
 can continue. On Home, the single `homePage1` promotional row is excluded from
 numeric counting, so public `rowIndex: 5` targets `homePage2_4_*`.
+
+`npm run test:list:contract` covers this action's traversal loop against a
+simulated list page and needs no live app.
+
+`play_all_contents` plays every content poster of the content-list page opened
+from a `Xem tất cả` poster. It is the multi-row counterpart of `play_row`: the
+list page is a grid of rows, and playback follows the page's reading order -
+left to right within a row, then down to the next row starting at its leftmost
+poster. Pass a positive `count` to play only the first N posters in that order,
+or a positive `rowCount` to play only the first N rows; the two are mutually
+exclusive, and with neither the whole list is played. The action requires the
+current route to be `specialModuleList`, `specialModuleListV2`, or `shortHome`
+and fails closed anywhere else. `channel-list` is rejected with its own message:
+the channel list builds rows and items in a different format and needs its own
+test. Because the page detaches rows that scroll out of view and calls its
+load-more API as focus approaches the end of the grid, the runner steps with the
+remote and re-reads the focused `<idName>_<row>_<col>` position instead of
+collecting rows up front, retries a step that was dropped during a load-more
+fetch, and treats the grid as finished only when a Down press no longer changes
+rows. A view-more poster inside the list is stepped over without an Enter.
+Per-poster evidence, failure handling, and the report table are the same as
+`play_row`; `count`/`rowCount` are the only bound, with no implicit wall-clock
+cutoff.
 
 When `focus_text` immediately follows `focus_row` for Home `Thể loại`, it
 scans the complete reachable service carousel, moving right and re-reading the
@@ -300,6 +324,9 @@ Playback actions use only content currently visible in the TV page's rows:
 {"action":"play_search_result","type":"movie"}
 {"action":"play_row","rowIndex":2,"count":3}
 {"action":"play_row","rowName":"Phim song song"}
+{"action":"play_all_contents"}
+{"action":"play_all_contents","count":10}
+{"action":"play_all_contents","rowCount":3}
 {"action":"play_home_trailers"}
 ```
 
