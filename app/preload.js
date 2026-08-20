@@ -51,6 +51,7 @@ contextBridge.exposeInMainWorld("mytvRunner", {
   openReport: () => ipcRenderer.invoke("open-report"),
   showReportFolder: () => ipcRenderer.invoke("show-report-folder"),
   copyTextToClipboard: (text) => ipcRenderer.invoke("copy-text-to-clipboard", text),
+  saveTextFile: (values) => ipcRenderer.invoke("save-text-file", values),
   onStarted: (callback) => ipcRenderer.on("test-started", callback),
   onLog: (callback) => ipcRenderer.on("test-log", (_event, value) => callback(value)),
   onPreview: (callback) => ipcRenderer.on("browser-preview", (_event, value) => callback(value)),

@@ -1,4 +1,5 @@
 const TEST_CONFIGURATION = typeof require === "function" ? require("../test-configuration") : globalThis.MYTV_TEST_CONFIGURATION;
+const API_CURL = typeof require === "function" ? require("../api-curl") : globalThis.MYTV_API_CURL;
 
 function maskActionForDisplay(action) {
     const displayAction = {...action};
@@ -26,6 +27,109 @@ function freezeSubmission(value) {
 
 function cloneFrozenSubmission(value) {
     return freezeSubmission(JSON.parse(JSON.stringify(value)));
+}
+
+const WEBP_SCREENSHOT_DATA_URL_PREFIX = "data:image/webp;base64,";
+const WEBP_SCREENSHOT_QUALITY = 0.8;
+const WEBP_SCREENSHOT_MAX_DIMENSION = 1280;
+const WEBP_SCREENSHOT_DECODE_TIMEOUT_MS = 5000;
+
+function resolveCaseScreenshotDataUrl(caseResult) {
+    const completion = String(caseResult?.completionScreenshotDataUrl ?? "").trim();
+    if (completion) return completion;
+    const steps = Array.isArray(caseResult?.steps) ? [...caseResult.steps].reverse() : [];
+    for (const step of steps) {
+        const candidates = collectScreenshotCandidates(step);
+        const chosen = candidates.find((item) => item.status === "failed") || candidates[0];
+        if (chosen) return chosen.dataUrl;
+    }
+    return "";
+}
+
+function collectScreenshotCandidates(step) {
+    const candidates = [];
+    const visit = (value) => {
+        if (!value || typeof value !== "object") return;
+        if (Array.isArray(value.results)) {
+            value.results.forEach(visit);
+            return;
+        }
+        const dataUrl = String(value.screenshotDataUrl ?? "").trim();
+        if (dataUrl) candidates.push({dataUrl, status: String(value.status ?? "")});
+    };
+    visit(step);
+    visit(step?.result);
+    visit(step?.details);
+    return candidates;
+}
+
+async function convertScreenshotToWebpBase64(dataUrl, {doc, win} = {}) {
+    const source = String(dataUrl ?? "").trim();
+    if (!/^data:image\/(?:png|jpe?g|webp);base64,[A-Za-z0-9+/]+={0,2}$/iu.test(source)) return "";
+    if (source.toLowerCase().startsWith(WEBP_SCREENSHOT_DATA_URL_PREFIX)) {
+        return source.slice(WEBP_SCREENSHOT_DATA_URL_PREFIX.length);
+    }
+
+    const canvas = doc?.createElement?.("canvas");
+    const context = canvas?.getContext?.("2d");
+    const ImageConstructor = win?.Image;
+    if (!context || typeof ImageConstructor !== "function") return "";
+
+    try {
+        const image = await decodeScreenshotImage(ImageConstructor, source, win);
+        const width = image?.naturalWidth || image?.width || 0;
+        const height = image?.naturalHeight || image?.height || 0;
+        if (!width || !height) return "";
+        const scale = Math.min(1, WEBP_SCREENSHOT_MAX_DIMENSION / Math.max(width, height));
+        canvas.width = Math.max(1, Math.round(width * scale));
+        canvas.height = Math.max(1, Math.round(height * scale));
+        context.drawImage(image, 0, 0, canvas.width, canvas.height);
+        const encoded = String(canvas.toDataURL?.("image/webp", WEBP_SCREENSHOT_QUALITY) ?? "");
+        if (!encoded.toLowerCase().startsWith(WEBP_SCREENSHOT_DATA_URL_PREFIX)) return "";
+        return encoded.slice(WEBP_SCREENSHOT_DATA_URL_PREFIX.length);
+    } catch {
+        return "";
+    }
+}
+
+function decodeScreenshotImage(ImageConstructor, source, win) {
+    const setTimer = typeof win?.setTimeout === "function" ? win.setTimeout.bind(win) : setTimeout;
+    const clearTimer = typeof win?.clearTimeout === "function" ? win.clearTimeout.bind(win) : clearTimeout;
+    return new Promise((resolve, reject) => {
+        const image = new ImageConstructor();
+        const timer = setTimer(() => reject(new Error("Timed out decoding the test screenshot.")), WEBP_SCREENSHOT_DECODE_TIMEOUT_MS);
+        image.onload = () => {
+            clearTimer(timer);
+            resolve(image);
+        };
+        image.onerror = () => {
+            clearTimer(timer);
+            reject(new Error("Could not decode the test screenshot."));
+        };
+        image.src = source;
+    });
+}
+
+function omitApiLogCurl(entry) {
+    if (!entry || typeof entry !== "object" || Array.isArray(entry)) return entry;
+    const {curl, ...rest} = entry;
+    return rest;
+}
+
+function collectApiLogCurl(apiLogs) {
+    const commands = (Array.isArray(apiLogs) ? apiLogs : [apiLogs])
+        .map((entry) => String(entry?.curl ?? "").trim())
+        .filter(Boolean);
+    return commands.length ? commands.join("\n\n") : API_CURL.buildCurlCommands(apiLogs);
+}
+
+function elideCopyOnlyLogValues(key, value) {
+    if (typeof value !== "string" || !value) return value;
+    // `screenshots` and `curl` carry the full base64 payload and the real service
+    // token: they belong in the clipboard, never in the visible log.
+    if (key === "screenshots") return `[WebP base64, ${value.length} chars]`;
+    if (key === "curl") return `[cURL command, ${value.length} chars]`;
+    return value;
 }
 
 function formatGmtPlusSevenTimestamp(date = new Date()) {
@@ -268,6 +372,7 @@ function createRendererController({document, windowRef, runner, storage, deferIn
     const foldersByPath = new Map();
     let apiRequestDepth = 0;
     let activeRunnerLog = null;
+    const apiRequestLogCards = new Map();
     let activeBrowserBatchId = "";
     let activeBrowserBatchSettings = null;
     let activeLogCaseId = "";
@@ -468,7 +573,98 @@ function createRendererController({document, windowRef, runner, storage, deferIn
         }
     }
 
-    function appendLog(value, label = "Runner", {preserveWhitespace = false} = {}) {
+    function createLogActionButton({label, className, readyTitle = "", pendingTitle = "", activate}) {
+        const button = doc.createElement("button");
+        button.type = "button";
+        button.className = `log-entry-action-button ${className}`;
+        const buttonLabel = doc.createElement("span");
+        buttonLabel.className = "log-entry-action-label";
+        buttonLabel.textContent = label;
+        button.append(buttonLabel);
+
+        let actionText = "";
+        let resetTimer = null;
+        const applyState = () => {
+            const title = actionText ? readyTitle || label : pendingTitle || label;
+            button.disabled = !actionText;
+            button.title = title;
+            button.setAttribute("aria-label", title);
+        };
+        const showFeedback = (doneLabel) => {
+            const schedule = typeof win?.setTimeout === "function" ? win.setTimeout.bind(win) : setTimeout;
+            const cancel = typeof win?.clearTimeout === "function" ? win.clearTimeout.bind(win) : clearTimeout;
+            buttonLabel.textContent = doneLabel;
+            button.classList.add("log-entry-action-done");
+            if (resetTimer) cancel(resetTimer);
+            resetTimer = schedule(() => {
+                resetTimer = null;
+                buttonLabel.textContent = label;
+                button.classList.remove("log-entry-action-done");
+            }, COPY_LOG_FEEDBACK_DURATION_MS);
+        };
+
+        button.addEventListener("click", async (event) => {
+            event?.stopPropagation?.();
+            if (!actionText) return;
+            let result;
+            try {
+                result = await activate(actionText);
+            } catch (error) {
+                result = {ok: false, message: error?.message || ""};
+            }
+            if (result?.canceled) return;
+            if (!result?.ok) {
+                showAppToast(result?.message || `Could not complete "${label}".`, "error");
+                return;
+            }
+            if (result.message) showAppToast(result.message, "ok");
+            showFeedback(result.doneLabel || "Done");
+        });
+        button.addEventListener("keydown", (event) => event?.stopPropagation?.());
+        applyState();
+
+        return {
+            button,
+            setText(value) {
+                actionText = String(value ?? "");
+                applyState();
+            },
+        };
+    }
+
+    function createLogActionControls({pendingTitle = "", readyTitle = "", saveName = "api-request", text = ""} = {}) {
+        const controls = [
+            createLogActionButton({
+                label: "Copy cURL",
+                className: "log-entry-copy-button",
+                readyTitle,
+                pendingTitle,
+                activate: async (value) => {
+                    const result = await api?.copyTextToClipboard?.(value);
+                    if (!result?.ok) return {ok: false, message: "Could not copy the cURL command to the clipboard."};
+                    return {ok: true, doneLabel: "Copied"};
+                },
+            }),
+            createLogActionButton({
+                label: "Get text file",
+                className: "log-entry-save-button",
+                readyTitle: "Save this cURL command as a .txt file",
+                pendingTitle,
+                activate: async (value) => {
+                    const result = await api?.saveTextFile?.({text: value, suggestedName: saveName});
+                    if (result?.canceled) return {canceled: true};
+                    if (!result?.ok) return {ok: false, message: result?.message || "Could not save the cURL command to a text file."};
+                    return {ok: true, doneLabel: "Saved", message: `Saved the cURL command to ${result.filePath}.`};
+                },
+            }),
+        ];
+        const setText = (value) => controls.forEach((control) => control.setText(value));
+        setText(text);
+
+        return {buttons: controls.map((control) => control.button), setText};
+    }
+
+    function appendLog(value, label = "Runner", {preserveWhitespace = false, copy = null} = {}) {
         if (!logOutput || !doc?.createElement) return;
 
         const entry = doc.createElement("article");
@@ -486,7 +682,8 @@ function createRendererController({document, windowRef, runner, storage, deferIn
         const expandHint = doc.createElement("span");
         expandHint.className = "log-entry-expand-hint";
         expandHint.textContent = "Expand";
-        header.append(time, entryLabel, expandHint);
+        const actionControls = copy ? createLogActionControls(copy) : null;
+        header.append(time, entryLabel, ...(actionControls ? actionControls.buttons : []), expandHint);
 
         const content = doc.createElement("pre");
         content.className = "log-entry-content";
@@ -511,7 +708,7 @@ function createRendererController({document, windowRef, runner, storage, deferIn
         updateLogEntryOverflow(entry, content);
         win?.requestAnimationFrame?.(() => updateLogEntryOverflow(entry, content));
         logOutput.scrollTop = 0;
-        return {entry, content};
+        return {entry, content, setCopyText: actionControls ? actionControls.setText : () => {}};
     }
 
     function appendRunnerLog(value) {
@@ -532,14 +729,26 @@ function createRendererController({document, windowRef, runner, storage, deferIn
 
     function formatLogDetails(value) {
         try {
-            return JSON.stringify(value, null, 2);
+            return JSON.stringify(value, elideCopyOnlyLogValues, 2);
         } catch {
             return String(value ?? "");
         }
     }
 
     function appendApiRequestLog(operation, request) {
-        appendLog(formatLogDetails(request), `[API] ${operation} request`);
+        const handle = appendLog(formatLogDetails(request), `[API] ${operation} request`, {
+            copy: {
+                pendingTitle: "The cURL command becomes available once the API response arrives.",
+                readyTitle: "Copy this API request as a runnable cURL command (includes the real service token)",
+                saveName: `curl-${operation}-request`.toLowerCase(),
+            },
+        });
+        if (handle) {
+            const pending = apiRequestLogCards.get(operation) || [];
+            pending.push(handle);
+            apiRequestLogCards.set(operation, pending);
+        }
+        return handle;
     }
 
     function appendApiResponseLog(operation, response) {
@@ -555,13 +764,27 @@ function createRendererController({document, windowRef, runner, storage, deferIn
             timeout: Boolean(response?.timeout),
             request: details?.request || null,
             response: details?.response || null,
-            ...(apiLogs.length > 1 ? {apiLogs} : {}),
+            ...(apiLogs.length > 1 ? {apiLogs: apiLogs.map((entry) => omitApiLogCurl(entry))} : {}),
         };
-        appendLog(formatLogDetails(result), `[API] ${operation} response`);
+        const curl = collectApiLogCurl(apiLogs);
+        appendLog(formatLogDetails(result), `[API] ${operation} response`, {
+            copy: {
+                text: curl,
+                pendingTitle: "This response carries no HTTP request details to copy.",
+                readyTitle: "Copy this API request as a runnable cURL command (includes the real service token)",
+                saveName: `curl-${operation}-response`.toLowerCase(),
+            },
+        });
+        const pending = apiRequestLogCards.get(operation) || [];
+        const requestCard = pending.shift();
+        if (curl) requestCard?.setCopyText(curl);
+        if (pending.length) apiRequestLogCards.set(operation, pending);
+        else apiRequestLogCards.delete(operation);
     }
 
     function clearLog() {
         activeRunnerLog = null;
+        apiRequestLogCards.clear();
         if (logOutput) logOutput.textContent = "";
     }
 
@@ -2714,7 +2937,7 @@ function createRendererController({document, windowRef, runner, storage, deferIn
     }
 
     async function submitFlowCaseResultsForRuns(context, caseRuns) {
-        const submission = buildFlowCaseResultSubmission(context, caseRuns);
+        const submission = await buildFlowCaseResultSubmission(context, caseRuns);
         appendApiRequestLog("Send flow-case results", submission);
         try {
             const result = await api.submitFlowCaseResults?.(submission);
@@ -2732,22 +2955,26 @@ function createRendererController({document, windowRef, runner, storage, deferIn
         }
     }
 
-    function buildFlowCaseResultSubmission(context, caseRuns) {
+    async function buildFlowCaseResultSubmission(context, caseRuns) {
         const campaignId = String(context.CAMPAIGN_ID ?? "").trim();
         const folderPath = String(context.FOLDER_PATH ?? "").trim();
+        const testcases = [];
+        for (const {id, result} of caseRuns) {
+            testcases.push(await buildFlowCaseResult(id, result, campaignId));
+        }
         const submission = {
             API_DOMAIN: context.API_DOMAIN,
             API_AUTHORIZATION: context.API_AUTHORIZATION,
             PROJECT_ID: context.PROJECT_ID,
             API_TIMEOUT_SECONDS: context.API_TIMEOUT_SECONDS,
-            testcases: caseRuns.map(({id, result}) => buildFlowCaseResult(id, result, campaignId)),
+            testcases,
         };
         if (folderPath) submission.FOLDER_PATH = folderPath;
         if (campaignId) submission.CAMPAIGN_ID = campaignId;
         return submission;
     }
 
-    function buildFlowCaseResult(testCaseId, run, campaignId = "") {
+    async function buildFlowCaseResult(testCaseId, run, campaignId = "") {
         const passed = Boolean(run.passed);
         const executionResult = run.executionResult || run;
         const caseResult = executionResult.caseResult || run.caseResult || null;
@@ -2755,6 +2982,8 @@ function createRendererController({document, windowRef, runner, storage, deferIn
         const message = passed
             ? "Testcase chạy thành công."
             : String(failedStepMessage || executionResult.message || run.message || "Testcase chạy thất bại.");
+
+        const screenshots = await convertScreenshotToWebpBase64(resolveCaseScreenshotDataUrl(caseResult), {doc, win});
 
         return {
             id: testCaseId,
@@ -2766,6 +2995,7 @@ function createRendererController({document, windowRef, runner, storage, deferIn
                 passed: passed ? 1 : 0,
                 failed: passed ? 0 : 1,
                 finishedAt: new Date().toISOString(),
+                ...(screenshots ? {screenshots} : {}),
             },
         };
     }
@@ -3326,5 +3556,7 @@ if (typeof module !== "undefined" && module.exports) {
         maskActionForDisplay,
         redactSensitiveText,
         validateRunValues,
+        resolveCaseScreenshotDataUrl,
+        convertScreenshotToWebpBase64,
     };
 }

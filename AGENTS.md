@@ -134,7 +134,23 @@ API or cache logic. Folder-filtered campaign results use
 Campaign-only results use ordered per-case
 `PATCH /api/v1/projects/{projectId}/flow-cases/{caseId}` requests with
 `campaignId`, `status`, and `testResult`; only failed/unknown IDs remain
-eligible for Retry sync after partial success.
+eligible for Retry sync after partial success. The renderer re-encodes each
+case's result screenshot to WebP through a canvas and submits it as the raw
+base64 `testResult.screenshots` string; `app/test-result-screenshot.js` validates
+that string at the main-process boundary, and both the renderer and main API logs
+elide the base64 body. `app/api-curl.js` is a dual-mode module (script
+global plus CommonJS export, like `app/test-configuration.js`) that turns an
+HTTP request descriptor into a `curl` command. `sanitizeApiLog` in `app/main.js`
+runs it on the *unredacted* request and ships the result as an extra `curl` field
+beside the redacted `request`/`response`, so the Logs modal's Copy cURL button
+hands over a runnable command (real service token, full screenshot base64) while
+the rendered log keeps its redactions: the renderer strips `curl` from the
+displayed JSON and `elideCopyOnlyLogValues` elides both `curl` and `screenshots`.
+The renderer never rebuilds API URLs itself, so the buttons on a request card are
+filled from the matching response's `curl`. The card's second action, Get text
+file, goes through the `save-text-file` IPC handler: the main process owns the
+`dialog.showSaveDialog` call and the write, so the renderer never touches the
+filesystem.
 
 ### Terminal regression runner
 

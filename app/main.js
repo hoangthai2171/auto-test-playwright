@@ -6,6 +6,8 @@ const {app, BrowserView, BrowserWindow, clipboard, dialog, ipcMain, safeStorage,
 const {loadLocalTestCases, loadCachedTestCases, findTestCaseById} = require("../tests/lib/test-case-source");
 const {validateTestCaseList} = require("../tests/lib/test-case-schema");
 const {redactSensitiveText, createLogRedactor} = require("./credential-redaction");
+const {normalizeResultScreenshots} = require("./test-result-screenshot");
+const {buildCurlCommand} = require("./api-curl");
 const {fetchFlowCaseFolders, fetchFlowCases, fetchRunningFlowCaseCampaigns, fetchCampaignTestCases, submitFlowCaseResults, submitFlowCaseResult, fetchDeviceCompatibilityCatalog, normalizeTimeoutMs} = require("./flow-case-api");
 const {intersectCampaignCasesById, submitCampaignResultsOrdered} = require("./campaign-flow-case-workflow");
 const {replaceFolderCacheEntry, replaceCampaignCacheEntry, clearTestCaseCache, readMostRecentTestCaseCacheEntry} = require("./test-case-cache");
@@ -784,6 +786,11 @@ function normalizeFlowCaseResult(testCase, index) {
         normalizedResult.finishedAt = String(result.finishedAt);
     }
 
+    const screenshots = normalizeResultScreenshots(result.screenshots);
+    if (screenshots) {
+        normalizedResult.screenshots = screenshots;
+    }
+
     const normalized = {id: testCase.id, status: "tested", testResult: normalizedResult};
     if (Object.prototype.hasOwnProperty.call(testCase, "campaignId")) {
         const campaignId = String(testCase.campaignId ?? "").trim();
@@ -808,12 +815,21 @@ function withApiLogs(result, results = [result]) {
 }
 
 function sanitizeApiLog(value) {
-    return cloneApiLogValue(value);
+    const sanitized = cloneApiLogValue(value);
+    // The renderer copy button needs the real request: the same token and screenshot
+    // payload that was sent, never the redacted log copy.
+    const curl = buildCurlCommand(value?.request);
+    if (!curl || !sanitized || typeof sanitized !== "object" || Array.isArray(sanitized)) return sanitized;
+    return {...sanitized, curl};
 }
 
 function cloneApiLogValue(value, key = "") {
     if (/^(?:password|token|authorization|cookie|secret|x-flowtest-service-token)$/iu.test(key)) {
         return "••••••";
+    }
+
+    if (key === "screenshots" && typeof value === "string" && value) {
+        return `[WebP base64, ${value.length} chars]`;
     }
 
     if (Array.isArray(value)) {
@@ -1335,6 +1351,35 @@ ipcMain.handle("copy-text-to-clipboard", async (_event, value) => {
     clipboard.writeText(text);
     return {ok: true};
 });
+
+ipcMain.handle("save-text-file", async (_event, values = {}) => {
+    const text = typeof values?.text === "string" ? values.text : String(values?.text ?? "");
+    if (!text) return {ok: false, canceled: false, message: "There is nothing to save."};
+
+    try {
+        const fileName = withTextFileExtension(safeFileName(values?.suggestedName));
+        const dialogOptions = {
+            title: "Save text file",
+            defaultPath: path.join(app.getPath("downloads"), fileName),
+            filters: [{name: "Text file", extensions: ["txt"]}],
+        };
+        const parentWindow = mainWindow && !mainWindow.isDestroyed() ? mainWindow : null;
+        const result = parentWindow
+            ? await dialog.showSaveDialog(parentWindow, dialogOptions)
+            : await dialog.showSaveDialog(dialogOptions);
+        if (result.canceled || !result.filePath) return {ok: false, canceled: true};
+        const filePath = withTextFileExtension(result.filePath);
+        await fs.writeFile(filePath, text, "utf8");
+        return {ok: true, canceled: false, filePath};
+    } catch (error) {
+        return {ok: false, canceled: false, message: error.message};
+    }
+});
+
+function withTextFileExtension(value) {
+    const name = String(value ?? "").trim() || "api-request";
+    return /\.txt$/iu.test(name) ? name : `${name}.txt`;
+}
 
 function reportPath() {
     return userReportHtmlPath();

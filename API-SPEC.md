@@ -267,6 +267,12 @@ Pass/Fail không phải trạng thái vòng đời. Giá trị này nằm trong 
 - Khi gửi `testResult`, bắt buộc gửi `status: "tested"`.
 - Khi gửi `status: "tested"`, bắt buộc gửi `testResult`.
 
+`testResult.screenshots` (string, tùy chọn) là ảnh chụp màn hình kết quả của lần chạy
+đó, đã mã hóa WebP dạng base64 thuần (không có tiền tố `data:image/webp;base64,`).
+Runner lấy ảnh hoàn thành của testcase, hoặc ảnh của bước lỗi cuối cùng khi testcase
+thất bại; ảnh được thu nhỏ về tối đa 1280px cạnh dài với chất lượng WebP 0.8. Nếu lần
+chạy không có ảnh nào, runner bỏ hẳn field này thay vì gửi chuỗi rỗng.
+
 ### 5.1. Gửi kết quả hàng loạt
 
 Endpoint khuyến nghị:
@@ -289,7 +295,8 @@ Thành công:
         "message": "Testcase chạy thành công.",
         "passed": 1,
         "failed": 0,
-        "finishedAt": "2026-08-03T10:30:00+07:00"
+        "finishedAt": "2026-08-03T10:30:00+07:00",
+        "screenshots": "UklGRiQAAABXRUJQVlA4..."
       }
     }
   ]
@@ -310,7 +317,8 @@ Thất bại với message `failed connection`:
         "message": "failed connection",
         "passed": 0,
         "failed": 1,
-        "finishedAt": "2026-08-03T10:31:00+07:00"
+        "finishedAt": "2026-08-03T10:31:00+07:00",
+        "screenshots": "UklGRiQAAABXRUJQVlA4..."
       }
     }
   ]

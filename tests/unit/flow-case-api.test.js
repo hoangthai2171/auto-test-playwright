@@ -428,3 +428,44 @@ test("submits one campaign testcase result through the per-case PATCH endpoint",
   assert.deepEqual(result.request.body, {campaignId: "12", status: "tested", testResult});
   assert.equal(result.response.status, 200);
 });
+
+test("carries the WebP screenshot string in the submitted testResult", async () => {
+  let request;
+  const testResult = {
+    status: "failed",
+    message: "Player không phát.",
+    passed: 0,
+    failed: 1,
+    finishedAt: "2026-08-20T10:30:00.000Z",
+    screenshots: "V0VCUA==",
+  };
+  await api.submitFlowCaseResult({
+    apiDomain: "http://api.test",
+    projectId: "1",
+    caseId: "1842",
+    campaignId: "12",
+    status: "tested",
+    testResult,
+    fetchImpl: async (url, options) => {
+      request = {url, options};
+      return {ok: true, status: 200, statusText: "OK", json: async () => ({data: {id: "1842"}})};
+    },
+  });
+
+  assert.equal(JSON.parse(request.options.body).testResult.screenshots, "V0VCUA==");
+
+  let folderRequest;
+  const testcases = [{id: 1713, status: "tested", testResult}];
+  await api.submitFlowCaseResults({
+    apiDomain: "http://api.test",
+    projectId: "1",
+    folderPath: "/Thai-test",
+    testcases,
+    fetchImpl: async (url, options) => {
+      folderRequest = {url, options};
+      return {ok: true, status: 200, json: async () => ({data: []})};
+    },
+  });
+
+  assert.equal(JSON.parse(folderRequest.options.body).testcases[0].testResult.screenshots, "V0VCUA==");
+});

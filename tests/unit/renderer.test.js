@@ -497,6 +497,12 @@ function createRendererFixture() {
             this.clipboardWrites.push(text);
             return this.clipboardResult;
         },
+        savedTextFiles: [],
+        saveTextFileResult: {ok: true, canceled: false, filePath: "/Users/qa/Downloads/curl.txt"},
+        async saveTextFile(values) {
+            this.savedTextFiles.push(values);
+            return this.saveTextFileResult;
+        },
         showInteractiveBrowser: async () => {},
         hideInteractiveBrowser: async () => {},
         suspendInteractiveBrowser: async () => {},
@@ -3546,4 +3552,528 @@ test("keeps normal log cards in document flow when another card expands", () => 
     assert.match(css, /\.log-output\s*\{[^}]*overflow:\s*auto;[^}]*background:\s*#0c0e13;/s);
     assert.doesNotMatch(css, /\.log-output\s*\{[^}]*display:\s*grid;/s);
     assert.match(css, /\.log-entry\s*\{[^}]*margin-bottom:\s*12px;[^}]*overflow:\s*hidden;/s);
+});
+
+function stubWebpScreenshotConversion(fixture) {
+    const draws = [];
+    const createElement = fixture.document.createElement;
+    fixture.document.createElement = (tagName) => {
+        const element = createElement(tagName);
+        if (String(tagName).toLowerCase() !== "canvas") return element;
+        element.getContext = () => ({
+            drawImage: (image, x, y, width, height) => draws.push({src: image.src, width, height}),
+        });
+        element.toDataURL = (type) => (type === "image/webp" ? "data:image/webp;base64,V0VCUA==" : "data:image/png;base64,UE5H");
+        return element;
+    };
+    fixture.windowRef.Image = class FakeImage {
+        constructor() {
+            this.naturalWidth = 1920;
+            this.naturalHeight = 1080;
+            this.onload = null;
+            this.onerror = null;
+            this._src = "";
+        }
+
+        set src(value) {
+            this._src = String(value);
+            Promise.resolve().then(() => this.onload?.());
+        }
+
+        get src() {
+            return this._src;
+        }
+    };
+    return draws;
+}
+
+test("sends the case screenshot as WebP base64 in the flow-case testResult", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    const draws = stubWebpScreenshotConversion(fixture);
+    const submissions = [];
+    fixture.runner.submitFlowCaseResults = async (value) => {
+        submissions.push(value);
+        return {ok: true};
+    };
+    fixture.runner.runBrowserBatch = async () => ({
+        ok: true,
+        batchId: "screenshot-batch",
+        stopped: false,
+        caseRuns: [
+            {
+                caseId: "case-1",
+                started: true,
+                passed: true,
+                stopped: false,
+                skipped: false,
+                caseResult: {status: "passed", completionScreenshotDataUrl: "data:image/png;base64,UE5H"},
+            },
+            {
+                caseId: "case-2",
+                started: true,
+                passed: false,
+                stopped: false,
+                skipped: false,
+                caseResult: {
+                    status: "failed",
+                    steps: [
+                        {
+                            action: "play_row",
+                            status: "failed",
+                            message: "row playback failed",
+                            result: {results: [{status: "failed", screenshotDataUrl: "data:image/png;base64,RkFJTA=="}]},
+                        },
+                    ],
+                },
+            },
+        ],
+    });
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCaseList([{id: "case-1", name: "First", actions: []}, {id: "case-2", name: "Second", actions: []}]);
+    const header = fixture.elements["select-all-test-cases"];
+    header.checked = true;
+    header.dispatchEvent("change", {target: header});
+    await controller.runSelectedCases({
+        PREVIEW_TYPE: "none",
+        FLOW_CASE_RESULT_CONTEXT: {
+            API_DOMAIN: "https://api.example.test",
+            API_AUTHORIZATION: "",
+            PROJECT_ID: "1",
+            API_TIMEOUT_SECONDS: "30",
+            FOLDER_PATH: "/Root/Folder",
+        },
+    });
+
+    assert.equal(submissions.length, 1);
+    assert.equal(submissions[0].testcases[0].testResult.screenshots, "V0VCUA==");
+    assert.equal(submissions[0].testcases[1].testResult.screenshots, "V0VCUA==");
+    assert.deepEqual(draws.map(({src}) => src), ["data:image/png;base64,UE5H", "data:image/png;base64,RkFJTA=="]);
+    assert.deepEqual(draws.map(({width, height}) => [width, height]), [[1280, 720], [1280, 720]]);
+});
+
+test("omits the flow-case screenshots field when no case screenshot is available", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    stubWebpScreenshotConversion(fixture);
+    const submissions = [];
+    fixture.runner.submitFlowCaseResults = async (value) => {
+        submissions.push(value);
+        return {ok: true};
+    };
+    fixture.runner.runBrowserBatch = async () => ({
+        ok: true,
+        batchId: "no-screenshot-batch",
+        stopped: false,
+        caseRuns: [{caseId: "case-1", started: true, passed: true, stopped: false, skipped: false, caseResult: {status: "passed"}}],
+    });
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCaseList([{id: "case-1", name: "First", actions: []}]);
+    const header = fixture.elements["select-all-test-cases"];
+    header.checked = true;
+    header.dispatchEvent("change", {target: header});
+    await controller.runSelectedCases({
+        PREVIEW_TYPE: "none",
+        FLOW_CASE_RESULT_CONTEXT: {
+            API_DOMAIN: "https://api.example.test",
+            API_AUTHORIZATION: "",
+            PROJECT_ID: "1",
+            API_TIMEOUT_SECONDS: "30",
+            FOLDER_PATH: "/Root/Folder",
+        },
+    });
+
+    assert.equal(submissions.length, 1);
+    assert.equal(Object.prototype.hasOwnProperty.call(submissions[0].testcases[0].testResult, "screenshots"), false);
+});
+
+test("prefers the completion screenshot and falls back to the last failed step screenshot", () => {
+    assert.equal(loadError, undefined, loadError?.message);
+
+    assert.equal(
+        renderer.resolveCaseScreenshotDataUrl({
+            completionScreenshotDataUrl: "data:image/png;base64,RE9ORQ==",
+            steps: [{status: "failed", result: {status: "failed", screenshotDataUrl: "data:image/png;base64,RkFJTA=="}}],
+        }),
+        "data:image/png;base64,RE9ORQ==",
+    );
+
+    assert.equal(
+        renderer.resolveCaseScreenshotDataUrl({
+            steps: [
+                {action: "play_row", details: {results: [{status: "playable", screenshotDataUrl: "data:image/png;base64,T0s="}]}},
+                {action: "assert_screen", status: "failed", result: {status: "failed", screenshotDataUrl: "data:image/png;base64,RkFJTA=="}},
+            ],
+        }),
+        "data:image/png;base64,RkFJTA==",
+    );
+
+    assert.equal(renderer.resolveCaseScreenshotDataUrl(null), "");
+    assert.equal(renderer.resolveCaseScreenshotDataUrl({steps: [{action: "press_ok", status: "passed"}]}), "");
+});
+
+test("keeps WebP screenshots as raw base64 and rejects undecodable sources", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    stubWebpScreenshotConversion(fixture);
+    const context = {doc: fixture.document, win: fixture.windowRef};
+
+    assert.equal(await renderer.convertScreenshotToWebpBase64("data:image/webp;base64,V0VCUA==", context), "V0VCUA==");
+    assert.equal(await renderer.convertScreenshotToWebpBase64("data:image/gif;base64,R0lG", context), "");
+    assert.equal(await renderer.convertScreenshotToWebpBase64("", context), "");
+    assert.equal(await renderer.convertScreenshotToWebpBase64("data:image/png;base64,UE5H", {doc: fixture.document, win: {}}), "");
+});
+
+test("forwards the normalized WebP screenshot through the main-process result boundary", () => {
+    const mainSource = fs.readFileSync(path.join(__dirname, "../../app/main.js"), "utf8");
+
+    assert.match(mainSource, /const \{normalizeResultScreenshots\} = require\("\.\/test-result-screenshot"\);/);
+    assert.match(
+        mainSource,
+        /const screenshots = normalizeResultScreenshots\(result\.screenshots\);\s*if \(screenshots\) \{\s*normalizedResult\.screenshots = screenshots;/s,
+    );
+    assert.match(
+        mainSource,
+        /if \(key === "screenshots" && typeof value === "string" && value\) \{\s*return `\[WebP base64, \$\{value\.length\} chars\]`;/s,
+    );
+});
+
+test("elides screenshot base64 from the API request log details", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    stubWebpScreenshotConversion(fixture);
+    fixture.runner.submitFlowCaseResults = async () => ({ok: true});
+    fixture.runner.runBrowserBatch = async () => ({
+        ok: true,
+        batchId: "log-batch",
+        stopped: false,
+        caseRuns: [
+            {
+                caseId: "case-1",
+                started: true,
+                passed: true,
+                stopped: false,
+                skipped: false,
+                caseResult: {status: "passed", completionScreenshotDataUrl: "data:image/png;base64,UE5H"},
+            },
+        ],
+    });
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCaseList([{id: "case-1", name: "First", actions: []}]);
+    const header = fixture.elements["select-all-test-cases"];
+    header.checked = true;
+    header.dispatchEvent("change", {target: header});
+    await controller.runSelectedCases({
+        PREVIEW_TYPE: "none",
+        FLOW_CASE_RESULT_CONTEXT: {
+            API_DOMAIN: "https://api.example.test",
+            API_AUTHORIZATION: "",
+            PROJECT_ID: "1",
+            API_TIMEOUT_SECONDS: "30",
+            FOLDER_PATH: "/Root/Folder",
+        },
+    });
+
+    const logText = fixture.elements["log-output"].textContent;
+
+    assert.match(logText, /"screenshots": "\[WebP base64, 8 chars\]"/);
+    assert.doesNotMatch(logText, /V0VCUA==/);
+});
+
+test("copies the API request as a cURL command from both log cards", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    fixture.runner.loadFlowCaseFolders = async () => ({
+        ok: true,
+        folders: [],
+        apiLog: {
+            request: {
+                method: "GET",
+                url: "http://api.test/api/v1/projects/1/flow-case-folders",
+                headers: {Accept: "application/json", "X-FlowTest-Service-Token": "••••••"},
+                timeoutMs: 30000,
+            },
+            response: {status: 200, body: {folders: []}},
+            curl: 'curl -X GET "http://api.test/api/v1/projects/1/flow-case-folders" \\\n  -H "X-FlowTest-Service-Token: real-service-token"',
+        },
+    });
+    const controller = renderer.createRendererController(fixture);
+
+    await controller.loadFolders();
+
+    const [responseEntry, requestEntry] = fixture.elements["log-output"].children;
+    const responseCopyButton = responseEntry.querySelector(".log-entry-copy-button");
+    const requestCopyButton = requestEntry.querySelector(".log-entry-copy-button");
+
+    assert.deepEqual(
+        requestEntry.querySelector(".log-entry-header").children.map((child) => child.className),
+        [
+            "log-entry-timestamp",
+            "log-entry-label",
+            "log-entry-action-button log-entry-copy-button",
+            "log-entry-action-button log-entry-save-button",
+            "log-entry-expand-hint",
+        ],
+    );
+    assert.equal(requestCopyButton.textContent, "Copy cURL");
+    assert.equal(requestCopyButton.disabled, false);
+    assert.equal(responseCopyButton.disabled, false);
+    assert.equal(requestCopyButton.title, "Copy this API request as a runnable cURL command (includes the real service token)");
+
+    requestCopyButton.dispatchEvent("click", {stopPropagation: () => {}});
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.deepEqual(fixture.runner.clipboardWrites, [
+        'curl -X GET "http://api.test/api/v1/projects/1/flow-case-folders" \\\n  -H "X-FlowTest-Service-Token: real-service-token"',
+    ]);
+    assert.doesNotMatch(fixture.elements["log-output"].textContent, /real-service-token/);
+    assert.equal(requestCopyButton.textContent, "Copied");
+    assert.equal(requestCopyButton.classList.contains("log-entry-action-done"), true);
+
+    responseCopyButton.dispatchEvent("click", {stopPropagation: () => {}});
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.equal(fixture.runner.clipboardWrites.length, 2);
+    assert.equal(fixture.runner.clipboardWrites[1], fixture.runner.clipboardWrites[0]);
+});
+
+test("keeps the cURL copy button disabled until the HTTP request details arrive", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    fixture.runner.loadFlowCaseFolders = async () => ({ok: false, message: "Folder path is required."});
+    const controller = renderer.createRendererController(fixture);
+
+    await controller.loadFolders();
+
+    const [responseEntry, requestEntry] = fixture.elements["log-output"].children;
+    const requestCopyButton = requestEntry.querySelector(".log-entry-copy-button");
+
+    assert.equal(requestCopyButton.disabled, true);
+    assert.equal(requestCopyButton.title, "The cURL command becomes available once the API response arrives.");
+    assert.equal(responseEntry.querySelector(".log-entry-copy-button").disabled, true);
+
+    requestCopyButton.dispatchEvent("click", {stopPropagation: () => {}});
+    await Promise.resolve();
+
+    assert.deepEqual(fixture.runner.clipboardWrites, []);
+});
+
+test("copies one cURL command per ordered campaign result submission", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    fixture.runner.submitFlowCaseResults = async () => ({
+        ok: true,
+        apiLogs: [
+            {
+                id: "2786",
+                request: {method: "PATCH", url: "http://api.test/flow-cases/2786", body: {status: "tested"}},
+                curl: 'curl -X PATCH "http://api.test/flow-cases/2786" --data-binary \'{"screenshots":"UklGRiQ"}\'',
+            },
+            {
+                id: "2787",
+                request: {method: "PATCH", url: "http://api.test/flow-cases/2787", body: {status: "tested"}},
+                curl: 'curl -X PATCH "http://api.test/flow-cases/2787" --data-binary \'{"screenshots":"UklGRiQ"}\'',
+            },
+        ],
+    });
+    fixture.runner.runBrowserBatch = async () => ({
+        ok: true,
+        batchId: "curl-batch",
+        stopped: false,
+        caseRuns: [
+            {caseId: "case-1", started: true, passed: true, stopped: false, skipped: false, caseResult: {status: "passed"}},
+            {caseId: "case-2", started: true, passed: true, stopped: false, skipped: false, caseResult: {status: "passed"}},
+        ],
+    });
+    const controller = renderer.createRendererController(fixture);
+    controller.renderCaseList([{id: "case-1", name: "First", actions: []}, {id: "case-2", name: "Second", actions: []}]);
+    const header = fixture.elements["select-all-test-cases"];
+    header.checked = true;
+    header.dispatchEvent("change", {target: header});
+    await controller.runSelectedCases({
+        PREVIEW_TYPE: "none",
+        FLOW_CASE_RESULT_CONTEXT: {
+            API_DOMAIN: "https://api.example.test",
+            API_AUTHORIZATION: "",
+            PROJECT_ID: "1",
+            API_TIMEOUT_SECONDS: "30",
+            CAMPAIGN_ID: "12",
+        },
+    });
+
+    const requestEntry = fixture.elements["log-output"]
+        .querySelectorAll(".log-entry")
+        .find((entry) => /Send flow-case results request/.test(entry.querySelector(".log-entry-label").textContent));
+    requestEntry.querySelector(".log-entry-copy-button").dispatchEvent("click", {stopPropagation: () => {}});
+    await Promise.resolve();
+    await Promise.resolve();
+
+    const [copied] = fixture.runner.clipboardWrites;
+
+    assert.equal(copied.split("\n\n").length, 2);
+    assert.match(copied, /curl -X PATCH "http:\/\/api\.test\/flow-cases\/2786" --data-binary '\{"screenshots":"UklGRiQ"\}'/);
+    assert.match(copied, /curl -X PATCH "http:\/\/api\.test\/flow-cases\/2787" --data-binary '\{"screenshots":"UklGRiQ"\}'/);
+    assert.doesNotMatch(fixture.elements["log-output"].textContent, /--data-binary/);
+});
+
+test("styles the log card cURL action buttons beside the expand hint", () => {
+    const css = fs.readFileSync(path.join(__dirname, "../../app/renderer/styles.css"), "utf8");
+    const html = fs.readFileSync(path.join(__dirname, "../../app/renderer/index.html"), "utf8");
+
+    assert.match(css, /\.log-entry-action-button\s*\{[^}]*height:\s*22px;[^}]*white-space:\s*nowrap;/s);
+    assert.match(css, /\.log-entry-copy-button\s*\{\s*margin-left:\s*auto;\s*\}/s);
+    assert.match(css, /\.log-entry-action-button:disabled\s*\{[^}]*cursor:\s*not-allowed;/s);
+    assert.match(css, /\.log-entry-action-button \+ \.log-entry-expand-hint\s*\{\s*margin-left:\s*0;/s);
+    assert.match(html, /<script src="\.\.\/api-curl\.js"><\/script>/);
+});
+
+test("fills each queued API request card from its own response", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    const controller = renderer.createRendererController(fixture);
+    const requests = [];
+    let index = 0;
+    fixture.runner.loadFlowCaseFolders = async () => {
+        requests.push(index);
+        index += 1;
+        return {
+            ok: true,
+            folders: [],
+            apiLog: {
+                request: {method: "GET", url: `http://api.test/folders/${index}`},
+                response: {status: 200, body: {}},
+                curl: `curl -X GET "http://api.test/folders/${index}"`,
+            },
+        };
+    };
+
+    await controller.loadFolders();
+    await controller.loadFolders();
+
+    const requestEntries = fixture.elements["log-output"]
+        .querySelectorAll(".log-entry")
+        .filter((entry) => /Load flow-case folders request/.test(entry.querySelector(".log-entry-label").textContent));
+
+    assert.equal(requests.length, 2);
+    assert.equal(requestEntries.length, 2);
+    requestEntries.forEach((entry) => entry.querySelector(".log-entry-copy-button").dispatchEvent("click", {stopPropagation: () => {}}));
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.deepEqual(fixture.runner.clipboardWrites.sort(), [
+        'curl -X GET "http://api.test/folders/1"',
+        'curl -X GET "http://api.test/folders/2"',
+    ]);
+});
+
+test("builds the copyable cURL from the unredacted main-process request", () => {
+    const mainSource = fs.readFileSync(path.join(__dirname, "../../app/main.js"), "utf8");
+    const rendererSource = fs.readFileSync(path.join(__dirname, "../../app/renderer/renderer.js"), "utf8");
+
+    assert.match(mainSource, /const \{buildCurlCommand\} = require\("\.\/api-curl"\);/);
+    assert.match(
+        mainSource,
+        /function sanitizeApiLog\(value\) \{\s*const sanitized = cloneApiLogValue\(value\);[\s\S]*?const curl = buildCurlCommand\(value\?\.request\);/,
+    );
+    assert.match(rendererSource, /if \(key === "curl"\) return `\[cURL command, \$\{value\.length\} chars\]`;/);
+    assert.match(rendererSource, /apiLogs: apiLogs\.map\(\(entry\) => omitApiLogCurl\(entry\)\)/);
+});
+
+test("saves the cURL command to a text file through the save dialog", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    fixture.runner.loadFlowCaseFolders = async () => ({
+        ok: true,
+        folders: [],
+        apiLog: {
+            request: {method: "GET", url: "http://api.test/folders"},
+            response: {status: 200, body: {}},
+            curl: 'curl -X GET "http://api.test/folders"',
+        },
+    });
+    const controller = renderer.createRendererController(fixture);
+
+    await controller.loadFolders();
+
+    const [, requestEntry] = fixture.elements["log-output"].children;
+    const saveButton = requestEntry.querySelector(".log-entry-save-button");
+
+    assert.equal(saveButton.textContent, "Get text file");
+    assert.equal(saveButton.disabled, false);
+    assert.equal(saveButton.title, "Save this cURL command as a .txt file");
+
+    saveButton.dispatchEvent("click", {stopPropagation: () => {}});
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.deepEqual(fixture.runner.savedTextFiles, [
+        {text: 'curl -X GET "http://api.test/folders"', suggestedName: "curl-load flow-case folders-request"},
+    ]);
+    assert.equal(saveButton.textContent, "Saved");
+    assert.match(fixture.elements["app-toast"].textContent, /Saved the cURL command to \/Users\/qa\/Downloads\/curl\.txt\./);
+    assert.deepEqual(fixture.runner.clipboardWrites, []);
+});
+
+test("keeps the log card unchanged when the save dialog is canceled", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    fixture.runner.saveTextFileResult = {ok: false, canceled: true};
+    fixture.runner.loadFlowCaseFolders = async () => ({
+        ok: true,
+        folders: [],
+        apiLog: {request: {method: "GET", url: "http://api.test/folders"}, response: {status: 200, body: {}}, curl: 'curl -X GET "http://api.test/folders"'},
+    });
+    const controller = renderer.createRendererController(fixture);
+
+    await controller.loadFolders();
+
+    const [, requestEntry] = fixture.elements["log-output"].children;
+    const saveButton = requestEntry.querySelector(".log-entry-save-button");
+    saveButton.dispatchEvent("click", {stopPropagation: () => {}});
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.equal(fixture.runner.savedTextFiles.length, 1);
+    assert.equal(saveButton.textContent, "Get text file");
+    assert.equal(saveButton.classList.contains("log-entry-action-done"), false);
+});
+
+test("reports a failed text-file save without marking the button done", async () => {
+    assert.equal(loadError, undefined, loadError?.message);
+    const fixture = createRendererFixture();
+    fixture.runner.saveTextFileResult = {ok: false, canceled: false, message: "EACCES: permission denied"};
+    fixture.runner.loadFlowCaseFolders = async () => ({
+        ok: true,
+        folders: [],
+        apiLog: {request: {method: "GET", url: "http://api.test/folders"}, response: {status: 200, body: {}}, curl: 'curl -X GET "http://api.test/folders"'},
+    });
+    const controller = renderer.createRendererController(fixture);
+
+    await controller.loadFolders();
+
+    const [, requestEntry] = fixture.elements["log-output"].children;
+    const saveButton = requestEntry.querySelector(".log-entry-save-button");
+    saveButton.dispatchEvent("click", {stopPropagation: () => {}});
+    await Promise.resolve();
+    await Promise.resolve();
+    await Promise.resolve();
+
+    assert.match(fixture.elements["app-toast"].textContent, /EACCES: permission denied/);
+    assert.equal(saveButton.textContent, "Get text file");
+});
+
+test("writes the chosen text file through a main-process save dialog", () => {
+    const mainSource = fs.readFileSync(path.join(__dirname, "../../app/main.js"), "utf8");
+    const preload = fs.readFileSync(path.join(__dirname, "../../app/preload.js"), "utf8");
+
+    assert.match(preload, /saveTextFile: \(values\) => ipcRenderer\.invoke\("save-text-file", values\)/);
+    assert.match(mainSource, /ipcMain\.handle\("save-text-file"[\s\S]*?filters: \[\{name: "Text file", extensions: \["txt"\]\}\]/);
+    assert.match(mainSource, /const parentWindow = mainWindow && !mainWindow\.isDestroyed\(\) \? mainWindow : null;/);
+    assert.match(mainSource, /if \(result\.canceled \|\| !result\.filePath\) return \{ok: false, canceled: true\};/);
+    assert.match(mainSource, /const filePath = withTextFileExtension\(result\.filePath\);\s*await fs\.writeFile\(filePath, text, "utf8"\);/);
+    assert.match(mainSource, /return \/\\\.txt\$\/iu\.test\(name\) \? name : `\$\{name\}\.txt`;/);
 });
