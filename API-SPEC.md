@@ -267,11 +267,25 @@ Pass/Fail không phải trạng thái vòng đời. Giá trị này nằm trong 
 - Khi gửi `testResult`, bắt buộc gửi `status: "tested"`.
 - Khi gửi `status: "tested"`, bắt buộc gửi `testResult`.
 
-`testResult.screenshots` (string, tùy chọn) là ảnh chụp màn hình kết quả của lần chạy
-đó, đã mã hóa WebP dạng base64 thuần (không có tiền tố `data:image/webp;base64,`).
-Runner lấy ảnh hoàn thành của testcase, hoặc ảnh của bước lỗi cuối cùng khi testcase
-thất bại; ảnh được thu nhỏ về tối đa 1280px cạnh dài với chất lượng WebP 0.8. Nếu lần
-chạy không có ảnh nào, runner bỏ hẳn field này thay vì gửi chuỗi rỗng.
+`testResult.screenshots` (string, tùy chọn) là **đúng một** ảnh chụp màn hình đại diện
+cho lần chạy đó, đã mã hóa WebP dạng base64 thuần (không có tiền tố
+`data:image/webp;base64,`).
+
+Một lần chạy có thể tạo ra nhiều ảnh — `play_row` và `play_all_contents` chụp một ảnh
+cho mỗi poster — nhưng server chỉ nhận một ảnh, nên runner chọn ảnh đại diện theo thứ
+tự ưu tiên:
+
+1. Testcase **thất bại**: lấy ảnh của item/bước bị `failed` (item failed đầu tiên của
+   bước failed gần nhất). Ưu tiên này đứng trước cả ảnh hoàn thành, vì một lần chạy
+   thất bại vẫn có thể có ảnh hoàn thành/player-check chụp trước khi lỗi xảy ra, gửi
+   ảnh đó lên sẽ hiển thị một màn hình bình thường cho testcase đã fail.
+2. Testcase **thành công**: lấy ảnh hoàn thành của testcase.
+3. Không có hai loại trên: lấy ảnh gần nhất còn lại.
+
+Chỉ ảnh chụp màn hình (`screenshotDataUrl`, `completionScreenshotDataUrl`) được xét;
+ảnh poster của nội dung không bao giờ được gửi. Ảnh được thu nhỏ về tối đa 1280px cạnh
+dài với chất lượng WebP 0.8. Nếu lần chạy không có ảnh nào, runner bỏ hẳn field này
+thay vì gửi chuỗi rỗng.
 
 ### 5.1. Gửi kết quả hàng loạt
 

@@ -144,10 +144,15 @@ selected folder path and each case's `tested` lifecycle status,
 completed result through `PATCH /api/v1/projects/{projectId}/flow-cases/{caseId}`
 with `campaignId`, `status`, and `testResult`; confirmed successes are removed
 from later Retry sync attempts. Every submitted `testResult` also carries
-`screenshots`, a raw base64 WebP string of that run's result screenshot (the
-completion capture, or the last failed step capture for a failed case, resized to
-1280px on its longest edge); runs without any capture omit the field, and the
-API logs show only its length, never the base64 body. A normally completed API batch submits all
+`screenshots`, a raw base64 WebP string holding exactly one representative
+screenshot for that run, resized to 1280px on its longest edge. A run can produce
+many captures - `play_row` and `play_all_contents` capture one per poster - so a
+failed case is represented by a failed item's capture, which takes priority over
+the completion capture because a failed run can still hold a completion or
+player-check image taken before the failure. A passed case is represented by its
+completion capture. Only screenshots are eligible; content poster artwork is
+never submitted. Runs without any capture omit the field, and the API logs show
+only its length, never the base64 body. A normally completed API batch submits all
 selected cases; after a manual stop, only cases that fully completed before the
 stop are submitted. Skipped, local-fixture, and failed-to-launch cases are
 never included.

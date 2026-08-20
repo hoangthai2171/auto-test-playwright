@@ -136,8 +136,13 @@ Campaign-only results use ordered per-case
 `campaignId`, `status`, and `testResult`; only failed/unknown IDs remain
 eligible for Retry sync after partial success. The renderer re-encodes each
 case's result screenshot to WebP through a canvas and submits it as the raw
-base64 `testResult.screenshots` string; `app/test-result-screenshot.js` validates
-that string at the main-process boundary, and both the renderer and main API logs
+base64 `testResult.screenshots` string. Exactly one screenshot is submitted per
+result even when a run captured many: `resolveCaseScreenshotDataUrl` prefers a
+failed item's capture for a failed case - ahead of the completion capture, which
+a failed run can still hold from a player check taken before the failure - the
+completion capture for a passed case, and never considers poster artwork.
+`app/test-result-screenshot.js` validates that string at the main-process
+boundary, and both the renderer and main API logs
 elide the base64 body. `app/api-curl.js` is a dual-mode module (script
 global plus CommonJS export, like `app/test-configuration.js`) that turns an
 HTTP request descriptor into a `curl` command. `sanitizeApiLog` in `app/main.js`

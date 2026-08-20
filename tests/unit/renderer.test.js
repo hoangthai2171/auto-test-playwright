@@ -3687,15 +3687,53 @@ test("omits the flow-case screenshots field when no case screenshot is available
     assert.equal(Object.prototype.hasOwnProperty.call(submissions[0].testcases[0].testResult, "screenshots"), false);
 });
 
-test("prefers the completion screenshot and falls back to the last failed step screenshot", () => {
+test("submits one representative screenshot per case result", () => {
     assert.equal(loadError, undefined, loadError?.message);
 
+    // A passed case is represented by its completion screenshot.
     assert.equal(
         renderer.resolveCaseScreenshotDataUrl({
+            status: "passed",
+            completionScreenshotDataUrl: "data:image/png;base64,RE9ORQ==",
+            steps: [{
+                action: "play_all_contents",
+                status: "passed",
+                result: {results: [
+                    {status: "playable", screenshotDataUrl: "data:image/png;base64,T0sx"},
+                    {status: "playable", screenshotDataUrl: "data:image/png;base64,T0sy"},
+                ]},
+            }],
+        }),
+        "data:image/png;base64,RE9ORQ==",
+    );
+
+    // A failed case is represented by failure evidence, even when a completion
+    // or player-check screenshot was captured before the failure.
+    assert.equal(
+        renderer.resolveCaseScreenshotDataUrl({
+            status: "failed",
             completionScreenshotDataUrl: "data:image/png;base64,RE9ORQ==",
             steps: [{status: "failed", result: {status: "failed", screenshotDataUrl: "data:image/png;base64,RkFJTA=="}}],
         }),
-        "data:image/png;base64,RE9ORQ==",
+        "data:image/png;base64,RkFJTA==",
+    );
+
+    // One failed poster among many passing ones still decides the image.
+    assert.equal(
+        renderer.resolveCaseScreenshotDataUrl({
+            status: "failed",
+            completionScreenshotDataUrl: "data:image/png;base64,RE9ORQ==",
+            steps: [{
+                action: "play_all_contents",
+                status: "failed",
+                details: {results: [
+                    {status: "playable", screenshotDataUrl: "data:image/png;base64,T0sx"},
+                    {status: "failed", screenshotDataUrl: "data:image/png;base64,QkFE"},
+                    {status: "playable", screenshotDataUrl: "data:image/png;base64,T0sy"},
+                ]},
+            }],
+        }),
+        "data:image/png;base64,QkFE",
     );
 
     assert.equal(
@@ -3706,6 +3744,19 @@ test("prefers the completion screenshot and falls back to the last failed step s
             ],
         }),
         "data:image/png;base64,RkFJTA==",
+    );
+
+    // Poster artwork is never a screenshot candidate.
+    assert.equal(
+        renderer.resolveCaseScreenshotDataUrl({
+            status: "failed",
+            steps: [{
+                action: "play_all_contents",
+                status: "failed",
+                details: {results: [{status: "failed", poster: "https://example.test/poster.jpg"}]},
+            }],
+        }),
+        "",
     );
 
     assert.equal(renderer.resolveCaseScreenshotDataUrl(null), "");

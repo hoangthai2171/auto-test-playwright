@@ -34,16 +34,42 @@ const WEBP_SCREENSHOT_QUALITY = 0.8;
 const WEBP_SCREENSHOT_MAX_DIMENSION = 1280;
 const WEBP_SCREENSHOT_DECODE_TIMEOUT_MS = 5000;
 
+// The server takes exactly one screenshot per submitted result, so a run that
+// produced many - a row or list playback captures one per poster - has to be
+// represented by a single image. A failed run must be represented by failure
+// evidence: a failed run can still carry a completion/player-check screenshot
+// captured before the failure, and sending that would show a healthy screen for
+// a case that failed. Only screenshots are considered here, never poster
+// artwork.
 function resolveCaseScreenshotDataUrl(caseResult) {
+    if (hasFailedCaseOutcome(caseResult)) {
+        const failure = findCaseScreenshot(caseResult, (item) => item.status === "failed");
+        if (failure) return failure;
+    }
+
     const completion = String(caseResult?.completionScreenshotDataUrl ?? "").trim();
     if (completion) return completion;
+
+    return findCaseScreenshot(caseResult, () => true);
+}
+
+// Latest step first, so the representative image is the most recent evidence.
+function findCaseScreenshot(caseResult, accept) {
     const steps = Array.isArray(caseResult?.steps) ? [...caseResult.steps].reverse() : [];
     for (const step of steps) {
-        const candidates = collectScreenshotCandidates(step);
-        const chosen = candidates.find((item) => item.status === "failed") || candidates[0];
+        const chosen = collectScreenshotCandidates(step).find(accept);
         if (chosen) return chosen.dataUrl;
     }
     return "";
+}
+
+function hasFailedCaseOutcome(caseResult) {
+    if (String(caseResult?.status ?? "").trim() === "failed") return true;
+    const steps = Array.isArray(caseResult?.steps) ? caseResult.steps : [];
+    return steps.some((step) =>
+        String(step?.status ?? "").trim() === "failed" ||
+        collectScreenshotCandidates(step).some((item) => item.status === "failed")
+    );
 }
 
 function collectScreenshotCandidates(step) {
