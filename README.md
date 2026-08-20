@@ -258,10 +258,19 @@ left to right within a row, then down to the next row starting at its leftmost
 poster. Pass a positive `count` to play only the first N posters in that order,
 or a positive `rowCount` to play only the first N rows; the two are mutually
 exclusive, and with neither the whole list is played. The action requires the
-current route to be `specialModuleList`, `specialModuleListV2`, or `shortHome`
-and fails closed anywhere else. `channel-list` is rejected with its own message:
-the channel list builds rows and items in a different format and needs its own
-test. Because the page detaches rows that scroll out of view and calls its
+current route to be `specialModuleList`, `specialModuleListV2`, `shortHome`, or
+`channel-list`, and fails closed anywhere else.
+
+`channel-list` is a different widget: its rows and items use their own classes,
+its ids are `item_<row>_<col>`, and focus is an `is_focus="1"` attribute rather
+than the shared focus class. It is handled by a profile scoped to that route, so
+the global focus contract - and therefore `play_row`, `play_content`,
+`play_home_trailers` and the LG TV target - is unchanged. A channel carries no
+name in the DOM, so it is reported by its channel number plus `content-id`, and
+activation confirms focus from the grid's own marker before Enter, with one
+guarded retry for the first item while the freshly opened page is still
+settling. The channel list loads a whole category at once, so it has no
+load-more. Because the other list pages detach rows that scroll out of view and calls its
 load-more API as focus approaches the end of the grid, the runner steps with the
 remote and re-reads the focused `<idName>_<row>_<col>` position instead of
 collecting rows up front, retries a step that was dropped during a load-more

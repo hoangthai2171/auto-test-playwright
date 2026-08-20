@@ -49,9 +49,10 @@ function createListPage({rowLengths, route = "specialModuleList", failAt = []}) 
         };
       }
 
-      // getFocusedListPagePosition passes the id pattern source.
-      if (typeof argument === "string" && argument.includes("\\d+)_(")) {
+      // getFocusedListPagePosition passes the id pattern plus the profile table.
+      if (argument?.pattern) {
         return {
+          profile: "content-grid",
           id: cardId(state.row, state.col),
           idPrefix: "specialModuleListRow",
           row: state.row,
@@ -108,6 +109,117 @@ function createListPage({rowLengths, route = "specialModuleList", failAt = []}) 
 
   return {page, state};
 }
+
+function createChannelListPage({rowLengths}) {
+  const state = {row: 0, col: 0, enters: [], sharedActivations: 0, playerOpen: false};
+  const rows = [...rowLengths];
+  const cardId = (row, col) => `item_${row}_${col}`;
+
+  const page = {
+    url: () => "https://app.test/#channel-list?id=7",
+    waitForTimeout: async () => {},
+    screenshot: async () => Buffer.from("png"),
+    keyboard: {press: async () => {}},
+    evaluate: async (callback, argument) => {
+      const source = String(callback);
+
+      // Readiness only needs to observe visible rows on this page.
+      if (argument?.rowSelector) {
+        return {
+          contract: argument.contract,
+          rows: rows.map((length, rowIndex) => ({
+            rowId: `channellist_item_row_${rowIndex}`,
+            title: "",
+            onScreen: true,
+            items: Array.from({length}, (_unused, colIndex) => ({
+              id: cardId(rowIndex, colIndex),
+              title: `Kênh ${colIndex + 1}`,
+              label: `Kênh ${colIndex + 1}`,
+              contentId: `${200 + rowIndex * 10 + colIndex}`,
+              attributes: {},
+              poster: `logo-${rowIndex}-${colIndex}.png`,
+              isViewMore: false,
+              rect: {x: 60 + colIndex * 360, y: 200 + rowIndex * 260, width: 350, height: 207},
+              visible: true,
+            })),
+          })),
+        };
+      }
+      if (argument?.pattern) {
+        return {
+          profile: "channel-grid",
+          id: cardId(state.row, state.col),
+          idPrefix: "item",
+          row: state.row,
+          col: state.col,
+          rowId: `channellist_item_row_${state.row}`,
+          rowItemCount: rows[state.row],
+          rect: {x: 60, y: 200 + state.row * 260, width: 350, height: 207},
+        };
+      }
+      if (argument?.profiles) {
+        return {
+          profile: "channel-grid",
+          id: cardId(state.row, state.col),
+          title: `Kênh ${state.col + 1}`,
+          channelNumber: String(state.col + 1),
+          contentId: `${200 + state.row * 10 + state.col}`,
+          poster: `logo-${state.row}-${state.col}.png`,
+        };
+      }
+      if (source.includes('querySelectorAll("video")')) {
+        return {hasVideo: state.playerOpen, isProbablyPlaying: state.playerOpen};
+      }
+      if (source.includes("closePatternSource")) return null;
+      if (source.includes("#promo-video-next")) return {open: state.playerOpen};
+      if (source.includes("dialog_confirm_v2")) return {visible: false, unexpectedVisible: false};
+      if (source.includes("allowedRoutes")) return true;
+      return false;
+    },
+  };
+
+  contentRows.configureContentRows({
+    remotePress: async (_page, key) => {
+      if (key === "Enter") {
+        state.enters.push(cardId(state.row, state.col));
+        state.playerOpen = true;
+        return;
+      }
+      if (key === "ArrowRight" && state.col < rows[state.row] - 1) state.col += 1;
+      else if (key === "ArrowLeft" && state.col > 0) state.col -= 1;
+      else if (key === "ArrowDown" && state.row < rows.length - 1) {
+        state.row += 1;
+        state.col = Math.min(state.col, rows[state.row] - 1);
+      } else if (key === "ArrowUp" && state.row > 0) state.row -= 1;
+    },
+    remoteFocusById: async () => {},
+    getPlayerState: async () => ({hasVideo: state.playerOpen, isProbablyPlaying: state.playerOpen}),
+    // The channel grid must never reach the shared activation contract, which
+    // reads focus from a class this page does not set.
+    activateVerifiedTarget: async () => { state.sharedActivations += 1; },
+    observePlayerOrDetailState: async () => ({open: state.playerOpen}),
+    observeExitConfirmation: async () => ({visible: false, unexpectedVisible: false}),
+    closePlayerOrDetail: async () => { state.playerOpen = false; },
+  });
+
+  return {page, state};
+}
+
+test("plays a channel list through the channel activation path", async ({}, testInfo) => {
+  const {page, state} = createChannelListPage({rowLengths: [3, 2]});
+
+  const result = await workflows.playAllListPageContents(page, testInfo, {waitSeconds: 0});
+
+  expect(result.route).toBe("channel-list");
+  expect(result.results.map((item) => item.id)).toEqual([
+    "item_0_0", "item_0_1", "item_0_2", "item_1_0", "item_1_1",
+  ]);
+  expect(result.results.every((item) => item.status === "playable")).toBe(true);
+  expect(result.results.map((item) => item.channelNumber)).toEqual(["1", "2", "3", "1", "2"]);
+  expect(state.enters).toEqual(result.results.map((item) => item.id));
+  // Regression guard: the shared activation contract cannot see this page.
+  expect(state.sharedActivations).toBe(0);
+});
 
 test("plays every poster of a simulated list page in reading order", async ({}, testInfo) => {
   const {page, state} = createListPage({rowLengths: [2, 2]});
@@ -178,12 +290,12 @@ test("refuses a screen that is not a supported content-list page", async ({}, te
   expect(error?.message).toContain("homeNewUI");
 });
 
-test("refuses the channel list with its own message", async ({}, testInfo) => {
-  const {page} = createListPage({rowLengths: [2], route: "channel-list"});
+test("refuses a list route it does not know", async ({}, testInfo) => {
+  const {page} = createListPage({rowLengths: [2], route: "movieList"});
 
   const error = await workflows
     .playAllListPageContents(page, testInfo, {waitSeconds: 0})
     .then(() => null, (caught) => caught);
 
-  expect(error?.message).toContain("channel-list");
+  expect(error?.message).toContain("movieList");
 });

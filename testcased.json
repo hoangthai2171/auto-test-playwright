@@ -95,5 +95,56 @@
         "action": "play_all_contents"
       }
     ]
+  },
+  {
+    "id": "12069",
+    "projectId": "1",
+    "folderId": "24",
+    "slug": "case_mrol8f15",
+    "name": "Play toàn bộ kênh trong trang danh sách của row VTV",
+    "qaDescription": "B1. Đăng nhập vào app với tài khoản ts1/111222\nB2. Vào trang chủ ứng dụng\nB3. Di chuyển đến dòng cate \"Thể loại\"\nB4. Chọn vào item \"Truyền hình\"\nB5. Bấm OK\nB6. Di chuyển đến dòng cate \"VTV\"\nB7. Bấm vào poster \"Xem tất cả\"\nB8. Play toàn bộ kênh trong danh sách",
+    "platform": "tv",
+    "environment": "UI",
+    "preCondition": "Chưa đăng nhập tài khoản",
+    "expectedResult": "Play bình thường",
+    "category": "Auto test demo",
+    "status": "created",
+    "mode": "script",
+    "scriptVersion": 1,
+    "actions": [
+      {
+        "action": "login",
+        "username": "ts1",
+        "password": "111222"
+      },
+      {
+        "action": "open_home"
+      },
+      {
+        "action": "focus_row",
+        "rowName": "Thể loại"
+      },
+      {
+        "action": "focus_text",
+        "text": "Truyền hình"
+      },
+      {
+        "action": "press_ok"
+      },
+      {
+        "action": "focus_row",
+        "rowName": "VTV"
+      },
+      {
+        "action": "focus_text",
+        "text": "Xem tất cả"
+      },
+      {
+        "action": "press_ok"
+      },
+      {
+        "action": "play_all_contents"
+      }
+    ]
   }
 ]

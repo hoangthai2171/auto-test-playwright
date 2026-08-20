@@ -1097,8 +1097,9 @@ function createListPageGridPage(rowLengths, options = {}) {
   const page = {
     waitForTimeout: async () => {},
     evaluate: async (_callback, argument) => {
-      if (typeof argument !== "string") return null;
+      if (!argument?.pattern) return null;
       return {
+        profile: "content-grid",
         id: `specialModuleListRow_${state.row}_${state.col}`,
         idPrefix: "specialModuleListRow",
         row: state.row,
@@ -1186,10 +1187,11 @@ test("does not press twice when the grid answers a step late", async () => {
   const page = {
     waitForTimeout: async () => {},
     evaluate: async (_callback, argument) => {
-      if (typeof argument !== "string") return null;
+      if (!argument?.pattern) return null;
       state.reads += 1;
       const col = state.reads <= 1 ? 0 : state.col;
       return {
+        profile: "content-grid",
         id: `specialModuleListRow_0_${col}`,
         idPrefix: "specialModuleListRow",
         row: 0,

@@ -64,6 +64,31 @@ const CARD_LABEL_ATTRIBUTES = Object.freeze([
 // has to step with the remote and read the position back instead of collecting
 // every row up front.
 const LIST_PAGE_ITEM_ID_PATTERN = /^(.*)_(\d+)_(\d+)$/u;
+// A content-list page comes in two shapes. The default grid is built by
+// clsItemViewRelative and marks focus with the shared `.focused` class. The
+// channel list is built by clsGridViewChannelDynamic instead: different row and
+// item classes, its own row-container id scheme, and focus expressed as an
+// `is_focus="1"` attribute rather than a class. The channel shape is described
+// here rather than in the global focus contract so no other action or target
+// changes behavior.
+const LIST_PAGE_PROFILES = Object.freeze([
+  Object.freeze({
+    name: "content-grid",
+    itemSelector: ".cate_content_item",
+    rowSelector: ".cate_content_row",
+    focusSelector: ".focused",
+    rowIdPrefix: "",
+  }),
+  Object.freeze({
+    name: "channel-grid",
+    itemSelector: ".homepage_channel_item",
+    rowSelector: ".channellist_item_row_new",
+    focusSelector: '[is_focus="1"]',
+    rowIdPrefix: "channellist_item_row",
+  }),
+]);
+const CHANNEL_GRID_PROFILE = "channel-grid";
+const CHANNEL_ACTIVATION_DELAY_MS = 3500;
 const LIST_PAGE_STEP_DELAY_MS = 700;
 // A vertical step can be dropped while the page is fetching the next batch of
 // rows, so a failed step is retried before the grid is called exhausted.
@@ -80,7 +105,7 @@ const FOCUS_SETTLE_TIMEOUT_MS = 3000;
 const FOCUS_SETTLE_POLL_MS = 120;
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
-function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,getFocusedListPagePosition,expectFocusedListPageContent,focusListPageGridStart,moveToNextListPageContent,returnToListPageContent};}
+function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,getFocusedListPagePosition,getFocusedListPageMetadata,expectFocusedListPageContent,focusListPageGridStart,focusChannelListGridStart,activateFocusedChannelListItem,moveToNextListPageContent,returnToListPageContent};}
 function remotePress(...args){return dependencies.remotePress(...args);}
 function remoteFocusById(...args){return dependencies.remoteFocusById(...args);}
 function remoteFocusByText(...args){return dependencies.remoteFocusByText(...args);}
@@ -1873,37 +1898,49 @@ function contentItemSignature(item) {
 // grid card at all (a header control, the left menu, or nothing focused), which
 // callers treat as "the grid is not reachable from here" rather than as row 0.
 async function getFocusedListPagePosition(page) {
-  return page.evaluate((pattern) => {
-    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
-    if (!focused) return null;
+  return page.evaluate(({pattern, profiles}) => {
+    for (const profile of profiles) {
+      const position = readProfilePosition(profile);
+      if (position) return position;
+    }
+    return null;
 
-    const card = focused.classList.contains("cate_content_item")
-      ? focused
-      : focused.closest?.(".cate_content_item");
-    if (!card || !isVisible(card)) return null;
+    function readProfilePosition(profile) {
+      const focused = Array.from(document.querySelectorAll(profile.focusSelector)).find(isVisible);
+      if (!focused) return null;
 
-    const match = new RegExp(pattern, "u").exec(card.id || "");
-    if (!match) return null;
+      const card = focused.matches?.(profile.itemSelector)
+        ? focused
+        : focused.closest?.(profile.itemSelector);
+      if (!card || !isVisible(card)) return null;
 
-    const rowContainer = document.getElementById(`${match[1]}_${match[2]}`);
-    const rect = card.getBoundingClientRect();
+      const match = new RegExp(pattern, "u").exec(card.id || "");
+      if (!match) return null;
 
-    return {
-      id: card.id,
-      idPrefix: match[1],
-      row: Number(match[2]),
-      col: Number(match[3]),
-      rowId: rowContainer?.id || "",
-      rowItemCount: rowContainer
-        ? rowContainer.querySelectorAll(".cate_content_item").length
-        : 0,
-      rect: {
-        x: Math.round(rect.x),
-        y: Math.round(rect.y),
-        width: Math.round(rect.width),
-        height: Math.round(rect.height),
-      },
-    };
+      const rowContainerId = profile.rowIdPrefix
+        ? `${profile.rowIdPrefix}_${match[2]}`
+        : `${match[1]}_${match[2]}`;
+      const rowContainer = document.getElementById(rowContainerId);
+      const rect = card.getBoundingClientRect();
+
+      return {
+        profile: profile.name,
+        id: card.id,
+        idPrefix: match[1],
+        row: Number(match[2]),
+        col: Number(match[3]),
+        rowId: rowContainer?.id || "",
+        rowItemCount: rowContainer
+          ? rowContainer.querySelectorAll(profile.itemSelector).length
+          : 0,
+        rect: {
+          x: Math.round(rect.x),
+          y: Math.round(rect.y),
+          width: Math.round(rect.width),
+          height: Math.round(rect.height),
+        },
+      };
+    }
 
     function isVisible(element) {
       const rect = element.getBoundingClientRect();
@@ -1911,7 +1948,54 @@ async function getFocusedListPagePosition(page) {
       return rect.width > 0 && rect.height > 0 &&
         style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
     }
-  }, LIST_PAGE_ITEM_ID_PATTERN.source);
+  }, {pattern: LIST_PAGE_ITEM_ID_PATTERN.source, profiles: LIST_PAGE_PROFILES});
+}
+
+// Per-poster identity for the report. The channel grid carries no name in the
+// DOM - only a channel number and a logo - so a channel is identified by its
+// number plus content id.
+async function getFocusedListPageMetadata(page) {
+  return page.evaluate(({profiles}) => {
+    for (const profile of profiles) {
+      const focused = Array.from(document.querySelectorAll(profile.focusSelector)).find(isVisible);
+      const card = focused?.matches?.(profile.itemSelector)
+        ? focused
+        : focused?.closest?.(profile.itemSelector);
+      if (!card) continue;
+
+      const image = card.querySelector("img");
+      const numberText = (card.querySelector(".channel-key-text")?.textContent || "").trim();
+      const attributeTitle = [
+        card.getAttribute("title") || "",
+        card.getAttribute("title_text") || "",
+        card.getAttribute("movie_name") || "",
+        card.getAttribute("vod_name") || "",
+        card.getAttribute("content_name") || "",
+        card.getAttribute("channel_name") || "",
+      ].find(Boolean) || "";
+      const title = attributeTitle ||
+        (numberText ? `Kênh ${numberText}` : (card.textContent || "").replace(/\s+/gu, " ").trim());
+
+      return {
+        profile: profile.name,
+        id: card.id || "",
+        title,
+        channelNumber: numberText,
+        contentId: card.getAttribute("content_id") || card.getAttribute("content-id") ||
+          card.getAttribute("data-content-id") || "",
+        poster: image?.currentSrc || image?.src || "",
+      };
+    }
+
+    return {profile: "", id: "", title: "", channelNumber: "", contentId: "", poster: ""};
+
+    function isVisible(element) {
+      const rect = element.getBoundingClientRect();
+      const style = getComputedStyle(element);
+      return rect.width > 0 && rect.height > 0 &&
+        style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+    }
+  }, {profiles: LIST_PAGE_PROFILES});
 }
 
 // A list-page grid card is identified by its structure - a `.cate_content_item`
@@ -1928,6 +2012,78 @@ async function expectFocusedListPageContent(page) {
     }, {timeout: 10000})
     .toBe(true);
   return position;
+}
+
+// The channel grid has no `.focused` class for remoteFocusById to steer by, so
+// reaching the first card is done with bounded remote steps that read the
+// position back. Failing to reach it is a hard failure, never a silent start
+// from the middle of the page.
+async function focusChannelListGridStart(page) {
+  let position = await getFocusedListPagePosition(page).catch(() => null);
+  if (!position) {
+    throw new Error("Trang danh sách kênh không có item nào đang focus để bắt đầu");
+  }
+
+  for (let step = 0; step < ROW_HORIZONTAL_NAV_MAX_STEPS && position.col > 0; step += 1) {
+    const next = await stepListPageFocus(
+      page,
+      "ArrowLeft",
+      (candidate) => candidate.row === position.row && candidate.col < position.col,
+      {attempts: 2}
+    );
+    if (!next) break;
+    position = next;
+  }
+
+  for (let step = 0; step < ROW_HORIZONTAL_NAV_MAX_STEPS && position.row > 0; step += 1) {
+    const next = await stepListPageFocus(
+      page,
+      "ArrowUp",
+      (candidate) => candidate.row < position.row,
+      {attempts: 2}
+    );
+    if (!next) break;
+    position = next;
+  }
+
+  if (position.row !== 0 || position.col !== 0) {
+    throw new Error(
+      `Không về được item đầu tiên của trang danh sách kênh (đang ở dòng ${position.row + 1}, cột ${position.col + 1})`
+    );
+  }
+
+  return position;
+}
+
+// The shared activation contract reads focus from `.focused`, which the channel
+// grid does not set. Focus identity is confirmed from the grid's own marker
+// before Enter, so a poster is never activated blind.
+async function activateFocusedChannelListItem(page, expectedId) {
+  const position = await getFocusedListPagePosition(page).catch(() => null);
+  if (!position || (expectedId && position.id !== expectedId)) {
+    throw new Error(
+      `Focus không ở item kênh mong đợi "${expectedId}" trước khi bấm OK (đang ở "${position?.id || "không có"}")`
+    );
+  }
+
+  await remotePress(page, "Enter", CHANNEL_ACTIVATION_DELAY_MS);
+  if (await hasOpenedChannelDestination(page)) return;
+
+  // The channel list can still be settling right after the view-more Enter that
+  // opened it, and the app drops keys while it does. Retry only while the same
+  // item is still focused on the list, so a delivered Enter is never doubled.
+  const settled = await getFocusedListPagePosition(page).catch(() => null);
+  if (!settled || settled.id !== position.id) return;
+
+  await remotePress(page, "Enter", CHANNEL_ACTIVATION_DELAY_MS);
+}
+
+async function hasOpenedChannelDestination(page) {
+  const playerState = await getPlayerState(page).catch(() => null);
+  if (playerState?.hasVideo === true) return true;
+
+  const destination = await observePlayerOrDetailState(page).catch(() => ({open: false}));
+  return destination?.open === true;
 }
 
 // Playback order is the reading order of the page, so traversal always starts at
@@ -2025,31 +2181,31 @@ async function isListPageReturnBoundary(page, routes = []) {
   const playerObservation = await observePlayerOrDetailState(page).catch(() => ({open: true}));
   if (playerObservation?.open === true) return false;
 
-  return page.evaluate((allowedRoutes) => {
+  return page.evaluate(({routes: allowedRoutes, selectors}) => {
     const routeValue = location.hash.replace(/^#/, "").split("?")[0];
     if (allowedRoutes.length && !allowedRoutes.includes(routeValue)) return false;
 
-    return Array.from(document.querySelectorAll(".cate_content_item")).some((card) => {
-      const rect = card.getBoundingClientRect();
-      const style = getComputedStyle(card);
-      return rect.width > 0 && rect.height > 0 &&
-        style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
-    });
-  }, routes).catch(() => false);
+    return selectors.some((selector) =>
+      Array.from(document.querySelectorAll(selector)).some((card) => {
+        const rect = card.getBoundingClientRect();
+        const style = getComputedStyle(card);
+        return rect.width > 0 && rect.height > 0 &&
+          style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
+      })
+    );
+  }, {routes, selectors: LIST_PAGE_PROFILES.map((profile) => profile.itemSelector)}).catch(() => false);
 }
 
 // The list page restores its own row/column when the player closes, so the
 // boundary check accepts either the original card or any rebuilt list-page grid.
-async function returnToListPageContent(page, {item, routes = []} = {}) {
+async function returnToListPageContent(page, {item, routes = [], profile = ""} = {}) {
   await dependencies.closePlayerOrDetail(page, {
     remotePress,
     observePopup: observeExitConfirmation,
     dismissUnexpectedPopup: dismissKnownPlaybackFailurePopup,
     isClosed: async (candidatePage) => {
       const position = await getFocusedListPagePosition(candidatePage).catch(() => null);
-      if (position && item?.id && (await isFocusedOnContentItem(candidatePage, item))) {
-        return true;
-      }
+      if (position && item?.id && position.id === item.id) return true;
 
       return isListPageReturnBoundary(candidatePage, routes);
     },
@@ -2060,12 +2216,14 @@ async function returnToListPageContent(page, {item, routes = []} = {}) {
 
   await page.waitForTimeout(ROW_RETURN_RENDER_DELAY_MS);
 
-  if (item?.id) {
+  // The channel grid restores its own row/column on Back and exposes no
+  // `.focused` class for remoteFocusById to steer by.
+  if (item?.id && profile !== CHANNEL_GRID_PROFILE) {
     await remoteFocusById(page, item.id, 20).catch(() => {});
   }
 
-  await expectFocusedListPageContent(page);
+  return expectFocusedListPageContent(page);
 }
 
 
-module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,findRowHeading,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,getFocusedListPagePosition,expectFocusedListPageContent,focusListPageGridStart,moveToNextListPageContent,returnToListPageContent,isListPageReturnBoundary,ROW_RETURN_RENDER_DELAY_MS};
+module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,findRowHeading,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,getFocusedListPagePosition,getFocusedListPageMetadata,expectFocusedListPageContent,focusListPageGridStart,focusChannelListGridStart,activateFocusedChannelListItem,moveToNextListPageContent,returnToListPageContent,isListPageReturnBoundary,ROW_RETURN_RENDER_DELAY_MS};

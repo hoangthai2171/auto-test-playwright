@@ -29,7 +29,9 @@ npx playwright test -g "test name"            # run by title match
 npm run test:unit                    # run all Node unit tests (tests/unit/*.test.js)
 node --test tests/unit/foo.test.js   # run a single unit test file
 npm run test:tv:contract             # run the TV contract spec (tests/run-test-case-tv.spec.js)
-npm run test:list:contract           # run the play_all_contents contract spec (no live app needed)
+npm run test:list:contract           # play_all_contents contract spec (no live app needed)
+npm run test:popup:contract          # playback popup detector spec (real DOM, no live app)
+npm run test:channel:contract        # channel-list profile spec (real DOM, no live app)
 npm run test:headed                  # interactive terminal runner for legacy specs
 npm run browsers:install             # install/cache the pinned Playwright Chromium
 npm run app:build / app:build:mac / app:build:win   # electron-builder packaging
@@ -128,9 +130,12 @@ session. Do not change this to run in parallel without redesigning session owner
 - `play_row` on Home excludes the `homePage1` promotional row from numeric counting — public
   `rowIndex: 5` maps to `homePage2_4_*`.
 - `play_all_contents` plays a content-list page opened from a `Xem tất cả` poster
-  (`specialModuleList`, `specialModuleListV2`, `shortHome`) in reading order, with
-  optional `count` (posters) or `rowCount` (rows). `channel-list` is rejected on
-  purpose and needs its own test.
+  (`specialModuleList`, `specialModuleListV2`, `shortHome`, `channel-list`) in
+  reading order, with
+  optional `count` (posters) or `rowCount` (rows). `channel-list` is also
+  supported through a route-scoped profile because it marks focus with
+  `is_focus="1"` instead of the shared focus class; do not widen
+  `FOCUS_SELECTORS` for it.
 
 ## Graphify (knowledge graph)
 

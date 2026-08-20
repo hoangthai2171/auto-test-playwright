@@ -1270,13 +1270,17 @@ test("rejects play_all_contents outside a supported content-list route", () => {
     workflows.__internal.assertSupportedListPageRoute("specialModuleListV2"),
     "specialModuleListV2"
   );
-  assert.throws(
-    () => workflows.__internal.assertSupportedListPageRoute("channel-list"),
-    /channel-list/u
+  assert.equal(
+    workflows.__internal.assertSupportedListPageRoute("channel-list"),
+    "channel-list"
   );
   assert.throws(
     () => workflows.__internal.assertSupportedListPageRoute("homeNewUI"),
     /homeNewUI/u
+  );
+  assert.throws(
+    () => workflows.__internal.assertSupportedListPageRoute("movieList"),
+    /movieList/u
   );
 });
 

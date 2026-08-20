@@ -50,8 +50,9 @@ test("advances a list page from the focus it restored after playback", async () 
   const page = {
     waitForTimeout: async () => {},
     evaluate: async (_callback, argument) => {
-      if (typeof argument !== "string") return null;
+      if (!argument?.pattern) return null;
       return {
+        profile: "content-grid",
         id: `specialModuleListRow_${state.row}_${state.col}`,
         idPrefix: "specialModuleListRow",
         row: state.row,

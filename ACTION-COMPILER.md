@@ -96,9 +96,12 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
   compile thành `open_service`/`press_ok`. Activation cần destination ngoài
   Home có row nội dung và không có toast/tooltip tự ẩn hoặc popup lỗi.
 - `play_all_contents` chỉ chạy trên trang danh sách nội dung mở từ poster view
-  more, route phải là `specialModuleList`, `specialModuleListV2` hoặc `shortHome`;
-  route khác (kể cả Home) fail closed. Riêng `channel-list` bị từ chối bằng lỗi
-  riêng vì row/item của trang kênh có format khác và cần bài test khác. Runtime
+  more, route phải là `specialModuleList`, `specialModuleListV2`, `shortHome`
+  hoặc `channel-list`; route khác (kể cả Home) fail closed. Trang `channel-list`
+  là widget khác: row/item có class riêng và focus đánh dấu bằng thuộc tính
+  `is_focus="1"` thay vì class focus dùng chung, nên app xử lý bằng một profile
+  riêng cho route này; contract focus dùng chung không đổi. Kênh không có tên
+  trong DOM nên được nhận diện bằng số kênh và `content-id`. Runtime
   đi theo thứ tự đọc: từ trái sang phải trong một dòng, hết dòng thì xuống dòng
   dưới và về poster ngoài cùng bên trái. Trang danh sách detach dòng đã cuộn khỏi
   màn hình và gọi API load more khi focus xuống gần cuối, nên runtime bước bằng

@@ -260,10 +260,16 @@ The supported action allowlist is:
   to right inside a row, then down to the leftmost poster of the next row.
   Optional positive `count` limits the number of posters in that order; optional
   positive `rowCount` limits the number of rows; the two are mutually exclusive
-  and neither means the whole list. The action requires the current route to be
-  `specialModuleList`, `specialModuleListV2`, or `shortHome`, rejects
-  `channel-list` with a dedicated message (its rows and items use the channel
-  format and need their own test), and fails closed on any other screen. The
+  and neither means the whole list. Supported routes are `specialModuleList`,
+  `specialModuleListV2`, `shortHome` and `channel-list`; any other screen fails
+  closed. `channel-list` is a separate widget with its own row/item classes,
+  `item_<row>_<col>` ids, and focus expressed as an `is_focus="1"` attribute
+  instead of the shared focus class, so it runs through a profile scoped to that
+  route and leaves the global focus contract - and every other action and target
+  - untouched. Channels carry no DOM name and are reported by channel number
+  plus `content-id`; activation confirms focus from the grid marker and retries
+  Enter once while a freshly opened list is still settling. The channel list
+  loads a category at once, so it has no load-more. The
   list page detaches rows scrolled out of the visible window and calls its
   load-more API as focus nears the end of the grid, so traversal steps with the
   remote, re-reads the focused `<idName>_<row>_<col>` position, retries a step

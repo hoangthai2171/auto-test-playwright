@@ -30,8 +30,11 @@ const {
     returnToFirstRowContent,
     openFocusedContentForPlayback,
     getFocusedListPagePosition,
+    getFocusedListPageMetadata,
     expectFocusedListPageContent,
     focusListPageGridStart,
+    focusChannelListGridStart,
+    activateFocusedChannelListItem,
     moveToNextListPageContent,
     returnToListPageContent,
 } = contentRows;
@@ -645,26 +648,21 @@ async function playItemsInRow(page, testInfo, options = {}) {
     });
 }
 
-// Content-list pages reached from a "Xem tất cả" poster. `channel-list` is
-// deliberately excluded: it builds rows and items in its own channel format and
-// needs its own test.
+// Content-list pages reached from a "Xem tất cả" poster. The channel list is a
+// different widget - its own row/item classes and an `is_focus` attribute
+// instead of the shared focus class - so it is handled by a scoped profile in
+// content-rows rather than by widening the global focus contract.
+const CHANNEL_LIST_ROUTE = "channel-list";
 const LIST_PAGE_CONTENT_ROUTES = Object.freeze([
     "specialModuleList",
     "specialModuleListV2",
     "shortHome",
+    CHANNEL_LIST_ROUTE,
 ]);
-const CHANNEL_LIST_ROUTE = "channel-list";
 
 function assertSupportedListPageRoute(route) {
     const routeValue = String(route || "").trim();
     if (LIST_PAGE_CONTENT_ROUTES.includes(routeValue)) return routeValue;
-
-    if (routeValue === CHANNEL_LIST_ROUTE) {
-        throw new Error(
-            `Trang danh sách kênh "${CHANNEL_LIST_ROUTE}" chưa được hỗ trợ bởi play_all_contents: ` +
-                "row và item của trang này có format riêng nên cần một bài test khác"
-        );
-    }
 
     throw new Error(
         "play_all_contents phải chạy trên trang danh sách nội dung " +
@@ -703,7 +701,10 @@ async function playAllListPageContents(page, testInfo, options = {}) {
     let attempted = 0;
     let stopReason = "list-exhausted";
     let budgetLimited = false;
-    let position = await focusListPageGridStart(page);
+    const isChannelList = route === CHANNEL_LIST_ROUTE;
+    let position = isChannelList
+        ? await focusChannelListGridStart(page)
+        : await focusListPageGridStart(page);
 
     for (let index = 0; position; index += 1) {
         if (rowLimit !== undefined && position.row >= rowLimit) {
@@ -711,11 +712,15 @@ async function playAllListPageContents(page, testInfo, options = {}) {
             break;
         }
 
-        const focusedItem = await getFocusedContentMetadata(page);
-        const focusedViewMore = await getFocusedViewMoreMetadata(page, {
-            rowId: position.rowId,
-            rowY: position.rect?.y,
-        }).catch(() => null);
+        const focusedItem = isChannelList
+            ? await getFocusedListPageMetadata(page)
+            : await getFocusedContentMetadata(page);
+        const focusedViewMore = isChannelList
+            ? null
+            : await getFocusedViewMoreMetadata(page, {
+                rowId: position.rowId,
+                rowY: position.rect?.y,
+            }).catch(() => null);
         if (focusedViewMore) {
             // A view-more poster navigates to another list; it is not content, so
             // it is stepped over without ever being activated.
@@ -759,6 +764,7 @@ async function playAllListPageContents(page, testInfo, options = {}) {
                 poster: item.poster || "",
                 rowNumber,
                 columnNumber,
+                ...(item.channelNumber ? {channelNumber: item.channelNumber} : {}),
                 status: "unknown",
                 result: "fail",
                 errorPopup: "",
@@ -772,7 +778,11 @@ async function playAllListPageContents(page, testInfo, options = {}) {
                     body: JSON.stringify({item, position}, null, 2),
                     contentType: "application/json",
                 });
-                await openFocusedContentForPlayback(page, testInfo, item);
+                if (isChannelList) {
+                    await activateFocusedChannelListItem(page, item.id);
+                } else {
+                    await openFocusedContentForPlayback(page, testInfo, item);
+                }
 
                 const playback = await inspectPlaybackAfterWait(page, waitSeconds);
                 result.status = playback.ok ? "playable" : "failed";
@@ -789,7 +799,11 @@ async function playAllListPageContents(page, testInfo, options = {}) {
             }
 
             try {
-                await returnToListPageContent(page, {item, routes: LIST_PAGE_CONTENT_ROUTES});
+                await returnToListPageContent(page, {
+                    item,
+                    routes: LIST_PAGE_CONTENT_ROUTES,
+                    profile: position.profile,
+                });
             } catch (error) {
                 // One poster must not erase the evidence already collected or abort
                 // the rest of the list.  The return helper dismisses recognized
