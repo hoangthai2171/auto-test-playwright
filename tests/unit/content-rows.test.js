@@ -1219,3 +1219,90 @@ test("does not press twice when the grid answers a step late", async () => {
   assert.equal(next.col, 1);
   assert.deepEqual(state.presses, ["ArrowRight"]);
 });
+
+// Row scanning: a requested row name must not be satisfied by a mid-word hit
+// ("VTV" inside "VTVCab") while the exact row can still scroll into view.
+function createRowScanPage(screens) {
+  const state = {screen: 0, presses: [], focusedId: ""};
+  const page = {
+    waitForTimeout: async () => {},
+    evaluate: async (callback, argument) => {
+      const source = String(callback);
+      // The snapshot identity must change as scrolling reveals rows, otherwise
+      // the row cache would keep answering with the first screen.
+      if (source.includes("rootSelectors")) {
+        return {route: "#channel-list", container: `screen-${state.screen}`};
+      }
+      if (argument?.rowSelector) {
+        return {
+          contract: argument.contract,
+          rows: screens[state.screen].map((row, rowIndex) => ({
+            rowId: row.id,
+            title: row.title,
+            onScreen: true,
+            items: [{
+              id: `${row.id}_0`,
+              title: `${row.title} item`,
+              label: `${row.title} item`,
+              contentId: "1",
+              attributes: {},
+              poster: "",
+              isViewMore: false,
+              rect: {x: 100, y: 200 + rowIndex * 300, width: 233, height: 131},
+              visible: true,
+            }],
+          })),
+        };
+      }
+      if (Array.isArray(argument)) return argument.includes(state.focusedId);
+      if (typeof argument === "string") return argument === state.focusedId;
+      return false;
+    },
+  };
+
+  contentRows.configureContentRows({
+    remotePress: async (_page, key) => {
+      state.presses.push(key);
+      if (key === "ArrowDown" && state.screen < screens.length - 1) state.screen += 1;
+    },
+    remoteFocusById: async (_page, id) => { state.focusedId = id; },
+    getFocusedState: async () => ({id: state.focusedId, text: "", label: ""}),
+  });
+
+  return {page, state};
+}
+
+test("prefers the exact row over a mid-word match that appears first", async () => {
+  const {page} = createRowScanPage([
+    [{id: "channelID_4", title: "VTVCab"}],
+    [{id: "channelID_4", title: "VTVCab"}, {id: "channelID_7", title: "VTV"}],
+  ]);
+
+  const row = await contentRows.focusRequestedContentRow(page, {rowName: "VTV"});
+
+  assert.equal(row.title, "VTV");
+  assert.equal(row.rowId, "channelID_7");
+});
+
+test("falls back to a mid-word match once scrolling reveals nothing new", async () => {
+  const {page, state} = createRowScanPage([
+    [{id: "channelID_4", title: "VTVCab"}],
+  ]);
+
+  const row = await contentRows.focusRequestedContentRow(page, {rowName: "VTV"});
+
+  assert.equal(row.title, "VTVCab");
+  // One probe press to confirm nothing further loads, not a full 45-step scan.
+  assert.equal(state.presses.filter((key) => key === "ArrowDown").length, 1);
+});
+
+test("still accepts a word-bounded row name match immediately", async () => {
+  const {page, state} = createRowScanPage([
+    [{id: "channelID_9", title: "VTV Cab"}],
+  ]);
+
+  const row = await contentRows.focusRequestedContentRow(page, {rowName: "VTV"});
+
+  assert.equal(row.title, "VTV Cab");
+  assert.deepEqual(state.presses, []);
+});

@@ -247,6 +247,10 @@ numeric counting, so public `rowIndex: 5` targets `homePage2_4_*`.
 `npm run test:list:contract` covers this action's traversal loop against a
 simulated list page and needs no live app.
 
+The content noun in the description is descriptive only: `toàn bộ nội dung`,
+`toàn bộ kênh`, `toàn bộ phim`, `toàn bộ poster`, and `toàn bộ short` all compile
+to the same action, and the counted forms accept the same nouns.
+
 `play_all_contents` plays every content poster of the content-list page opened
 from a `Xem tất cả` poster. It is the multi-row counterpart of `play_row`: the
 list page is a grid of rows, and playback follows the page's reading order -

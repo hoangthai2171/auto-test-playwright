@@ -69,6 +69,11 @@ const LIST_PAGE_STEP_DELAY_MS = 700;
 // rows, so a failed step is retried before the grid is called exhausted.
 const LIST_PAGE_STEP_MAX_ATTEMPTS = 4;
 const LIST_PAGE_STEP_RETRY_DELAY_MS = 1500;
+// A mid-word containment hit (requesting "VTV" while only "VTVCab" is on
+// screen). Usable as a last resort, but never accepted while scrolling can still
+// reveal the exact row.
+const WEAK_ROW_MATCH_SCORE = 40;
+const STRONG_ROW_MATCH_SCORE = 80;
 const ROW_HEADING_MAX_DISTANCE_PX = 150;
 const FOCUS_SETTLE_TOLERANCE_PX = 4;
 const FOCUS_SETTLE_TIMEOUT_MS = 3000;
@@ -128,15 +133,34 @@ async function focusRequestedContentRow(page, rowSelector = {}) {
 
   const targetPattern = normalizeVietnameseText(rowName);
   const visitedRowTitles = new Set();
+  let weakMatch = null;
+
+  async function focusMatchedContentRow(candidatePage, row) {
+    if (hasItemIndex) {
+      return focusIndexedContentRow(candidatePage, row, itemIndex, {
+        snapshotCache,
+        rowName,
+        rowPattern: targetPattern,
+      });
+    }
+
+    await focusFirstRowStart(candidatePage, row.items[0], {snapshotCache});
+    await expect.poll(() => isFocusedOnRowItems(candidatePage, row.items), {timeout: 6000}).toBe(true);
+    return row;
+  }
+
   // Home rows can be lazy-loaded below the initial promotional rows. Keep
   // scanning while remote Down navigation reveals additional rows instead of
   // failing before the requested category enters the DOM.
   for (let attempt = 0; attempt < NAMED_ROW_MAX_ATTEMPTS; attempt++) {
     const rows = await collectVisibleContentRows(page, {snapshotCache});
+    const knownRowTitles = visitedRowTitles.size;
     rows.forEach((row) => {
       const title = String(row.title || "").trim();
       if (title) visitedRowTitles.add(title);
     });
+    // Scrolling has stopped revealing rows, so nothing better can still appear.
+    const discoveredNewRows = attempt === 0 || visitedRowTitles.size > knownRowTitles;
     const serviceCategoryRow = await findServiceCategoryRow(page, targetPattern);
     if (serviceCategoryRow) {
       if (hasItemIndex) {
@@ -152,22 +176,26 @@ async function focusRequestedContentRow(page, rowSelector = {}) {
       await expect.poll(() => isFocusedOnRowItems(page, serviceCategoryRow.items), { timeout: 6000 }).toBe(true);
       return serviceCategoryRow;
     }
-    const matchedRow = findBestContentRowMatch(rows, targetPattern);
-    if (matchedRow) {
-      if (hasItemIndex) {
-        return focusIndexedContentRow(page, matchedRow, itemIndex, {
-          snapshotCache,
-          rowName,
-          rowPattern: targetPattern,
-        });
-      }
+    const [bestMatch] = scoreContentRowMatches(rows, targetPattern);
+    if (bestMatch && bestMatch.score >= STRONG_ROW_MATCH_SCORE) {
+      return focusMatchedContentRow(page, bestMatch.row);
+    }
 
-      await focusFirstRowStart(page, matchedRow.items[0], {snapshotCache});
-      await expect.poll(() => isFocusedOnRowItems(page, matchedRow.items), { timeout: 6000 }).toBe(true);
-      return matchedRow;
+    // Only a mid-word hit so far, e.g. "VTVCab" while "VTV" is requested. Keep
+    // it as a fallback and keep scrolling: the exact row may still be below.
+    if (bestMatch && (!weakMatch || bestMatch.score > weakMatch.score)) {
+      weakMatch = bestMatch;
+    }
+    if (weakMatch && !discoveredNewRows) {
+      return focusMatchedContentRow(page, resolveWeakRowMatch(rows, targetPattern, weakMatch));
     }
 
     await remotePress(page, "ArrowDown", NAMED_ROW_SCROLL_DELAY, {snapshotCache});
+  }
+
+  if (weakMatch) {
+    const rows = await collectVisibleContentRows(page, {snapshotCache});
+    return focusMatchedContentRow(page, resolveWeakRowMatch(rows, targetPattern, weakMatch));
   }
 
   const visibleRows = await collectVisibleContentRows(page, {snapshotCache});
@@ -1062,7 +1090,23 @@ async function findLastContentRow(page, {snapshotCache = createDomSnapshotCache(
   throw new Error("Không tìm thấy hàng cuối cùng vì không có hàng nội dung nào đang hiển thị.");
 }
 
+// The weak candidate was captured before later scrolling, so its row object can
+// be stale. Prefer the same title in the current view and fall back to the
+// captured row when it is no longer on screen.
+function resolveWeakRowMatch(rows, targetPattern, weakMatch) {
+  const weakTitle = weakMatch.row.normalizedTitle ||
+    normalizeVietnameseText(weakMatch.row.title || "");
+  const current = scoreContentRowMatches(rows, targetPattern)
+    .find((item) => (item.row.normalizedTitle ||
+      normalizeVietnameseText(item.row.title || "")) === weakTitle);
+  return current?.row || weakMatch.row;
+}
+
 function findBestContentRowMatch(rows, targetPattern) {
+  return scoreContentRowMatches(rows, targetPattern)[0]?.row;
+}
+
+function scoreContentRowMatches(rows, targetPattern) {
   return rows
     .map((row, index) => ({
       row,
@@ -1071,13 +1115,22 @@ function findBestContentRowMatch(rows, targetPattern) {
     }))
     .filter((item) => item.score > 0)
     // Ties break on document order, which is stable regardless of scroll state.
-    .sort((a, b) => b.score - a.score || a.index - b.index)[0]?.row;
+    .sort((a, b) => b.score - a.score || a.index - b.index);
 }
 
 function scoreNormalizedTextMatch(label, target) {
   if (!label || !target) return 0;
   if (label === target) return 100;
-  if (label.includes(target) || target.includes(label)) return 90;
+  // A row name is a label, not free text. "VTV" inside "VTVCab" is a different
+  // category, so containment only counts as a strong match when it lands on word
+  // boundaries ("VTV Cab", "VTV HD"). A mid-word hit stays usable but weak, so
+  // an exact row further down the page still wins.
+  if (label.includes(target)) {
+    return isWordBoundedMatch(label, target) ? 90 : WEAK_ROW_MATCH_SCORE;
+  }
+  if (target.includes(label)) {
+    return isWordBoundedMatch(target, label) ? 90 : WEAK_ROW_MATCH_SCORE;
+  }
 
   const labelTokens = label.split(/[^a-z0-9]+/).filter((token) => token.length >= 2);
   const targetTokens = target.split(/[^a-z0-9]+/).filter((token) => token.length >= 2);
@@ -1090,6 +1143,20 @@ function scoreNormalizedTextMatch(label, target) {
   const coverage = matchedTokens.length / targetTokens.length;
   if (coverage === 1) return 80;
   return 0;
+}
+
+// True when every occurrence check can find `needle` inside `haystack` without
+// cutting a word in half on either side.
+function isWordBoundedMatch(haystack, needle) {
+  const isWordChar = (character) => /[a-z0-9]/u.test(character || "");
+  for (let index = haystack.indexOf(needle); index >= 0; index = haystack.indexOf(needle, index + 1)) {
+    const before = index === 0 ? "" : haystack[index - 1];
+    const afterIndex = index + needle.length;
+    const after = afterIndex >= haystack.length ? "" : haystack[afterIndex];
+    if (!isWordChar(before) && !isWordChar(after)) return true;
+  }
+
+  return false;
 }
 
 // Reads on-screen rows straight from the row containers. Returns null when the

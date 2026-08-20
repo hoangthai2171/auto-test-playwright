@@ -210,6 +210,19 @@ test("compiles list-page playback steps with poster and row bounds", () => {
   );
 });
 
+test("accepts every list content noun for the all and counted forms", () => {
+  const nouns = ["nội dung", "poster", "phim", "kênh", "short"];
+
+  assert.deepEqual(
+    compileQaDescription(nouns.map((noun) => `Play toàn bộ ${noun} trong danh sách`).join("\n")),
+    nouns.map(() => ({action: "play_all_contents"}))
+  );
+  assert.deepEqual(
+    compileQaDescription(nouns.map((noun) => `Play 4 ${noun} đầu tiên trong danh sách`).join("\n")),
+    nouns.map(() => ({action: "play_all_contents", count: 4}))
+  );
+});
+
 test("compiles the view-more list description into focus, OK and list playback", () => {
   assert.deepEqual(
     compileQaDescription(

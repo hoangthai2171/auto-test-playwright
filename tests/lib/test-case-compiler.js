@@ -221,11 +221,11 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
-      return /^(?:phat|play|chay)\s+(?:toan bo|tat ca|\d+)\s+.*\b(?:trang )?danh sach\b/u.test(normalizedLine);
+      return /^(?:phat|play|chay)\s+(?:toan bo|tat ca|\d+)\b.*\b(?:trang )?danh sach\b/u.test(normalizedLine);
     },
     compile(_preparedLine, normalizedLine) {
       const allMatch = normalizedLine.match(
-        /^(?:phat|play|chay)\s+(?:toan bo|tat ca)(?:\s+(?:noi dung|poster|phim|kenh))?\s+(?:trong|o|tai|cua)\s+(?:trang\s+)?danh sach[.!?…。！？]*$/u
+        /^(?:phat|play|chay)\s+(?:toan bo|tat ca)(?:\s+(?:noi dung|poster|phim|kenh|short))?\s+(?:trong|o|tai|cua)\s+(?:trang\s+)?danh sach[.!?…。！？]*$/u
       );
       if (allMatch) return {action: "play_all_contents"};
 
@@ -235,7 +235,7 @@ const STEP_COMPILERS = [
       if (rowMatch) return {action: "play_all_contents", rowCount: Number(rowMatch[1])};
 
       const itemMatch = normalizedLine.match(
-        /^(?:phat|play|chay)\s+(\d+)\s+(?:poster|noi dung)(?:\s+dau(?: tien)?)?\s+(?:trong|o|tai|cua)\s+(?:trang\s+)?danh sach[.!?…。！？]*$/u
+        /^(?:phat|play|chay)\s+(\d+)\s+(?:poster|noi dung|phim|kenh|short)(?:\s+dau(?: tien)?)?\s+(?:trong|o|tai|cua)\s+(?:trang\s+)?danh sach[.!?…。！？]*$/u
       );
       if (itemMatch) return {action: "play_all_contents", count: Number(itemMatch[1])};
 

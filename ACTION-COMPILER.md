@@ -68,7 +68,7 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 | `play_content` | `Phát/Play <phim\|kênh\|nội dung> "<name>"` | Giữ tên gốc và type; chỉ item đang hiển thị, không tìm kiếm toàn cục. |
 | `play_search_result` | `Phát/Play <type> tìm được/vừa tìm/tìm thấy` | Có thể kèm `type`; dùng sau `search_content` nếu chưa xác lập result. |
 | `play_row` | `Phát/Play <n\|tất cả\|toàn bộ> [nội dung] [phim\|kênh] của hàng cate thứ <rowIndex>` hoặc `... hàng cate "<rowName>"` | `<n>` thành `count`; `tất cả`/`toàn bộ` bỏ count; đúng một row selector, không `type`; index Home bỏ row quảng bá. |
-| `play_all_contents` | `Phát/Play/Chạy <toàn bộ\|tất cả> [nội dung\|poster\|phim\|kênh] trong/ở/tại/của [trang] danh sách`; `... <n> dòng [đầu tiên] trong danh sách`; `... <n> <poster\|nội dung> [đầu tiên] trong danh sách` | Không tham số = phát hết trang danh sách; `<n> dòng` thành `rowCount`; `<n> poster/nội dung` thành `count`; không có row selector. |
+| `play_all_contents` | `Phát/Play/Chạy <toàn bộ\|tất cả> [nội dung\|poster\|phim\|kênh\|short] trong/ở/tại/của [trang] danh sách`; `... <n> dòng [đầu tiên] trong danh sách`; `... <n> <poster\|nội dung\|phim\|kênh\|short> [đầu tiên] trong danh sách` | Không tham số = phát hết trang danh sách; `<n> dòng` thành `rowCount`; `<n> poster/nội dung` thành `count`; không có row selector. |
 | `play_home_trailers` | `Chạy/Phát/Play (toàn bộ\|tất cả\|các) (trailer\|trailler) (ở\|trên\|tại) (trang chủ\|Home)` | `{"action":"play_home_trailers"}`; chỉ Browser, không cố định số lượng. |
 | `assert_screen` | Không có fallback grammar | Chỉ action tường minh từ server: `{"action":"assert_screen","text":"..."}`. |
 | `press_back` | `Quay lại`, `Quay về`, `Nhấn back` | `{"action":"press_back"}`; lặp phải dùng `count`. |
