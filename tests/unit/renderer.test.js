@@ -3479,7 +3479,9 @@ test("ships the six-slot Browser workspace and resolution/device controls", () =
     assert.doesNotMatch(css, /\.browser-preview-toolbar/);
     assert.match(css, /\.browser-slot-grid\s*\{[^}]*grid-template-columns:\s*repeat\(3, minmax\(0, 1fr\)\);[^}]*grid-template-rows:\s*repeat\(2, minmax\(0, 1fr\)\);/s);
     assert.match(css, /\.browser-slot-grid\s*\{[^}]*gap:\s*6px;/s);
-    assert.match(css, /\.browser-slot\s*\{[^}]*aspect-ratio:\s*16 \/ 9;[^}]*max-height:\s*100%;/s);
+    assert.match(css, /\.browser-slot\s*\{[^}]*max-height:\s*100%;[^}]*align-self:\s*center;/s);
+    assert.doesNotMatch(css, /\.browser-slot\s*\{[^}]*aspect-ratio:/s);
+    assert.match(css, /\.browser-slot-stage\s*\{[^}]*aspect-ratio:\s*16 \/ 9;[^}]*max-height:\s*100%;/s);
     assert.match(css, /\.browser-slot-case-name\s*\{[^}]*min-width:\s*0;[^}]*overflow:\s*hidden;[^}]*text-overflow:\s*ellipsis;[^}]*white-space:\s*nowrap;/s);
     assert.match(css, /\.browser-slot-status\s*\{[^}]*background:\s*#fff;/s);
     assert.match(css, /\.browser-log-panel\s*\{[^}]*min-height:\s*180px;[^}]*overflow:\s*hidden;/s);
