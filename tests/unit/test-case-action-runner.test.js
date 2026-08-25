@@ -6,6 +6,8 @@ const {
   createDefaultActionHandlers,
   runTestCase,
   assertVisibleScreenText,
+  isPlayerCheckingAction,
+  nextStepRequiresPlayer,
 } = require("../lib/test-case-action-runner");
 const defaultHelpers = require("../lib/mytv-helpers");
 const workflows = require("../lib/workflows");
@@ -370,6 +372,8 @@ test("creates exactly the default handlers and logs in with action credentials i
     "play_home_trailers",
     "play_row",
     "play_search_result",
+    "player_seek",
+    "player_toggle_play",
     "press_back",
     "press_ok",
     "search_content",
@@ -1631,4 +1635,147 @@ test("runTestCase uses default handlers through the existing helpers.runStep", a
     defaultHelpers.runStep = originalRunStep;
     restore();
   }
+});
+
+test("routes OK through the player when a player is open and presses Enter otherwise", async () => {
+  const calls = [];
+  const page = {id: "page"};
+  const testInfo = createTestInfo();
+  let playerState = {state: "closed"};
+  const helpers = createHandlerHelpers({
+    observePlayerControlState: async () => playerState,
+    pressPlayerOk: async (_page, options) => {
+      calls.push(["pressPlayerOk", options.state.state]);
+      return {type: "player_press_ok", playing: true};
+    },
+    remotePress: async (_page, key) => calls.push(["remotePress", key]),
+  });
+  const handlers = createDefaultActionHandlers({helpers});
+
+  const outsidePlayer = await handlers.press_ok({page, testInfo, action: {action: "press_ok"}});
+  assert.equal(outsidePlayer, undefined);
+  assert.deepEqual(calls, [["remotePress", "Enter"]]);
+
+  playerState = {state: "control_bar"};
+  const insidePlayer = await handlers.press_ok({page, testInfo, action: {action: "press_ok"}});
+  assert.deepEqual(insidePlayer, {type: "player_press_ok", playing: true});
+  assert.deepEqual(calls, [["remotePress", "Enter"], ["pressPlayerOk", "control_bar"]]);
+});
+
+test("passes player seek arguments through to the player helper", async () => {
+  const calls = [];
+  const helpers = createHandlerHelpers({
+    seekPlayer: async (_page, options) => {
+      calls.push(["seekPlayer", options.direction, options.steps]);
+      return {type: "player_seek"};
+    },
+    togglePlayerPlayback: async () => ({type: "player_toggle_play"}),
+  });
+  const handlers = createDefaultActionHandlers({helpers});
+
+  await handlers.player_seek({
+    page: {id: "page"},
+    testInfo: createTestInfo(),
+    action: {action: "player_seek", direction: "backward", steps: 3},
+  });
+  const toggled = await handlers.player_toggle_play({page: {id: "page"}, testInfo: createTestInfo(), action: {action: "player_toggle_play"}});
+
+  assert.deepEqual(calls, [["seekPlayer", "backward", 3]]);
+  assert.deepEqual(toggled, {type: "player_toggle_play"});
+});
+
+test("keeps the player open between a seek and the OK press that commits it", () => {
+  const testCase = {
+    actions: [
+      {action: "play_content", name: "Dune", type: "movie"},
+      {action: "player_seek", direction: "forward", steps: 5},
+      {action: "press_ok"},
+    ],
+    expectedResult: "Play nội dung bình thường",
+  };
+
+  assert.equal(isPlayerCheckingAction({action: "player_seek"}), true);
+  assert.equal(isPlayerCheckingAction({action: "player_toggle_play"}), true);
+  // play_content must not close the player the seek is about to drive.
+  assert.equal(nextStepRequiresPlayer(testCase, 0), true);
+  // The seek stays pending until the OK press commits it.
+  assert.equal(nextStepRequiresPlayer(testCase, 1), true);
+  assert.equal(nextStepRequiresPlayer(testCase, 2), true);
+  // An OK press that does not follow a player action keeps its old meaning.
+  assert.equal(
+    nextStepRequiresPlayer({actions: [{action: "focus_text", text: "A"}, {action: "press_ok"}], expectedResult: ""}, 0),
+    false
+  );
+});
+
+test("verifies a paused-player expectedResult on the still-open player", async () => {
+  const events = [];
+  const page = {
+    id: "page",
+    waitForTimeout: async (durationMs) => events.push(`wait:${durationMs}`),
+  };
+  const helpers = createHandlerHelpers({
+    waitForPlayerControlState: async (_page, predicate) => {
+      const state = {
+        state: "control_bar",
+        controlBarVisible: true,
+        video: {hasVideo: true, paused: true, currentTime: 110},
+      };
+      assert.equal(await predicate(state), true);
+      events.push("observed-paused");
+      return state;
+    },
+    closePlayerOrDetail: async (_page, options) => {
+      // A paused player hides its control bar on the first Back, so the close
+      // helper is given room for the extra press.
+      events.push(`closed-player:${options.maxBackPresses}`);
+    },
+  });
+
+  const result = await runTestCase(page, createTestInfo(), {
+    id: "expected-paused",
+    name: "Expected paused player",
+    expectedResult: "Pause player/màn hình",
+    actions: [{action: "player_toggle_play"}],
+  }, {
+    helpers,
+    handlers: {player_toggle_play: async () => ({type: "player_toggle_play", to: "paused"})},
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  const expectedStep = result.steps.at(-1);
+  assert.equal(expectedStep.action, "expected_result");
+  assert.equal(expectedStep.status, "passed");
+  assert.deepEqual(expectedStep.result, {
+    type: "player_paused",
+    verified: "Player is open and paused",
+    positionSeconds: 110,
+    controlBarVisible: true,
+  });
+  // The player-control action must not close the player before the check, and
+  // the check closes it afterwards.
+  assert.deepEqual(events, ["observed-paused", "closed-player:4", "wait:2000"]);
+});
+
+test("fails a paused-player expectedResult when the player keeps playing", async () => {
+  const helpers = createHandlerHelpers({
+    waitForPlayerControlState: async () => {
+      throw new Error("A paused player was not reached within 6000ms");
+    },
+    closePlayerOrDetail: async () => {},
+  });
+
+  await assert.rejects(
+    runTestCase({id: "page", waitForTimeout: async () => {}}, createTestInfo(), {
+      id: "expected-paused-failure",
+      name: "Expected paused player",
+      expectedResult: "Tạm dừng player thành công",
+      actions: [{action: "player_toggle_play"}],
+    }, {
+      helpers,
+      handlers: {player_toggle_play: async () => ({type: "player_toggle_play"})},
+      stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+    }),
+    /A paused player was not reached/u
+  );
 });

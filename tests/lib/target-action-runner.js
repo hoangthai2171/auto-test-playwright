@@ -22,6 +22,8 @@ const ACTION_CAPABILITIES = Object.freeze({
   play_row: ["targetSemanticActions", "playerInspection"],
   play_all_contents: ["browserListPlayback"],
   play_home_trailers: ["browserHomeTrailers"],
+  player_seek: ["browserPlayerControl"],
+  player_toggle_play: ["browserPlayerControl"],
 });
 
 function validateTargetCaseCapabilities(testCase, capabilities = {}) {

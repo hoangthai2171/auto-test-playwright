@@ -129,3 +129,24 @@ test("rejects Browser-only list playback before a TV session is created", () => 
       && /browserListPlayback/u.test(error.message)
   );
 });
+
+test("rejects Browser-only player control before a TV session is created", () => {
+  for (const action of [{action: "player_seek", direction: "forward", steps: 5}, {action: "player_toggle_play"}]) {
+    assert.throws(
+      () => validateTargetCaseCapabilities({
+        id: "player-control-browser-only",
+        name: "Seek inside the player",
+        actions: [action],
+      }, {
+        domInspection: true,
+        visualCapture: true,
+        targetSemanticActions: true,
+        playerInspection: true,
+      }),
+      (error) => error.code === "ACTION_CAPABILITY_UNSUPPORTED"
+        && error.caseId === "player-control-browser-only"
+        && error.actionIndex === 0
+        && /browserPlayerControl/u.test(error.message)
+    );
+  }
+});

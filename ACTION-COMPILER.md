@@ -33,12 +33,13 @@ ASCII và nhập từng ký tự bằng bàn phím ảo.
 
 ### Credential đăng nhập
 
-Hỗ trợ `username/password`, `tên TK <username>, pass <password>` và dạng gắn
-nhãn với `tài khoản`/`mật khẩu`; nội dung gói thuê bao giữa `tài khoản` và
-credential được bỏ qua:
+Hỗ trợ `username/password` (sau `tài khoản` hoặc `TK`), `tên TK <username>, pass
+<password>` và dạng gắn nhãn với `tài khoản`/`mật khẩu`; nội dung gói thuê bao
+giữa `tài khoản` và credential được bỏ qua:
 
 ```text
 Đăng nhập vào app với tài khoản ts1/111222
+Đăng nhập TK ts1/111222
 Đăng nhập tài khoản gói VIP MAX: tên TK 0913476477, pass 0913476477
 ```
 
@@ -58,11 +59,11 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 | --- | --- | --- |
 | `open_home` | `Vào trang chủ`, `Vào trang chủ app/ứng dụng`, `Vào màn hình trang chủ ứng dụng`, `Vào home` | `{"action":"open_home"}` |
 | `open_service` | `Vào dịch vụ <service>` | Giữ service; `kênh` tìm alias `Truyền hình`. |
-| `focus_row` | `Di chuyển đến dòng cate/subcate/row "<row>"`; `... focus vào poster đầu tiên ... "<row>"`; hoặc `... poster <type> thứ <n> ... "<row>"` | `rowName`; câu có số thêm `itemIndex` dương, 1-based. |
-| `focus_row_first_item` | `Di chuyển focus đến ... đầu tiên bên trái` (kể cả `subcate` hiện tại) | Focus item trái nhất của row hiện tại, không phụ thuộc loại nội dung. |
+| `focus_row` | `Di chuyển đến dòng "<row>"`, `Di chuyển đến dòng cate/hàng/subcate/row "<row>"`; `... focus vào poster đầu tiên ... "<row>"`; hoặc `... poster <type> thứ <n> ... "<row>"` | `rowName`; câu có số thêm `itemIndex` dương, 1-based. |
+| `focus_row_first_item` | `Di chuyển focus đến ... đầu tiên bên trái` (kể cả `subcate` hiện tại); `Focus vào item/poster/nội dung đầu tiên` | Focus item trái nhất của row hiện tại, không phụ thuộc loại nội dung. |
 | `focus_text` | `Focus vào mục/item "<text>"`; `Di chuyển [đến] [và] focus vào mục/item "<text>"`; hoặc focus nút `Xem ngay` của trailer Home | `text`; sau `focus_row` ở row `Thể loại`, quét poster dịch vụ. `Xem tất cả`, `Xem thêm`, `View more` dùng poster view-more tin cậy, không fallback menu trái. |
 | `focus_text` (+ `press_ok`) | `Bấm/Chọn/Nhấn vào mục/item/poster "<text>"` | Phát sinh `focus_text`; thêm `press_ok` trừ khi dòng kế tiếp đã là lệnh OK, để không Enter hai lần. |
-| `press_ok` | `Bấm/Chọn/Nhấn [phím] OK` hoặc `enter` | `{"action":"press_ok"}`; poster dịch vụ Home phải qua kiểm tra activation. |
+| `press_ok` | `Bấm/Chọn/Nhấn [phím] OK` hoặc `enter`, có thể kèm mệnh đề mục đích `... để play` | `{"action":"press_ok"}`; poster dịch vụ Home phải qua kiểm tra activation. Trong player, OK commit seek đang chờ / nút đang focus; kết quả bắt buộc suy ra từ trạng thái hiện tại (đang seek hoặc ở detail thì phải phát lại, đang phát thì phải pause và hiện control bar). |
 | `open_search` | `Vào tìm kiếm`, `Vào trang tìm kiếm`, `Vào trang tìm kiếm nội dung` | `{"action":"open_search"}` |
 | `search_content` | `Tìm/Tìm kiếm/Search <phim\|movie\|kênh\|channel\|nội dung\|content> "<name>"` | `type` là `movie`, `channel` hoặc `content`; tìm sau khi nhập bàn phím ảo. |
 | `play_content` | `Phát/Play <phim\|kênh\|nội dung> "<name>"` | Giữ tên gốc và type; chỉ item đang hiển thị, không tìm kiếm toàn cục. |
@@ -70,6 +71,8 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 | `play_row` | `Phát/Play <n\|tất cả\|toàn bộ> [nội dung] [phim\|kênh] của hàng cate thứ <rowIndex>` hoặc `... hàng cate "<rowName>"` | `<n>` thành `count`; `tất cả`/`toàn bộ` bỏ count; đúng một row selector, không `type`; index Home bỏ row quảng bá. |
 | `play_all_contents` | `Phát/Play/Chạy <toàn bộ\|tất cả> [nội dung\|poster\|phim\|kênh\|short] trong/ở/tại/của [trang] danh sách`; `... <n> dòng [đầu tiên] trong danh sách`; `... <n> <poster\|nội dung\|phim\|kênh\|short> [đầu tiên] trong danh sách` | Không tham số = phát hết trang danh sách; `<n> dòng` thành `rowCount`; `<n> poster/nội dung` thành `count`; không có row selector. |
 | `play_home_trailers` | `Chạy/Phát/Play (toàn bộ\|tất cả\|các) (trailer\|trailler) (ở\|trên\|tại) (trang chủ\|Home)` | `{"action":"play_home_trailers"}`; chỉ Browser, không cố định số lượng. |
+| `player_seek` | `Tua <tới\|tiến\|lên\|trước\|nhanh\|phải\|forward> [<n> bước\|lần\|step]`; `Tua <lùi\|lại\|về\|ngược\|trái\|back> [<n> bước]` | `direction` là `forward`/`backward`, `<n>` thành `steps` (mặc định 1, tối đa 60; 1 bước = 1 lần nhấn trên thanh tua, bước nhảy do app quyết định). Chỉ Browser. Dạng khác (`Tua tới 5 phút`) fail closed. |
+| `player_toggle_play` | `Tạm dừng`, `Pause`, `Tiếp tục phát`, `Phát tiếp`, `Resume` (có thể kèm `phim/video/player/nội dung`) | `{"action":"player_toggle_play"}`; nhấn OK trên `#player-button-play` và kiểm tra trạng thái pause đảo chiều. Chỉ Browser. |
 | `assert_screen` | Không có fallback grammar | Chỉ action tường minh từ server: `{"action":"assert_screen","text":"..."}`. |
 | `press_back` | `Quay lại`, `Quay về`, `Nhấn back` | `{"action":"press_back"}`; lặp phải dùng `count`. |
 | `wait_for_ready` | `Chờ app`, `Chờ home`, `Chờ content`, `Chờ player` | `name` tương ứng. |
@@ -119,19 +122,19 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 
 ## Danh sách action cho phép và validate
 
-Chỉ chấp nhận đúng 17 giá trị:
+Chỉ chấp nhận đúng 19 giá trị:
 
 ```text
 login, open_home, focus_row, focus_row_first_item, focus_text, press_ok,
 open_service, open_search, search_content, play_content, play_search_result,
-play_row, play_all_contents, play_home_trailers, assert_screen, press_back,
-wait_for_ready
+play_row, play_all_contents, play_home_trailers, player_seek,
+player_toggle_play, assert_screen, press_back, wait_for_ready
 ```
 
 | Action | Bắt buộc | Tùy chọn |
 | --- | --- | --- |
 | `login` | `username`, `password` | — |
-| `open_home`, `focus_row_first_item`, `press_ok`, `open_search`, `play_home_trailers` | — | — |
+| `open_home`, `focus_row_first_item`, `press_ok`, `open_search`, `play_home_trailers`, `player_toggle_play` | — | — |
 | `focus_row` | `rowName` | `itemIndex` |
 | `focus_text`, `assert_screen` | `text` | — |
 | `open_service` | `service` | — |
@@ -139,13 +142,15 @@ wait_for_ready
 | `play_search_result` | — | `type` |
 | `play_row` | đúng một trong `rowIndex`, `rowName` | `count` |
 | `play_all_contents` | — | nhiều nhất một trong `count`, `rowCount` |
+| `player_seek` | — | `direction`, `steps` |
 | `press_back` | — | `count` |
 | `wait_for_ready` | `name` | — |
 
 `type` chỉ là `channel`, `movie`, `content`; `rowIndex`, `itemIndex`, `count`,
 `rowCount` là số nguyên dương; `press_back.count` không âm.
 `play_all_contents` không nhận cùng lúc `count` và `rowCount`, và không nhận
-`rowIndex`/`rowName`. Các field tên, row, service,
+`rowIndex`/`rowName`. `player_seek.direction` chỉ là `forward` hoặc `backward`,
+`player_seek.steps` là số nguyên từ 1 đến 60. Các field tên, row, service,
 text và credential phải là chuỗi không rỗng. Từ chối field lạ như `selector`,
 `module`, `handler`, `function` và mọi mã thực thi.
 

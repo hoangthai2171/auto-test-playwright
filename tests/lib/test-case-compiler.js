@@ -29,16 +29,18 @@ function ambiguousStepError(context, originalLine) {
 // A description can spell the OK press on its own line, or fold it into the
 // "Bấm vào <poster>" wording. The lookahead below decides which line owns the
 // activation so a poster is never activated twice.
-const OK_STEP_PATTERN = /^(?:nhan|bam|chon)(?: chon)?(?: phim)? (?:ok|enter)[.!?…。！？]*$/u;
+const OK_STEP_PATTERN = /^(?:nhan|bam|chon)(?: chon)?(?: phim)? (?:ok|enter)(?:\s+de\s+.+?)?[.!?…。！？]*$/u;
+const PLAYER_SEEK_FORWARD = /^(?:toi|tien|len|truoc|nhanh|phai|forward)$/u;
+const PLAYER_SEEK_BACKWARD = /^(?:lui|lai|ve|nguoc|trai|back|backward)$/u;
 
 const STEP_COMPILERS = [
   {
     matches(normalizedLine) {
-      return /\bdang nhap\b.*\btai khoan\b/u.test(normalizedLine);
+      return /\bdang nhap\b.*\b(?:tai khoan|tk)\b/u.test(normalizedLine);
     },
     compile(preparedLine, normalizedLine) {
       const slashCredentials = normalizedLine.match(
-        /^dang nhap\b.*\btai khoan\s+\S+\s*\/\s*\S+[.!?…。！？]*$/u
+        /^dang nhap\b.*\b(?:tai khoan|tk)\s+\S+\s*\/\s*\S+[.!?…。！？]*$/u
       )
         ? preparedLine.match(/([^\s/]+)\s*\/\s*([^\s/]+)[.!?…。！？]*$/u)
         : null;
@@ -150,14 +152,14 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
-      return /^di chuyen den (?:focus vao poster dau tien cua\s+(?:muc|hang cate|row)\s+|(?:dong cate|subcate)\s*(?:[:：]\s*)?)["“].+?["”][.!?…。！？]*$/u.test(normalizedLine);
+      return /^di chuyen den (?:focus vao poster dau tien cua\s+(?:muc|hang cate|row)\s+|(?:dong(?:\s+cate)?|hang(?:\s+cate)?|subcate)\s*(?:[:：]\s*)?)["“].+?["”][.!?…。！？]*$/u.test(normalizedLine);
     },
     compile(preparedLine, normalizedLine) {
       const normalizedMatch = normalizedLine.match(
-        /^di chuyen den (?:focus vao poster dau tien cua\s+(?:muc|hang cate|row)\s+|(?:dong cate|subcate)\s*(?:[:：]\s*)?)["“](.+?)["”][.!?…。！？]*$/u
+        /^di chuyen den (?:focus vao poster dau tien cua\s+(?:muc|hang cate|row)\s+|(?:dong(?:\s+cate)?|hang(?:\s+cate)?|subcate)\s*(?:[:：]\s*)?)["“](.+?)["”][.!?…。！？]*$/u
       );
       const preparedMatch = preparedLine.match(
-        /^di chuyển đến (?:focus vào poster đầu tiên của\s+(?:mục|hàng cate|row)\s+|(?:dòng cate|subcate)\s*(?:[:：]\s*)?)["“](.+?)["”][.!?…。！？]*$/iu
+        /^di chuyển đến (?:focus vào poster đầu tiên của\s+(?:mục|hàng cate|row)\s+|(?:dòng(?:\s+cate)?|hàng(?:\s+cate)?|subcate)\s*(?:[:：]\s*)?)["“](.+?)["”][.!?…。！？]*$/iu
       );
 
       if (!normalizedMatch) return null;
@@ -244,14 +246,64 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
-      return /^(?:nhan|bam|chon)(?: chon)?(?: phim)? (?:ok|enter)[.!?…。！？]*$/u.test(normalizedLine);
+      return OK_STEP_PATTERN.test(normalizedLine);
     },
     compile(_preparedLine, normalizedLine) {
-      if (!/^(?:nhan|bam|chon)(?: chon)?(?: phim)? (?:ok|enter)[.!?…。！？]*$/u.test(normalizedLine)) {
+      if (!OK_STEP_PATTERN.test(normalizedLine)) {
         return null;
       }
 
       return { action: "press_ok" };
+    },
+  },
+  {
+    matches(normalizedLine) {
+      return /^tua(?:\s+(?:phim|video|noi dung))?\s+[a-z]+/u.test(normalizedLine);
+    },
+    compile(_preparedLine, normalizedLine) {
+      const match = normalizedLine.match(
+        /^tua(?:\s+(?:phim|video|noi dung))?\s+([a-z]+)(?:\s+(\d+)\s+(?:buoc|lan|step|steps))?[.!?…。！？]*$/u
+      );
+      if (!match) return null;
+
+      const direction = PLAYER_SEEK_FORWARD.test(match[1])
+        ? "forward"
+        : PLAYER_SEEK_BACKWARD.test(match[1])
+          ? "backward"
+          : "";
+      // Any other wording ("tua tới 5 phút") is a different semantic and must
+      // fail closed instead of being guessed as a step count.
+      if (!direction) return null;
+
+      const action = {action: "player_seek", direction};
+      if (match[2] !== undefined) action.steps = Number(match[2]);
+      return action;
+    },
+  },
+  {
+    matches(normalizedLine) {
+      return /^(?:tam dung|pause|tiep tuc phat|phat tiep|resume|play\/pause|toggle play)\b/u.test(normalizedLine);
+    },
+    compile(_preparedLine, normalizedLine) {
+      if (!/^(?:tam dung|pause|tiep tuc phat|phat tiep|resume|play\/pause|toggle play)(?:\s+(?:phim|video|player|noi dung))?[.!?…。！？]*$/u.test(normalizedLine)) {
+        return null;
+      }
+
+      return {action: "player_toggle_play"};
+    },
+  },
+  {
+    matches(normalizedLine) {
+      return /^(?:di chuyen\s+(?:den\s+)?)?focus vao\s+(?:item|poster|noi dung|muc|phim|kenh)\s+dau tien(?:\s+ben trai)?[.!?…。！？]*$/u.test(normalizedLine);
+    },
+    compile(_preparedLine, normalizedLine) {
+      if (!/^(?:di chuyen\s+(?:den\s+)?)?focus vao\s+(?:item|poster|noi dung|muc|phim|kenh)\s+dau tien(?:\s+ben trai)?[.!?…。！？]*$/u.test(normalizedLine)) {
+        return null;
+      }
+
+      // The row was already focused by the previous step; this only moves to
+      // its leftmost item.
+      return {action: "focus_row_first_item"};
     },
   },
   {

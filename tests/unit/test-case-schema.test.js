@@ -294,3 +294,41 @@ test("allows open_home without parameters", () => {
     action: "open_home",
   });
 });
+
+test("validates the player control actions", () => {
+  assert.deepEqual(
+    validateAction({action: "player_seek"}),
+    {action: "player_seek"}
+  );
+  assert.deepEqual(
+    validateAction({action: "player_seek", direction: "backward", steps: 5}),
+    {action: "player_seek", direction: "backward", steps: 5}
+  );
+  assert.deepEqual(
+    validateAction({action: "player_toggle_play"}),
+    {action: "player_toggle_play"}
+  );
+});
+
+test("rejects malformed player control actions", () => {
+  assert.throws(
+    () => validateAction({action: "player_seek", direction: "up"}),
+    /direction must be one of forward or backward/u
+  );
+  assert.throws(
+    () => validateAction({action: "player_seek", steps: 0}),
+    /steps must be an integer between 1 and 60/u
+  );
+  assert.throws(
+    () => validateAction({action: "player_seek", steps: 61}),
+    /steps must be an integer between 1 and 60/u
+  );
+  assert.throws(
+    () => validateAction({action: "player_seek", count: 2}),
+    /unknown field "count"/u
+  );
+  assert.throws(
+    () => validateAction({action: "player_toggle_play", steps: 1}),
+    /unknown field "steps"/u
+  );
+});

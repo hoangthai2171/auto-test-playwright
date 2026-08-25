@@ -13,12 +13,16 @@ const ALLOWED_ACTIONS = new Set([
   "play_row",
   "play_all_contents",
   "play_home_trailers",
+  "player_seek",
+  "player_toggle_play",
   "assert_screen",
   "press_back",
   "wait_for_ready",
 ]);
 
 const READY_NAMES = new Set(["app", "home", "content", "player"]);
+const PLAYER_SEEK_DIRECTIONS = new Set(["forward", "backward"]);
+const MAX_PLAYER_SEEK_STEPS = 60;
 const PLAY_CONTENT_TYPES = new Set(["channel", "movie", "content"]);
 const ACTION_KEYS = {
   login: ["action", "username", "password"],
@@ -35,6 +39,8 @@ const ACTION_KEYS = {
   play_row: ["action", "rowIndex", "rowName", "count"],
   play_all_contents: ["action", "count", "rowCount"],
   play_home_trailers: ["action"],
+  player_seek: ["action", "direction", "steps"],
+  player_toggle_play: ["action"],
   assert_screen: ["action", "text"],
   press_back: ["action", "count"],
   wait_for_ready: ["action", "name"],
@@ -163,6 +169,21 @@ function validateAction(action, path = "action") {
     }
   }
 
+  if (action.action === "player_seek") {
+    if (hasOwn(action, "direction") && !PLAYER_SEEK_DIRECTIONS.has(action.direction)) {
+      throw new Error(`${path}.direction must be one of forward or backward`);
+    }
+
+    if (
+      hasOwn(action, "steps") &&
+      (!Number.isInteger(action.steps) || action.steps < 1 || action.steps > MAX_PLAYER_SEEK_STEPS)
+    ) {
+      throw new Error(
+        `${path}.steps must be an integer between 1 and ${MAX_PLAYER_SEEK_STEPS} when provided`
+      );
+    }
+  }
+
   if (action.action === "assert_screen" && !isNonEmptyString(action.text)) {
     throw new Error(`${path}.text must be a non-empty string`);
   }
@@ -272,6 +293,8 @@ function validateTestCaseList(value, sourceLabel = "test cases") {
 }
 
 module.exports = {
+  PLAYER_SEEK_DIRECTIONS,
+  MAX_PLAYER_SEEK_STEPS,
   validateTestCaseList,
   validateTestCase,
   validateAction,

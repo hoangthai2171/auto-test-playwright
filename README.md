@@ -205,7 +205,10 @@ consent screen continue directly to the username keyboard.
 
 Recognized `expectedResult` values are checked after all declared actions. Play
 or Phát success wording waits for the configured player-check timeout (6 seconds
-by default), then verifies a healthy playing player; service-screen
+by default), then verifies a healthy playing player; pause wording
+(`Pause player`, `Pause player/màn hình`, `Tạm dừng player thành công`) verifies
+the opposite - a player that is open and paused - and reports the paused
+position and whether the control bar is showing; service-screen
 success wording verifies either left-menu/all-services navigation or the Home
 “Thể loại” row route (`focus_row`, `focus_text`, `press_ok`) without requiring
 the service name to appear on the destination screen. The same destination
@@ -236,6 +239,8 @@ initial action vocabulary is:
 - `play_row`
 - `play_all_contents`
 - `play_home_trailers`
+- `player_seek`
+- `player_toggle_play`
 - `assert_screen`
 - `press_back`
 - `wait_for_ready`
@@ -346,6 +351,9 @@ Playback actions use only content currently visible in the TV page's rows:
 {"action":"play_all_contents","count":10}
 {"action":"play_all_contents","rowCount":3}
 {"action":"play_home_trailers"}
+{"action":"player_seek","direction":"forward","steps":5}
+{"action":"player_seek","direction":"backward","steps":2}
+{"action":"player_toggle_play"}
 ```
 
 `play_content` verifies the selected item is playing. `play_row` opens each
@@ -369,6 +377,54 @@ player/detail-close helper as generic player checks and row playback; Home only
 adds its Home-promo readiness predicate. The helper sends one remote Back at a
 time, permits a second Back only when the first destination is not ready, and
 dismisses a detected exit-confirmation popup without another close press.
+
+### Player control
+
+The VOD player answers the remote differently in each of its three screen
+states, so the player actions read the state first instead of assuming one:
+
+| State | Marker | Remote behaviour |
+| --- | --- | --- |
+| Detail | `#movie_leftmenu_wr` is on screen, playback runs behind it | Up/Down move between the detail buttons, OK activates the focused one, Back leaves the player |
+| Control bar | `#new_player_controlbar` inside `#media_player_new` is shown | OK on `#player-button-play` toggles play/pause, Left/Right open and focus `#new-player-timeshift-bar`, Up reaches the button row, Down reaches the related-content row |
+| Player | only the video is on screen | OK pauses and shows the control bar, Left/Right open the seek bar |
+
+The state is read from geometry, not from classes: the app keeps the detail
+panel mounted and slides it to `x=-1280`, and it keeps `focused` on
+`#player-button-play` while the control bar is hidden. Only a full-screen video
+counts as the player, so Home trailers and promo videos are never mistaken for
+one.
+
+`player_seek` seeks inside an open player. `direction` is `forward` (default) or
+`backward`, and `steps` is the number of remote presses on the seek bar
+(default 1, at most 60). One step is one press; the app owns the increment - the
+seek bar advances in 10-second thumbnails at 1X and accelerates while presses
+keep coming - so the action reports the measured start and end positions instead
+of assuming a fixed jump. The first press is what opens the seek bar at the
+current position. The action opens the player itself when the previous step only reached the
+detail menu, waits for a player that is still opening, realigns focus onto
+play/pause when it sits on the control-bar button row or the related-content
+row, and verifies that the seek target - the middle thumbnail of the seek bar's
+strip, which is the only position readout the app keeps in sync while seeking -
+actually moved in the requested direction. A press that leaves the seek bar hidden was swallowed by a screen
+transition and moved nothing, so the opening press is retried instead of
+spending the remaining steps blindly.
+
+A seek stays pending until OK commits it. Inside the player, `press_ok` means
+"commit whatever is focused", and what that must produce is derived from the
+state that owns the screen rather than assumed: a pending seek or a detail play
+button must leave the content playing, OK on a playing player must pause it and
+show the control bar, and OK on the play/pause button must flip the paused
+state. Focus on any other control-bar button opens that control, so nothing
+about playback is required of it.
+`player_toggle_play` presses OK on play/pause and verifies the paused state
+flipped. The runner keeps the player open across the boundary between a seek and
+the OK press that commits it, and across the last action when the
+`expectedResult` is a player or paused-player check.
+
+`npm run test:player:contract` covers the state readers and the seek loop
+against a simulated player DOM and needs no live app. These actions are
+Browser-only: their contract is the app's player DOM.
 
 search_content uses the on-screen virtual keyboard, activates #callSearch,
 waits three seconds, then focuses the best fuzzy match in the visible

@@ -446,3 +446,91 @@ test("rejects a line that matches multiple supported patterns", () => {
     /ambiguous-case.*ambiguous.*Vào home.*vào dịch vụ phim truyện/i
   );
 });
+
+test("compiles the player seek wording into player_seek", () => {
+  assert.deepEqual(
+    compileQaDescription("B1. Tua tới 5 bước"),
+    [{action: "player_seek", direction: "forward", steps: 5}]
+  );
+  assert.deepEqual(
+    compileQaDescription("B1. Tua lùi 2 bước"),
+    [{action: "player_seek", direction: "backward", steps: 2}]
+  );
+  assert.deepEqual(
+    compileQaDescription("B1. Tua phim tới 3 lần"),
+    [{action: "player_seek", direction: "forward", steps: 3}]
+  );
+  assert.deepEqual(
+    compileQaDescription("B1. Tua tới"),
+    [{action: "player_seek", direction: "forward"}]
+  );
+});
+
+test("fails closed on a seek wording that is not a step count", () => {
+  for (const line of ["B1. Tua tới 5 phút", "B1. Tua ngang 5 bước", "B1. Tua đến giữa phim"]) {
+    assert.throws(() => compileQaDescription(line), /Không thể parse được bước/u, line);
+  }
+});
+
+test("compiles pause and resume wording into player_toggle_play", () => {
+  for (const line of ["B1. Tạm dừng", "B1. Tạm dừng phim", "B1. Pause", "B1. Tiếp tục phát", "B1. Phát tiếp phim"]) {
+    assert.deepEqual(compileQaDescription(line), [{action: "player_toggle_play"}], line);
+  }
+});
+
+test("compiles an OK press that spells out its purpose", () => {
+  assert.deepEqual(
+    compileQaDescription("B1. Nhấn phím OK để play"),
+    [{action: "press_ok"}]
+  );
+  assert.deepEqual(
+    compileQaDescription("B1. Bấm OK để xác nhận"),
+    [{action: "press_ok"}]
+  );
+});
+
+test("compiles the short row and first-item wording", () => {
+  assert.deepEqual(
+    compileQaDescription('B1. Di chuyển đến dòng "Phim lẻ không thể bỏ lỡ"'),
+    [{action: "focus_row", rowName: "Phim lẻ không thể bỏ lỡ"}]
+  );
+  assert.deepEqual(
+    compileQaDescription("B1. Focus vào item đầu tiên"),
+    [{action: "focus_row_first_item"}]
+  );
+});
+
+test("compiles a login step that shortens tài khoản to TK", () => {
+  assert.deepEqual(
+    compileQaDescription("B1. Đăng nhập TK ts1/111222"),
+    [{action: "login", username: "ts1", password: "111222"}]
+  );
+});
+
+test("compiles the player-control case end to end", () => {
+  const qaDescription = [
+    "B1. Đăng nhập TK ts1/111222",
+    "B2. Vào trang chủ ứng dung",
+    'B3. Di chuyển đến dòng "Thể loại"',
+    'B4. Focus vào mục "PHIM TRUYỆN"',
+    "B5. Nhấn phím OK",
+    'B6. Di chuyển đến dòng "Phim lẻ không thể bỏ lỡ"',
+    "B7. Focus vào item đầu tiên",
+    "B8. Nhấn phím OK để play",
+    "B9. Tua tới 5 bước",
+    "B10. Nhấn phím OK để play",
+  ].join("\n");
+
+  assert.deepEqual(compileQaDescription(qaDescription, {caseId: "player-seek"}), [
+    {action: "login", username: "ts1", password: "111222"},
+    {action: "open_home"},
+    {action: "focus_row", rowName: "Thể loại"},
+    {action: "focus_text", text: "PHIM TRUYỆN"},
+    {action: "press_ok"},
+    {action: "focus_row", rowName: "Phim lẻ không thể bỏ lỡ"},
+    {action: "focus_row_first_item"},
+    {action: "press_ok"},
+    {action: "player_seek", direction: "forward", steps: 5},
+    {action: "press_ok"},
+  ]);
+});

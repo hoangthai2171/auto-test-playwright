@@ -6,10 +6,18 @@ const { captureCurrentAppScreenshot } = require("./artifacts");
 const { normalizePlayerCheckTimeoutSeconds, normalizeAppEnvironment } = require("../../app/test-configuration");
 
 const PLAYER_RETURN_DELAY_MS = 2000;
+// A paused player answers the first Back by hiding its control bar, so leaving
+// it needs one more press than closing a playing player.
+const PAUSED_PLAYER_BACK_PRESSES = 4;
 const VIEW_MORE_LABELS = new Set(["xem tat ca", "xem them", "view more"]);
 // Actions that already checked a player for every poster they visited, so the
 // expected-result pass must not re-open one.
 const ROW_PLAYBACK_ACTIONS = new Set(["play_row", "play_all_contents"]);
+// Actions that drive the remote inside an already open player. They must find
+// the player open and must leave it open for the OK press that commits them.
+const PLAYER_CONTROL_ACTIONS = new Set(["player_seek", "player_toggle_play"]);
+// Expected results that are checked on the still-open player.
+const PLAYER_EXPECTED_RESULTS = new Set(["player", "player_paused"]);
 
 function attachJson(testInfo, name, value) {
   if (!testInfo || typeof testInfo.attach !== "function") return Promise.resolve();
@@ -35,7 +43,18 @@ function escapeRegExp(value) {
 function classifyExpectedResult(expectedResult) {
   const normalized = normalizeVietnameseText(expectedResult)
     .replace(/[.!?…。！？]+$/u, "")
+    // A QA expectation often names the surfaces it covers with a slash
+    // ("Pause player/màn hình"); the separator carries no meaning here.
+    .replace(/[\/|,+&]+/gu, " ")
+    .replace(/\s+/gu, " ")
     .trim();
+
+  if (
+    /^(?:pause|tam dung|dung)(?:\s+(?:player|man hinh|phim|video|noi dung|playback))+(?:\s+(?:binh thuong|thanh cong|lai))?$/u
+      .test(normalized)
+  ) {
+    return "player_paused";
+  }
 
   if (
     /^(?:play|phat)(?:\s+(?:noi dung|kenh|phim))?\s+(?:binh thuong|thanh cong)$/u.test(
@@ -298,6 +317,38 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
   const kind = classifyExpectedResult(testCase.expectedResult);
   if (!kind) return undefined;
 
+  if (kind === "player_paused") {
+    const timeoutSeconds = normalizePlayerCheckTimeoutSeconds(playerCheckTimeoutSeconds);
+    let pausedScreenshotDataUrl = "";
+    try {
+      const paused = await helpers.waitForPlayerControlState(
+        page,
+        (state) => state.video.hasVideo === true && state.video.paused === true,
+        {timeoutMs: timeoutSeconds * 1000, reason: "A paused player"}
+      );
+      pausedScreenshotDataUrl = await capturePlayerCheckScreenshot(page, testInfo);
+      await finishPlayerCheck(page, helpers, {maxBackPresses: PAUSED_PLAYER_BACK_PRESSES});
+      return {
+        type: "player_paused",
+        verified: "Player is open and paused",
+        positionSeconds: Math.round(paused.video.currentTime),
+        controlBarVisible: paused.controlBarVisible === true,
+        ...(pausedScreenshotDataUrl ? {completionScreenshotDataUrl: pausedScreenshotDataUrl} : {}),
+      };
+    } catch (error) {
+      pausedScreenshotDataUrl ||= await capturePlayerCheckScreenshot(page, testInfo);
+      if (pausedScreenshotDataUrl && error && typeof error === "object") {
+        error.playerCheckScreenshotDataUrl = pausedScreenshotDataUrl;
+      }
+      try {
+        await finishPlayerCheck(page, helpers, {maxBackPresses: PAUSED_PLAYER_BACK_PRESSES});
+      } catch (cleanupError) {
+        if (error && typeof error === "object") error.playerCleanupError = errorMessage(cleanupError);
+      }
+      throw error;
+    }
+  }
+
   if (kind === "player") {
     const rowPlaybackStep = [...(steps || [])]
       .reverse()
@@ -376,16 +427,23 @@ function isPlayerCheckingAction(action) {
   return (
     action?.action === "play_content" ||
     action?.action === "play_search_result" ||
+    PLAYER_CONTROL_ACTIONS.has(action?.action) ||
     (action?.action === "wait_for_ready" && action.name === "player")
   );
 }
 
 function nextStepRequiresPlayer(testCase, actionIndex) {
   const actions = testCase.actions || [];
+  const currentAction = actions[actionIndex];
   const nextAction = actions[actionIndex + 1];
   if (nextAction?.action === "wait_for_ready" && nextAction.name === "player") return true;
   if (nextAction?.action === "press_back") return true;
-  return !nextAction && classifyExpectedResult(testCase.expectedResult) === "player";
+  if (PLAYER_CONTROL_ACTIONS.has(nextAction?.action)) return true;
+  // A seek stays pending until OK commits it, so the player must survive the
+  // step boundary between them.
+  if (PLAYER_CONTROL_ACTIONS.has(currentAction?.action) && nextAction?.action === "press_ok") return true;
+  if (nextAction) return false;
+  return PLAYER_EXPECTED_RESULTS.has(classifyExpectedResult(testCase.expectedResult));
 }
 
 async function cleanupAfterPlayerAction({page, action, actionIndex, testCase, helpers}) {
@@ -404,14 +462,15 @@ async function cleanupAfterFailedPlayerAction({page, action, helpers, error}) {
   await finishPlayerCheck(page, helpers);
 }
 
-async function finishPlayerCheck(page, helpers) {
-  await returnFromPlayer(page, helpers);
+async function finishPlayerCheck(page, helpers, options = {}) {
+  await returnFromPlayer(page, helpers, options);
   await page.waitForTimeout(PLAYER_RETURN_DELAY_MS);
 }
 
-async function returnFromPlayer(page, helpers) {
+async function returnFromPlayer(page, helpers, options = {}) {
   if (typeof helpers.closePlayerOrDetail === "function") {
     return helpers.closePlayerOrDetail(page, {
+      ...options,
       remotePress: helpers.remotePress,
     });
   }
@@ -570,6 +629,21 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
       );
     },
     press_ok: async ({ page, testInfo }) => {
+      // Inside the player OK means "commit what is focused": confirm a pending
+      // seek, activate a detail/control-bar button, or toggle playback. Verify
+      // the player answered instead of pressing Enter blindly.
+      if (!pendingViewMoreTarget && !pendingServiceName) {
+        const playerControlState = typeof helpers.observePlayerControlState === "function"
+          ? await helpers.observePlayerControlState(page).catch(() => null)
+          : null;
+        if (playerControlState && playerControlState.state !== "closed") {
+          return helpers.pressPlayerOk(page, {
+            state: playerControlState,
+            remotePress: helpers.remotePress,
+          });
+        }
+      }
+
       await helpers.remotePress(page, "Enter");
       if (pendingViewMoreTarget) {
         const target = pendingViewMoreTarget;
@@ -637,6 +711,16 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
       helpers.playAllHomeTrailers(page, testInfo, {
         ...playbackWaitOptions,
       }),
+    player_seek: ({ page, action }) =>
+      helpers.seekPlayer(page, {
+        direction: action.direction,
+        steps: action.steps,
+        remotePress: helpers.remotePress,
+      }),
+    player_toggle_play: ({ page }) =>
+      helpers.togglePlayerPlayback(page, {
+        remotePress: helpers.remotePress,
+      }),
     press_back: async ({ page, action }) => {
       for (let index = 0; index < (action.count ?? 1); index += 1) {
         await page.keyboard.press("Backspace");
@@ -688,6 +772,7 @@ async function runTestCase(page, testInfo, testCase, options = {}) {
 }
 
 module.exports = {
+  PLAYER_CONTROL_ACTIONS,
   createActionRunner,
   createDefaultActionHandlers,
   runTestCase,

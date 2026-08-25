@@ -296,6 +296,40 @@ The supported action allowlist is:
   promo boundary. The helper supports destinations requiring one or two Back
   presses and dismisses a recognized exit-confirmation dialog without another
   close press.
+- `player_seek`: Browser-only action that seeks inside an open VOD player.
+  Optional `direction` is `forward` (default) or `backward`; optional `steps`
+  (default 1, at most 60) is the number of remote presses on the seek bar. One
+  step is one press and the app owns the increment - 10-second thumbnails at 1X,
+  accelerating while presses keep coming - so the action reports the measured
+  start and end positions rather than assuming a fixed jump; the first press is
+  what opens the bar at the current position. The player exposes three screen states -
+  detail (`#movie_leftmenu_wr` on screen), control bar (`#new_player_controlbar`
+  inside `#media_player_new`), and bare player - and each answers the remote
+  differently, so the action reads the state from geometry rather than from
+  classes: the app keeps the detail panel mounted and slides it to `x=-1280`,
+  and it keeps `focused` on `#player-button-play` while the control bar is
+  hidden. Only a full-screen video counts as a player, so Home trailers and
+  `#promo-video-next` are never mistaken for one. The action waits for a player
+  that is still opening, enters the player from the detail menu when the
+  previous OK only reached it, realigns focus onto play/pause when it sits on
+  the control-bar button row or the related-content row, retries an opening
+  press that a screen transition swallowed (a press that leaves the seek bar
+  hidden moved nothing), and verifies the seek target moved in the requested
+  direction. The target is the middle thumbnail of the seek bar's time strip,
+  the only position readout the app keeps in sync while seeking; the app mounts
+  two player instances under the same ids, so every lookup takes the on-screen
+  one and focus is classified by ancestry rather than by node identity.
+- `player_toggle_play`: Browser-only parameterless action that presses OK on
+  `#player-button-play` and verifies the paused state flipped.
+- `press_ok` inside a player: commits whatever is focused. The required outcome
+  is derived from the state that owns the screen instead of assumed - a pending
+  seek or a detail play button must leave the content playing, OK on a playing
+  player must pause it and show the control bar, and OK on the play/pause
+  button must flip the paused state, while OK on another control-bar button
+  opens that control and requires nothing of playback. The runner keeps the
+  player open across the step boundary between a seek and the OK press that
+  commits it, and across the last action when the `expectedResult` is a player
+  or paused-player check.
 - `assert_screen`: checks visible body text.
 - `press_back`: sends Backspace; optional `count` repeats it.
 - `wait_for_ready`: accepts `app`, `home`, `content`, or `player`.
@@ -328,7 +362,11 @@ mechanism, and returns structured per-step results.
 After all action steps pass, recognized `expectedResult` values add a final
 `expected_result` check. Playback-success wording waits for the configured
 player-check timeout (6 seconds by default), then waits for a healthy playing
-player; service- and view-more-success wording (`Vào`/`Mở` a service or item,
+player; pause wording (`Pause player`, `Pause player/màn hình`, `Tạm dừng
+player thành công`) waits within that same timeout for an open player that is
+paused and reports its position and control-bar visibility - a paused player
+answers the first Back by hiding its control bar, so that cleanup is allowed up
+to four Back presses instead of the usual two; service- and view-more-success wording (`Vào`/`Mở` a service or item,
 or category `bình thường`/`thành công`) requires the activation check to have
 observed a non-Home destination with visible content rows. A visible
 auto-hide toast/tooltip or no-data/error popup fails service access. Player

@@ -125,10 +125,22 @@ session. Do not change this to run in parallel without redesigning session owner
   execution contract" section for the current vocabulary: `login`, `open_home`, `focus_row`,
   `focus_text`, `press_ok`, `open_service`, `open_search`, `search_content`, `play_content`,
   `play_search_result`, `play_row`, `play_all_contents`, `play_home_trailers`,
-  `assert_screen`, `press_back`,
+  `player_seek`, `player_toggle_play`, `assert_screen`, `press_back`,
   `wait_for_ready`) over relying on the `qaDescription` fallback compiler.
 - `play_row` on Home excludes the `homePage1` promotional row from numeric counting — public
   `rowIndex: 5` maps to `homePage2_4_*`.
+- `player_seek` / `player_toggle_play` drive the remote inside an open VOD
+  player (`tests/lib/player-control.js`). The player's three screen states are
+  read from geometry, not classes: the detail panel stays mounted and slides to
+  `x=-1280`, and `#player-button-play` keeps `focused` while the control bar is
+  hidden. One seek step is one press on `#new-player-timeshift-bar` (the app
+  owns the increment and accelerates, so the action verifies measured movement
+  of the strip's middle thumbnail rather than a fixed jump); the seek
+  stays pending until `press_ok` commits it, so the runner keeps the player open
+  between those two steps. `press_ok` inside the player derives its required
+  outcome from the current state (commit/play, pause a playing player, or toggle
+  play/pause), and `expectedResult` pause wording (`Pause player/màn hình`)
+  verifies an open, paused player.
 - `play_all_contents` plays a content-list page opened from a `Xem tất cả` poster
   (`specialModuleList`, `specialModuleListV2`, `shortHome`, `channel-list`) in
   reading order, with

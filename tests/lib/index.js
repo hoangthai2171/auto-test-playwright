@@ -2,6 +2,7 @@ const textUtils = require("./text-utils");
 const navigation = require("./navigation");
 const contentRows = require("./content-rows");
 const playback = require("./playback");
+const playerControl = require("./player-control");
 const artifacts = require("./artifacts");
 const workflows = require("./workflows");
 const selectors = require("./selectors");
@@ -17,6 +18,7 @@ module.exports = {
   ...navigation,
   ...contentRows,
   ...playback,
+  ...playerControl,
   ...artifacts,
   ...workflows,
   ...selectors,
@@ -28,6 +30,7 @@ module.exports = {
   ...homeTrailers,
   __internal: {
     ...navigation.__internal,
+    ...playerControl.__internal,
     focusFirstRowStart: contentRows.focusFirstRowStart,
     findServiceIdInAllServices: workflows.__internal.findServiceIdInAllServices,
     closeAdvertisePopupIfVisible: workflows.__internal.closeAdvertisePopupIfVisible,
