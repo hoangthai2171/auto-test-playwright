@@ -52,6 +52,7 @@ class FakeElement {
         this.checked = false;
         this.disabled = false;
         this.src = "";
+        this.style = {};
     }
 
     set textContent(value) {
@@ -326,6 +327,21 @@ function createRendererFixture() {
         "lg-recovery-dialog",
         "lg-recovery-retry-button",
         "lg-recovery-stop-button",
+        "app-update-check-button",
+        "app-update-status",
+        "app-update-current-version",
+        "app-update-modal",
+        "app-update-new-version",
+        "app-update-release-name",
+        "app-update-size",
+        "app-update-changelog",
+        "app-update-progress",
+        "app-update-progress-bar",
+        "app-update-progress-fill",
+        "app-update-progress-text",
+        "app-update-confirm-button",
+        "app-update-cancel-button",
+        "app-update-close-button",
     ];
 
     ids.forEach((id) => {
@@ -347,6 +363,8 @@ function createRendererFixture() {
     elements["lg-compatibility-dialog"].className = "modal hidden";
     elements["lg-run-confirmation-dialog"].className = "modal hidden";
     elements["lg-recovery-dialog"].className = "modal hidden";
+    elements["app-update-modal"].className = "modal hidden";
+    elements["app-update-progress"].className = "sdk-install-progress hidden";
     elements["tv-device-passphrase-input"].setAttribute("type", "password");
     elements["api-loading-overlay"].className = "api-loading-overlay";
     elements["app-toast"].className = "app-toast hidden";
@@ -370,6 +388,16 @@ function createRendererFixture() {
     const logsClose = new FakeElement("div");
     logsClose.setAttribute("data-close-logs", "");
     elements["logs-modal"].append(logsClose);
+
+    const appUpdateDialog = new FakeElement("section");
+    appUpdateDialog.className = "app-update-dialog";
+    elements["app-update-dialog"] = appUpdateDialog;
+    elements["app-update-modal"].append(appUpdateDialog);
+
+    const appUpdateClose = new FakeElement("div");
+    appUpdateClose.setAttribute("data-close-app-update", "");
+    elements["app-update-backdrop"] = appUpdateClose;
+    elements["app-update-modal"].append(appUpdateClose);
 
     const guiNav = new FakeElement("button");
     guiNav.setAttribute("data-settings-panel", "gui");
@@ -398,6 +426,16 @@ function createRendererFixture() {
     sdkPanel.setAttribute("data-settings-content", "sdk");
     sdkPanel.className = "hidden";
     root.append(sdkPanel);
+
+    const appUpdateNav = new FakeElement("button");
+    appUpdateNav.setAttribute("data-settings-panel", "app-update");
+    elements["app-update-settings-nav"] = appUpdateNav;
+    root.append(appUpdateNav);
+
+    const appUpdatePanel = new FakeElement("section");
+    appUpdatePanel.setAttribute("data-settings-content", "app-update");
+    appUpdatePanel.className = "hidden";
+    root.append(appUpdatePanel);
 
     ["none", "live", "interactive"].forEach((value) => {
         const input = new FakeElement("input");
@@ -521,6 +559,29 @@ function createRendererFixture() {
         finishedCallback: null,
         onFinished(callback) {
             this.finishedCallback = callback;
+        },
+        getAppVersion: async () => "1.0.9",
+        appUpdateCheckRequests: [],
+        appUpdateCheckResult: {ok: true, updateAvailable: false, currentVersion: "1.0.9", version: "1.0.9"},
+        async checkAppUpdate(request) {
+            this.appUpdateCheckRequests.push(request);
+            return this.appUpdateCheckResult;
+        },
+        appUpdateInstallRequests: [],
+        appUpdateInstallResult: {ok: true, status: "UPDATE_INSTALL_STARTED"},
+        async installAppUpdate(request) {
+            this.appUpdateInstallRequests.push(request);
+            return this.appUpdateInstallResult;
+        },
+        appUpdateCancelCalls: 0,
+        async cancelAppUpdate() {
+            this.appUpdateCancelCalls += 1;
+            return {ok: true};
+        },
+        appUpdateProgressCallback: null,
+        onAppUpdateProgress(callback) {
+            this.appUpdateProgressCallback = callback;
+            return () => { this.appUpdateProgressCallback = null; };
         },
     };
 
@@ -4128,3 +4189,163 @@ test("writes the chosen text file through a main-process save dialog", () => {
     assert.match(mainSource, /const filePath = withTextFileExtension\(result\.filePath\);\s*await fs\.writeFile\(filePath, text, "utf8"\);/);
     assert.match(mainSource, /return \/\\\.txt\$\/iu\.test\(name\) \? name : `\$\{name\}\.txt`;/);
 });
+
+test("shows a bottom toast and no modal when the server reports no newer version", async () => {
+    const fixture = createRendererFixture();
+    const controller = renderer.createRendererController(fixture);
+    fixture.elements["api-domain-input"].value = "http://172.16.240.254:30100";
+    fixture.elements["api-authorization-input"].value = "service-token";
+    fixture.elements["api-timeout-input"].value = "30";
+
+    await controller.checkForAppUpdate();
+
+    assert.deepEqual(fixture.runner.appUpdateCheckRequests, [{
+        apiDomain: "http://172.16.240.254:30100",
+        authorization: "service-token",
+        timeoutSeconds: 30,
+    }]);
+    assert.equal(fixture.elements["app-toast"].textContent, "Không có phiên bản mới");
+    assert.equal(fixture.elements["app-toast"].classList.contains("hidden"), false);
+    assert.equal(fixture.elements["app-update-modal"].classList.contains("hidden"), true);
+});
+
+test("opens the update modal with the version, release name and changelog entries", async () => {
+    const fixture = createRendererFixture();
+    fixture.runner.appUpdateCheckResult = {
+        ok: true,
+        updateAvailable: true,
+        currentVersion: "1.0.9",
+        version: "1.1.0",
+        releaseName: "MyTV Auto Test 1.1.0",
+        changelog: ["Thêm mục Check for updates", "Sửa lỗi player"],
+        mandatory: false,
+        downloadSize: 104857600,
+    };
+    const controller = renderer.createRendererController(fixture);
+
+    await controller.checkForAppUpdate();
+
+    assert.equal(fixture.elements["app-update-modal"].classList.contains("hidden"), false);
+    assert.equal(fixture.elements["app-update-new-version"].textContent, "v1.1.0");
+    assert.equal(fixture.elements["app-update-release-name"].textContent, "MyTV Auto Test 1.1.0");
+    assert.equal(fixture.elements["app-update-size"].textContent, "Dung lượng tải về: 100.0 MB");
+    assert.deepEqual(
+        fixture.elements["app-update-changelog"].children.map((item) => item.textContent),
+        ["Thêm mục Check for updates", "Sửa lỗi player"]
+    );
+    assert.equal(fixture.elements["app-toast"].classList.contains("hidden"), true);
+});
+
+test("Cancel closes the update modal and drops the pending update in the main process", async () => {
+    const fixture = createRendererFixture();
+    fixture.runner.appUpdateCheckResult = {ok: true, updateAvailable: true, currentVersion: "1.0.9", version: "1.1.0", releaseName: "", changelog: [], mandatory: false, downloadSize: 10};
+    const controller = renderer.createRendererController(fixture);
+    await controller.checkForAppUpdate();
+
+    fixture.elements["app-update-cancel-button"].dispatchEvent("click", {});
+    await flushRendererPromises();
+
+    assert.equal(fixture.elements["app-update-modal"].classList.contains("hidden"), true);
+    assert.equal(fixture.runner.appUpdateCancelCalls, 1);
+    assert.deepEqual(fixture.runner.appUpdateInstallRequests, []);
+
+    controller.closeAppUpdateModal();
+    await flushRendererPromises();
+    assert.equal(fixture.runner.appUpdateCancelCalls, 2);
+});
+
+test("Update confirms the checked version and reports download progress in the modal", async () => {
+    const fixture = createRendererFixture();
+    fixture.runner.appUpdateCheckResult = {ok: true, updateAvailable: true, currentVersion: "1.0.9", version: "1.1.0", releaseName: "", changelog: [], mandatory: false, downloadSize: 2097152};
+    const controller = renderer.createRendererController(fixture);
+    await controller.checkForAppUpdate();
+
+    const install = controller.confirmAppUpdate();
+    assert.equal(fixture.elements["app-update-confirm-button"].disabled, true);
+    assert.equal(fixture.elements["app-update-cancel-button"].disabled, true);
+    assert.equal(fixture.elements["app-update-progress"].classList.contains("hidden"), false);
+    await install;
+
+    assert.deepEqual(fixture.runner.appUpdateInstallRequests, [{confirmed: true, version: "1.1.0"}]);
+
+    fixture.runner.appUpdateProgressCallback({code: "downloading", percent: 50, receivedBytes: 1048576, totalBytes: 2097152});
+    assert.equal(fixture.elements["app-update-progress-fill"].style.width, "50%");
+    assert.equal(fixture.elements["app-update-progress-bar"].getAttribute("aria-valuenow"), "50");
+    assert.equal(
+        fixture.elements["app-update-progress-text"].textContent,
+        "Đang tải bản cập nhật... 50% (1.0 MB / 2.0 MB)"
+    );
+
+    fixture.runner.appUpdateProgressCallback({code: "verifying"});
+    assert.equal(fixture.elements["app-update-progress-text"].textContent, "Đang xác thực SHA-256 của bản tải về...");
+
+    fixture.runner.appUpdateProgressCallback({code: "complete"});
+    assert.equal(fixture.elements["app-update-progress"].classList.contains("complete"), true);
+});
+
+test("a blocked or failed install re-enables the dialog and explains why", async () => {
+    const fixture = createRendererFixture();
+    fixture.runner.appUpdateCheckResult = {ok: true, updateAvailable: true, currentVersion: "1.0.9", version: "1.1.0", releaseName: "", changelog: [], mandatory: false, downloadSize: 10};
+    fixture.runner.appUpdateInstallResult = {ok: false, status: "UPDATE_BLOCKED_BY_RUN"};
+    const controller = renderer.createRendererController(fixture);
+    await controller.checkForAppUpdate();
+
+    await controller.confirmAppUpdate();
+
+    assert.equal(fixture.elements["app-update-progress"].classList.contains("attention"), true);
+    assert.equal(
+        fixture.elements["app-update-progress-text"].textContent,
+        "Đang có test chạy hoặc kết quả chưa đồng bộ. Hoàn tất trước khi cập nhật."
+    );
+    assert.equal(fixture.elements["app-update-confirm-button"].disabled, false);
+    assert.equal(fixture.elements["app-update-cancel-button"].disabled, false);
+    assert.equal(fixture.elements["app-update-modal"].classList.contains("hidden"), false);
+
+    controller.renderAppUpdateProgress({code: "failed", status: "UPDATE_VERIFICATION_FAILED"});
+    assert.equal(
+        fixture.elements["app-update-progress-text"].textContent,
+        "Bản tải về không khớp SHA-256 nên đã hủy cài đặt."
+    );
+});
+
+test("a failed check surfaces the reason in the panel and in a toast", async () => {
+    const fixture = createRendererFixture();
+    fixture.runner.appUpdateCheckResult = {ok: false, status: "UPDATE_ARTIFACT_UNTRUSTED"};
+    const controller = renderer.createRendererController(fixture);
+
+    await controller.checkForAppUpdate();
+
+    const expected = "Đường dẫn tải bản cập nhật không thuộc API domain đã cấu hình.";
+    assert.equal(fixture.elements["app-update-status"].textContent, expected);
+    assert.equal(fixture.elements["app-update-status"].classList.contains("error"), true);
+    assert.equal(fixture.elements["app-toast"].textContent, expected);
+    assert.equal(fixture.elements["app-update-modal"].classList.contains("hidden"), true);
+});
+
+test("shows the running version in the update panel", async () => {
+    const fixture = createRendererFixture();
+    renderer.createRendererController(fixture);
+    await flushRendererPromises();
+    assert.equal(fixture.elements["app-update-current-version"].textContent, "v1.0.9");
+});
+
+test("offers Check for updates from its own settings panel", () => {
+    const html = fs.readFileSync(path.join(__dirname, "../../app/renderer/index.html"), "utf8");
+    assert.match(html, /data-settings-panel="app-update">Application update</u);
+    assert.match(html, /id="app-update-check-button"[^>]*>Check for updates</u);
+    assert.match(html, /id="app-update-cancel-button"[^>]*>Cancel</u);
+    assert.match(html, /id="app-update-confirm-button"[^>]*>Update</u);
+    assert.match(html, /<div id="app-update-modal" class="modal hidden"/u);
+});
+
+test("anchors the update toast to the bottom corner and scrolls a long changelog", () => {
+    const css = fs.readFileSync(path.join(__dirname, "../../app/renderer/styles.css"), "utf8");
+    const toast = css.match(/\.app-toast \{[^}]*\}/u)[0];
+    assert.match(toast, /position: fixed/u);
+    assert.match(toast, /bottom: 24px/u);
+    assert.match(toast, /right: 24px/u);
+    const changelog = css.match(/\.app-update-changelog \{[^}]*\}/u)[0];
+    assert.match(changelog, /overflow-y: auto/u);
+    assert.match(changelog, /max-height: 240px/u);
+});
+

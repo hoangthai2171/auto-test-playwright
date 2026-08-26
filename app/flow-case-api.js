@@ -78,6 +78,10 @@ function buildDeviceCompatibilityUrl({apiDomain}) {
   return `${normalizeApiDomain(apiDomain)}/api/v1/device-compatibility`;
 }
 
+function buildAppUpdateManifestUrl({apiDomain}) {
+  return `${normalizeApiDomain(apiDomain)}/api/v1/app-updates/latest`;
+}
+
 function flattenFlowCaseFolders(nodes, result = []) {
   if (!Array.isArray(nodes)) return result;
   nodes.forEach((node) => {
@@ -345,6 +349,12 @@ async function fetchDeviceCompatibilityCatalog({apiDomain, authorization, timeou
   return {ok: true, catalog: result.body, request: result.request, response: result.response};
 }
 
+async function fetchAppUpdateManifest({apiDomain, authorization, timeoutMs, fetchImpl} = {}) {
+  const result = await requestJson(buildAppUpdateManifestUrl({apiDomain}), {authorization, timeoutMs, fetchImpl});
+  if (!result.ok) return result;
+  return {ok: true, manifest: result.body, request: result.request, response: result.response};
+}
+
 module.exports = {
   DEFAULT_API_DOMAIN,
   DEFAULT_TIMEOUT_SECONDS,
@@ -358,12 +368,14 @@ module.exports = {
   buildCampaignTestCasesUrl,
   buildFlowCaseResultUrl,
   buildDeviceCompatibilityUrl,
+  buildAppUpdateManifestUrl,
   flattenFlowCaseFolders,
   fetchFlowCaseFolders,
   fetchFlowCases,
   fetchRunningFlowCaseCampaigns,
   fetchCampaignTestCases,
   fetchDeviceCompatibilityCatalog,
+  fetchAppUpdateManifest,
   submitFlowCaseResults,
   submitFlowCaseResult,
 };

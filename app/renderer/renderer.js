@@ -205,6 +205,38 @@ const DEFAULT_SETTINGS = {
 };
 
 const SAVE_TOAST_DURATION_MS = 3000;
+const NO_APP_UPDATE_MESSAGE = "Không có phiên bản mới";
+const APP_UPDATE_STATUS_MESSAGES = {
+    UPDATE_CHECK_UNAVAILABLE: "Cần cấu hình API domain trong GUI > Connection trước khi kiểm tra cập nhật.",
+    UPDATE_CHECK_FAILED: "Không kiểm tra được phiên bản mới. Kiểm tra lại kết nối tới API domain.",
+    UPDATE_CHECK_TIMEOUT: "Kiểm tra cập nhật quá thời gian chờ.",
+    UPDATE_MANIFEST_INVALID: "Server trả về thông tin phiên bản không hợp lệ.",
+    UPDATE_PLATFORM_UNSUPPORTED: "Nền tảng này không hỗ trợ cập nhật tự động.",
+    UPDATE_ARTIFACT_UNAVAILABLE: "Server chưa có bản cài cho hệ điều hành và kiến trúc này.",
+    UPDATE_ARTIFACT_UNTRUSTED: "Đường dẫn tải bản cập nhật không thuộc API domain đã cấu hình.",
+    UPDATE_ARTIFACT_UNVERIFIABLE: "Bản cập nhật thiếu SHA-256 nên không thể xác thực.",
+    UPDATE_NOT_CHECKED: "Hãy kiểm tra cập nhật lại trước khi cài.",
+    UPDATE_VERSION_MISMATCH: "Thông tin phiên bản đã thay đổi. Hãy kiểm tra cập nhật lại.",
+    UPDATE_BLOCKED_BY_RUN: "Đang có test chạy hoặc kết quả chưa đồng bộ. Hoàn tất trước khi cập nhật.",
+    UPDATE_DOWNLOAD_FAILED: "Tải bản cập nhật thất bại.",
+    UPDATE_VERIFICATION_FAILED: "Bản tải về không khớp SHA-256 nên đã hủy cài đặt.",
+    UPDATE_ARCHIVE_INVALID: "Gói cập nhật không đúng định dạng.",
+    UPDATE_INSTALL_UNSUPPORTED: "Bản chạy từ source không tự cập nhật được. File tải về đã được mở trong thư mục.",
+    UPDATE_INSTALL_FAILED: "Không cài được bản cập nhật.",
+};
+
+function appUpdateStatusText(status) {
+    return APP_UPDATE_STATUS_MESSAGES[String(status ?? "")] || APP_UPDATE_STATUS_MESSAGES.UPDATE_CHECK_FAILED;
+}
+
+function formatUpdateSize(bytes) {
+    const size = Number(bytes);
+    if (!Number.isFinite(size) || size <= 0) return "";
+    const megabytes = size / (1024 * 1024);
+    return megabytes >= 1024
+        ? `${(megabytes / 1024).toFixed(2)} GB`
+        : `${megabytes.toFixed(1)} MB`;
+}
 const COPY_LOG_FEEDBACK_DURATION_MS = 1600;
 const MAX_BROWSER_PREVIEW_SLOTS = 6;
 const MAX_BROWSER_LOG_LENGTH = 120000;
@@ -378,6 +410,22 @@ function createRendererController({document, windowRef, runner, storage, deferIn
     const logsModal = get("logs-modal");
     const appToast = get("app-toast");
     const previewTargetStatus = get("preview-target-status");
+    const appUpdateCheckButton = get("app-update-check-button");
+    const appUpdateStatus = get("app-update-status");
+    const appUpdateCurrentVersion = get("app-update-current-version");
+    const appUpdateModal = get("app-update-modal");
+    const appUpdateDialog = appUpdateModal?.querySelector?.(".app-update-dialog") || null;
+    const appUpdateNewVersion = get("app-update-new-version");
+    const appUpdateReleaseName = get("app-update-release-name");
+    const appUpdateSize = get("app-update-size");
+    const appUpdateChangelog = get("app-update-changelog");
+    const appUpdateProgress = get("app-update-progress");
+    const appUpdateProgressBar = get("app-update-progress-bar");
+    const appUpdateProgressFill = get("app-update-progress-fill");
+    const appUpdateProgressText = get("app-update-progress-text");
+    const appUpdateConfirmButton = get("app-update-confirm-button");
+    const appUpdateCancelButton = get("app-update-cancel-button");
+    const appUpdateCloseButton = get("app-update-close-button");
     const settingsNavItems = doc?.querySelectorAll?.("[data-settings-panel]") || [];
     const settingsPanels = doc?.querySelectorAll?.("[data-settings-content]") || [];
     let cases = [];
@@ -389,6 +437,8 @@ function createRendererController({document, windowRef, runner, storage, deferIn
     let activeCompletion = null;
     let activePreviewType = "live";
     let appToastTimer = null;
+    let pendingAppUpdate = null;
+    let appUpdateInstalling = false;
     let settings = {...DEFAULT_SETTINGS};
     let activeCampaignId = "";
     let activeCacheKey = "";
@@ -579,6 +629,172 @@ function createRendererController({document, windowRef, runner, storage, deferIn
             appToast.className = "app-toast hidden";
             appToastTimer = null;
         }, SAVE_TOAST_DURATION_MS);
+    }
+
+    function setAppUpdateStatus(message, type = "") {
+        if (!appUpdateStatus) return;
+        appUpdateStatus.textContent = message;
+        appUpdateStatus.className = `field-note settings-message ${type}`.trim();
+    }
+
+    function renderAppUpdateChangelog(entries) {
+        if (!appUpdateChangelog) return;
+        appUpdateChangelog.textContent = "";
+        (Array.isArray(entries) ? entries : []).forEach((entry) => {
+            const item = doc.createElement("li");
+            item.textContent = String(entry ?? "");
+            appUpdateChangelog.append(item);
+        });
+    }
+
+    function setAppUpdateProgressValue(percent) {
+        if (appUpdateProgressFill) appUpdateProgressFill.style.width = `${percent}%`;
+        appUpdateProgressBar?.setAttribute?.("aria-valuenow", String(percent));
+    }
+
+    function resetAppUpdateProgress() {
+        appUpdateInstalling = false;
+        appUpdateProgress?.classList.add("hidden");
+        appUpdateProgress?.classList.remove("attention", "complete");
+        appUpdateDialog?.classList.remove("is-installing");
+        setAppUpdateProgressValue(0);
+        if (appUpdateProgressText) appUpdateProgressText.textContent = "";
+        if (appUpdateConfirmButton) appUpdateConfirmButton.disabled = false;
+        if (appUpdateCancelButton) appUpdateCancelButton.disabled = false;
+        if (appUpdateCloseButton) appUpdateCloseButton.disabled = false;
+    }
+
+    function renderAppUpdateProgress(event) {
+        if (!appUpdateProgress) return;
+        const code = String(event?.code || "");
+        appUpdateProgress.classList.remove("hidden");
+        if (code === "downloading") {
+            const percent = Number(event.percent);
+            const bounded = Number.isFinite(percent) ? Math.min(100, Math.max(0, percent)) : 0;
+            setAppUpdateProgressValue(bounded);
+            const total = formatUpdateSize(event.totalBytes);
+            if (appUpdateProgressText) {
+                appUpdateProgressText.textContent = total
+                    ? `Đang tải bản cập nhật... ${bounded}% (${formatUpdateSize(event.receivedBytes)} / ${total})`
+                    : `Đang tải bản cập nhật... ${bounded}%`;
+            }
+            return;
+        }
+        if (code === "verifying") {
+            setAppUpdateProgressValue(100);
+            if (appUpdateProgressText) appUpdateProgressText.textContent = "Đang xác thực SHA-256 của bản tải về...";
+            return;
+        }
+        if (code === "installing") {
+            setAppUpdateProgressValue(100);
+            if (appUpdateProgressText) appUpdateProgressText.textContent = "Đang cài đặt. Ứng dụng sẽ tự đóng lại.";
+            return;
+        }
+        if (code === "complete") {
+            appUpdateProgress.classList.add("complete");
+            setAppUpdateProgressValue(100);
+            if (appUpdateProgressText) appUpdateProgressText.textContent = "Đã bắt đầu cài đặt bản mới.";
+            return;
+        }
+        if (code === "failed") {
+            // The install never started, so the dialog becomes interactive again
+            // and keeps the reason visible instead of closing itself.
+            appUpdateInstalling = false;
+            appUpdateDialog?.classList.remove("is-installing");
+            appUpdateProgress.classList.remove("complete");
+            appUpdateProgress.classList.add("attention");
+            setAppUpdateProgressValue(100);
+            if (appUpdateProgressText) appUpdateProgressText.textContent = appUpdateStatusText(event.status);
+            if (appUpdateConfirmButton) appUpdateConfirmButton.disabled = false;
+            if (appUpdateCancelButton) appUpdateCancelButton.disabled = false;
+            if (appUpdateCloseButton) appUpdateCloseButton.disabled = false;
+        }
+    }
+
+    function openAppUpdateModal(update) {
+        pendingAppUpdate = update;
+        resetAppUpdateProgress();
+        if (appUpdateNewVersion) appUpdateNewVersion.textContent = `v${update.version}`;
+        if (appUpdateReleaseName) appUpdateReleaseName.textContent = update.releaseName || "";
+        if (appUpdateSize) {
+            const size = formatUpdateSize(update.downloadSize);
+            appUpdateSize.textContent = size ? `Dung lượng tải về: ${size}` : "";
+        }
+        renderAppUpdateChangelog(update.changelog);
+        openModal(appUpdateModal);
+    }
+
+    function closeAppUpdateModal() {
+        if (appUpdateInstalling) return;
+        pendingAppUpdate = null;
+        resetAppUpdateProgress();
+        closeModal(appUpdateModal);
+        void api.cancelAppUpdate?.();
+    }
+
+    async function checkForAppUpdate() {
+        if (typeof api.checkAppUpdate !== "function") {
+            setAppUpdateStatus(appUpdateStatusText("UPDATE_CHECK_UNAVAILABLE"), "error");
+            return {ok: false, status: "UPDATE_CHECK_UNAVAILABLE"};
+        }
+        if (appUpdateCheckButton) appUpdateCheckButton.disabled = true;
+        setAppUpdateStatus("Đang kiểm tra phiên bản mới...");
+        try {
+            const current = currentSettings();
+            const response = await api.checkAppUpdate({
+                apiDomain: current.API_DOMAIN,
+                authorization: current.API_AUTHORIZATION,
+                timeoutSeconds: Number(current.API_TIMEOUT_SECONDS),
+            });
+            if (!response?.ok) {
+                setAppUpdateStatus(appUpdateStatusText(response?.status), "error");
+                showAppToast(appUpdateStatusText(response?.status), "error");
+                return response || {ok: false, status: "UPDATE_CHECK_FAILED"};
+            }
+            if (!response.updateAvailable) {
+                setAppUpdateStatus(`${NO_APP_UPDATE_MESSAGE}. Bản đang dùng là mới nhất.`, "ok");
+                showAppToast(NO_APP_UPDATE_MESSAGE);
+                return response;
+            }
+            setAppUpdateStatus(`Đã có phiên bản mới: v${response.version}.`, "ok");
+            openAppUpdateModal(response);
+            return response;
+        } catch {
+            setAppUpdateStatus(appUpdateStatusText("UPDATE_CHECK_FAILED"), "error");
+            showAppToast(appUpdateStatusText("UPDATE_CHECK_FAILED"), "error");
+            return {ok: false, status: "UPDATE_CHECK_FAILED"};
+        } finally {
+            if (appUpdateCheckButton) appUpdateCheckButton.disabled = false;
+        }
+    }
+
+    // The download and the install run in the main process; the dialog stays
+    // open and locked so the user cannot start a second install or close the
+    // window while the app bundle is being replaced.
+    async function confirmAppUpdate() {
+        if (!pendingAppUpdate || appUpdateInstalling) return {ok: false, status: "UPDATE_NOT_CHECKED"};
+        if (typeof api.installAppUpdate !== "function") {
+            renderAppUpdateProgress({code: "failed", status: "UPDATE_INSTALL_FAILED"});
+            return {ok: false, status: "UPDATE_INSTALL_FAILED"};
+        }
+        appUpdateInstalling = true;
+        appUpdateDialog?.classList.add("is-installing");
+        if (appUpdateConfirmButton) appUpdateConfirmButton.disabled = true;
+        if (appUpdateCancelButton) appUpdateCancelButton.disabled = true;
+        if (appUpdateCloseButton) appUpdateCloseButton.disabled = true;
+        renderAppUpdateProgress({code: "downloading", percent: 0, receivedBytes: 0, totalBytes: pendingAppUpdate.downloadSize});
+        try {
+            const response = await api.installAppUpdate({confirmed: true, version: pendingAppUpdate.version});
+            if (!response?.ok) {
+                renderAppUpdateProgress({code: "failed", status: response?.status});
+                setAppUpdateStatus(appUpdateStatusText(response?.status), "error");
+                return response || {ok: false, status: "UPDATE_INSTALL_FAILED"};
+            }
+            return response;
+        } catch {
+            renderAppUpdateProgress({code: "failed", status: "UPDATE_INSTALL_FAILED"});
+            return {ok: false, status: "UPDATE_INSTALL_FAILED"};
+        }
     }
 
     function updateLogEntryOverflow(entry, content) {
@@ -2544,6 +2760,7 @@ function createRendererController({document, windowRef, runner, storage, deferIn
             void loadSdkToolchainStatus();
             void loadBrowserToolchainStatus();
         }
+        if (name === "app-update") setAppUpdateStatus("");
     }
 
     function openModal(modal) {
@@ -3410,6 +3627,11 @@ function createRendererController({document, windowRef, runner, storage, deferIn
         await resumeInteractiveBrowserAfterModal();
     });
     settingsNavItems.forEach((item) => item.addEventListener("click", () => selectSettingsPanel(item.dataset.settingsPanel)));
+    appUpdateCheckButton?.addEventListener("click", () => { void checkForAppUpdate(); });
+    appUpdateConfirmButton?.addEventListener("click", () => { void confirmAppUpdate(); });
+    appUpdateCancelButton?.addEventListener("click", () => closeAppUpdateModal());
+    appUpdateCloseButton?.addEventListener("click", () => closeAppUpdateModal());
+    appUpdateModal?.querySelector("[data-close-app-update]")?.addEventListener("click", () => closeAppUpdateModal());
     win?.addEventListener?.("resize", () => {
         if (activePreviewType === "interactive") showInteractiveBrowserBounds();
     });
@@ -3449,11 +3671,13 @@ function createRendererController({document, windowRef, runner, storage, deferIn
     const unsubscribeBrowserToolchainInstallProgress = api.onBrowserToolchainInstallProgress?.((event) => {
         renderBrowserInstallProgress(event);
     });
+    const unsubscribeAppUpdateProgress = api.onAppUpdateProgress?.((event) => renderAppUpdateProgress(event));
     const unsubscribeLgRunStatus = api.onLgRunStatus?.((event) => renderLgRunStatus(event));
     const unsubscribeLgRunPreview = api.onLgRunPreview?.((dataUrl) => renderLgPreview(dataUrl));
     win?.addEventListener?.("beforeunload", () => {
         if (typeof unsubscribeLgToolchainInstallProgress === "function") unsubscribeLgToolchainInstallProgress();
         if (typeof unsubscribeBrowserToolchainInstallProgress === "function") unsubscribeBrowserToolchainInstallProgress();
+        if (typeof unsubscribeAppUpdateProgress === "function") unsubscribeAppUpdateProgress();
         if (typeof unsubscribeLgRunStatus === "function") unsubscribeLgRunStatus();
         if (typeof unsubscribeLgRunPreview === "function") unsubscribeLgRunPreview();
         if (typeof unsubscribeBrowserBatchEvent === "function") unsubscribeBrowserBatchEvent();
@@ -3471,6 +3695,7 @@ function createRendererController({document, windowRef, runner, storage, deferIn
         .then((version) => {
             const versionEl = doc.getElementById("app-version");
             if (versionEl) versionEl.textContent = `v${version}`;
+            if (appUpdateCurrentVersion) appUpdateCurrentVersion.textContent = `v${version}`;
         })
         .catch((err) => console.error("Failed to load app version:", err));
 
@@ -3497,6 +3722,10 @@ function createRendererController({document, windowRef, runner, storage, deferIn
         runSelectedCases,
         retryResultSync,
         selectRunTarget,
+        checkForAppUpdate,
+        confirmAppUpdate,
+        closeAppUpdateModal,
+        renderAppUpdateProgress,
         refreshLgRunAvailability,
         openLgBatchConfirmation,
         runLgSelectedCases,

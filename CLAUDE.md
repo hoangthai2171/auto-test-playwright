@@ -34,7 +34,8 @@ npm run test:popup:contract          # playback popup detector spec (real DOM, n
 npm run test:channel:contract        # channel-list profile spec (real DOM, no live app)
 npm run test:headed                  # interactive terminal runner for legacy specs
 npm run browsers:install             # install/cache the pinned Playwright Chromium
-npm run app:build / app:build:mac / app:build:win   # electron-builder packaging
+npm run app:build / app:build:mac / app:build:win   # electron-builder packaging + artifact SHA-256 report
+npm run app:build:win -- --x64       # extra args pass straight through to electron-builder
 ```
 
 There is no lint/typecheck script configured (no ESLint/Prettier config in the repo).
@@ -72,6 +73,11 @@ tests/lib/test-case-action-runner.js  <------------------------+
   (1/2/4/6 concurrent devices), each with isolated preview/result/test-results/debug-report paths.
 - `app/flow-case-api.js`, `app/test-case-cache.js`, `app/campaign-flow-case-workflow.js` handle
   folder/campaign retrieval from the flow-case API and the atomic local cache that backs GUI restore.
+- `app/app-update-*.js` implement `Settings > Application update`: the manifest comes from a
+  parameterless `GET {API_DOMAIN}/api/v1/app-updates/latest`, the app itself compares `version` and
+  picks the artifact for its own platform/arch, the renderer never sees the artifact URL, and only a
+  checked release whose declared size and SHA-256 both match is installed. See README.md's
+  "Application update" section for the manifest contract the server must serve.
 - `app/lg-*.js` files implement the second execution target — real LG webOS TVs via Appium
   (`app/loopback-appium-client.js`, loopback-only, native remote control + virtual keyboard,
   `noReset: true`). This path never deploys/uninstalls/resets the TV app and never uses

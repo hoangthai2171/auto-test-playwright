@@ -220,6 +220,92 @@ activation-settle delays in `activateVerifiedTarget`. Those delays only give the
 application time to render the destination screen; they do not replace or
 perform the player-health check.
 
+### Application update
+
+`Settings > Application update` shows the running version and a
+`Check for updates` button. The check reads a manifest from the API domain
+already configured under `GUI > Connection` - no separate update host or URL
+field - and reuses the same `X-FlowTest-Service-Token` header and API timeout:
+
+```
+GET {API_DOMAIN}/api/v1/app-updates/latest
+```
+
+The request carries no query parameters. The server always answers with the
+same manifest describing the latest release and every build it ships; the app
+compares the manifest `version` against its own, and only when the manifest is
+newer does it pick the artifact matching its own platform and architecture and
+show the update modal.
+
+When the served version is not newer than the running build, a small toast
+appears in the bottom corner (`Không có phiên bản mới`) and nothing else
+happens. When it is newer, a modal shows the version, the release name, the
+changelog, and `Cancel` / `Update`.
+
+The server must answer with a manifest in this shape (a `data` wrapper is
+accepted, `artifact` may replace `artifacts` for a single build):
+
+```json
+{
+  "version": "1.1.0",
+  "releaseName": "MyTV Auto Test 1.1.0",
+  "changelog": ["Thêm mục Check for updates", "Sửa lỗi player khi seek"],
+  "mandatory": false,
+  "artifacts": [
+    {
+      "platform": "win32",
+      "arch": "x64",
+      "url": "http://172.16.240.254:30100/files/MyTV Auto Test Setup 1.1.0.exe",
+      "fileName": "MyTV Auto Test Setup 1.1.0.exe",
+      "size": 187695104,
+      "sha256": "…64 hex characters…"
+    },
+    {
+      "platform": "darwin",
+      "arch": "arm64",
+      "url": "http://172.16.240.254:30100/files/MyTV Auto Test-1.1.0-arm64-mac.zip",
+      "size": 164626432,
+      "sha256": "…64 hex characters…"
+    }
+  ]
+}
+```
+
+Manifest rules the app enforces, so a published manifest that breaks one of
+them is rejected rather than installed:
+
+- `version` is compared numerically against the running build; a prerelease
+  (`1.1.0-rc.1`) sorts below its release. Equal or older means no update.
+- The app selects the artifact itself, so `artifacts` should list every build.
+  An entry must match the running platform, and its `arch` must either match or
+  be omitted (an entry naming the architecture wins over one that omits it).
+  Windows artifacts must be the NSIS `.exe`; macOS artifacts must be the `.zip`.
+  A manifest that is newer but ships no artifact for the running platform
+  reports that instead of offering an update.
+- `size` and a lowercase `sha256` are required. The download is rejected if it
+  is longer than `size`, if the final length differs, or if the digest does not
+  match - nothing is installed in those cases.
+- The artifact `url` must use `http`/`https` **and its hostname must be the
+  configured API domain's hostname** (the port may differ, so a separate file
+  port on the same server is fine). This stops a spoofed manifest from pointing
+  the installer at another host.
+- `changelog` accepts an array or a newline-separated string; leading `-`, `*`,
+  and `•` markers are stripped for display.
+
+`Update` downloads the artifact into `app-updates/<sha256>/` under the Electron
+`userData` directory, verifies it, and then installs:
+
+- **Windows** runs the downloaded NSIS installer and quits the app.
+- **macOS** extracts the `.zip` with `ditto`, then hands the bundle swap to a
+  detached script that waits for the app to exit, keeps the old bundle as
+  `.app.previous` until the new one is in place, restores it if the move fails,
+  and reopens the app.
+
+The install is refused while a test run is active or completed results are still
+waiting to sync, because installing quits the app. Running from a source
+checkout (`npm run app:dev`) never replaces anything: the verified download is
+revealed in the file manager instead.
+
 ### Case execution contract
 
 Explicit `actions` are the preferred and authoritative representation. The
@@ -514,20 +600,75 @@ On Apple Silicon, `npm run app:build:win` produces a Windows ARM64 installer.
 To build a Windows x64 installer explicitly, use:
 
 ```bash
-npx electron-builder --win --x64
+npm run app:build:win -- --x64
 ```
 
 In summary:
 
 | Command | Output |
 | --- | --- |
+| `npm run app:build` | Artifacts for the host platform and architecture |
 | `npm run app:build:mac` | macOS ZIP for the host architecture |
 | `npm run app:build:mac:dmg` | macOS DMG for the host architecture |
 | `npm run app:build:win` | Windows NSIS installer for the host architecture |
-| `npx electron-builder --win --x64` | Windows x64 NSIS installer |
+| `npm run app:build:win -- --x64` | Windows x64 NSIS installer |
+
+Every argument after `--` is passed straight through to electron-builder, so
+`npx electron-builder …` still works but skips the artifact report below.
 
 The app obtains the host-appropriate reviewed Chromium only through the
 post-install Browser configuration flow.
+
+### Build artifact SHA-256
+
+Each `app:build*` command runs electron-builder through `scripts/build-app.js`,
+which prints the size and SHA-256 of every installer that build produced,
+followed by a paste-ready manifest fragment for the update endpoint:
+
+```
+Build artifacts for version 1.0.9:
+
+  MyTV Auto Test Setup 1.0.9.exe
+    platform  win32
+    arch      arm64
+    size      104651931 bytes (99.8 MB)
+    sha256    e2f7078ea2d2f85cde0a0159ae3dad03810b340bf3be8dbb686f1870b64b4edc
+
+Manifest entries for GET {API_DOMAIN}/api/v1/app-updates/latest
+(replace REPLACE_WITH_DOWNLOAD_BASE_URL with a download base URL on the API domain's host):
+
+{
+  "version": "1.0.9",
+  "artifacts": [
+    {
+      "platform": "win32",
+      "arch": "arm64",
+      "url": "REPLACE_WITH_DOWNLOAD_BASE_URL/MyTV Auto Test Setup 1.0.9.exe",
+      "fileName": "MyTV Auto Test Setup 1.0.9.exe",
+      "size": 104651931,
+      "sha256": "e2f7078ea2d2f85cde0a0159ae3dad03810b340bf3be8dbb686f1870b64b4edc"
+    }
+  ]
+}
+```
+
+Fill in `url` and the `changelog`/`releaseName` fields, then serve the result
+from the update endpoint - the digest and size are exactly what the app verifies
+before installing, so a stale value makes the update fail rather than install
+the wrong file.
+
+Notes on the report:
+
+- Only files this build created or rewrote are listed, so older releases left in
+  `dist/` are never re-reported. Block maps and builder metadata are skipped.
+- The architecture is read from electron-builder's own build log, not from the
+  file name. electron-builder omits the architecture from the file name when it
+  builds a single architecture, so `MyTV Auto Test Setup 1.0.9.exe` is the
+  ARM64 installer on an Apple Silicon host and the x64 installer elsewhere.
+  If the architecture ever has to be assumed from the build machine, the report
+  says so on that line.
+- A universal macOS build is reported without an `arch`, which lets one manifest
+  entry serve both architectures.
 
 ## Browser Configuration Notes
 

@@ -8,7 +8,7 @@ const {validateTestCaseList} = require("../tests/lib/test-case-schema");
 const {redactSensitiveText, createLogRedactor} = require("./credential-redaction");
 const {normalizeResultScreenshots} = require("./test-result-screenshot");
 const {buildCurlCommand} = require("./api-curl");
-const {fetchFlowCaseFolders, fetchFlowCases, fetchRunningFlowCaseCampaigns, fetchCampaignTestCases, submitFlowCaseResults, submitFlowCaseResult, fetchDeviceCompatibilityCatalog, normalizeTimeoutMs} = require("./flow-case-api");
+const {fetchFlowCaseFolders, fetchFlowCases, fetchRunningFlowCaseCampaigns, fetchCampaignTestCases, submitFlowCaseResults, submitFlowCaseResult, fetchDeviceCompatibilityCatalog, fetchAppUpdateManifest, normalizeTimeoutMs} = require("./flow-case-api");
 const {intersectCampaignCasesById, submitCampaignResultsOrdered} = require("./campaign-flow-case-workflow");
 const {replaceFolderCacheEntry, replaceCampaignCacheEntry, clearTestCaseCache, readMostRecentTestCaseCacheEntry} = require("./test-case-cache");
 const {createEmptyReport, buildTestReportEntry, upsertTestReport, renderUserReport} = require("./test-report");
@@ -37,6 +37,9 @@ const {createBrowserToolchain} = require("./browser-toolchain");
 const {createBrowserToolchainInstaller} = require("./browser-toolchain-installer");
 const {createBrowserRunLauncher} = require("./browser-run-launcher");
 const {registerBrowserToolchainIpc} = require("./browser-toolchain-ipc");
+const {createAppUpdateService} = require("./app-update-service");
+const {createAppUpdateInstaller} = require("./app-update-installer");
+const {registerAppUpdateIpc} = require("./app-update-ipc");
 const {trustedLgToolchainManifest} = require("./lg-toolchain-manifest");
 const bundledLgCompatibilityCatalog = require("../DEVICE-COMPATIBILITY.json");
 const {createLgCompatibilityCatalogStore} = require("./lg-compatibility-catalog-store");
@@ -200,6 +203,10 @@ function lgCompatibilityCatalogPath() {
     return path.join(app.getPath("userData"), "lg-compatibility-catalog.json");
 }
 
+function appUpdateDownloadRoot() {
+    return path.join(app.getPath("userData"), "app-updates");
+}
+
 const toolchainConfig = createTvToolchainConfig({
     filePath: tvToolchainPath(),
     fs,
@@ -307,6 +314,31 @@ registerTvDeviceIpc({
     redact: redactSensitiveText,
 });
 registerBrowserToolchainIpc({ipcMain, browserToolchain, browserInstaller: browserToolchainInstaller});
+const appUpdateService = createAppUpdateService({
+    currentVersion: app.getVersion(),
+    platform: process.platform,
+    arch: process.arch,
+    downloadRoot: appUpdateDownloadRoot(),
+    fetchManifest: fetchAppUpdateManifest,
+    fetch,
+    fs,
+    installer: createAppUpdateInstaller({
+        platform: process.platform,
+        isPackaged: app.isPackaged,
+        executablePath: app.getPath("exe"),
+        processId: process.pid,
+        fs,
+        spawn,
+        quitApp: () => app.quit(),
+        revealPath: (target) => shell.showItemInFolder(target),
+    }),
+});
+registerAppUpdateIpc({
+    ipcMain,
+    appUpdateService,
+    resolveTimeoutMs: normalizeTimeoutMs,
+    canInstall: () => !runningProcess && !activeBrowserBatchRunner?.isRunning?.() && !rendererRunActive && !hasUnsyncedResultSubmission,
+});
 const lgDeviceLock = createDeviceLock();
 const lgAppiumServerManager = createAppiumServerManager({
     spawn,

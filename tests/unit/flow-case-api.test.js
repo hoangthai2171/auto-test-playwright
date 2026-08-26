@@ -469,3 +469,36 @@ test("carries the WebP screenshot string in the submitted testResult", async () 
 
   assert.equal(JSON.parse(folderRequest.options.body).testcases[0].testResult.screenshots, "V0VCUA==");
 });
+
+test("builds the app-update manifest URL without any query parameters", () => {
+  assert.equal(
+    api.buildAppUpdateManifestUrl({apiDomain: "http://api.test:30100/"}),
+    "http://api.test:30100/api/v1/app-updates/latest"
+  );
+  assert.equal(
+    api.buildAppUpdateManifestUrl({}),
+    "http://172.16.240.254:30100/api/v1/app-updates/latest"
+  );
+});
+
+test("returns the manifest body and preserves a failed manifest request", async () => {
+  const ok = await api.fetchAppUpdateManifest({
+    apiDomain: "http://api.test:30100",
+    authorization: "token",
+    fetchImpl: async (url, options) => {
+      assert.equal(url, "http://api.test:30100/api/v1/app-updates/latest");
+      assert.equal(options.method, "GET");
+      assert.equal(options.headers["X-FlowTest-Service-Token"], "token");
+      return {ok: true, status: 200, statusText: "OK", json: async () => ({version: "1.1.0"})};
+    },
+  });
+  assert.equal(ok.ok, true);
+  assert.deepEqual(ok.manifest, {version: "1.1.0"});
+
+  const failed = await api.fetchAppUpdateManifest({
+    apiDomain: "http://api.test:30100",
+    fetchImpl: async () => ({ok: false, status: 503, statusText: "Service Unavailable", json: async () => ({})}),
+  });
+  assert.equal(failed.ok, false);
+  assert.match(failed.message, /HTTP 503/u);
+});

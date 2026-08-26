@@ -89,4 +89,13 @@ contextBridge.exposeInMainWorld("mytvRunner", {
   onStopRequested: (callback) => ipcRenderer.on("request-stop-run", callback),
   onDiscardUnsyncedResultSubmission: (callback) => ipcRenderer.on("discard-unsynced-result-submission", callback),
   getAppVersion: () => ipcRenderer.invoke("get-app-version"),
+  checkAppUpdate: (request) => ipcRenderer.invoke("check-app-update", request),
+  installAppUpdate: (request) => ipcRenderer.invoke("install-app-update", request),
+  cancelAppUpdate: () => ipcRenderer.invoke("cancel-app-update"),
+  onAppUpdateProgress: (callback) => {
+    if (typeof callback !== "function") return () => {};
+    const listener = (_event, value) => callback(value);
+    ipcRenderer.on("app-update-progress", listener);
+    return () => ipcRenderer.removeListener("app-update-progress", listener);
+  },
 });

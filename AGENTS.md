@@ -70,7 +70,7 @@ local-fixture, and launch-failed cases are never included.
 The desktop supports two execution targets: Browser (the default) and LG webOS.
 The Settings dialog owns Browser configuration, Test configuration, LG SDK configuration, the
 saved LG-device list, redacted connection status, managed/advanced toolchain
-selection, and the compatibility catalog. APP_URL is source-controlled in
+selection, the compatibility catalog, and the application update check. APP_URL is source-controlled in
 `app/main.js` and is not rendered or accepted from the GUI. The DNS host mapping
 is source-controlled in `app/hosts-file.js`; host IPC resolves it in the main
 process and returns only safe status fields. Browser runs require the separately
@@ -87,6 +87,21 @@ Interactive BrowserView/CDP preview is allowed only for one selected Browser
 case; Live or None is required for a multi-case batch. LG runs reuse the same case selection,
 batch control, report, and result-submission flow, but require an explicitly
 confirmed real-TV operation.
+
+`Settings > Application update` reads its manifest from a parameterless
+`GET /api/v1/app-updates/latest` on the configured API domain, so there is no
+separate update host and no renderer-editable update URL. The server returns one
+manifest for every build; main compares the manifest version against
+`app.getVersion()` and selects the artifact for its own platform and
+architecture, so no client detail is sent upstream. The renderer sends only the
+API domain, the service token, and the timeout in seconds for a check, then a version string plus explicit confirmation for an install: the
+artifact URL, the staged file path, and the digest never leave the main process.
+Main records exactly one pending release per successful check and refuses to
+install any other version. A download is installed only after its declared
+length and SHA-256 both match, the artifact host must be the configured API
+domain's host, and an install is refused while a run is active or results are
+unsynced because installing quits the app. A source checkout never replaces a
+bundle - the verified download is revealed instead.
 
 The LG renderer may send only a selected saved-device ID, case IDs, an optional
 folder ID or campaign cache key, and explicit confirmation to the LG IPC boundary. The main process
@@ -185,6 +200,10 @@ app/
   flow-case-api.js                Flow-case API URLs, fetch, normalization, timeout
   campaign-flow-case-workflow.js Pure campaign/folder intersection and ordered result fan-out
   test-case-cache.js              Atomic folder/campaign-keyed user-data cache
+  app-update-manifest.js          Pure update-manifest validation and version ordering
+  app-update-service.js           Checked-then-verified update download, one pending release
+  app-update-installer.js         Platform install handoff (NSIS run, macOS bundle swap)
+  app-update-ipc.js               Narrow renderer-to-main update IPC and progress sanitizing
   lg-desktop-run-preflight.js     Main-only LG local/read-only preflight
   lg-desktop-batch-runner.js      Confirmed LG serial batch and recovery policy
   lg-run-ipc.js                   Narrow renderer-to-main LG run IPC
@@ -195,6 +214,9 @@ app/
   renderer/index.html             Case browser and preview markup
   renderer/renderer.js            Case selection, masking, logs, preview UI
   renderer/styles.css             Desktop runner styles
+scripts/
+  build-app.js                    electron-builder passthrough plus artifact SHA-256 report
+  build-artifact-report.js        Pure built-artifact selection, arch resolution, report text
 tests/
   run-test-case-mytv.spec.js      Generic selected-case Playwright spec
   fixtures/mytv-session-fixture.js Shared context, CDP, preview screenshots

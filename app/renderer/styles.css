@@ -1812,3 +1812,66 @@ button:disabled {
   background: #3a1d24;
   color: #ffb3b3;
 }
+
+.app-update-dialog {
+  position: absolute;
+  top: 50%;
+  left: 50%;
+  width: min(560px, calc(100vw - 48px));
+  overflow: hidden;
+  border: 1px solid #343946;
+  border-radius: 8px;
+  background: #17191f;
+  box-shadow: 0 24px 80px rgba(0, 0, 0, 0.42);
+  transform: translate(-50%, -50%);
+}
+
+.app-update-dialog-content {
+  display: grid;
+  gap: 12px;
+  padding: 22px;
+}
+
+.app-update-version {
+  margin: 0;
+  color: #f2f4f8;
+  font-size: 16px;
+}
+
+.app-update-changelog-title {
+  margin: 4px 0 0;
+  color: #c9d3e3;
+  font-size: 13px;
+}
+
+.app-update-changelog {
+  display: grid;
+  gap: 6px;
+  max-height: 240px;
+  margin: 0;
+  padding: 0 0 0 18px;
+  overflow-y: auto;
+  color: #c2ccdb;
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.app-update-changelog:empty::after {
+  color: #8a95a8;
+  content: "Không có mô tả thay đổi.";
+}
+
+.app-update-dialog-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 10px;
+  margin-top: 6px;
+}
+
+.app-update-dialog.is-installing .app-update-dialog-actions button {
+  opacity: 0.6;
+}
+
+#app-update-progress .sdk-install-progress-bar span {
+  animation: none;
+}

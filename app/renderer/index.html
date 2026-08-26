@@ -304,6 +304,7 @@
                         <button type="button" class="settings-nav-item active" data-settings-panel="gui">GUI</button>
                         <button type="button" class="settings-nav-item" data-settings-panel="test-configuration">Test configuration</button>
                         <button type="button" class="settings-nav-item" data-settings-panel="sdk">SDK configuration</button>
+                        <button type="button" class="settings-nav-item" data-settings-panel="app-update">Application update</button>
                     </nav>
 
                     <section class="settings-content">
@@ -523,6 +524,18 @@
                             </section>
                             <button type="button" id="tv-help-button" class="secondary-button">LG help</button>
                         </div>
+                        <div class="settings-panel hidden" data-settings-content="app-update">
+                            <h3>Application update</h3>
+                            <section class="settings-section">
+                                <h4>Version</h4>
+                                <p class="field-note">Phiên bản đang dùng: <strong id="app-update-current-version">—</strong></p>
+                                <p class="field-note">Bản cập nhật được lấy từ API domain đã cấu hình trong GUI &gt; Connection.</p>
+                                <div class="settings-actions">
+                                    <button type="button" id="app-update-check-button">Check for updates</button>
+                                </div>
+                                <p id="app-update-status" class="field-note" role="status" aria-live="polite"></p>
+                            </section>
+                        </div>
                     </section>
                 </div>
             </section>
@@ -551,6 +564,32 @@
                         <button type="button" id="lg-compatibility-validation-confirm-button" class="secondary-button hidden">Confirm one-case validation</button>
                     </div>
                     <p id="lg-compatibility-dialog-status" class="tv-device-status" role="status"></p>
+                </div>
+            </section>
+        </div>
+
+        <div id="app-update-modal" class="modal hidden" role="dialog" aria-modal="true" aria-labelledby="app-update-modal-title">
+            <div class="modal-backdrop" data-close-app-update></div>
+            <section class="app-update-dialog">
+                <header class="settings-header">
+                    <h2 id="app-update-modal-title">Đã có phiên bản mới</h2>
+                    <button type="button" id="app-update-close-button" class="icon-button" aria-label="Đóng">×</button>
+                </header>
+                <div class="app-update-dialog-content">
+                    <p class="app-update-version"><strong id="app-update-new-version">—</strong> <span id="app-update-release-name" class="muted"></span></p>
+                    <p id="app-update-size" class="field-note"></p>
+                    <h4 class="app-update-changelog-title">Changelogs</h4>
+                    <ul id="app-update-changelog" class="app-update-changelog"></ul>
+                    <section id="app-update-progress" class="sdk-install-progress hidden" role="status" aria-live="polite">
+                        <div id="app-update-progress-bar" class="sdk-install-progress-bar" role="progressbar" aria-label="Update download progress" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0">
+                            <span id="app-update-progress-fill"></span>
+                        </div>
+                        <p id="app-update-progress-text" class="sdk-install-progress-text"></p>
+                    </section>
+                    <div class="app-update-dialog-actions">
+                        <button type="button" id="app-update-cancel-button" class="secondary-button">Cancel</button>
+                        <button type="button" id="app-update-confirm-button">Update</button>
+                    </div>
                 </div>
             </section>
         </div>
