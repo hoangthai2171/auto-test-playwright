@@ -372,6 +372,7 @@ test("creates exactly the default handlers and logs in with action credentials i
     "play_home_trailers",
     "play_row",
     "play_search_result",
+    "player_focus_related",
     "player_seek",
     "player_toggle_play",
     "press_back",
@@ -1778,4 +1779,34 @@ test("fails a paused-player expectedResult when the player keeps playing", async
     }),
     /A paused player was not reached/u
   );
+});
+
+test("unwinds the extra screen a related-content playback leaves behind", async () => {
+  const closeCalls = [];
+  const page = {id: "page", waitForTimeout: async () => {}};
+  const helpers = createHandlerHelpers({
+    waitForPlayerReady: async () => {},
+    closePlayerOrDetail: async (_page, options) => closeCalls.push(options.maxBackPresses),
+  });
+  const run = (actions) => runTestCase(page, createTestInfo(), {
+    id: "related-close",
+    name: "Related close",
+    expectedResult: "Play bình thường",
+    actions,
+  }, {
+    helpers,
+    handlers: {
+      open_home: async () => {},
+      player_focus_related: async () => ({type: "player_focus_related", itemIndex: 1}),
+      press_ok: async () => {},
+    },
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  await run([{action: "player_focus_related"}, {action: "press_ok"}]);
+  await run([{action: "open_home"}]);
+
+  // Only the case that played a related item needs the deeper unwind; a plain
+  // playback keeps the shared helper's own default.
+  assert.deepEqual(closeCalls, [4, undefined]);
 });

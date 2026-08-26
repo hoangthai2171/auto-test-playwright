@@ -372,3 +372,127 @@ test("rejects unsupported seek arguments before touching the player", async ({pa
   await expect(playerControl.seekPlayer(page, {direction: "up", steps: 1})).rejects.toThrow(/seek direction/u);
   await expect(playerControl.seekPlayer(page, {direction: "forward", steps: 0})).rejects.toThrow(/between 1 and 60/u);
 });
+
+// The in-player related-content row: Down opens the control bar, Down again
+// swaps it for the row and pauses playback, and OK starts that content.
+const RELATED_PAGE = `
+  <style>
+    body {margin: 0; background: #000;}
+    #media_player_new {position: absolute; top: 0; left: 0; width: 1280px; height: 720px;}
+    #new_player_controlbar {position: absolute; top: 607px; left: 61px; width: 1152px; height: 113px;}
+    #player-button-play {position: absolute; top: -20px; left: 0; width: 40px; height: 40px; display: inline-block;}
+    #related_row {position: absolute; top: 523px; left: 27px;}
+    #related_row span {display: inline-block; width: 245px; height: 138px; margin-right: 2px;}
+    .hidden {display: none;}
+  </style>
+  <video id="player-video" style="width: 1280px; height: 720px;"></video>
+  <div id="media_player_new" class="new-player hidden">
+    <div id="new_player_controlbar" class="controls-bar show">
+      <span id="player-button-play" class="player-button-play focused"></span>
+      <span id="media_player_current">08:05</span>
+      <span id="media_player_duration">2:17:28</span>
+    </div>
+  </div>
+  <div id="related_row" class="hidden">
+    <span id="relativeContentPopup2_0_0" class="cate_content_item oldSize" content-id="162128"></span>
+    <span id="relativeContentPopup2_0_1" class="cate_content_item oldSize" content-id="163859"></span>
+    <span id="relativeContentPopup2_0_2" class="cate_content_item oldSize" content-id="164100"></span>
+  </div>
+  <script>
+    const video = document.getElementById("player-video");
+    window.__player = {paused: false, currentTime: 485, source: "blob:first-content"};
+    window.__ui = {controlBar: false, related: false, index: 0};
+    for (const [name, read] of [
+      ["paused", () => window.__player.paused],
+      ["currentTime", () => window.__player.currentTime],
+      ["duration", () => 8734.36],
+      ["readyState", () => 4],
+      ["ended", () => false],
+      ["currentSrc", () => window.__player.source],
+    ]) {
+      Object.defineProperty(video, name, {get: read});
+    }
+
+    function render() {
+      document.getElementById("media_player_new").classList.toggle("hidden", !window.__ui.controlBar);
+      document.getElementById("related_row").classList.toggle("hidden", !window.__ui.related);
+      Array.from(document.querySelectorAll("#related_row span")).forEach((item, index) => {
+        item.classList.toggle("focused", window.__ui.related && index === window.__ui.index);
+      });
+    }
+
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "ArrowDown") {
+        if (!window.__ui.controlBar && !window.__ui.related) window.__ui.controlBar = true;
+        else if (!window.__ui.related) {
+          window.__ui = {controlBar: false, related: true, index: 0};
+          window.__player.paused = true;
+        }
+      } else if (event.key === "ArrowUp" && window.__ui.related) {
+        window.__ui = {controlBar: true, related: false, index: 0};
+      } else if ((event.key === "ArrowRight" || event.key === "ArrowLeft") && window.__ui.related) {
+        const step = event.key === "ArrowRight" ? 1 : -1;
+        const last = document.querySelectorAll("#related_row span").length - 1;
+        window.__ui.index = Math.min(last, Math.max(0, window.__ui.index + step));
+      } else if (event.key === "Enter" && window.__ui.related) {
+        const id = document.querySelectorAll("#related_row span")[window.__ui.index].id;
+        window.__player = {paused: false, currentTime: 0, source: "blob:" + id};
+        window.__ui = {controlBar: false, related: false, index: 0};
+      }
+      render();
+    });
+
+    render();
+  </script>
+`;
+
+test("opens the related-content row and focuses its first poster", async ({page}) => {
+  await page.setContent(RELATED_PAGE);
+
+  const result = await playerControl.focusPlayerRelatedContent(page, {pressDelayMs: 50, openTimeoutMs: 500});
+
+  expect(result.type).toBe("player_focus_related");
+  expect(result.itemIndex).toBe(1);
+  expect(result.id).toBe("relativeContentPopup2_0_0");
+  expect(result.rowId).toBe("relativeContentPopup2_0");
+  // Opening the row pauses the content that is playing behind it.
+  expect(result.playbackPaused).toBe(true);
+
+  const state = await playerControl.observePlayerControlState(page);
+  expect(state.focus.scope).toBe("related");
+  expect(state.focus.id).toBe("relativeContentPopup2_0_0");
+});
+
+test("walks to the requested related-content item and plays it with OK", async ({page}) => {
+  await page.setContent(RELATED_PAGE);
+
+  const focused = await playerControl.focusPlayerRelatedContent(page, {
+    itemIndex: 3,
+    pressDelayMs: 50,
+    openTimeoutMs: 500,
+  });
+  expect(focused.id).toBe("relativeContentPopup2_0_2");
+
+  const played = await playerControl.pressPlayerOk(page, {pressDelayMs: 50});
+
+  expect(played.expected).toBe("playing");
+  expect(played.contentChanged).toBe(true);
+  expect(played.playing).toBe(true);
+  expect(await page.evaluate(() => window.__player.source)).toBe("blob:relativeContentPopup2_0_2");
+});
+
+test("fails closed when the related row is shorter than the requested item", async ({page}) => {
+  await page.setContent(RELATED_PAGE);
+
+  await expect(playerControl.focusPlayerRelatedContent(page, {itemIndex: 5, pressDelayMs: 50, openTimeoutMs: 500}))
+    .rejects.toThrow(/related-content row ended before item 5/u);
+});
+
+test("returns from the related row to play/pause when a seek is requested", async ({page}) => {
+  await page.setContent(RELATED_PAGE);
+  await playerControl.focusPlayerRelatedContent(page, {pressDelayMs: 50, openTimeoutMs: 500});
+
+  const state = await playerControl.focusPlayPauseButton(page, {pressDelayMs: 50});
+
+  expect(state.focus.scope).toBe("play_pause");
+});

@@ -73,6 +73,8 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 | `play_home_trailers` | `Chạy/Phát/Play (toàn bộ\|tất cả\|các) (trailer\|trailler) (ở\|trên\|tại) (trang chủ\|Home)` | `{"action":"play_home_trailers"}`; chỉ Browser, không cố định số lượng. |
 | `player_seek` | `Tua <tới\|tiến\|lên\|trước\|nhanh\|phải\|forward> [<n> bước\|lần\|step]`; `Tua <lùi\|lại\|về\|ngược\|trái\|back> [<n> bước]` | `direction` là `forward`/`backward`, `<n>` thành `steps` (mặc định 1, tối đa 60; 1 bước = 1 lần nhấn trên thanh tua, bước nhảy do app quyết định). Chỉ Browser. Dạng khác (`Tua tới 5 phút`) fail closed. |
 | `player_toggle_play` | `Tạm dừng`, `Pause`, `Tiếp tục phát`, `Phát tiếp`, `Resume` (có thể kèm `phim/video/player/nội dung`) | `{"action":"player_toggle_play"}`; nhấn OK trên `#player-button-play` và kiểm tra trạng thái pause đảo chiều. Chỉ Browser. |
+| `player_focus_related` | `Chọn/Mở/Focus [vào] [phim\|nội dung\|poster\|item] liên quan <đầu tiên\|thứ <n>>` | `itemIndex` 1-based (mặc định 1, tối đa 60); mở hàng nội dung liên quan trong player rồi focus poster. Chỉ Browser. `press_ok` sau đó phát nội dung liên quan. |
+| `player_focus_related` (+ `press_ok`) | `Phát/Play/Chơi [phim\|nội dung] liên quan <đầu tiên\|thứ <n>>` | Phát sinh `player_focus_related`; thêm `press_ok` trừ khi dòng kế tiếp đã là lệnh OK, để không Enter hai lần. |
 | `assert_screen` | Không có fallback grammar | Chỉ action tường minh từ server: `{"action":"assert_screen","text":"..."}`. |
 | `press_back` | `Quay lại`, `Quay về`, `Nhấn back` | `{"action":"press_back"}`; lặp phải dùng `count`. |
 | `wait_for_ready` | `Chờ app`, `Chờ home`, `Chờ content`, `Chờ player` | `name` tương ứng. |
@@ -122,13 +124,14 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 
 ## Danh sách action cho phép và validate
 
-Chỉ chấp nhận đúng 19 giá trị:
+Chỉ chấp nhận đúng 20 giá trị:
 
 ```text
 login, open_home, focus_row, focus_row_first_item, focus_text, press_ok,
 open_service, open_search, search_content, play_content, play_search_result,
 play_row, play_all_contents, play_home_trailers, player_seek,
-player_toggle_play, assert_screen, press_back, wait_for_ready
+player_toggle_play, player_focus_related, assert_screen, press_back,
+wait_for_ready
 ```
 
 | Action | Bắt buộc | Tùy chọn |
@@ -143,6 +146,7 @@ player_toggle_play, assert_screen, press_back, wait_for_ready
 | `play_row` | đúng một trong `rowIndex`, `rowName` | `count` |
 | `play_all_contents` | — | nhiều nhất một trong `count`, `rowCount` |
 | `player_seek` | — | `direction`, `steps` |
+| `player_focus_related` | — | `itemIndex` |
 | `press_back` | — | `count` |
 | `wait_for_ready` | `name` | — |
 
@@ -150,7 +154,7 @@ player_toggle_play, assert_screen, press_back, wait_for_ready
 `rowCount` là số nguyên dương; `press_back.count` không âm.
 `play_all_contents` không nhận cùng lúc `count` và `rowCount`, và không nhận
 `rowIndex`/`rowName`. `player_seek.direction` chỉ là `forward` hoặc `backward`,
-`player_seek.steps` là số nguyên từ 1 đến 60. Các field tên, row, service,
+`player_seek.steps` và `player_focus_related.itemIndex` là số nguyên từ 1 đến 60. Các field tên, row, service,
 text và credential phải là chuỗi không rỗng. Từ chối field lạ như `selector`,
 `module`, `handler`, `function` và mọi mã thực thi.
 

@@ -194,7 +194,6 @@
   "192": "content-rows.test.js",
   "193": "test-result-screenshot.test.js",
   "194": "player-control.test.js",
-  "195": "app-cleanup.test.js",
   "196": "smart-waits.spec.js",
   "197": "play-all-contents-contract.spec.js",
   "198": "channel-list-profile-contract.spec.js",

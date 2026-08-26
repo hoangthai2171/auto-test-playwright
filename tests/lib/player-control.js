@@ -16,13 +16,14 @@ const PLAYER_SELECTORS = Object.freeze({
   timeshiftBar: "#new-player-timeshift-bar",
   timeshiftProgress: "#player-bar-timeshift",
   timeshiftActive: "#player_bar_active",
+  relatedItem: "[id^='relativeContentPopup']",
   currentTime: "#media_player_current",
   remainingTime: "#media_player_duration",
   promoVideo: "#promo-video-next",
 });
 
 const PLAYER_STATES = Object.freeze(["closed", "detail", "control_bar", "player"]);
-const FOCUS_SCOPES = Object.freeze(["none", "detail", "play_pause", "timeshift", "control_button", "other"]);
+const FOCUS_SCOPES = Object.freeze(["none", "detail", "play_pause", "timeshift", "related", "control_button", "other"]);
 const SEEK_DIRECTIONS = Object.freeze({forward: "ArrowRight", backward: "ArrowLeft"});
 const DEFAULT_SEEK_DIRECTION = "forward";
 const DEFAULT_SEEK_STEPS = 1;
@@ -43,6 +44,11 @@ const PLAYBACK_RESUME_TIMEOUT_MS = 20000;
 const STATE_POLL_INTERVAL_MS = 250;
 const STATE_TIMEOUT_MS = 15000;
 const MAX_FOCUS_ALIGN_PRESSES = 4;
+const MAX_RELATED_OPEN_PRESSES = 4;
+const MAX_RELATED_MOVE_PRESSES = 40;
+const RELATED_PRESS_DELAY_MS = 700;
+const RELATED_STEP_TIMEOUT_MS = 2500;
+const MAX_RELATED_ITEM_INDEX = 60;
 
 function normalizeSeekDirection(value) {
   const direction = String(value ?? DEFAULT_SEEK_DIRECTION).trim().toLowerCase();
@@ -50,6 +56,15 @@ function normalizeSeekDirection(value) {
     throw new Error(`Unsupported player seek direction: ${value}`);
   }
   return direction;
+}
+
+function normalizeRelatedItemIndex(value) {
+  if (value === undefined || value === null || value === "") return 1;
+  const itemIndex = Number(value);
+  if (!Number.isSafeInteger(itemIndex) || itemIndex < 1 || itemIndex > MAX_RELATED_ITEM_INDEX) {
+    throw new Error(`Related item index must be an integer between 1 and ${MAX_RELATED_ITEM_INDEX}: ${value}`);
+  }
+  return itemIndex;
 }
 
 function normalizeSeekSteps(value) {
@@ -135,13 +150,18 @@ async function observePlayerControlState(page) {
     const controlBarVisible = isOnScreen(controlBar) || isOnScreen(playPauseButton);
     const timeshiftVisible = isOnScreen(timeshiftBar);
 
+    // `.focused` is the app's real focus marker and must win. #player_bar_active
+    // carries `active` whenever the control bar is shown - it is the progress
+    // fill, not the focus - so it only counts when nothing else is focused,
+    // which is exactly the seeking state.
     const focusedElement = [
-      `${selectors.timeshiftActive}.active`,
-      `${selectors.timeshiftBar} .active`,
       `${selectors.playerRoot} .focused`,
       `${selectors.detail} .focused`,
-      `${selectors.detail} .active`,
+      `${selectors.relatedItem}.focused`,
       ".focused",
+      `${selectors.detail} .active`,
+      `${selectors.timeshiftActive}.active`,
+      `${selectors.timeshiftBar} .active`,
       "[is_focus='1']",
     ].flatMap((selector) => Array.from(document.querySelectorAll(selector)))
       .find(isOnScreen) || null;
@@ -150,7 +170,9 @@ async function observePlayerControlState(page) {
     // player instances cannot misfile the focus.
     let focusScope = "none";
     if (focusedElement) {
-      if (focusedElement.closest(`${selectors.timeshiftBar}, ${selectors.timeshiftProgress}, ${selectors.timeshiftActive}`)) {
+      if (focusedElement.closest(selectors.relatedItem)) {
+        focusScope = "related";
+      } else if (focusedElement.closest(`${selectors.timeshiftBar}, ${selectors.timeshiftProgress}, ${selectors.timeshiftActive}`)) {
         focusScope = "timeshift";
       } else if (focusedElement.closest(selectors.playPauseButton)) {
         focusScope = "play_pause";
@@ -220,8 +242,11 @@ async function observePlayerControlState(page) {
           paused: videoElement.paused,
           ended: videoElement.ended,
           readyState: videoElement.readyState,
+          // Playing a related item swaps the content in place and leaves the
+          // route untouched, so the media source is the only content identity.
+          source: (videoElement.currentSrc || videoElement.src || "").slice(-64),
         }
-        : {hasVideo: false, currentTime: 0, duration: null, paused: true, ended: false, readyState: 0},
+        : {hasVideo: false, currentTime: 0, duration: null, paused: true, ended: false, readyState: 0, source: ""},
       detailText: detailOnScreen ? describe(detail)?.text || "" : "",
       timeshiftText: timeshiftVisible ? describe(timeshiftBar)?.text || "" : "",
     };
@@ -335,6 +360,14 @@ async function focusPlayPauseButton(page, options = {}) {
   for (let attempt = 0; attempt < MAX_FOCUS_ALIGN_PRESSES; attempt += 1) {
     if (isSeekReadyFocus(state)) return state;
 
+    // Up is the documented way back from the related-content row; the control
+    // bar is hidden while that row is open, so its geometry says nothing.
+    if (state.focus.scope === "related") {
+      await remotePress(page, "ArrowUp", options.pressDelayMs ?? SEEK_PRESS_DELAY_MS);
+      state = await observePlayerControlState(page);
+      continue;
+    }
+
     const playPauseY = state.playPauseRect?.y;
     if (typeof playPauseY !== "number") break;
     const key = state.focus.rect.y < playPauseY ? "ArrowDown" : "ArrowUp";
@@ -349,7 +382,9 @@ async function focusPlayPauseButton(page, options = {}) {
   throw error;
 }
 
-async function preparePlayerForRemoteControl(page, options = {}) {
+// Readiness only: the player answers the remote and the detail menu no longer
+// owns the screen. Callers that need a specific focus align it themselves.
+async function ensureRemoteReadyPlayer(page, options = {}) {
   let state = options.state || (await observePlayerControlState(page));
 
   // The OK press that opened the content belongs to the previous step, so the
@@ -369,7 +404,95 @@ async function preparePlayerForRemoteControl(page, options = {}) {
     state = await enterPlayerFromDetail(page, {...options, state});
   }
 
+  return state;
+}
+
+async function preparePlayerForRemoteControl(page, options = {}) {
+  const state = await ensureRemoteReadyPlayer(page, options);
   return focusPlayPauseButton(page, {...options, state});
+}
+
+function relatedItemPosition(state) {
+  // Items are ids of the shape relativeContentPopup<n>_<row>_<col>.
+  const match = String(state?.focus?.id || "").match(/^(relativeContentPopup\d*)_(\d+)_(\d+)$/u);
+  if (!match) return null;
+  return {rowId: `${match[1]}_${match[2]}`, row: Number(match[2]), column: Number(match[3])};
+}
+
+// Down from the player opens the control bar, and Down again shows the related
+// content row and moves focus into it. The app pauses playback while that row
+// is open, and OK on a poster starts that content instead.
+async function focusPlayerRelatedContent(page, options = {}) {
+  const itemIndex = normalizeRelatedItemIndex(options.itemIndex);
+  const remotePress = options.remotePress || navigation.remotePress;
+  const pressDelayMs = Number(options.pressDelayMs ?? RELATED_PRESS_DELAY_MS);
+  // Focus that already sits in the related row stays there; only readiness is
+  // required here.
+  let state = await ensureRemoteReadyPlayer(page, {...options, state: options.state});
+
+  // Down opens the control bar first and only the next Down reaches the related
+  // row. The bar auto-hides after a few idle seconds, so each press waits just
+  // until something opened - never for the row itself - and the next Down lands
+  // while the bar is still up.
+  for (let attempt = 0; state.focus.scope !== "related" && attempt < MAX_RELATED_OPEN_PRESSES; attempt += 1) {
+    await remotePress(page, "ArrowDown", pressDelayMs);
+    state = await waitForPlayerControlState(
+      page,
+      (candidate) => candidate.focus.scope === "related" ||
+        candidate.focus.scope === "play_pause" ||
+        candidate.controlBarVisible === true,
+      {
+        timeoutMs: options.openTimeoutMs ?? RELATED_STEP_TIMEOUT_MS,
+        pollIntervalMs: options.pollIntervalMs,
+      }
+    ).catch((error) => error?.details?.playerControlState || observePlayerControlState(page));
+  }
+
+  if (state.focus.scope !== "related") {
+    const error = new Error(`The player did not open its related-content row: ${describeState(state)}`);
+    error.details = {playerControlState: state};
+    throw error;
+  }
+
+  let position = relatedItemPosition(state);
+  if (!position) {
+    const error = new Error(`Could not read the related-content position from "${state.focus.id}"`);
+    error.details = {playerControlState: state};
+    throw error;
+  }
+
+  const targetColumn = itemIndex - 1;
+  for (let move = 0; position.column !== targetColumn && move < MAX_RELATED_MOVE_PRESSES; move += 1) {
+    const key = position.column < targetColumn ? "ArrowRight" : "ArrowLeft";
+    await remotePress(page, key, pressDelayMs);
+    const moved = await observePlayerControlState(page);
+    const movedPosition = relatedItemPosition(moved);
+    if (!movedPosition || movedPosition.column === position.column) {
+      const error = new Error(
+        `The related-content row ended before item ${itemIndex}: ${describeState(moved)}`
+      );
+      error.details = {playerControlState: moved};
+      throw error;
+    }
+    state = moved;
+    position = movedPosition;
+  }
+
+  if (position.column !== targetColumn) {
+    const error = new Error(`Could not focus related-content item ${itemIndex}: ${describeState(state)}`);
+    error.details = {playerControlState: state};
+    throw error;
+  }
+
+  return {
+    type: "player_focus_related",
+    itemIndex,
+    id: state.focus.id,
+    rowId: position.rowId,
+    column: position.column,
+    label: state.focus.text,
+    playbackPaused: state.video.paused === true,
+  };
 }
 
 function seekBaselineSeconds(state) {
@@ -513,6 +636,7 @@ async function togglePlayerPlayback(page, options = {}) {
 // Focus on another control-bar button opens that control instead, and nothing
 // about playback can be required of it.
 function expectedOutcomeAfterOk(before) {
+  if (before.focus.scope === "related") return "playing";
   if (before.state === "detail") return "playing";
   if (before.focus.scope === "timeshift") return "playing";
   if (before.state === "player" || before.focus.scope === "play_pause") {
@@ -533,8 +657,12 @@ async function pressPlayerOk(page, options = {}) {
   const expected = options.expect || expectedOutcomeAfterOk(before);
   await remotePress(page, "Enter", options.pressDelayMs ?? OK_PRESS_DELAY_MS);
 
+  // A related poster swaps the content, so playing the same media again would
+  // mean the poster never opened.
+  const requireNewMedia = options.requireNewMedia ?? (before.focus.scope === "related");
   const predicate = expected === "playing"
-    ? isPlayingState
+    ? (state) => isPlayingState(state) &&
+      (!requireNewMedia || state.video.source !== before.video.source)
     : expected === "paused"
       ? (state) => state.video.hasVideo === true && state.video.paused === true
       : null;
@@ -552,6 +680,7 @@ async function pressPlayerOk(page, options = {}) {
     to: {state: after.state, focus: after.focus.scope, positionLabel: after.position.currentLabel},
     playing: isPlayingState(after),
     paused: after.video.paused === true,
+    ...(requireNewMedia ? {contentChanged: after.video.source !== before.video.source} : {}),
     controlBarVisible: after.controlBarVisible === true,
     positionSeconds: Math.round(after.video.currentTime),
   };
@@ -568,12 +697,15 @@ module.exports = {
   waitForPlayerControlState,
   enterPlayerFromDetail,
   focusPlayPauseButton,
+  ensureRemoteReadyPlayer,
   preparePlayerForRemoteControl,
   seekPlayer,
+  focusPlayerRelatedContent,
+  normalizeRelatedItemIndex,
   togglePlayerPlayback,
   pressPlayerOk,
   expectedOutcomeAfterOk,
   normalizeSeekDirection,
   normalizeSeekSteps,
-  __internal: {describeState, isPlayingState, isRemoteReadyPlayer, isSeekReadyFocus, seekBaselineSeconds, seekTargetSeconds},
+  __internal: {describeState, isPlayingState, isRemoteReadyPlayer, isSeekReadyFocus, seekBaselineSeconds, seekTargetSeconds, relatedItemPosition},
 };

@@ -327,6 +327,7 @@ initial action vocabulary is:
 - `play_home_trailers`
 - `player_seek`
 - `player_toggle_play`
+- `player_focus_related`
 - `assert_screen`
 - `press_back`
 - `wait_for_ready`
@@ -440,6 +441,8 @@ Playback actions use only content currently visible in the TV page's rows:
 {"action":"player_seek","direction":"forward","steps":5}
 {"action":"player_seek","direction":"backward","steps":2}
 {"action":"player_toggle_play"}
+{"action":"player_focus_related"}
+{"action":"player_focus_related","itemIndex":3}
 ```
 
 `play_content` verifies the selected item is playing. `play_row` opens each
@@ -496,12 +499,29 @@ actually moved in the requested direction. A press that leaves the seek bar hidd
 transition and moved nothing, so the opening press is retried instead of
 spending the remaining steps blindly.
 
+`player_focus_related` opens the related-content row the player carries under
+its control bar and focuses one of its posters (`itemIndex`, 1-based, default
+1). Down from the player opens the control bar and a second Down swaps that bar
+for the row - the bar auto-hides after a few idle seconds, so the action only
+waits until something opened and delivers the next Down while the bar is still
+up. Opening the row pauses the content playing behind it; `press_ok` then starts
+the focused poster's content. Items are `#relativeContentPopup<n>_<row>_<col>`,
+so the action reads its position from the focused id and walks left/right to the
+requested column, failing closed when the row ends first. In a description,
+`Chọn/Mở/Focus ... liên quan ...` only focuses the poster, while
+`Phát/Play/Chơi ... liên quan ...` is focus plus the OK that starts it - and
+that OK is dropped when the next line already spells an OK press, so the poster
+is never activated twice. The app swaps the
+content in place without changing the route, so OK on a related poster also
+requires the media source to actually change - the same media playing again
+means the poster never opened.
+
 A seek stays pending until OK commits it. Inside the player, `press_ok` means
 "commit whatever is focused", and what that must produce is derived from the
-state that owns the screen rather than assumed: a pending seek or a detail play
-button must leave the content playing, OK on a playing player must pause it and
-show the control bar, and OK on the play/pause button must flip the paused
-state. Focus on any other control-bar button opens that control, so nothing
+state that owns the screen rather than assumed: a pending seek, a related poster,
+or a detail play button must leave the content playing, OK on a playing player
+must pause it and show the control bar, and OK on the play/pause button must
+flip the paused state. Focus on any other control-bar button opens that control, so nothing
 about playback is required of it.
 `player_toggle_play` presses OK on play/pause and verifies the paused state
 flipped. The runner keeps the player open across the boundary between a seek and

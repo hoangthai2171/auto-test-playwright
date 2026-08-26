@@ -131,7 +131,11 @@ test("rejects Browser-only list playback before a TV session is created", () => 
 });
 
 test("rejects Browser-only player control before a TV session is created", () => {
-  for (const action of [{action: "player_seek", direction: "forward", steps: 5}, {action: "player_toggle_play"}]) {
+  for (const action of [
+    {action: "player_seek", direction: "forward", steps: 5},
+    {action: "player_toggle_play"},
+    {action: "player_focus_related", itemIndex: 2},
+  ]) {
     assert.throws(
       () => validateTargetCaseCapabilities({
         id: "player-control-browser-only",

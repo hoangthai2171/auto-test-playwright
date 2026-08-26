@@ -534,3 +534,55 @@ test("compiles the player-control case end to end", () => {
     {action: "press_ok"},
   ]);
 });
+
+test("compiles the in-player related-content wording", () => {
+  assert.deepEqual(
+    compileQaDescription("B1. Chọn phim liên quan đầu tiên"),
+    [{action: "player_focus_related"}]
+  );
+  assert.deepEqual(
+    compileQaDescription("B1. Chọn nội dung liên quan thứ 3"),
+    [{action: "player_focus_related", itemIndex: 3}]
+  );
+  assert.deepEqual(
+    compileQaDescription("B1. Mở poster liên quan đầu tiên"),
+    [{action: "player_focus_related"}]
+  );
+});
+
+test("compiles the play wording for related content into focus plus OK", () => {
+  for (const line of [
+    "B1. Phát phim liên quan đầu tiên",
+    "B1. Play nội dung liên quan đầu tiên",
+    "B1. Chơi phim liên quan đầu tiên",
+  ]) {
+    assert.deepEqual(
+      compileQaDescription(line),
+      [{action: "player_focus_related"}, {action: "press_ok"}],
+      line
+    );
+  }
+
+  assert.deepEqual(
+    compileQaDescription("B1. Play nội dung liên quan thứ 2"),
+    [{action: "player_focus_related", itemIndex: 2}, {action: "press_ok"}]
+  );
+});
+
+test("lets an explicit OK line own the activation of a played related item", () => {
+  // Otherwise the poster would be activated twice.
+  assert.deepEqual(
+    compileQaDescription("B1. Phát phim liên quan đầu tiên\nB2. Nhấn phím OK để play"),
+    [{action: "player_focus_related"}, {action: "press_ok"}]
+  );
+  assert.deepEqual(
+    compileQaDescription("B1. Chọn phim liên quan đầu tiên\nB2. Nhấn phím OK để play"),
+    [{action: "player_focus_related"}, {action: "press_ok"}]
+  );
+});
+
+test("fails closed on related-content wording without a position", () => {
+  for (const line of ["B1. Chọn phim liên quan", "B1. Xem nội dung liên quan bất kỳ"]) {
+    assert.throws(() => compileQaDescription(line), /Không thể parse được bước/u, line);
+  }
+});

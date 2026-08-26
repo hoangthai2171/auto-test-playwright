@@ -327,6 +327,120 @@ test("OK inside the player fails closed when playback does not resume", async ()
   );
 });
 
+function relatedState(column, overrides = {}) {
+  return createState({
+    focus: {scope: "related", id: `relativeContentPopup2_0_${column}`, rect: {x: 27 + column * 247, y: 523, width: 245, height: 138}},
+    video: {paused: true},
+    ...overrides,
+  });
+}
+
+test("opens the related-content row and focuses its first poster", async () => {
+  const controlBar = createState({
+    state: "control_bar",
+    controlBarVisible: true,
+    focus: {scope: "play_pause", id: "player-button-play", rect: PLAY_PAUSE_RECT},
+  });
+  const page = createPage([createState(), controlBar, relatedState(0)]);
+
+  const result = await playerControl.focusPlayerRelatedContent(page, {
+    remotePress: pressRecorder(page),
+    openTimeoutMs: 0,
+  });
+
+  // Down opens the control bar, Down again shows the related row.
+  assert.deepEqual(page.presses, ["ArrowDown", "ArrowDown"]);
+  assert.equal(result.type, "player_focus_related");
+  assert.equal(result.itemIndex, 1);
+  assert.equal(result.id, "relativeContentPopup2_0_0");
+  assert.equal(result.rowId, "relativeContentPopup2_0");
+  assert.equal(result.column, 0);
+  assert.equal(result.playbackPaused, true);
+});
+
+test("walks right to the requested related-content item", async () => {
+  const page = createPage([relatedState(0), relatedState(1), relatedState(2)]);
+
+  const result = await playerControl.focusPlayerRelatedContent(page, {
+    itemIndex: 3,
+    remotePress: pressRecorder(page),
+    openTimeoutMs: 0,
+  });
+
+  assert.deepEqual(page.presses, ["ArrowRight", "ArrowRight"]);
+  assert.equal(result.id, "relativeContentPopup2_0_2");
+  assert.equal(result.column, 2);
+});
+
+test("fails closed when the related-content row ends before the requested item", async () => {
+  const page = createPage([relatedState(0), relatedState(1), relatedState(1)]);
+
+  await assert.rejects(
+    playerControl.focusPlayerRelatedContent(page, {itemIndex: 4, remotePress: pressRecorder(page), openTimeoutMs: 0}),
+    /related-content row ended before item 4/u
+  );
+});
+
+test("fails closed when the related-content row never opens", async () => {
+  const page = createPage([createState()]);
+
+  await assert.rejects(
+    playerControl.focusPlayerRelatedContent(page, {remotePress: pressRecorder(page), openTimeoutMs: 0}),
+    /did not open its related-content row/u
+  );
+});
+
+test("rejects an unusable related item index before touching the player", async () => {
+  const page = createPage([createState()]);
+
+  await assert.rejects(
+    playerControl.focusPlayerRelatedContent(page, {itemIndex: 0, remotePress: pressRecorder(page)}),
+    /between 1 and 60/u
+  );
+  assert.deepEqual(page.presses, []);
+});
+
+test("returns from the related row to play/pause before seeking", async () => {
+  const onPlayPause = createState({
+    state: "control_bar",
+    controlBarVisible: true,
+    focus: {scope: "play_pause", id: "player-button-play", rect: PLAY_PAUSE_RECT},
+  });
+  const seeking = createState({
+    state: "control_bar",
+    controlBarVisible: true,
+    timeshiftVisible: true,
+    focus: {scope: "timeshift", id: "player_bar_active"},
+    video: {paused: true},
+    position: {currentLabel: "00:21", currentSeconds: 21},
+  });
+  const page = createPage([relatedState(0), onPlayPause, seeking]);
+
+  await playerControl.seekPlayer(page, {steps: 1, remotePress: pressRecorder(page)});
+
+  assert.deepEqual(page.presses, ["ArrowUp", "ArrowRight"]);
+});
+
+test("OK on a related poster must start a different content", async () => {
+  const focusedRelated = relatedState(0, {video: {paused: true, source: "blob:old-content"}});
+  const sameContent = createState({video: {source: "blob:old-content"}});
+  const newContent = createState({video: {source: "blob:new-content", currentTime: 3}});
+
+  const playing = createPage([focusedRelated, sameContent, newContent]);
+  const result = await playerControl.pressPlayerOk(playing, {remotePress: pressRecorder(playing)});
+
+  assert.equal(result.expected, "playing");
+  assert.equal(result.contentChanged, true);
+  assert.equal(result.playing, true);
+
+  // The same media playing again means the poster never opened.
+  const stuck = createPage([focusedRelated, sameContent]);
+  await assert.rejects(
+    playerControl.pressPlayerOk(stuck, {remotePress: pressRecorder(stuck), timeoutMs: 0}),
+    /Player playing after OK in the player state/u
+  );
+});
+
 test("derives the OK outcome from the state that owns the screen", () => {
   const {expectedOutcomeAfterOk} = playerControl;
 
@@ -341,6 +455,10 @@ test("derives the OK outcome from the state that owns the screen", () => {
   assert.equal(
     expectedOutcomeAfterOk(createState({state: "control_bar", focus: {scope: "play_pause"}})),
     "paused"
+  );
+  assert.equal(
+    expectedOutcomeAfterOk(createState({focus: {scope: "related"}, video: {paused: true}})),
+    "playing"
   );
   // Another control-bar button opens its own control; playback says nothing.
   assert.equal(

@@ -343,9 +343,20 @@ The supported action allowlist is:
   one and focus is classified by ancestry rather than by node identity.
 - `player_toggle_play`: Browser-only parameterless action that presses OK on
   `#player-button-play` and verifies the paused state flipped.
+- `player_focus_related`: Browser-only action that opens the related-content row
+  the player carries under its control bar and focuses one of its posters
+  (optional 1-based `itemIndex`, default 1). Down from the player opens the
+  control bar and a second Down swaps that bar for the row; because the bar
+  auto-hides after a few idle seconds, each press waits only until something
+  opened so the next Down lands while the bar is still up. Opening the row
+  pauses the content behind it. Items are `#relativeContentPopup<n>_<row>_<col>`
+  and the action reads its position from the focused id, walks left/right to the
+  requested column, and fails closed when the row ends first.
 - `press_ok` inside a player: commits whatever is focused. The required outcome
   is derived from the state that owns the screen instead of assumed - a pending
-  seek or a detail play button must leave the content playing, OK on a playing
+  seek, a focused related poster, or a detail play button must leave the content
+  playing (a related poster must also change the media source, since the app
+  swaps content in place without changing the route), OK on a playing
   player must pause it and show the control bar, and OK on the play/pause
   button must flip the paused state, while OK on another control-bar button
   opens that control and requires nothing of playback. The runner keeps the

@@ -9,13 +9,16 @@ const PLAYER_RETURN_DELAY_MS = 2000;
 // A paused player answers the first Back by hiding its control bar, so leaving
 // it needs one more press than closing a playing player.
 const PAUSED_PLAYER_BACK_PRESSES = 4;
+// Playing a related poster opens that content on top of the player it was
+// launched from, so leaving it unwinds one screen more than a single playback.
+const RELATED_PLAYBACK_BACK_PRESSES = 4;
 const VIEW_MORE_LABELS = new Set(["xem tat ca", "xem them", "view more"]);
 // Actions that already checked a player for every poster they visited, so the
 // expected-result pass must not re-open one.
 const ROW_PLAYBACK_ACTIONS = new Set(["play_row", "play_all_contents"]);
 // Actions that drive the remote inside an already open player. They must find
 // the player open and must leave it open for the OK press that commits them.
-const PLAYER_CONTROL_ACTIONS = new Set(["player_seek", "player_toggle_play"]);
+const PLAYER_CONTROL_ACTIONS = new Set(["player_seek", "player_toggle_play", "player_focus_related"]);
 // Expected results that are checked on the still-open player.
 const PLAYER_EXPECTED_RESULTS = new Set(["player", "player_paused"]);
 
@@ -327,7 +330,10 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
         {timeoutMs: timeoutSeconds * 1000, reason: "A paused player"}
       );
       pausedScreenshotDataUrl = await capturePlayerCheckScreenshot(page, testInfo);
-      await finishPlayerCheck(page, helpers, {maxBackPresses: PAUSED_PLAYER_BACK_PRESSES});
+      await finishPlayerCheck(page, helpers, {
+        ...playerCloseOptions(testCase),
+        maxBackPresses: PAUSED_PLAYER_BACK_PRESSES,
+      });
       return {
         type: "player_paused",
         verified: "Player is open and paused",
@@ -341,7 +347,10 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
         error.playerCheckScreenshotDataUrl = pausedScreenshotDataUrl;
       }
       try {
-        await finishPlayerCheck(page, helpers, {maxBackPresses: PAUSED_PLAYER_BACK_PRESSES});
+        await finishPlayerCheck(page, helpers, {
+          ...playerCloseOptions(testCase),
+          maxBackPresses: PAUSED_PLAYER_BACK_PRESSES,
+        });
       } catch (cleanupError) {
         if (error && typeof error === "object") error.playerCleanupError = errorMessage(cleanupError);
       }
@@ -371,7 +380,7 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
       await page.waitForTimeout(timeoutSeconds * 1000);
       await assertPlayerReadyAfterWait(helpers, page, timeoutSeconds);
       playerScreenshotDataUrl = await capturePlayerCheckScreenshot(page, testInfo);
-      await finishPlayerCheck(page, helpers);
+      await finishPlayerCheck(page, helpers, playerCloseOptions(testCase));
       return {
         type: "player",
         verified: "Player is open and playing normally",
@@ -383,7 +392,7 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
         error.playerCheckScreenshotDataUrl = playerScreenshotDataUrl;
       }
       try {
-        await finishPlayerCheck(page, helpers);
+        await finishPlayerCheck(page, helpers, playerCloseOptions(testCase));
       } catch (cleanupError) {
         if (error && typeof error === "object") error.playerCleanupError = errorMessage(cleanupError);
       }
@@ -423,6 +432,12 @@ async function assertPlayerReadyAfterWait(helpers, page, timeoutSeconds) {
   throw error;
 }
 
+function playerCloseOptions(testCase) {
+  return (testCase?.actions || []).some((action) => action?.action === "player_focus_related")
+    ? {maxBackPresses: RELATED_PLAYBACK_BACK_PRESSES}
+    : {};
+}
+
 function isPlayerCheckingAction(action) {
   return (
     action?.action === "play_content" ||
@@ -448,18 +463,18 @@ function nextStepRequiresPlayer(testCase, actionIndex) {
 
 async function cleanupAfterPlayerAction({page, action, actionIndex, testCase, helpers}) {
   if (!isPlayerCheckingAction(action) || nextStepRequiresPlayer(testCase, actionIndex)) return;
-  await returnFromPlayer(page, helpers);
+  await returnFromPlayer(page, helpers, playerCloseOptions(testCase));
   if (actionIndex === (testCase.actions || []).length - 1) {
     await page.waitForTimeout(PLAYER_RETURN_DELAY_MS);
   }
 }
 
-async function cleanupAfterFailedPlayerAction({page, action, helpers, error}) {
+async function cleanupAfterFailedPlayerAction({page, action, testCase, helpers, error}) {
   const playerWasChecked =
     action?.action === "wait_for_ready" && action.name === "player" ||
     Boolean(error?.details?.playerState);
   if (!playerWasChecked) return;
-  await finishPlayerCheck(page, helpers);
+  await finishPlayerCheck(page, helpers, playerCloseOptions(testCase));
 }
 
 async function finishPlayerCheck(page, helpers, options = {}) {
@@ -719,6 +734,11 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
       }),
     player_toggle_play: ({ page }) =>
       helpers.togglePlayerPlayback(page, {
+        remotePress: helpers.remotePress,
+      }),
+    player_focus_related: ({ page, action }) =>
+      helpers.focusPlayerRelatedContent(page, {
+        itemIndex: action.itemIndex,
         remotePress: helpers.remotePress,
       }),
     press_back: async ({ page, action }) => {

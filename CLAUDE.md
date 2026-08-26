@@ -135,6 +135,10 @@ session. Do not change this to run in parallel without redesigning session owner
   `wait_for_ready`) over relying on the `qaDescription` fallback compiler.
 - `play_row` on Home excludes the `homePage1` promotional row from numeric counting — public
   `rowIndex: 5` maps to `homePage2_4_*`.
+- `player_focus_related` opens the in-player related-content row
+  (`#relativeContentPopup<n>_<row>_<col>`) and focuses a poster; the control bar
+  auto-hides, so the second `ArrowDown` must land while it is still up. `press_ok`
+  then plays that content and requires the media source to change.
 - `player_seek` / `player_toggle_play` drive the remote inside an open VOD
   player (`tests/lib/player-control.js`). The player's three screen states are
   read from geometry, not classes: the detail panel stays mounted and slides to

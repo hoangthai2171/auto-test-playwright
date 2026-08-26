@@ -15,6 +15,7 @@ const ALLOWED_ACTIONS = new Set([
   "play_home_trailers",
   "player_seek",
   "player_toggle_play",
+  "player_focus_related",
   "assert_screen",
   "press_back",
   "wait_for_ready",
@@ -23,6 +24,7 @@ const ALLOWED_ACTIONS = new Set([
 const READY_NAMES = new Set(["app", "home", "content", "player"]);
 const PLAYER_SEEK_DIRECTIONS = new Set(["forward", "backward"]);
 const MAX_PLAYER_SEEK_STEPS = 60;
+const MAX_RELATED_ITEM_INDEX = 60;
 const PLAY_CONTENT_TYPES = new Set(["channel", "movie", "content"]);
 const ACTION_KEYS = {
   login: ["action", "username", "password"],
@@ -41,6 +43,7 @@ const ACTION_KEYS = {
   play_home_trailers: ["action"],
   player_seek: ["action", "direction", "steps"],
   player_toggle_play: ["action"],
+  player_focus_related: ["action", "itemIndex"],
   assert_screen: ["action", "text"],
   press_back: ["action", "count"],
   wait_for_ready: ["action", "name"],
@@ -184,6 +187,16 @@ function validateAction(action, path = "action") {
     }
   }
 
+  if (
+    action.action === "player_focus_related" &&
+    hasOwn(action, "itemIndex") &&
+    (!Number.isInteger(action.itemIndex) || action.itemIndex < 1 || action.itemIndex > MAX_RELATED_ITEM_INDEX)
+  ) {
+    throw new Error(
+      `${path}.itemIndex must be an integer between 1 and ${MAX_RELATED_ITEM_INDEX} when provided`
+    );
+  }
+
   if (action.action === "assert_screen" && !isNonEmptyString(action.text)) {
     throw new Error(`${path}.text must be a non-empty string`);
   }
@@ -295,6 +308,7 @@ function validateTestCaseList(value, sourceLabel = "test cases") {
 module.exports = {
   PLAYER_SEEK_DIRECTIONS,
   MAX_PLAYER_SEEK_STEPS,
+  MAX_RELATED_ITEM_INDEX,
   validateTestCaseList,
   validateTestCase,
   validateAction,

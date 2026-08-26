@@ -308,6 +308,14 @@ test("validates the player control actions", () => {
     validateAction({action: "player_toggle_play"}),
     {action: "player_toggle_play"}
   );
+  assert.deepEqual(
+    validateAction({action: "player_focus_related"}),
+    {action: "player_focus_related"}
+  );
+  assert.deepEqual(
+    validateAction({action: "player_focus_related", itemIndex: 3}),
+    {action: "player_focus_related", itemIndex: 3}
+  );
 });
 
 test("rejects malformed player control actions", () => {
@@ -330,5 +338,13 @@ test("rejects malformed player control actions", () => {
   assert.throws(
     () => validateAction({action: "player_toggle_play", steps: 1}),
     /unknown field "steps"/u
+  );
+  assert.throws(
+    () => validateAction({action: "player_focus_related", itemIndex: 0}),
+    /itemIndex must be an integer between 1 and 60/u
+  );
+  assert.throws(
+    () => validateAction({action: "player_focus_related", rowName: "Liên quan"}),
+    /unknown field "rowName"/u
   );
 });

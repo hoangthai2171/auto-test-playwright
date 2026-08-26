@@ -30,6 +30,7 @@ function ambiguousStepError(context, originalLine) {
 // "Bấm vào <poster>" wording. The lookahead below decides which line owns the
 // activation so a poster is never activated twice.
 const OK_STEP_PATTERN = /^(?:nhan|bam|chon)(?: chon)?(?: phim)? (?:ok|enter)(?:\s+de\s+.+?)?[.!?…。！？]*$/u;
+const RELATED_PLAY_VERBS = /^(?:phat|play|choi)$/u;
 const PLAYER_SEEK_FORWARD = /^(?:toi|tien|len|truoc|nhanh|phai|forward)$/u;
 const PLAYER_SEEK_BACKWARD = /^(?:lui|lai|ve|nguoc|trai|back|backward)$/u;
 
@@ -278,6 +279,26 @@ const STEP_COMPILERS = [
       const action = {action: "player_seek", direction};
       if (match[2] !== undefined) action.steps = Number(match[2]);
       return action;
+    },
+  },
+  {
+    matches(normalizedLine) {
+      return /\blien quan\b/u.test(normalizedLine);
+    },
+    compile(_preparedLine, normalizedLine, context = {}) {
+      const match = normalizedLine.match(
+        /^(chon|mo|focus|di chuyen den|di chuyen toi|di chuyen|phat|play|choi)\s*(?:vao\s+)?(?:phim|noi dung|poster|item|video|content)?\s*lien quan\s+(?:dau tien|thu\s+(\d+))[.!?…。！？]*$/u
+      );
+      if (!match) return null;
+
+      const action = {action: "player_focus_related"};
+      if (match[2] !== undefined) action.itemIndex = Number(match[2]);
+
+      // "Chọn/Mở" only focuses the poster; "Phát/Play/Chơi" is focus plus the OK
+      // that starts it, unless the next line already spells that OK press.
+      if (!RELATED_PLAY_VERBS.test(match[1])) return action;
+      if (OK_STEP_PATTERN.test(context.nextNormalizedLine || "")) return action;
+      return [action, {action: "press_ok"}];
     },
   },
   {
