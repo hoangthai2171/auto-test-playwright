@@ -17,13 +17,17 @@ const PLAYER_SELECTORS = Object.freeze({
   timeshiftProgress: "#player-bar-timeshift",
   timeshiftActive: "#player_bar_active",
   relatedItem: "[id^='relativeContentPopup']",
+  episodeItem: "[id^='moviePartitions'].movie-partition-poster",
+  episodeRow: "[id^='moviePartitions'].movie-partition-row",
+  episodeButton: "#player-button-partition",
+  titleBar: "#hide-when-timeshift",
   currentTime: "#media_player_current",
   remainingTime: "#media_player_duration",
   promoVideo: "#promo-video-next",
 });
 
 const PLAYER_STATES = Object.freeze(["closed", "detail", "control_bar", "player"]);
-const FOCUS_SCOPES = Object.freeze(["none", "detail", "play_pause", "timeshift", "related", "control_button", "other"]);
+const FOCUS_SCOPES = Object.freeze(["none", "detail", "play_pause", "timeshift", "related", "episode", "control_button", "other"]);
 const SEEK_DIRECTIONS = Object.freeze({forward: "ArrowRight", backward: "ArrowLeft"});
 const DEFAULT_SEEK_DIRECTION = "forward";
 const DEFAULT_SEEK_STEPS = 1;
@@ -49,6 +53,11 @@ const MAX_RELATED_MOVE_PRESSES = 40;
 const RELATED_PRESS_DELAY_MS = 700;
 const RELATED_STEP_TIMEOUT_MS = 2500;
 const MAX_RELATED_ITEM_INDEX = 60;
+const MAX_EPISODE_NUMBER = 2000;
+const MAX_EPISODE_STEPS = 400;
+const MAX_CONTROL_BUTTON_STEPS = 8;
+const EPISODE_PRESS_DELAY_MS = 600;
+const EPISODE_PANEL_TIMEOUT_MS = 10000;
 
 function normalizeSeekDirection(value) {
   const direction = String(value ?? DEFAULT_SEEK_DIRECTION).trim().toLowerCase();
@@ -65,6 +74,14 @@ function normalizeRelatedItemIndex(value) {
     throw new Error(`Related item index must be an integer between 1 and ${MAX_RELATED_ITEM_INDEX}: ${value}`);
   }
   return itemIndex;
+}
+
+function normalizeEpisodeNumber(value) {
+  const episode = Number(value);
+  if (!Number.isSafeInteger(episode) || episode < 1 || episode > MAX_EPISODE_NUMBER) {
+    throw new Error(`Episode must be an integer between 1 and ${MAX_EPISODE_NUMBER}: ${value}`);
+  }
+  return episode;
 }
 
 function normalizeSeekSteps(value) {
@@ -170,7 +187,9 @@ async function observePlayerControlState(page) {
     // player instances cannot misfile the focus.
     let focusScope = "none";
     if (focusedElement) {
-      if (focusedElement.closest(selectors.relatedItem)) {
+      if (focusedElement.closest(selectors.episodeItem)) {
+        focusScope = "episode";
+      } else if (focusedElement.closest(selectors.relatedItem)) {
         focusScope = "related";
       } else if (focusedElement.closest(`${selectors.timeshiftBar}, ${selectors.timeshiftProgress}, ${selectors.timeshiftActive}`)) {
         focusScope = "timeshift";
@@ -192,6 +211,19 @@ async function observePlayerControlState(page) {
         : videoElement
           ? "player"
           : "closed";
+
+    // The episode picker marks every poster with the episode it opens, so the
+    // episode number never has to be counted from a position.
+    const episodeElement = focusedElement?.closest(selectors.episodeItem) || null;
+    const episodeNumber = episodeElement
+      ? Number(episodeElement.getAttribute("partition") || episodeElement.getAttribute("keyword") || "") || null
+      : null;
+    const episodeRow = episodeElement?.id
+      ? document.getElementById(episodeElement.id.replace(/_\d+$/u, ""))
+      : null;
+    const episodePanelOpen = Array.from(document.querySelectorAll(selectors.episodeItem)).some(isOnScreen);
+    const titleText = (pick(selectors.titleBar)?.textContent || "").replace(/\s+/gu, " ").trim();
+    const playingEpisode = Number(titleText.match(/t[aâăậ]p\s*(\d+)/iu)?.[1] || "") || null;
 
     const currentLabel = describe(pick(selectors.currentTime))?.text || "";
     const remainingLabel = describe(pick(selectors.remainingTime))?.text || "";
@@ -226,6 +258,12 @@ async function observePlayerControlState(page) {
         ...(describe(focusedElement) || {id: "", className: "", text: "", rect: {x: 0, y: 0, width: 0, height: 0}}),
       },
       playPauseRect: describe(playPauseButton)?.rect || null,
+      episodes: {
+        panelOpen: episodePanelOpen,
+        focusedEpisode: episodeNumber,
+        focusedLabel: (episodeRow?.textContent || "").replace(/\s+/gu, " ").trim().slice(0, 80),
+        playingEpisode,
+      },
       position: {
         currentLabel,
         currentSeconds: parseTimeLabel(currentLabel),
@@ -495,6 +533,139 @@ async function focusPlayerRelatedContent(page, options = {}) {
   };
 }
 
+// The control bar's top button row sits above play/pause; Up enters it and
+// Left/Right walk it. The row differs per content (a movie has no episode
+// button at all), so the walk is by id and fails closed when the row ends.
+async function focusPlayerControlButton(page, options = {}) {
+  const buttonId = String(options.buttonId || "").trim();
+  const remotePress = options.remotePress || navigation.remotePress;
+  const pressDelayMs = Number(options.pressDelayMs ?? EPISODE_PRESS_DELAY_MS);
+  let state = await preparePlayerForRemoteControl(page, {...options, state: options.state});
+
+  const settle = (predicate, timeoutMs) => waitForPlayerControlState(page, predicate, {
+    timeoutMs: timeoutMs ?? options.openTimeoutMs ?? RELATED_STEP_TIMEOUT_MS,
+  }).catch((error) => error?.details?.playerControlState || observePlayerControlState(page));
+
+  // Down opens the control bar on the play/pause button; Up then enters the
+  // button row above it.
+  if (state.focus.scope !== "control_button" && state.focus.scope !== "play_pause") {
+    await remotePress(page, "ArrowDown", pressDelayMs);
+    state = await settle((candidate) =>
+      candidate.focus.scope === "play_pause" || candidate.focus.scope === "control_button");
+  }
+
+  for (let attempt = 0; state.focus.scope !== "control_button" && attempt < MAX_FOCUS_ALIGN_PRESSES; attempt += 1) {
+    await remotePress(page, "ArrowUp", pressDelayMs);
+    state = await settle((candidate) => candidate.focus.scope === "control_button");
+  }
+
+  // Left/Right on the play/pause button starts a seek instead of moving along
+  // the row, so the walk may only begin once the row owns the focus.
+  if (state.focus.scope !== "control_button") {
+    const error = new Error(
+      `Could not reach the player control-bar button row for "${buttonId}": ${describeState(state)}`
+    );
+    error.details = {playerControlState: state};
+    throw error;
+  }
+
+  for (const key of ["ArrowRight", "ArrowLeft"]) {
+    for (let step = 0; step < MAX_CONTROL_BUTTON_STEPS; step += 1) {
+      if (state.focus.id === buttonId) return state;
+      await remotePress(page, key, pressDelayMs);
+      const moved = await observePlayerControlState(page);
+      if (moved.focus.id === state.focus.id) break;
+      state = moved;
+    }
+  }
+
+  if (state.focus.id === buttonId) return state;
+
+  const error = new Error(
+    `Could not focus the player control button "${buttonId}": ${describeState(state)}`
+  );
+  error.details = {playerControlState: state};
+  throw error;
+}
+
+// "Chọn tập" opens a vertical list of episode posters. Each poster carries the
+// episode it opens in its `partition` attribute, so the episode is read rather
+// than counted, and opening the list pauses the content behind it.
+async function openPlayerEpisodes(page, options = {}) {
+  const remotePress = options.remotePress || navigation.remotePress;
+  let state = options.state || (await observePlayerControlState(page));
+
+  if (state.focus.scope !== "episode") {
+    state = await focusPlayerControlButton(page, {
+      ...options,
+      state,
+      buttonId: PLAYER_SELECTORS.episodeButton.replace(/^#/u, ""),
+    });
+    await remotePress(page, "Enter", options.pressDelayMs ?? EPISODE_PRESS_DELAY_MS);
+    state = await waitForPlayerControlState(page, (candidate) => candidate.focus.scope === "episode", {
+      timeoutMs: options.panelTimeoutMs ?? EPISODE_PANEL_TIMEOUT_MS,
+      reason: "The player episode picker",
+    });
+  }
+
+  return {
+    type: "player_open_episodes",
+    focusedEpisode: state.episodes.focusedEpisode,
+    playingEpisode: state.episodes.playingEpisode,
+    label: state.episodes.focusedLabel,
+    playbackPaused: state.video.paused === true,
+  };
+}
+
+async function focusPlayerEpisode(page, options = {}) {
+  const episode = normalizeEpisodeNumber(options.episode);
+  const remotePress = options.remotePress || navigation.remotePress;
+  const pressDelayMs = Number(options.pressDelayMs ?? EPISODE_PRESS_DELAY_MS);
+  let state = options.state || (await observePlayerControlState(page));
+
+  if (state.focus.scope !== "episode") {
+    await openPlayerEpisodes(page, {...options, state});
+    state = await observePlayerControlState(page);
+  }
+
+  let current = state.episodes.focusedEpisode;
+  if (!current) {
+    const error = new Error(`Could not read the focused episode from "${state.focus.id}"`);
+    error.details = {playerControlState: state};
+    throw error;
+  }
+
+  for (let step = 0; current !== episode && step < MAX_EPISODE_STEPS; step += 1) {
+    await remotePress(page, current < episode ? "ArrowDown" : "ArrowUp", pressDelayMs);
+    const moved = await observePlayerControlState(page);
+    const movedEpisode = moved.episodes.focusedEpisode;
+    if (!movedEpisode || movedEpisode === current) {
+      const error = new Error(
+        `The episode list ended at episode ${current} before reaching episode ${episode}: ${describeState(moved)}`
+      );
+      error.details = {playerControlState: moved};
+      throw error;
+    }
+    state = moved;
+    current = movedEpisode;
+  }
+
+  if (current !== episode) {
+    const error = new Error(`Could not focus episode ${episode}: ${describeState(state)}`);
+    error.details = {playerControlState: state};
+    throw error;
+  }
+
+  return {
+    type: "player_focus_episode",
+    episode,
+    id: state.focus.id,
+    label: state.episodes.focusedLabel,
+    playingEpisode: state.episodes.playingEpisode,
+    playbackPaused: state.video.paused === true,
+  };
+}
+
 function seekBaselineSeconds(state) {
   // While playback runs the video element is authoritative; once the app pauses
   // for seeking, its own position readout is.
@@ -636,7 +807,7 @@ async function togglePlayerPlayback(page, options = {}) {
 // Focus on another control-bar button opens that control instead, and nothing
 // about playback can be required of it.
 function expectedOutcomeAfterOk(before) {
-  if (before.focus.scope === "related") return "playing";
+  if (before.focus.scope === "related" || before.focus.scope === "episode") return "playing";
   if (before.state === "detail") return "playing";
   if (before.focus.scope === "timeshift") return "playing";
   if (before.state === "player" || before.focus.scope === "play_pause") {
@@ -659,10 +830,18 @@ async function pressPlayerOk(page, options = {}) {
 
   // A related poster swaps the content, so playing the same media again would
   // mean the poster never opened.
-  const requireNewMedia = options.requireNewMedia ?? (before.focus.scope === "related");
+  const requireNewMedia = options.requireNewMedia ??
+    (before.focus.scope === "related" || before.focus.scope === "episode");
+  // The player names the episode it is on, so an episode poster can be held to
+  // the episode it promised - but only when the app shows one at all.
+  const expectedEpisode = before.focus.scope === "episode" &&
+    typeof before.episodes.playingEpisode === "number"
+    ? before.episodes.focusedEpisode
+    : null;
   const predicate = expected === "playing"
     ? (state) => isPlayingState(state) &&
-      (!requireNewMedia || state.video.source !== before.video.source)
+      (!requireNewMedia || state.video.source !== before.video.source) &&
+      (!expectedEpisode || state.episodes.playingEpisode === expectedEpisode)
     : expected === "paused"
       ? (state) => state.video.hasVideo === true && state.video.paused === true
       : null;
@@ -681,6 +860,9 @@ async function pressPlayerOk(page, options = {}) {
     playing: isPlayingState(after),
     paused: after.video.paused === true,
     ...(requireNewMedia ? {contentChanged: after.video.source !== before.video.source} : {}),
+    ...(before.focus.scope === "episode"
+      ? {episode: after.episodes.playingEpisode, requestedEpisode: before.episodes.focusedEpisode}
+      : {}),
     controlBarVisible: after.controlBarVisible === true,
     positionSeconds: Math.round(after.video.currentTime),
   };
@@ -702,6 +884,10 @@ module.exports = {
   seekPlayer,
   focusPlayerRelatedContent,
   normalizeRelatedItemIndex,
+  focusPlayerControlButton,
+  openPlayerEpisodes,
+  focusPlayerEpisode,
+  normalizeEpisodeNumber,
   togglePlayerPlayback,
   pressPlayerOk,
   expectedOutcomeAfterOk,

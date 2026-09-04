@@ -5,13 +5,25 @@ const playerControl = require("../lib/player-control");
 
 const PLAY_PAUSE_RECT = {x: 61, y: 587, width: 40, height: 40};
 
+function episodeState(episode, overrides = {}) {
+  return createState({
+    focus: {scope: "episode", id: `moviePartitions_${episode - 1}_0`},
+    video: {paused: true},
+    episodes: {panelOpen: true, focusedEpisode: episode, focusedLabel: `44 phút Tập ${episode}`, playingEpisode: 2},
+    ...overrides,
+  });
+}
+
 function createState(overrides = {}) {
   const focus = {scope: "none", id: "", className: "", text: "", rect: {x: 0, y: 0, width: 0, height: 0}, ...(overrides.focus || {})};
   const video = {hasVideo: true, currentTime: 11, duration: 8734, paused: false, ended: false, readyState: 4, ...(overrides.video || {})};
   const position = {currentLabel: "00:11", currentSeconds: 11, remainingLabel: "2:25:22", remainingSeconds: 8722, timeshiftLabels: [], ...(overrides.position || {})};
   if (position.targetSeconds === undefined) position.targetSeconds = position.currentSeconds;
 
+  const episodes = {panelOpen: false, focusedEpisode: null, focusedLabel: "", playingEpisode: null, ...(overrides.episodes || {})};
+
   return {
+    episodes,
     state: "player",
     route: "moviePlayerNew",
     detailOnScreen: false,
@@ -505,4 +517,99 @@ test("refuses to press OK when no player is open", async () => {
     /VOD player is not open/u
   );
   assert.deepEqual(page.presses, []);
+});
+
+test("opens the episode picker from the control-bar button row", async () => {
+  const controlBar = createState({
+    state: "control_bar",
+    controlBarVisible: true,
+    focus: {scope: "play_pause", id: "player-button-play", rect: PLAY_PAUSE_RECT},
+  });
+  const onForward = createState({
+    state: "control_bar",
+    controlBarVisible: true,
+    focus: {scope: "control_button", id: "player-button-forward", rect: {x: 897, y: 545, width: 40, height: 65}},
+  });
+  const onPartition = createState({
+    state: "control_bar",
+    controlBarVisible: true,
+    focus: {scope: "control_button", id: "player-button-partition", rect: {x: 967, y: 545, width: 40, height: 65}},
+  });
+  const page = createPage([createState(), controlBar, onForward, onPartition, episodeState(2)]);
+
+  const result = await playerControl.openPlayerEpisodes(page, {remotePress: pressRecorder(page)});
+
+  // Down opens the bar, Up enters the button row, Right reaches "Chọn tập",
+  // and OK opens the list.
+  assert.deepEqual(page.presses, ["ArrowDown", "ArrowUp", "ArrowRight", "Enter"]);
+  assert.equal(result.type, "player_open_episodes");
+  assert.equal(result.focusedEpisode, 2);
+  assert.equal(result.playingEpisode, 2);
+  assert.equal(result.playbackPaused, true);
+});
+
+test("walks the episode list by the episode each poster names", async () => {
+  const page = createPage([episodeState(2), episodeState(3), episodeState(4), episodeState(5)]);
+
+  const result = await playerControl.focusPlayerEpisode(page, {episode: 5, remotePress: pressRecorder(page)});
+
+  assert.deepEqual(page.presses, ["ArrowDown", "ArrowDown", "ArrowDown"]);
+  assert.equal(result.episode, 5);
+  assert.equal(result.id, "moviePartitions_4_0");
+  assert.equal(result.label, "44 phút Tập 5");
+});
+
+test("walks up when the requested episode is behind the current one", async () => {
+  const page = createPage([episodeState(5), episodeState(4)]);
+
+  const result = await playerControl.focusPlayerEpisode(page, {episode: 4, remotePress: pressRecorder(page)});
+
+  assert.deepEqual(page.presses, ["ArrowUp"]);
+  assert.equal(result.episode, 4);
+});
+
+test("fails closed when the episode list ends before the requested episode", async () => {
+  const page = createPage([episodeState(2), episodeState(3), episodeState(3)]);
+
+  await assert.rejects(
+    playerControl.focusPlayerEpisode(page, {episode: 9, remotePress: pressRecorder(page)}),
+    /episode list ended at episode 3 before reaching episode 9/u
+  );
+});
+
+test("rejects an unusable episode number before touching the player", async () => {
+  const page = createPage([episodeState(2)]);
+
+  await assert.rejects(
+    playerControl.focusPlayerEpisode(page, {episode: 0, remotePress: pressRecorder(page)}),
+    /Episode must be an integer between 1 and 2000/u
+  );
+  assert.deepEqual(page.presses, []);
+});
+
+test("OK on an episode poster must play the episode it named", async () => {
+  const focused = episodeState(5, {video: {paused: true, source: "blob:episode-2"}});
+  const wrongEpisode = createState({
+    video: {source: "blob:episode-6"},
+    episodes: {panelOpen: false, focusedEpisode: null, focusedLabel: "", playingEpisode: 6},
+  });
+  const rightEpisode = createState({
+    video: {source: "blob:episode-5", currentTime: 4},
+    episodes: {panelOpen: false, focusedEpisode: null, focusedLabel: "", playingEpisode: 5},
+  });
+
+  const page = createPage([focused, rightEpisode]);
+  const result = await playerControl.pressPlayerOk(page, {remotePress: pressRecorder(page)});
+
+  assert.equal(result.expected, "playing");
+  assert.equal(result.episode, 5);
+  assert.equal(result.requestedEpisode, 5);
+  assert.equal(result.contentChanged, true);
+
+  // Playing a different episode than the one that was focused is a failure.
+  const mismatched = createPage([focused, wrongEpisode]);
+  await assert.rejects(
+    playerControl.pressPlayerOk(mismatched, {remotePress: pressRecorder(mismatched), timeoutMs: 0}),
+    /Player playing after OK in the player state/u
+  );
 });

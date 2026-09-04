@@ -328,6 +328,8 @@ initial action vocabulary is:
 - `player_seek`
 - `player_toggle_play`
 - `player_focus_related`
+- `player_open_episodes`
+- `player_focus_episode`
 - `assert_screen`
 - `press_back`
 - `wait_for_ready`
@@ -443,6 +445,8 @@ Playback actions use only content currently visible in the TV page's rows:
 {"action":"player_toggle_play"}
 {"action":"player_focus_related"}
 {"action":"player_focus_related","itemIndex":3}
+{"action":"player_open_episodes"}
+{"action":"player_focus_episode","episode":5}
 ```
 
 `play_content` verifies the selected item is playing. `play_row` opens each
@@ -515,6 +519,19 @@ is never activated twice. The app swaps the
 content in place without changing the route, so OK on a related poster also
 requires the media source to actually change - the same media playing again
 means the poster never opened.
+
+`player_open_episodes` and `player_focus_episode` drive the episode picker of a
+series. The picker lives behind the `Chọn tập` button of the control bar's top
+button row: Down opens the bar on play/pause and Up enters the button row, which
+is the only place where Left/Right walk between buttons - on play/pause those
+keys start a seek instead, so the walk begins only once the row owns the focus.
+OK on `#player-button-partition` opens a vertical list and pauses the content
+behind it. Every poster in that list names the episode it opens in a `partition`
+attribute (`#moviePartitions_<row>_<col>`), so `player_focus_episode` reads the
+episode instead of counting positions, steps Down/Up until the numbers match,
+and fails closed when the list ends first. The player also names the episode it
+is on, so `press_ok` on an episode poster requires both a changed media source
+and the promised episode number.
 
 A seek stays pending until OK commits it. Inside the player, `press_ok` means
 "commit whatever is focused", and what that must produce is derived from the

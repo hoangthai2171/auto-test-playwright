@@ -18,7 +18,13 @@ const VIEW_MORE_LABELS = new Set(["xem tat ca", "xem them", "view more"]);
 const ROW_PLAYBACK_ACTIONS = new Set(["play_row", "play_all_contents"]);
 // Actions that drive the remote inside an already open player. They must find
 // the player open and must leave it open for the OK press that commits them.
-const PLAYER_CONTROL_ACTIONS = new Set(["player_seek", "player_toggle_play", "player_focus_related"]);
+const PLAYER_CONTROL_ACTIONS = new Set([
+  "player_seek",
+  "player_toggle_play",
+  "player_focus_related",
+  "player_open_episodes",
+  "player_focus_episode",
+]);
 // Expected results that are checked on the still-open player.
 const PLAYER_EXPECTED_RESULTS = new Set(["player", "player_paused"]);
 
@@ -433,7 +439,8 @@ async function assertPlayerReadyAfterWait(helpers, page, timeoutSeconds) {
 }
 
 function playerCloseOptions(testCase) {
-  return (testCase?.actions || []).some((action) => action?.action === "player_focus_related")
+  return (testCase?.actions || []).some((action) =>
+    action?.action === "player_focus_related" || action?.action === "player_focus_episode")
     ? {maxBackPresses: RELATED_PLAYBACK_BACK_PRESSES}
     : {};
 }
@@ -739,6 +746,15 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
     player_focus_related: ({ page, action }) =>
       helpers.focusPlayerRelatedContent(page, {
         itemIndex: action.itemIndex,
+        remotePress: helpers.remotePress,
+      }),
+    player_open_episodes: ({ page }) =>
+      helpers.openPlayerEpisodes(page, {
+        remotePress: helpers.remotePress,
+      }),
+    player_focus_episode: ({ page, action }) =>
+      helpers.focusPlayerEpisode(page, {
+        episode: action.episode,
         remotePress: helpers.remotePress,
       }),
     press_back: async ({ page, action }) => {

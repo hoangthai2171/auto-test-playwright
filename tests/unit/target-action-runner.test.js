@@ -135,6 +135,8 @@ test("rejects Browser-only player control before a TV session is created", () =>
     {action: "player_seek", direction: "forward", steps: 5},
     {action: "player_toggle_play"},
     {action: "player_focus_related", itemIndex: 2},
+    {action: "player_open_episodes"},
+    {action: "player_focus_episode", episode: 5},
   ]) {
     assert.throws(
       () => validateTargetCaseCapabilities({

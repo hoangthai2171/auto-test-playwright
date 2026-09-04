@@ -31,6 +31,7 @@ function ambiguousStepError(context, originalLine) {
 // activation so a poster is never activated twice.
 const OK_STEP_PATTERN = /^(?:nhan|bam|chon)(?: chon)?(?: phim)? (?:ok|enter)(?:\s+de\s+.+?)?[.!?…。！？]*$/u;
 const RELATED_PLAY_VERBS = /^(?:phat|play|choi)$/u;
+const EPISODE_PLAY_VERBS = /^(?:phat|play|choi|xem)$/u;
 const PLAYER_SEEK_FORWARD = /^(?:toi|tien|len|truoc|nhanh|phai|forward)$/u;
 const PLAYER_SEEK_BACKWARD = /^(?:lui|lai|ve|nguoc|trai|back|backward)$/u;
 
@@ -303,6 +304,37 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
+      return /\b(?:chon tap|danh sach tap|chọn tập)\b/u.test(normalizedLine) && !/\btap\s+\d+/u.test(normalizedLine);
+    },
+    compile(_preparedLine, normalizedLine) {
+      if (!/^(?:mo|hien thi|bat|vao)\s+(?:giao dien|man hinh|popup|bang|danh sach|muc)?\s*(?:chon tap|danh sach tap)[.!?…。！？]*$/u.test(normalizedLine)) {
+        return null;
+      }
+
+      return {action: "player_open_episodes"};
+    },
+  },
+  {
+    matches(normalizedLine) {
+      return /\btap\s+\d+/u.test(normalizedLine);
+    },
+    compile(_preparedLine, normalizedLine, context = {}) {
+      const match = normalizedLine.match(
+        /^(chon|focus|mo|di chuyen den|di chuyen toi|di chuyen|phat|play|choi|xem)\s*(?:vao\s+)?tap\s+(\d+)[.!?…。！？]*$/u
+      );
+      if (!match) return null;
+
+      const action = {action: "player_focus_episode", episode: Number(match[2])};
+
+      // "Chọn/Focus tập N" only focuses it; a play verb is focus plus the OK
+      // that starts it, unless the next line already spells that OK press.
+      if (!EPISODE_PLAY_VERBS.test(match[1])) return action;
+      if (OK_STEP_PATTERN.test(context.nextNormalizedLine || "")) return action;
+      return [action, {action: "press_ok"}];
+    },
+  },
+  {
+    matches(normalizedLine) {
       return /^(?:tam dung|pause|tiep tuc phat|phat tiep|resume|play\/pause|toggle play)\b/u.test(normalizedLine);
     },
     compile(_preparedLine, normalizedLine) {
@@ -342,17 +374,20 @@ const STEP_COMPILERS = [
   {
     isService: true,
     matches(normalizedLine) {
-      return /\bvao dich vu\b/u.test(normalizedLine);
+      return /\b(?:vao|mo) dich vu\b/u.test(normalizedLine);
     },
     startsLine(normalizedLine) {
-      return /^vao dich vu\b/u.test(normalizedLine);
+      return /^(?:vao|mo) dich vu\b/u.test(normalizedLine);
     },
     compile(preparedLine, normalizedLine) {
-      if (!/^vao dich vu\s+.+$/u.test(normalizedLine)) {
+      if (!/^(?:vao|mo) dich vu\s+.+$/u.test(normalizedLine)) {
         return null;
       }
 
-      const service = preparedLine.match(/^\S+\s+\S+\s+\S+\s+(.+)$/u)[1];
+      // Literal punctuation belongs to the service name ("VTVcab ON)."), but a
+      // fully quoted name keeps only what is inside the quotes.
+      const service = preparedLine.match(/^\S+\s+\S+\s+\S+\s+(.+)$/u)[1]
+        .replace(/^["“](.+)["”]$/u, "$1");
 
       return {
         action: "open_service",

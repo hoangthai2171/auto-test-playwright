@@ -187,9 +187,7 @@
   "185": "dom-scan.js",
   "186": "CLAUDE.md",
   "187": "focusFirstRowStart",
-  "188": "home-trailers.test.js",
   "189": "observeServiceOpenState",
-  "190": "createBatchBudget",
   "191": "openFocusedContentForPlayback",
   "192": "content-rows.test.js",
   "193": "test-result-screenshot.test.js",
@@ -197,10 +195,7 @@
   "196": "smart-waits.spec.js",
   "197": "play-all-contents-contract.spec.js",
   "198": "channel-list-profile-contract.spec.js",
-  "199": "playback-smart-waits.spec.js",
   "200": "player-control-contract.spec.js",
   "201": "playback.test.js",
-  "202": "firmwareVersion",
-  "203": "locator-contracts.spec.js",
-  "204": "selector-validation.test.js"
+  "202": "firmwareVersion"
 }

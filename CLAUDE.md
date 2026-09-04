@@ -139,6 +139,10 @@ session. Do not change this to run in parallel without redesigning session owner
   (`#relativeContentPopup<n>_<row>_<col>`) and focuses a poster; the control bar
   auto-hides, so the second `ArrowDown` must land while it is still up. `press_ok`
   then plays that content and requires the media source to change.
+- `player_open_episodes` / `player_focus_episode` drive a series' episode picker
+  behind `#player-button-partition`; posters name their episode in a `partition`
+  attribute, and Left/Right only walk the control-bar button row (on play/pause
+  they start a seek).
 - `player_seek` / `player_toggle_play` drive the remote inside an open VOD
   player (`tests/lib/player-control.js`). The player's three screen states are
   read from geometry, not classes: the detail panel stays mounted and slides to

@@ -496,3 +496,158 @@ test("returns from the related row to play/pause when a seek is requested", asyn
 
   expect(state.focus.scope).toBe("play_pause");
 });
+
+// The episode picker: the control bar's button row carries "Chọn tập", OK opens
+// a vertical list whose posters name their episode in a `partition` attribute,
+// and OK on one plays that episode.
+const EPISODE_PAGE = `
+  <style>
+    body {margin: 0; background: #000;}
+    #media_player_new {position: absolute; top: 0; left: 0; width: 1280px; height: 720px;}
+    #new_player_controlbar {position: absolute; top: 607px; left: 61px; width: 1152px; height: 113px;}
+    #player-button-play {position: absolute; top: -20px; left: 0; width: 40px; height: 40px; display: inline-block;}
+    #hide-when-timeshift {position: absolute; top: -85px; left: 50px;}
+    .player-button {position: absolute; top: -62px; width: 40px; height: 65px; display: inline-block;}
+    #player-button-forward {left: 836px;}
+    #player-button-partition {left: 906px;}
+    #player-button-quality {left: 976px;}
+    #episode_panel {position: absolute; top: 83px; left: 647px; width: 613px;}
+    #episode_panel span {display: block; width: 239px; height: 60px;}
+    .hidden {display: none;}
+  </style>
+  <video id="player-video" style="width: 1280px; height: 720px;"></video>
+  <div id="media_player_new" class="new-player hidden">
+    <div id="new_player_controlbar" class="controls-bar show">
+      <span id="hide-when-timeshift">Lâu Đài Tham Vọng - Tập 2</span>
+      <span id="player-button-play" class="player-button-play focused"></span>
+      <span id="player-button-forward" class="player-button">Tập kế tiếp</span>
+      <span id="player-button-partition" class="player-button">Chọn tập</span>
+      <span id="player-button-quality" class="player-button">Chất lượng (Auto)</span>
+      <span id="media_player_current">01:35</span>
+      <span id="media_player_duration">42:04</span>
+    </div>
+  </div>
+  <div id="episode_panel" class="hidden">
+    <div id="moviePartitions_0" class="movie-partition-row">44 phút Tập 1</div>
+    <span id="moviePartitions_0_0" class="movie-partition-poster" partition="1" content-id="164735"></span>
+    <div id="moviePartitions_1" class="movie-partition-row">44 phút Tập 2</div>
+    <span id="moviePartitions_1_0" class="movie-partition-poster" partition="2" content-id="164735"></span>
+    <div id="moviePartitions_2" class="movie-partition-row">44 phút Tập 3</div>
+    <span id="moviePartitions_2_0" class="movie-partition-poster" partition="3" content-id="164735"></span>
+    <div id="moviePartitions_3" class="movie-partition-row">44 phút Tập 4</div>
+    <span id="moviePartitions_3_0" class="movie-partition-poster" partition="4" content-id="164735"></span>
+    <div id="moviePartitions_4" class="movie-partition-row">44 phút Tập 5</div>
+    <span id="moviePartitions_4_0" class="movie-partition-poster" partition="5" content-id="164735"></span>
+  </div>
+  <script>
+    const video = document.getElementById("player-video");
+    window.__player = {paused: false, currentTime: 95, source: "blob:episode-2", episode: 2};
+    window.__ui = {controlBar: false, row: false, buttonIndex: 0, panel: false, episode: 2};
+    for (const [name, read] of [
+      ["paused", () => window.__player.paused],
+      ["currentTime", () => window.__player.currentTime],
+      ["duration", () => 2619.6],
+      ["readyState", () => 4],
+      ["ended", () => false],
+      ["currentSrc", () => window.__player.source],
+    ]) {
+      Object.defineProperty(video, name, {get: read});
+    }
+
+    const buttons = () => Array.from(document.querySelectorAll("#new_player_controlbar .player-button"));
+    const posters = () => Array.from(document.querySelectorAll("#episode_panel .movie-partition-poster"));
+
+    function render() {
+      document.getElementById("media_player_new").classList.toggle("hidden", !window.__ui.controlBar);
+      document.getElementById("episode_panel").classList.toggle("hidden", !window.__ui.panel);
+      document.getElementById("hide-when-timeshift").textContent =
+        "Lâu Đài Tham Vọng - Tập " + window.__player.episode;
+      document.getElementById("player-button-play")
+        .classList.toggle("focused", window.__ui.controlBar && !window.__ui.row && !window.__ui.panel);
+      buttons().forEach((button, index) => {
+        button.classList.toggle("focused", window.__ui.row && index === window.__ui.buttonIndex);
+      });
+      posters().forEach((poster) => {
+        poster.classList.toggle("focused",
+          window.__ui.panel && Number(poster.getAttribute("partition")) === window.__ui.episode);
+      });
+    }
+
+    document.addEventListener("keydown", (event) => {
+      const ui = window.__ui;
+      if (event.key === "ArrowDown") {
+        if (ui.panel) ui.episode = Math.min(posters().length, ui.episode + 1);
+        else if (ui.row) ui.row = false;
+        else ui.controlBar = true;
+      } else if (event.key === "ArrowUp") {
+        if (ui.panel) ui.episode = Math.max(1, ui.episode - 1);
+        else if (ui.controlBar) ui.row = true;
+      } else if ((event.key === "ArrowRight" || event.key === "ArrowLeft") && ui.row) {
+        const step = event.key === "ArrowRight" ? 1 : -1;
+        ui.buttonIndex = Math.min(buttons().length - 1, Math.max(0, ui.buttonIndex + step));
+      } else if (event.key === "Enter") {
+        if (ui.panel) {
+          window.__player = {
+            paused: false,
+            currentTime: 0,
+            source: "blob:episode-" + ui.episode,
+            episode: ui.episode,
+          };
+          window.__ui = {controlBar: false, row: false, buttonIndex: 0, panel: false, episode: ui.episode};
+        } else if (ui.row && buttons()[ui.buttonIndex].id === "player-button-partition") {
+          ui.panel = true;
+          ui.row = false;
+          ui.controlBar = false;
+          window.__player.paused = true;
+        }
+      }
+      render();
+    });
+
+    render();
+  </script>
+`;
+
+test("opens the episode picker from the control-bar button row", async ({page}) => {
+  await page.setContent(EPISODE_PAGE);
+
+  const result = await playerControl.openPlayerEpisodes(page, {pressDelayMs: 50, openTimeoutMs: 500});
+
+  expect(result.type).toBe("player_open_episodes");
+  // The list opens on the episode that is playing.
+  expect(result.focusedEpisode).toBe(2);
+  expect(result.playingEpisode).toBe(2);
+  expect(result.playbackPaused).toBe(true);
+});
+
+test("walks the episode list and plays the requested episode", async ({page}) => {
+  await page.setContent(EPISODE_PAGE);
+
+  const focused = await playerControl.focusPlayerEpisode(page, {episode: 5, pressDelayMs: 50, openTimeoutMs: 500});
+  expect(focused.episode).toBe(5);
+  expect(focused.id).toBe("moviePartitions_4_0");
+  expect(focused.label).toBe("44 phút Tập 5");
+
+  const played = await playerControl.pressPlayerOk(page, {pressDelayMs: 50});
+
+  expect(played.expected).toBe("playing");
+  expect(played.episode).toBe(5);
+  expect(played.requestedEpisode).toBe(5);
+  expect(played.contentChanged).toBe(true);
+  expect(await page.evaluate(() => window.__player.source)).toBe("blob:episode-5");
+});
+
+test("fails closed when the episode list ends before the requested episode", async ({page}) => {
+  await page.setContent(EPISODE_PAGE);
+
+  await expect(playerControl.focusPlayerEpisode(page, {episode: 9, pressDelayMs: 50, openTimeoutMs: 500}))
+    .rejects.toThrow(/episode list ended at episode 5 before reaching episode 9/u);
+});
+
+test("fails closed when the player has no episode button", async ({page}) => {
+  await page.setContent(PLAYER_PAGE);
+  await leaveDetail(page);
+
+  await expect(playerControl.openPlayerEpisodes(page, {pressDelayMs: 50, openTimeoutMs: 400}))
+    .rejects.toThrow(/control-bar button row|player-button-partition/u);
+});

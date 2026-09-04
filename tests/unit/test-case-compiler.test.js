@@ -586,3 +586,40 @@ test("fails closed on related-content wording without a position", () => {
     assert.throws(() => compileQaDescription(line), /Không thể parse được bước/u, line);
   }
 });
+
+test("compiles the episode picker wording", () => {
+  for (const line of ["B1. Mở giao diện chọn tập", "B1. Mở danh sách tập", "B1. Hiển thị chọn tập"]) {
+    assert.deepEqual(compileQaDescription(line), [{action: "player_open_episodes"}], line);
+  }
+
+  assert.deepEqual(
+    compileQaDescription("B1. Chọn tập 5"),
+    [{action: "player_focus_episode", episode: 5}]
+  );
+  assert.deepEqual(
+    compileQaDescription("B1. Phát tập 12"),
+    [{action: "player_focus_episode", episode: 12}, {action: "press_ok"}]
+  );
+  // An explicit OK line owns the activation.
+  assert.deepEqual(
+    compileQaDescription("B1. Xem tập 3\nB2. Nhấn phím OK để play"),
+    [{action: "player_focus_episode", episode: 3}, {action: "press_ok"}]
+  );
+});
+
+test("fails closed on episode wording without a number", () => {
+  for (const line of ["B1. Chọn tập", "B1. Chọn tập cuối cùng"]) {
+    assert.throws(() => compileQaDescription(line), /Không thể parse được bước/u, line);
+  }
+});
+
+test("compiles the Mở dịch vụ wording with a quoted service name", () => {
+  assert.deepEqual(
+    compileQaDescription('B1. Mở dịch vụ "Phim truyện"'),
+    [{action: "open_service", service: "Phim truyện"}]
+  );
+  assert.deepEqual(
+    compileQaDescription("B1. Vào dịch vụ Phim truyện"),
+    [{action: "open_service", service: "Phim truyện"}]
+  );
+});

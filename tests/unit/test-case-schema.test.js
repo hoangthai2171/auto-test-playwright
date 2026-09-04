@@ -316,6 +316,14 @@ test("validates the player control actions", () => {
     validateAction({action: "player_focus_related", itemIndex: 3}),
     {action: "player_focus_related", itemIndex: 3}
   );
+  assert.deepEqual(
+    validateAction({action: "player_open_episodes"}),
+    {action: "player_open_episodes"}
+  );
+  assert.deepEqual(
+    validateAction({action: "player_focus_episode", episode: 5}),
+    {action: "player_focus_episode", episode: 5}
+  );
 });
 
 test("rejects malformed player control actions", () => {
@@ -346,5 +354,18 @@ test("rejects malformed player control actions", () => {
   assert.throws(
     () => validateAction({action: "player_focus_related", rowName: "Liên quan"}),
     /unknown field "rowName"/u
+  );
+  // The episode is what the action is about, so it is required.
+  assert.throws(
+    () => validateAction({action: "player_focus_episode"}),
+    /episode must be an integer between 1 and 2000/u
+  );
+  assert.throws(
+    () => validateAction({action: "player_focus_episode", episode: 0}),
+    /episode must be an integer between 1 and 2000/u
+  );
+  assert.throws(
+    () => validateAction({action: "player_open_episodes", episode: 2}),
+    /unknown field "episode"/u
   );
 });

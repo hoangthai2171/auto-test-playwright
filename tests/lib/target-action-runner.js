@@ -25,6 +25,8 @@ const ACTION_CAPABILITIES = Object.freeze({
   player_seek: ["browserPlayerControl"],
   player_toggle_play: ["browserPlayerControl"],
   player_focus_related: ["browserPlayerControl"],
+  player_open_episodes: ["browserPlayerControl"],
+  player_focus_episode: ["browserPlayerControl"],
 });
 
 function validateTargetCaseCapabilities(testCase, capabilities = {}) {

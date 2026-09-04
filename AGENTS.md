@@ -352,6 +352,20 @@ The supported action allowlist is:
   pauses the content behind it. Items are `#relativeContentPopup<n>_<row>_<col>`
   and the action reads its position from the focused id, walks left/right to the
   requested column, and fails closed when the row ends first.
+- `player_open_episodes`: Browser-only parameterless action that opens a series'
+  episode picker. The picker sits behind `#player-button-partition` ("Chọn tập")
+  in the control bar's top button row: Down opens the bar on play/pause, Up
+  enters the button row, and only then may Left/Right walk between buttons -
+  on play/pause those keys start a seek, so the action verifies the row owns the
+  focus before walking and fails closed otherwise (a movie has no such button).
+  Opening the list pauses the content behind it.
+- `player_focus_episode`: Browser-only action requiring an `episode` integer
+  (1-2000). Every poster of the list names the episode it opens in a `partition`
+  attribute (`#moviePartitions_<row>_<col>`), so the action reads the episode
+  rather than counting positions, steps Down/Up until it matches, and fails
+  closed when the list ends before the requested episode. The player names the
+  episode it is on, so OK afterwards requires both a changed media source and
+  that promised episode number.
 - `press_ok` inside a player: commits whatever is focused. The required outcome
   is derived from the state that owns the screen instead of assumed - a pending
   seek, a focused related poster, or a detail play button must leave the content

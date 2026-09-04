@@ -16,6 +16,8 @@ const ALLOWED_ACTIONS = new Set([
   "player_seek",
   "player_toggle_play",
   "player_focus_related",
+  "player_open_episodes",
+  "player_focus_episode",
   "assert_screen",
   "press_back",
   "wait_for_ready",
@@ -25,6 +27,7 @@ const READY_NAMES = new Set(["app", "home", "content", "player"]);
 const PLAYER_SEEK_DIRECTIONS = new Set(["forward", "backward"]);
 const MAX_PLAYER_SEEK_STEPS = 60;
 const MAX_RELATED_ITEM_INDEX = 60;
+const MAX_EPISODE_NUMBER = 2000;
 const PLAY_CONTENT_TYPES = new Set(["channel", "movie", "content"]);
 const ACTION_KEYS = {
   login: ["action", "username", "password"],
@@ -44,6 +47,8 @@ const ACTION_KEYS = {
   player_seek: ["action", "direction", "steps"],
   player_toggle_play: ["action"],
   player_focus_related: ["action", "itemIndex"],
+  player_open_episodes: ["action"],
+  player_focus_episode: ["action", "episode"],
   assert_screen: ["action", "text"],
   press_back: ["action", "count"],
   wait_for_ready: ["action", "name"],
@@ -197,6 +202,13 @@ function validateAction(action, path = "action") {
     );
   }
 
+  if (
+    action.action === "player_focus_episode" &&
+    (!Number.isInteger(action.episode) || action.episode < 1 || action.episode > MAX_EPISODE_NUMBER)
+  ) {
+    throw new Error(`${path}.episode must be an integer between 1 and ${MAX_EPISODE_NUMBER}`);
+  }
+
   if (action.action === "assert_screen" && !isNonEmptyString(action.text)) {
     throw new Error(`${path}.text must be a non-empty string`);
   }
@@ -309,6 +321,7 @@ module.exports = {
   PLAYER_SEEK_DIRECTIONS,
   MAX_PLAYER_SEEK_STEPS,
   MAX_RELATED_ITEM_INDEX,
+  MAX_EPISODE_NUMBER,
   validateTestCaseList,
   validateTestCase,
   validateAction,
