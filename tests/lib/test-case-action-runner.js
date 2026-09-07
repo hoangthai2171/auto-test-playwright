@@ -159,7 +159,7 @@ async function assertVisibleScreenText(page, text, {timeoutMs = 30000, pollInter
     .toBe(true);
 }
 
-function createActionRunner({ handlers = {}, stepRunner, afterAction, onActionError }) {
+function createActionRunner({ handlers = {}, stepRunner, afterAction, onActionError, captureEvidence }) {
   if (typeof stepRunner !== "function") {
     throw new TypeError("stepRunner must be a function");
   }
@@ -217,7 +217,7 @@ function createActionRunner({ handlers = {}, stepRunner, afterAction, onActionEr
       try {
         let handlerResult;
         const stepRunnerResult = await stepRunner(page, testInfo, label, async () => {
-          handlerResult = await handlers[label]({ page, testInfo, action, testCase: compiledTestCase, options });
+          handlerResult = await handlers[label]({ page, testInfo, action, actionIndex: index, testCase: compiledTestCase, options });
           return handlerResult;
         });
         if (handlerResult === undefined) handlerResult = stepRunnerResult;
@@ -234,6 +234,13 @@ function createActionRunner({ handlers = {}, stepRunner, afterAction, onActionEr
         if (handlerResult !== undefined) step.result = handlerResult;
         step.durationMs = Date.now() - startedAt;
       } catch (error) {
+        // A failed step is read by a person, not a debugger: what the screen
+        // showed and what the app itself said are the report. Both are captured
+        // before any cleanup handler navigates away from the failure.
+        const evidence = typeof captureEvidence === "function"
+          ? await captureEvidence({page, testInfo, action}).catch(() => ({}))
+          : {};
+
         if (typeof onActionError === "function") {
           try {
             await onActionError({
@@ -256,6 +263,8 @@ function createActionRunner({ handlers = {}, stepRunner, afterAction, onActionEr
         // error text often does not carry.
         const failedTarget = describeActionTarget(action);
         if (failedTarget) step.target = failedTarget;
+        if (evidence?.popupText) step.popupText = evidence.popupText;
+        if (evidence?.screenshotDataUrl) step.failureScreenshotDataUrl = evidence.screenshotDataUrl;
         if (error?.details !== undefined) step.details = error.details;
         result.status = "failed";
         steps.push(step);
@@ -308,7 +317,16 @@ function createActionRunner({ handlers = {}, stepRunner, afterAction, onActionEr
         result.status = "failed";
         if (error?.playerCheckScreenshotDataUrl) {
           result.completionScreenshotDataUrl = error.playerCheckScreenshotDataUrl;
+          // The player check captures its own screenshot at the moment it gave
+          // up, before it closes the player; a screenshot taken here would show
+          // the screen after that cleanup instead.
+          step.failureScreenshotDataUrl = error.playerCheckScreenshotDataUrl;
         }
+        // The player check reports the dialog it saw, and the cleanup that
+        // follows dismisses it, so the popup is read from the error rather than
+        // from the page.
+        const checkPopupText = String(error?.details?.popup?.text || "").trim();
+        if (checkPopupText) step.popupText = checkPopupText;
         steps.push(step);
         if (error && typeof error === "object") error.testCaseResult = result;
 
@@ -459,6 +477,18 @@ function isPlayerCheckingAction(action) {
   );
 }
 
+// The player-checking half of `nextStepRequiresPlayer`: a following `press_back`
+// keeps a player open but does not assert one, so it must not make `press_ok`
+// drill into an album.
+function caseChecksPlayerAfter(testCase, actionIndex) {
+  const actions = testCase?.actions || [];
+  const nextAction = actions[actionIndex + 1];
+  if (nextAction?.action === "wait_for_ready" && nextAction.name === "player") return true;
+  if (PLAYER_CONTROL_ACTIONS.has(nextAction?.action)) return true;
+  if (nextAction) return false;
+  return PLAYER_EXPECTED_RESULTS.has(classifyExpectedResult(testCase?.expectedResult));
+}
+
 function nextStepRequiresPlayer(testCase, actionIndex) {
   const actions = testCase.actions || [];
   const currentAction = actions[actionIndex];
@@ -506,6 +536,40 @@ async function returnFromPlayer(page, helpers, options = {}) {
     return;
   }
   await page.keyboard.press("Backspace");
+}
+
+// What a person needs from a failed step: the screen as it looked when the step
+// failed, and the app's own popup text when one was up. Every part is
+// best-effort - evidence must never replace the original failure.
+async function captureFailureEvidence({page, testInfo, action, helpers}) {
+  const screenshotName = `failure-${actionName(action) || "step"}`;
+  const screenshotDataUrl = typeof page?.screenshot === "function"
+    ? await captureCurrentAppScreenshot(page, testInfo, screenshotName).catch(() => "")
+    : "";
+
+  return {
+    popupText: await readVisiblePopupText(page, helpers),
+    screenshotDataUrl: String(screenshotDataUrl || ""),
+  };
+}
+
+// Whatever the app had on screen, in its own words. The dialog observer is asked
+// first because it reports any visible dialog of the app's four dialog families,
+// while `getVisiblePopup` only recognizes the playback-error wording it has to
+// act on - a report has to quote the message whatever it says.
+async function readVisiblePopupText(page, helpers) {
+  const dialogs = typeof helpers?.observeExitConfirmation === "function"
+    ? await helpers.observeExitConfirmation(page).catch(() => null)
+    : null;
+  const dialogText = (dialogs?.visibleDialogs || [])
+    .map((dialog) => String(dialog?.text || "").trim())
+    .find(Boolean);
+  if (dialogText) return dialogText;
+
+  const getVisiblePopup = helpers?.__internal?.getVisiblePopup;
+  if (typeof getVisiblePopup !== "function") return "";
+  const popup = await getVisiblePopup(page).catch(() => null);
+  return String(popup?.text || "").trim();
 }
 
 async function capturePlayerCheckScreenshot(page, testInfo) {
@@ -655,7 +719,7 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
         new RegExp(`^\\s*${escapeRegExp(action.text.trim())}\\s*$`, "iu")
       );
     },
-    press_ok: async ({ page, testInfo }) => {
+    press_ok: async ({ page, testInfo, actionIndex, testCase }) => {
       // Inside the player OK means "commit what is focused": confirm a pending
       // seek, activate a detail/control-bar button, or toggle playback. Verify
       // the player answered instead of pressing Enter blindly.
@@ -681,7 +745,18 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
           testInfo,
         });
       }
-      if (!pendingServiceName) return undefined;
+      if (!pendingServiceName) {
+        // OK on an album poster opens the album detail screen, which plays
+        // nothing on its own. When the case goes on to check a player, drill
+        // into the album the same way the play actions do; a case that only
+        // wanted the screen opened is left standing on it.
+        if (caseChecksPlayerAfter(testCase, actionIndex) &&
+          typeof helpers.isAlbumDetailScreen === "function" &&
+          await helpers.isAlbumDetailScreen(page)) {
+          return helpers.playRandomAlbumContent(page, testInfo);
+        }
+        return undefined;
+      }
       const service = pendingServiceName;
       pendingServiceName = "";
       return helpers.assertServiceOpened(page, {service, testInfo});
@@ -793,6 +868,7 @@ async function runTestCase(page, testInfo, testCase, options = {}) {
     stepRunner,
     afterAction: (context) => cleanupAfterPlayerAction({...context, helpers}),
     onActionError: (context) => cleanupAfterFailedPlayerAction({...context, helpers}),
+    captureEvidence: (context) => captureFailureEvidence({...context, helpers}),
   })(
     page,
     testInfo,

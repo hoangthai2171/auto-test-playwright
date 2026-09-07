@@ -20,7 +20,10 @@ Key technologies: Playwright, Electron, Node.js
 
 When text input is required in the TV app, always use the virtual keyboard
 character by character. Do not use standard form input or mouse-driven app
-interaction.
+interaction. A letter key types whatever case the keyboard is in, so
+`enterWithVirtualKeyboard` drives `#key-uppercase-v2` - a shift-lock - to the
+case each character needs, reading the current case from a letter key's label
+because the shift key is an unlabelled icon with no state class.
 
 ## Architecture
 
@@ -196,6 +199,7 @@ app/
   test-report-store.js           Ordered serialized compact-report persistence
   main.js                         Electron process, case loading, run IPC
   test-report.js                  Compact user report HTML/data generation
+  failure-message.js              Raw runner errors and app popups to one readable sentence
   preload.js                      Context-isolated IPC bridge
   flow-case-api.js                Flow-case API URLs, fetch, normalization, timeout
   campaign-flow-case-workflow.js Pure campaign/folder intersection and ordered result fan-out
@@ -231,6 +235,7 @@ tests/
   lib/navigation.js               Remote focus and virtual-keyboard primitives
   lib/content-rows.js             Content-row discovery and navigation
   lib/playback.js                 Player state and playback assertions
+  lib/album-detail.js             Album detail screen traversal and content selection
   lib/waits.js                    Readiness and pacing utilities
   lib/artifacts.js                Failure screenshots and JSON/HTML attachments
   unit/                           Pure Node contract and renderer tests
@@ -305,6 +310,26 @@ The supported action allowlist is:
   Enter. Per-poster evidence, continue-after-failure behavior, and the row
   playback report table match `play_row`; `count`/`rowCount` are the only bound,
   with no implicit runtime budget.
+- Album posters, shared by every play action above: a poster marked
+  `.item_album`/`keyword="album"` opens `#albumDetail` instead of a player. That
+  screen carries the album's own buttons on the left (`Xem toàn bộ`, `Xem ở chế
+  độ lặp lại`, `Lưu vào danh sách`) and the album's contents on the right as
+  `album_card_<row>_<col>` cards with `action="play_album_content"`, and nothing
+  plays while it is up. `tests/lib/album-detail.js` therefore enters the
+  right-hand list, picks one content at random, activates it, and hands the
+  resulting player to the caller's ordinary playback check; the result records
+  the album title, the album's size, and the content that actually played. The
+  right-hand list is virtualized - about a dozen cards exist at a time - so the
+  random pick is drawn from the album's declared `Tổng số phim, VOD : N` total
+  and traversal steps with the remote instead of enumerating cards. A locked
+  card is stepped over; an empty album, an out-of-range index, or a content that
+  never opens a player fails closed with that reason. Unwinding costs two Back
+  presses more than an ordinary playback (an album-launched player answers the
+  first Back without changing state, and album detail itself needs one), so
+  `closePlayerOrDetail` widens its budget by exactly that much when the open
+  player carries `is_album=1` or a Back press lands on album detail, and album
+  detail is never accepted as a return boundary. Contract spec:
+  `npm run test:album:contract`.
 - `play_home_trailers`: Browser-only parameterless action that tests every
   distinct Home promotional trailer through remote `Xem ngay` → player or
   Album-detail check → Back navigation. It reads the trailer name from the

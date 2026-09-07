@@ -87,6 +87,11 @@ function collectScreenshotCandidates(step) {
     visit(step);
     visit(step?.result);
     visit(step?.details);
+    // The step's own failure screenshot is the screen at the moment the step
+    // failed. It is added last so a step that carries more specific per-item
+    // evidence - the poster whose player check failed - still decides the image.
+    const failureDataUrl = String(step?.failureScreenshotDataUrl ?? "").trim();
+    if (failureDataUrl) candidates.push({dataUrl: failureDataUrl, status: "failed"});
     return candidates;
 }
 

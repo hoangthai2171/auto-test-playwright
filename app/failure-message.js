@@ -158,6 +158,14 @@ const FAILURE_CODE_MESSAGES = {
 
 const SLOW_APP_HINT = "Ứng dụng tải chậm hoặc màn hình không hiển thị mục này.";
 
+// A popup's text is read straight off the dialog, so it carries the dialog's own
+// chrome: the "Thông báo" heading, the build stamp the app prints under it, and
+// the label of the button that closes it. None of that is the message a reader
+// needs, so it is trimmed off and only the sentence is kept.
+const POPUP_HEADING_PATTERN = /^(?:thông báo|thong bao|notice|notification|error|lỗi)\b[\s:.\-]*/iu;
+const POPUP_BUILD_STAMP_PATTERN = /\((?=[^)]*\bver\b)[^)]*\)/giu;
+const POPUP_CLOSE_LABEL_PATTERN = /\s*(?:Đồng ý|Đóng|Huỷ|Hủy|Bỏ qua|Tiếp tục|Thử lại|Quay về(?: trang chủ)?|OK|Close|Cancel|Retry)\s*$/iu;
+
 function stripAnsi(value) {
     return String(value ?? "")
         .replace(ANSI_ESCAPE_PATTERN, "")
@@ -186,6 +194,18 @@ function parseTimeoutMs(message) {
 
 function waitedFor(seconds) {
     return seconds ? ` sau ${seconds} giây chờ` : "";
+}
+
+// The sentence a popup was actually showing, or "" when there was no popup.
+function describePopupMessage(popupText) {
+    let message = normalizeWhitespace(stripAnsi(popupText)).replace(POPUP_BUILD_STAMP_PATTERN, " ");
+    message = normalizeWhitespace(message).replace(POPUP_HEADING_PATTERN, "");
+    // A dialog can stack several buttons, so the labels are trimmed one by one.
+    for (let previous = ""; previous !== message; ) {
+        previous = message;
+        message = normalizeWhitespace(message.replace(POPUP_CLOSE_LABEL_PATTERN, ""));
+    }
+    return message;
 }
 
 function assertionMeaning(message) {
@@ -315,16 +335,22 @@ function stepPrefix({stepIndex, action, target} = {}) {
     return named ? `${prefix} "${named}"` : prefix;
 }
 
-// One readable sentence for a single failed step.
-function describeStepFailure({message, action, target, stepIndex} = {}) {
+// One readable sentence for a single failed step. When the app had a popup up at
+// the moment of failure, that popup is the failure a reader cares about: the
+// assertion that tripped is only how the runner noticed it.
+function describeStepFailure({message, action, target, stepIndex, popupText} = {}) {
     const detail = technicalDetail(message);
-    const reason = describeFailureReason(detail, action);
+    const popupMessage = describePopupMessage(popupText);
+    const reason = popupMessage
+        ? `Ứng dụng hiển thị thông báo "${popupMessage}".`
+        : describeFailureReason(detail, action);
     const readable = reason || detail;
     const prefix = stepPrefix({stepIndex, action, target});
     const summary = prefix && readable ? `${prefix}: ${readable}` : readable || prefix;
 
     return {
         summary,
+        popupMessage,
         detail: reason && detail !== reason ? detail : "",
     };
 }
@@ -342,24 +368,31 @@ function describeCaseFailure(caseResult, fallbackMessage = "") {
     const failedStep = steps.find((step) => step?.status === "failed" && step?.message);
 
     if (failedStep) {
-        return describeStepFailure({
-            message: failedStep.message,
-            action: failedStep.action,
-            target: failedStep.target,
-            stepIndex: Number.isInteger(failedStep.index) ? failedStep.index : steps.indexOf(failedStep),
-        });
+        return {
+            ...describeStepFailure({
+                message: failedStep.message,
+                action: failedStep.action,
+                target: failedStep.target,
+                stepIndex: Number.isInteger(failedStep.index) ? failedStep.index : steps.indexOf(failedStep),
+                popupText: failedStep.popupText,
+            }),
+            // The screen as it looked at the moment the step failed.
+            screenshot: String(failedStep.failureScreenshotDataUrl || ""),
+        };
     }
 
     const fallback = technicalDetail(fallbackMessage);
-    if (!fallback) return {summary: "", detail: ""};
+    if (!fallback) return {summary: "", popupMessage: "", detail: "", screenshot: ""};
 
     const coded = describeFailureCode(fallback);
-    if (coded) return {summary: coded, detail: fallback};
+    if (coded) return {summary: coded, popupMessage: "", detail: fallback, screenshot: ""};
 
     const reason = describeFailureReason(fallback, "");
     return {
         summary: reason || fallback,
+        popupMessage: "",
         detail: reason ? fallback : "",
+        screenshot: "",
     };
 }
 
@@ -370,6 +403,7 @@ const failureMessage = Object.freeze({
     describeCaseFailure,
     describeFailureCode,
     describeFailureReason,
+    describePopupMessage,
     describeStepFailure,
     stripAnsi,
 });

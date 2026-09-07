@@ -7,6 +7,13 @@ const DEFAULT_REMOTE_PRESS_DELAY = 100;
 // that is still rendering has to be waited for here.
 const TARGET_RECT_WAIT_MS = 3000;
 const TARGET_RECT_POLL_MS = 200;
+// `#key-uppercase-v2` is the keyboard's shift-lock: one press switches every
+// letter key and the new case holds until it is pressed again. The key itself is
+// an icon with no label and it carries no state class, so the keyboard's current
+// case is read from a letter key's own label instead.
+const VIRTUAL_KEYBOARD_UPPERCASE_KEY_ID = "key-uppercase-v2";
+const VIRTUAL_KEYBOARD_CASE_PROBE_KEY_ID = "key-a-v2";
+const VIRTUAL_KEYBOARD_CASE_TOGGLE_DELAY_MS = 300;
 const VIRTUAL_KEYBOARD_ROWS = [
   ["a", "b", "c", "d", "e", "f", "1", "2", "3"],
   ["g", "h", "i", "j", "k", "l", "4", "5", "6"],
@@ -59,12 +66,62 @@ async function expectFocusedElementToLookOrange(page) {
 }
 async function enterWithVirtualKeyboard(page, value) {
   for (const char of value) {
+    // A letter key types whatever case the keyboard is in, so an upper-case
+    // character needs the shift-lock on and a lower-case one needs it off. The
+    // case is checked per character rather than once up front because the app
+    // rerenders the keyboard while typing.
+    if (hasLetterCase(char)) {
+      const uppercase = char === char.toUpperCase();
+      const applied = await setVirtualKeyboardUppercase(page, uppercase);
+      if (!applied && uppercase) {
+        throw new Error(
+          `Bàn phím ảo trên màn hình không có phím chuyển chữ in hoa để nhập "${char}".`
+        );
+      }
+    }
+
     await remoteFocusByVirtualKey(page, char);
     // Let the app finish updating the query/suggestion layer before the next
     // remote-navigation lookup.  The keyboard is rerendered after the third
     // character on staging, so the default key delay is too short here.
     await remotePress(page, "Enter", 250);
   }
+}
+
+function hasLetterCase(char) {
+  return char.toLowerCase() !== char.toUpperCase();
+}
+
+// true/false when the keyboard shows its case, null when this screen's keyboard
+// has no readable letter key to read it from.
+async function readVirtualKeyboardUppercase(page) {
+  return page
+    .evaluate((probeId) => {
+      const label = (document.getElementById(probeId)?.innerText || "").trim();
+      if (label.length !== 1 || label.toLowerCase() === label.toUpperCase()) return null;
+      return label === label.toUpperCase();
+    }, VIRTUAL_KEYBOARD_CASE_PROBE_KEY_ID)
+    .catch(() => null);
+}
+
+// Puts the keyboard in the requested case, pressing the shift-lock only when the
+// case actually has to change. Returns false when this keyboard exposes no case
+// control at all, so a caller can decide whether that matters.
+async function setVirtualKeyboardUppercase(page, uppercase) {
+  const current = await readVirtualKeyboardUppercase(page);
+  if (current === null) return false;
+  if (current === uppercase) return true;
+
+  await remoteFocusById(page, VIRTUAL_KEYBOARD_UPPERCASE_KEY_ID, 50);
+  await remotePress(page, "Enter", VIRTUAL_KEYBOARD_CASE_TOGGLE_DELAY_MS);
+
+  if ((await readVirtualKeyboardUppercase(page)) !== uppercase) {
+    throw new Error(
+      `Không chuyển được bàn phím ảo sang chế độ ${uppercase ? "chữ in hoa" : "chữ thường"}.`
+    );
+  }
+
+  return true;
 }
 
 async function remoteFocusByVirtualKey(page, char) {
@@ -531,4 +588,4 @@ async function getFocusedState(page) {
   }, FOCUS_SELECTORS);
 }
 
-module.exports={DEFAULT_REMOTE_PRESS_DELAY,remotePress,enterWithVirtualKeyboard,remoteFocusByVirtualKey,virtualKeyIds,searchKeyboardInput,remoteFocusByText,remoteFocusByKeyText,remoteFocusById,remoteFocusBySelector,remoteFocus,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange,__internal:{chooseDirection,rangesOverlap,fallbackDirection,center}};
+module.exports={DEFAULT_REMOTE_PRESS_DELAY,VIRTUAL_KEYBOARD_UPPERCASE_KEY_ID,remotePress,enterWithVirtualKeyboard,readVirtualKeyboardUppercase,setVirtualKeyboardUppercase,remoteFocusByVirtualKey,virtualKeyIds,searchKeyboardInput,remoteFocusByText,remoteFocusByKeyText,remoteFocusById,remoteFocusBySelector,remoteFocus,getFocusedState,expectFocusedText,expectFocusedElementToLookOrange,__internal:{chooseDirection,rangesOverlap,fallbackDirection,center}};

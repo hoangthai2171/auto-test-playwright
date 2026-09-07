@@ -7,6 +7,7 @@ const {
     describeActionTarget,
     describeCaseFailure,
     describeFailureCode,
+    describePopupMessage,
     describeStepFailure,
     stripAnsi,
 } = require("../../app/failure-message");
@@ -158,6 +159,62 @@ test("names the item a failed action was aiming at, except login credentials", (
     assert.equal(describeActionTarget({action: "play_row", rowIndex: 5}), "hàng 5");
     assert.equal(describeActionTarget({action: "player_focus_episode", episode: 12}), "tập 12");
     assert.equal(describeActionTarget({action: "login", username: "0912345678", password: "secret"}), "");
+});
+
+test("keeps only the sentence a popup was showing", () => {
+    assert.equal(
+        describePopupMessage("Thông báo ( SmartTV - Ver LG253.5.0 ) Vui lòng kiểm tra lại thông tin đăng nhập! Đóng"),
+        "Vui lòng kiểm tra lại thông tin đăng nhập!"
+    );
+    assert.equal(
+        describePopupMessage("Thiết bị không hỗ trợ nội dung này (mã 4032) Đồng ý Đóng"),
+        "Thiết bị không hỗ trợ nội dung này (mã 4032)"
+    );
+    assert.equal(describePopupMessage(""), "");
+    assert.equal(describePopupMessage(undefined), "");
+});
+
+test("a popup on screen when a step failed becomes the reported reason", () => {
+    const failure = describeStepFailure({
+        message: 'expect(locator).toContainText(expected) failed Expected substring: "Nhập mật khẩu"',
+        action: "login",
+        stepIndex: 0,
+        popupText: "Thông báo ( SmartTV - Ver LG253.5.0 ) Vui lòng kiểm tra lại thông tin đăng nhập! Đóng",
+    });
+
+    assert.equal(
+        failure.summary,
+        'Bước 1 – Đăng nhập: Ứng dụng hiển thị thông báo "Vui lòng kiểm tra lại thông tin đăng nhập!".'
+    );
+    assert.equal(failure.popupMessage, "Vui lòng kiểm tra lại thông tin đăng nhập!");
+});
+
+test("a step that failed without a popup still explains itself", () => {
+    const failure = describeStepFailure({
+        message: "Timed out 10000ms waiting for locator('#row')",
+        action: "focus_row",
+        stepIndex: 1,
+    });
+
+    assert.equal(failure.popupMessage, "");
+    assert.match(failure.summary, /Không tìm thấy hàng nội dung cần chọn/u);
+});
+
+test("a case failure carries the popup and the screenshot of the failed step", () => {
+    const failure = describeCaseFailure({
+        steps: [{
+            index: 0,
+            action: "login",
+            status: "failed",
+            message: "expect(locator).toContainText(expected) failed",
+            popupText: "Thông báo Vui lòng kiểm tra lại thông tin đăng nhập! Đóng",
+            failureScreenshotDataUrl: "data:image/png;base64,failure",
+        }],
+    });
+
+    assert.equal(failure.popupMessage, "Vui lòng kiểm tra lại thông tin đăng nhập!");
+    assert.equal(failure.screenshot, "data:image/png;base64,failure");
+    assert.match(failure.summary, /Ứng dụng hiển thị thông báo/u);
 });
 
 test("removes terminal colour codes with or without the escape character", () => {

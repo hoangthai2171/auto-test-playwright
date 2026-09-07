@@ -92,6 +92,11 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
   báo vị trí xa nhất nếu row kết thúc. `play_row` quay lại row sau mỗi item,
   tiếp tục sau lỗi, báo mọi item đã thử và fail nếu item yêu cầu fail hoặc
   không item nào thành công.
+- Poster album (`.item_album`, `keyword="album"`) mở `#albumDetail` chứ không mở
+  player. Mọi action play tự vào danh sách nội dung bên phải, chọn ngẫu nhiên
+  một nội dung và phát nội dung đó trước khi kiểm tra player, nên description
+  không cần bước riêng cho album. Thoát tốn thêm 2 lần Back so với playback
+  thường và runtime tự cấp thêm, nên đừng thêm `press_back` bù.
 - `Xem tất cả`, `Xem thêm`, `View more` chỉ đặc biệt khi đứng ngay sau
   `focus_row` thành công. Browser tới poster cuối có marker
   `.view_more[item_view_more="1"]`; không reach thì fail closed, không Enter lên

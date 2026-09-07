@@ -33,8 +33,42 @@ test("builds a compact passed test entry", () => {
     rowPlaybackItems: [],
     homeTrailerItems: [],
     error: "",
-    errorDetail: "",
+    errorPopup: "",
+    failureScreenshot: "",
   });
+});
+
+test("a failed entry reports the app popup and the failure screenshot, not the assertion dump", () => {
+    const entry = buildTestReportEntry({
+        testCaseId: "case-popup",
+        testCaseName: "Đăng nhập sai",
+        exitCode: 1,
+        caseResult: {
+            testCaseId: "case-popup",
+            name: "Đăng nhập sai",
+            status: "failed",
+            steps: [{
+                index: 0,
+                action: "login",
+                status: "failed",
+                message: "expect(locator).toContainText(expected) failed Locator: locator('#new_ui_login_input_label')",
+                popupText: "Thông báo ( SmartTV - Ver LG253.5.0 ) Vui lòng kiểm tra lại thông tin đăng nhập! Đóng",
+                failureScreenshotDataUrl: "data:image/png;base64,failure",
+            }],
+        },
+    });
+
+    assert.equal(entry.errorPopup, "Vui lòng kiểm tra lại thông tin đăng nhập!");
+    assert.equal(entry.failureScreenshot, "data:image/png;base64,failure");
+    assert.match(entry.error, /Ứng dụng hiển thị thông báo/u);
+    assert.equal(Object.prototype.hasOwnProperty.call(entry, "errorDetail"), false);
+
+    const html = renderUserReport({generatedAt: "now", tests: [entry]});
+    assert.match(html, /Vui lòng kiểm tra lại thông tin đăng nhập!/u);
+    assert.match(html, /data:image\/png;base64,failure/u);
+    assert.doesNotMatch(html, /Chi tiết kỹ thuật/u);
+    assert.doesNotMatch(html, /toContainText/u);
+    assert.doesNotMatch(html, /new_ui_login_input_label/u);
 });
 
 test("extracts failed row items with poster and screenshot", () => {

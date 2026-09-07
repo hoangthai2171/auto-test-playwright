@@ -2,6 +2,7 @@ const textUtils = require("./text-utils");
 const navigation = require("./navigation");
 const contentRows = require("./content-rows");
 const playback = require("./playback");
+const albumDetail = require("./album-detail");
 const playerControl = require("./player-control");
 const artifacts = require("./artifacts");
 const workflows = require("./workflows");
@@ -18,6 +19,7 @@ module.exports = {
   ...navigation,
   ...contentRows,
   ...playback,
+  ...albumDetail,
   ...playerControl,
   ...artifacts,
   ...workflows,

@@ -189,6 +189,16 @@ window.location = 'index.html';
 `STAGE` runs `gServerAAALink.setDevMode(APP_MODE.ONLINE56)` followed by the
 same `index.html` reload and readiness wait. LG runs do not use this setting.
 
+After the password is submitted, the workflow waits for the app's answer rather
+than for the password screen to go away. That screen is torn down before either
+answer arrives, so its absence is not success: the wait resolves when profile
+selection appears (or the device-limit dialog that precedes it), and fails
+immediately, quoting the app's own dialog, when the credentials are refused.
+Before this, a refused login looked like a success and the run then sat out the
+device-limit wait (15s) and the profile-selection wait (30s) before failing with
+a misleading profile-selection error - about 45 seconds of dead time on every
+wrong-password case, and the wrong reason in the report.
+
 If login displays the device-limit popup, the workflow monitors the asynchronous
 transition to profile selection, remotely selects `Tiếp tục`, and waits for that
 popup to close before continuing. The four supported dialog families
@@ -345,6 +355,36 @@ numeric counting, so public `rowIndex: 5` targets `homePage2_4_*`.
 
 `npm run test:list:contract` covers this action's traversal loop against a
 simulated list page and needs no live app.
+
+### Album posters
+
+A row can hold album posters (`.item_album`, `keyword="album"`, `album_id=...`)
+alongside ordinary content. An album poster does not open a player: Enter opens
+`#albumDetail`, whose left column holds the album's own buttons (`Xem toàn bộ`,
+`Xem ở chế độ lặp lại`, `Lưu vào danh sách`) and whose right column lists the
+album's contents. Nothing is playing while that screen is up.
+
+Every play action - `play_row`, `play_all_contents`, `play_content`,
+`play_search_result` - therefore treats album detail as a way-station rather
+than a destination: it enters the content list on the right, picks one content
+at random, plays it, and only then runs the ordinary player check. The pick
+covers the album's declared size (`Tổng số phim, VOD : N`), not just the dozen
+cards the app keeps built, so the tail of a long album is reachable; a locked
+content is stepped over rather than reported as a playback failure, and an
+empty album, a content index outside the album, or a content that never reaches
+a player fails the poster with that reason. The report names both the album and
+the content that actually played.
+
+Leaving costs two Back presses more than an ordinary playback - an
+album-launched player answers the first Back without changing state, and the
+album detail screen it falls back to needs one Back of its own - so the close
+budget is widened by exactly that much whenever the app marks the open player
+with `is_album=1`, or a Back press lands on album detail. Album detail is never
+accepted as a return boundary.
+
+`npm run test:album:contract` covers the observation, traversal and activation
+against a simulated album detail page (including its virtualized card window)
+and needs no live app.
 
 The content noun in the description is descriptive only: `toàn bộ nội dung`,
 `toàn bộ kênh`, `toàn bộ phim`, `toàn bộ poster`, and `toàn bộ short` all compile
@@ -600,6 +640,20 @@ npm run test:unit
   Backspace/Escape goes back.
 - Text input uses the app's virtual keyboard character by character, not normal
   browser typing.
+- The keyboard's letter keys type whatever case the keyboard is in, so a value
+  with upper-case letters (`tS1`) needs its case switched while typing.
+  `#key-uppercase-v2` is a shift-lock: one press switches every letter key and
+  the new case holds until it is pressed again. The key itself is an icon with
+  no label and no state class, so the current case is read from a letter key's
+  own label (`#key-a-v2` showing `A` means upper case). The case is checked once
+  per character - the app rerenders the keyboard while typing, so a case set
+  once up front would not survive that - and the shift-lock is pressed only when
+  the case actually has to change. Digits and symbols are the same in both
+  cases, so they are typed without touching it. A keyboard with no case control
+  still types a lower-case value unchanged, but a requested upper-case character
+  fails the step rather than silently typing the wrong one.
+  `npm run test:keyboard:contract` covers this against a simulated keyboard and
+  needs no live app.
 - Vietnamese matching ignores accents and case, maps `đ` to `d`, and supports
   partial token matches.
 - Readiness checks and action failures preserve screenshots, focused-element
@@ -758,11 +812,30 @@ and the item it was aiming at (`Bước 4 – Phát nội dung "Mai": …`), and
 technical shapes to what actually happened — a `toBeTruthy()` dump with a `null`
 value becomes "content not found on screen", a `waitForFunction` timeout becomes
 "not found after N seconds of waiting, the app is slow or the item is not
-shown", and an LG failure code becomes its Vietnamese meaning. The raw text is
-kept underneath as `Chi tiết kỹ thuật` in the report and unchanged in
-`test-case-result.json` and the Playwright report, so nothing is lost for
-debugging. The same sentence is what the app sends back to the flow-case API as
-`testResult.message`.
+shown", and an LG failure code becomes its Vietnamese meaning. The same sentence
+is what the app sends back to the flow-case API as `testResult.message`.
+
+When the app had a dialog up at the moment the step failed, that dialog is the
+failure: the reported sentence quotes it (`Ứng dụng hiển thị thông báo "Số điện
+thoại không hợp lệ. Vui lòng nhập lại!".`) instead of describing the assertion
+that noticed it, and the report repeats the message on its own line. The popup
+text is read off the app's own dialog and cleaned of the dialog's chrome — the
+`Thông báo` heading, the `( Mã … - Ver … )` build stamp, and the label of the
+button that closes it — so only the sentence a reader needs is kept.
+
+Every failed step also carries the screen as it looked when it failed. The
+runner captures that screenshot, and the app's dialog text, before any cleanup
+handler presses Back, and the report shows the screenshot under the failure
+sentence. The player-check step uses the screenshot the check itself took, since
+by the time it reports it has already closed the player.
+
+### What the user report leaves out
+
+The user report is written for people, so it carries only the failure sentence,
+the app's popup message, and the failure screenshot. The raw assertion dump,
+locators, and stack traces are deliberately not rendered there; they stay
+unchanged in `test-case-result.json` and in the Playwright HTML report, so
+nothing is lost for debugging.
 
 Interactive Browser preview is supported for exactly one selected Browser case;
 use Live or None when running multiple cases. LG selection remains a separately

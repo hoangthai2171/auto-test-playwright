@@ -132,7 +132,7 @@ function buildTestReportEntry({testCaseId, testCaseName, exitCode, caseResult, e
   // report shows the readable sentence and keeps the raw text as a detail line.
   const failure = status === "failed"
     ? describeCaseFailure(caseResult, errorMessage)
-    : {summary: "", detail: ""};
+    : {summary: "", popupMessage: "", screenshot: ""};
   return {
     id: String(caseResult?.testCaseId || testCaseId),
     name: String(caseResult?.name || testCaseName || "Test case " + testCaseId),
@@ -143,7 +143,11 @@ function buildTestReportEntry({testCaseId, testCaseName, exitCode, caseResult, e
     rowPlaybackItems: collectRowPlaybackItems(caseResult),
     homeTrailerItems: collectHomeTrailerItems(caseResult),
     error: status === "failed" ? String(failure.summary || "Test case chạy thất bại.") : "",
-    errorDetail: status === "failed" ? String(failure.detail || "") : "",
+    // What the app itself said, and the screen at the moment it said it. The
+    // raw assertion dump is deliberately left out: this report is read by
+    // people, and the dump stays in the Playwright artifacts for debugging.
+    errorPopup: status === "failed" ? String(failure.popupMessage || "") : "",
+    failureScreenshot: status === "failed" ? String(failure.screenshot || "") : "",
   };
 }
 
@@ -208,7 +212,7 @@ function renderUserReport(report) {
     "th{background:#222631;color:#cbd1dc}.status-passed{color:#46d083;font-weight:700;text-transform:capitalize}.status-failed{color:#ff7a7a;font-weight:700;text-transform:capitalize}",
     ".details-button{padding:6px 12px;border:1px solid #596579;border-radius:4px;background:#2a3140;color:#fff;cursor:pointer}",
     ".hidden{display:none}.details-row td{background:#0f1117;padding:18px}.detail-section+.detail-section{margin-top:18px}.detail-section h2{font-size:14px;margin:0 0 8px}.expected-result{margin:0;white-space:pre-wrap;word-break:break-word}.failure-table,.trailer-table,.row-playback-table{background:#14161b}.failure-table th,.failure-table td,.trailer-table th,.trailer-table td,.row-playback-table th,.row-playback-table td{padding:10px}",
-    ".poster{max-width:100px;max-height:120px;object-fit:contain}.screenshot{max-width:360px;max-height:220px;object-fit:contain;background:#050608}.completion-screenshot{max-width:560px;max-height:315px;object-fit:contain;background:#050608}.empty{color:#9aa3b2}.error-summary{white-space:pre-wrap;word-break:break-word;margin:0 0 8px}.error-detail{white-space:pre-wrap;word-break:break-word;color:#9aa3b2;font-size:12px;margin:0 0 12px}",
+    ".poster{max-width:100px;max-height:120px;object-fit:contain}.screenshot{max-width:360px;max-height:220px;object-fit:contain;background:#050608}.completion-screenshot{max-width:560px;max-height:315px;object-fit:contain;background:#050608}.empty{color:#9aa3b2}.error-summary{white-space:pre-wrap;word-break:break-word;margin:0 0 8px}.error-popup{white-space:pre-wrap;word-break:break-word;color:#ffcf7a;margin:0 0 12px}.failure-screenshot-wrap{margin:0 0 12px}",
     "</style></head><body><main><h1>MyTV Test Report</h1>",
     '<p class="muted">Generated ' + escapeHtml(report?.generatedAt || "") + "</p>",
     "<table><thead><tr><th>Test ID</th><th>Test Name</th><th>Status</th><th></th></tr></thead>",
@@ -249,16 +253,30 @@ function renderCompletionScreenshot(entry, heading) {
     "</section>";
 }
 
-function renderFailureTechnicalDetail(entry) {
-  if (!entry?.errorDetail) return "";
-  return '<p class="error-detail">Chi tiết kỹ thuật: ' + escapeHtml(entry.errorDetail) + "</p>";
+// The popup the app had up when the step failed. It is repeated under the
+// summary because it is the app's own wording, not the runner's reading of it.
+function renderFailurePopup(entry) {
+  if (!entry?.errorPopup) return "";
+  return '<p class="error-popup">Thông báo trên ứng dụng: "' + escapeHtml(entry.errorPopup) + '"</p>';
+}
+
+function renderFailureScreenshot(entry) {
+  if (!entry?.failureScreenshot) return "";
+  return '<div class="failure-screenshot-wrap">' +
+    renderImage(entry.failureScreenshot, "Screenshot at the moment " + entry.name + " failed", "completion-screenshot") +
+    "</div>";
+}
+
+function renderFailureSummary(entry) {
+  return '<div class="error-summary">' + escapeHtml(entry.error || "Không ghi nhận được chi tiết lỗi.") + "</div>" +
+    renderFailurePopup(entry) +
+    renderFailureScreenshot(entry);
 }
 
 function renderFailedItems(entry) {
   const items = Array.isArray(entry.failedItems) ? entry.failedItems : [];
   if (!items.length) {
-    return '<div class="error-summary">' + escapeHtml(entry.error || "Không ghi nhận được chi tiết lỗi.") + "</div>" +
-      renderFailureTechnicalDetail(entry);
+    return renderFailureSummary(entry);
   }
 
   const rows = items.map((item) => (
@@ -267,9 +285,7 @@ function renderFailedItems(entry) {
     "</td><td>" + renderImage(item.screenshot, "Screenshot for " + item.name, "screenshot") +
     "</td></tr>"
   )).join("");
-  const summary = entry.error
-    ? '<div class="error-summary">' + escapeHtml(entry.error) + "</div>" + renderFailureTechnicalDetail(entry)
-    : "";
+  const summary = entry.error ? renderFailureSummary(entry) : "";
   return summary + '<table class="failure-table"><thead><tr><th>Failed Item Name</th><th>Poster</th><th>Screenshot</th></tr></thead><tbody>' + rows + "</tbody></table>";
 }
 

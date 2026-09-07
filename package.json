@@ -18,6 +18,8 @@
     "test:channel:contract": "npx playwright test tests/channel-list-profile-contract.spec.js",
     "test:viewmore:contract": "npx playwright test tests/view-more-marker-contract.spec.js",
     "test:player:contract": "npx playwright test tests/player-control-contract.spec.js",
+    "test:album:contract": "npx playwright test tests/album-detail-contract.spec.js",
+    "test:keyboard:contract": "npx playwright test tests/virtual-keyboard-contract.spec.js",
     "test:headed": "node scripts/run-headed.js",
     "tv:poc:tizen:setup": "node scripts/real-tv-appium/tizen-poc.js setup",
     "tv:poc:tizen:doctor": "node scripts/real-tv-appium/tizen-poc.js doctor",

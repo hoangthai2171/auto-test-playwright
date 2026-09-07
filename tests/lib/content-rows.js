@@ -4,6 +4,7 @@ const {createScopedDomScanner}=require("./dom-scan");
 const {createDomSnapshotCache,getDomSnapshotIdentity}=require("./dom-snapshots");
 const {normalizeVietnameseText}=require("./text-utils");
 const playback=require("./playback");
+const albumDetail=require("./album-detail");
 
 const dependencies={
   remotePress:async(page,key,delay=250)=>{await page.keyboard.press(key);await page.waitForTimeout(delay);},
@@ -1739,6 +1740,13 @@ async function openFocusedContentForPlayback(page, testInfo, expectedItem = null
       .catch(() => ({open: false}));
   }
 
+  // An album poster opens #albumDetail instead of a player: the screen lists the
+  // album's contents and plays nothing on its own. Pick one of those contents
+  // and play it so the caller's player check has a player to inspect.
+  if (albumDetail.isAlbumDetailRoute(destination.routeValue)) {
+    return {albumContent: await albumDetail.playRandomAlbumContent(page, testInfo)};
+  }
+
   const focused = await getFocusedState(page).catch(() => ({ text: "", label: "" }));
   const xemNgay = /^Xem ngay$/i;
   const focusedOnXemNgay = xemNgay.test(focused.text) || xemNgay.test(focused.label);
@@ -1788,6 +1796,10 @@ async function returnToFirstRowContent(page, { item, rowY, rowId }) {
     observePopup: observeExitConfirmation,
     dismissUnexpectedPopup: dismissKnownPlaybackFailurePopup,
     isClosed: async (candidatePage) => {
+      // Album detail sits between the player and the row when the poster was an
+      // album; it plays nothing, so it can never be the row return boundary.
+      if (await albumDetail.isAlbumDetailScreen(candidatePage)) return false;
+
       if (
         (await isFocusedContentItem(candidatePage)) &&
         ((await isFocusedNearRow(candidatePage, {rowId, rowY})) ||
@@ -2223,6 +2235,8 @@ async function returnToListPageContent(page, {item, routes = [], profile = ""} =
     observePopup: observeExitConfirmation,
     dismissUnexpectedPopup: dismissKnownPlaybackFailurePopup,
     isClosed: async (candidatePage) => {
+      if (await albumDetail.isAlbumDetailScreen(candidatePage)) return false;
+
       const position = await getFocusedListPagePosition(candidatePage).catch(() => null);
       if (position && item?.id && position.id === item.id) return true;
 

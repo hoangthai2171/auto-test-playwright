@@ -3820,6 +3820,34 @@ test("submits one representative screenshot per case result", () => {
         "",
     );
 
+    // A step that failed before reaching any content - a rejected login, for
+    // instance - is represented by the screenshot taken at that moment.
+    assert.equal(
+        renderer.resolveCaseScreenshotDataUrl({
+            status: "failed",
+            steps: [{
+                action: "login",
+                status: "failed",
+                failureScreenshotDataUrl: "data:image/png;base64,TE9HSU4=",
+            }],
+        }),
+        "data:image/png;base64,TE9HSU4=",
+    );
+
+    // Per-poster evidence stays more representative than the step-level shot.
+    assert.equal(
+        renderer.resolveCaseScreenshotDataUrl({
+            status: "failed",
+            steps: [{
+                action: "play_row",
+                status: "failed",
+                failureScreenshotDataUrl: "data:image/png;base64,U1RFUA==",
+                result: {results: [{status: "failed", screenshotDataUrl: "data:image/png;base64,QkFE"}]},
+            }],
+        }),
+        "data:image/png;base64,QkFE",
+    );
+
     assert.equal(renderer.resolveCaseScreenshotDataUrl(null), "");
     assert.equal(renderer.resolveCaseScreenshotDataUrl({steps: [{action: "press_ok", status: "passed"}]}), "");
 });

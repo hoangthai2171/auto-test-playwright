@@ -208,6 +208,70 @@ test("fails before execution when an action handler is missing", async () => {
   assert.deepEqual(events, []);
 });
 
+test("records the popup and the screenshot captured when a step failed", async () => {
+  const order = [];
+  const runTestCase = createActionRunner({
+    handlers: {
+      open_service: async () => {
+        throw new Error("expect(locator).toContainText(expected) failed");
+      },
+    },
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+    captureEvidence: async ({action}) => {
+      order.push(`capture:${action.action}`);
+      return {
+        popupText: "Thông báo Số điện thoại không hợp lệ. Vui lòng nhập lại! Đồng ý",
+        screenshotDataUrl: "data:image/png;base64,failure",
+      };
+    },
+    onActionError: async () => order.push("cleanup"),
+  });
+
+  let caught;
+  await runTestCase({id: "page"}, createTestInfo(), {
+    id: "evidence",
+    name: "Evidence",
+    actions: [{action: "open_service", service: "Phim truyện"}],
+  }).catch((error) => {
+    caught = error;
+  });
+
+  const step = caught.testCaseResult.steps[0];
+  assert.equal(step.popupText, "Thông báo Số điện thoại không hợp lệ. Vui lòng nhập lại! Đồng ý");
+  assert.equal(step.failureScreenshotDataUrl, "data:image/png;base64,failure");
+  // Cleanup navigates away from the failure, so the evidence is taken first.
+  assert.deepEqual(order, ["capture:open_service", "cleanup"]);
+});
+
+test("a step failure survives evidence capture that cannot run", async () => {
+  const runTestCase = createActionRunner({
+    handlers: {
+      open_home: async () => {
+        throw new Error("original failure");
+      },
+    },
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+    captureEvidence: async () => {
+      throw new Error("screenshot unavailable");
+    },
+  });
+
+  let caught;
+  await runTestCase({id: "page"}, createTestInfo(), {
+    id: "evidence-failed",
+    name: "Evidence failed",
+    actions: [{action: "open_home"}],
+  }).catch((error) => {
+    caught = error;
+  });
+
+  assert.equal(caught.message, "original failure");
+  const step = caught.testCaseResult.steps[0];
+  assert.equal(step.status, "failed");
+  assert.equal(step.popupText, undefined);
+  assert.equal(step.failureScreenshotDataUrl, undefined);
+});
+
 test("records and attaches a failed step before rethrowing the original error", async () => {
   const error = new Error("service navigation failed");
   const testInfo = createTestInfo();
@@ -1081,6 +1145,58 @@ test("presses remote OK through the shared remote key primitive", async () => {
   await handlers.press_ok({page, action: {action: "press_ok"}});
 
   assert.deepEqual(calls, [[page, "Enter"]]);
+});
+
+test("OK on an album poster plays one of the album's contents when a player check follows", async () => {
+  const played = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      remotePress: async () => {},
+      isAlbumDetailScreen: async () => true,
+      playRandomAlbumContent: async (page, testInfo, options) => {
+        played.push({page, options});
+        return {type: "album_content", name: "Nội dung 5"};
+      },
+    }),
+  });
+  const page = {id: "page"};
+
+  const result = await handlers.press_ok({
+    page,
+    action: {action: "press_ok"},
+    actionIndex: 2,
+    testCase: {
+      actions: [{action: "open_home"}, {action: "focus_row"}, {action: "press_ok"}],
+      expectedResult: "Play nội dung bình thường",
+    },
+  });
+
+  assert.deepEqual(result, {type: "album_content", name: "Nội dung 5"});
+  assert.equal(played.length, 1);
+});
+
+test("OK leaves an album detail screen alone when the case does not check a player", async () => {
+  const played = [];
+  const handlers = createDefaultActionHandlers({
+    helpers: createHandlerHelpers({
+      remotePress: async () => {},
+      isAlbumDetailScreen: async () => true,
+      playRandomAlbumContent: async () => played.push("played"),
+    }),
+  });
+
+  const result = await handlers.press_ok({
+    page: {id: "page"},
+    action: {action: "press_ok"},
+    actionIndex: 2,
+    testCase: {
+      actions: [{action: "open_home"}, {action: "focus_row"}, {action: "press_ok"}, {action: "press_back"}],
+      expectedResult: "Vào màn hình album thành công",
+    },
+  });
+
+  assert.equal(result, undefined);
+  assert.deepEqual(played, []);
 });
 
 test("opens a service with the action service and test context", async () => {

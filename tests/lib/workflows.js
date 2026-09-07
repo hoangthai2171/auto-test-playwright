@@ -8,7 +8,7 @@ const selectorValidation = require("./selector-validation");
 const waits = require("./waits");
 const {createScopedDomScanner} = require("./dom-scan");
 const {createBatchBudget} = require("./batch-budget");
-const {acceptDeviceLimitPopupIfVisible, acceptUserConsentPopupIfVisible} = require("./login-popups");
+const {acceptDeviceLimitPopupIfVisible, acceptUserConsentPopupIfVisible, DEVICE_LIMIT_POPUP_TEXT} = require("./login-popups");
 const {applyAppEnvironment} = require("./app-environment");
 
 const {remotePress, remoteFocusById, remoteFocusBySelector, remoteFocusByText, enterWithVirtualKeyboard, searchKeyboardInput, getFocusedState, expectFocusedText, expectFocusedElementToLookOrange} = navigation;
@@ -59,6 +59,17 @@ const DEFAULT_OPTIONS = {
 };
 
 const CLOSE_POPUP_TEXT = /^(Đóng|Huỷ|Hủy|Quay về|Quay về trang chủ)$/i;
+// The app answers a submitted password by moving on to profile selection -
+// sometimes behind the device-limit dialog - or by refusing the credentials with
+// a dialog of its own. Both answers have to be watched for, and the answer has
+// to be a positive one: the password screen is torn down before either arrives,
+// so treating "the password prompt is gone" as success let a refused login run
+// on and sit out the device-limit and profile-selection timeouts - about 45
+// seconds - before failing with a misleading profile-selection error.
+const LOGIN_RESULT_TIMEOUT_MS = 30000;
+const LOGIN_RESULT_POLL_MS = 250;
+const PROFILE_SELECTION_TIMEOUT_MS = 30000;
+const PROFILE_SELECTION_POLL_MS = 250;
 const WELCOME_LOGIN_BUTTON_SELECTOR = '#welcome-button [data-btn-type="1"]';
 
 function getTestOptions() {
@@ -124,11 +135,66 @@ async function loginWithAccount(page, options, testInfo) {
     await enterWithVirtualKeyboard(page, options.PASSWORD);
 
     await remoteFocusById(page, "new_ui_login_btn_ok");
-    await activateVerifiedTarget(page, {testInfo, name: "login-password-submit", contractName: "menuItem", expectedId: "new_ui_login_btn_ok", delay: 5000});
+    // A short settle is enough here: `waitForLoginResult` polls for the app's
+    // answer, so this press does not need a blind wait long enough to contain it.
+    await activateVerifiedTarget(page, {testInfo, name: "login-password-submit", contractName: "menuItem", expectedId: "new_ui_login_btn_ok", delay: 1500});
 
-    await expect(page.locator("body")).not.toContainText("Nhập mật khẩu", {
-        timeout: 30000,
-    });
+    await waitForLoginResult(page);
+}
+
+async function observeVisibleLoginDialog(page) {
+    const dialogs = await playback.observeExitConfirmation(page).catch(() => null);
+    return (dialogs?.visibleDialogs || []).find((dialog) => String(dialog?.text || "").trim()) || null;
+}
+
+// The device-limit dialog is a step of a successful login - the profile flow
+// presses "Tiếp tục" and carries on - so it is never a refusal.
+function isDeviceLimitDialog(dialog) {
+    return DEVICE_LIMIT_POPUP_TEXT.test(String(dialog?.text || ""));
+}
+
+async function observeLoginRefusal(page) {
+    const dialog = await observeVisibleLoginDialog(page);
+    return dialog && !isDeviceLimitDialog(dialog) ? dialog : null;
+}
+
+function loginRefusedError(dialog) {
+    const error = new Error(
+        `Đăng nhập không thành công, ứng dụng hiển thị thông báo: "${String(dialog?.text || "").trim()}"`
+    );
+    error.code = "LOGIN_REFUSED";
+    error.details = {dialogId: dialog?.id || "", text: dialog?.text || ""};
+    return error;
+}
+
+// Read from the prompt's own element, not from `document.body.innerText`:
+// innerText forces a full layout of this screen, and polling that while the app
+// is handling the login request measurably delays the app's own answer.
+// Returns as soon as the app has accepted the password, and throws the app's own
+// wording the moment it refuses, instead of letting a later wait time out on it.
+async function waitForLoginResult(page, {
+    observeDialog = observeVisibleLoginDialog,
+    hasProfileSelection = hasProfileSelectionScreen,
+    timeoutMs = LOGIN_RESULT_TIMEOUT_MS,
+    pollMs = LOGIN_RESULT_POLL_MS,
+} = {}) {
+    const deadline = Date.now() + timeoutMs;
+
+    for (;;) {
+        const dialog = await observeDialog(page);
+        if (dialog && !isDeviceLimitDialog(dialog)) throw loginRefusedError(dialog);
+        // The device-limit dialog only appears on an accepted login, and the
+        // profile flow is what dismisses it.
+        if (dialog || (await hasProfileSelection(page))) return;
+
+        if (Date.now() >= deadline) {
+            throw new Error(
+                `Ứng dụng không phản hồi mật khẩu đã gửi sau ${Math.round(timeoutMs / 1000)} giây ` +
+                "(không mở màn hình chọn người dùng và cũng không hiển thị thông báo nào)."
+            );
+        }
+        await page.waitForTimeout(pollMs);
+    }
 }
 
 async function chooseFirstProfileAndEnterHome(page, testInfo) {
@@ -540,7 +606,13 @@ async function playAllItemsInFirstRow(page, testInfo, options = {}) {
                     body: JSON.stringify(item, null, 2),
                     contentType: "application/json",
                 });
-                await openFocusedContentForPlayback(page, testInfo, item);
+                const opened = await openFocusedContentForPlayback(page, testInfo, item);
+                // An album poster plays one of the album's own contents, so the
+                // report has to name what actually reached the player.
+                if (opened?.albumContent) {
+                    result.albumContent = opened.albumContent;
+                    result.playedContentName = opened.albumContent.name;
+                }
 
                 const playback = await inspectPlaybackAfterWait(page, waitSeconds);
                 result.status = playback.ok ? "playable" : "failed";
@@ -781,7 +853,11 @@ async function playAllListPageContents(page, testInfo, options = {}) {
                 if (isChannelList) {
                     await activateFocusedChannelListItem(page, item.id);
                 } else {
-                    await openFocusedContentForPlayback(page, testInfo, item);
+                    const opened = await openFocusedContentForPlayback(page, testInfo, item);
+                    if (opened?.albumContent) {
+                        result.albumContent = opened.albumContent;
+                        result.playedContentName = opened.albumContent.name;
+                    }
                 }
 
                 const playback = await inspectPlaybackAfterWait(page, waitSeconds);
@@ -954,7 +1030,7 @@ async function playFocusedSearchResult(page, testInfo, options = {}) {
 
 async function playFocusedContent(page, testInfo, {name, type = "content", poster = "", artifactPrefix = "content", waitSeconds} = {}) {
     const itemName = String(name || "focused content").trim();
-    await openFocusedContentForPlayback(page, testInfo);
+    const opened = await openFocusedContentForPlayback(page, testInfo);
 
     const playback = await inspectPlaybackAfterWait(page, Number(waitSeconds) > 0 ? Number(waitSeconds) : PLAYER_PLAYBACK_WAIT_SECONDS);
     const result = {
@@ -964,6 +1040,11 @@ async function playFocusedContent(page, testInfo, {name, type = "content", poste
         status: playback.ok ? "playable" : "failed",
         errorPopup: playback.popup?.text || playback.playerState?.reason || "",
         playerState: playback.playerState,
+        // An album poster plays one of the album's own contents; the report has
+        // to name what actually reached the player.
+        ...(opened?.albumContent
+            ? {albumContent: opened.albumContent, playedContentName: opened.albumContent.name}
+            : {}),
     };
 
     if (testInfo?.attach) {
@@ -1289,8 +1370,35 @@ async function isWelcomeScreen(page) {
 }
 
 async function waitForProfileSelection(page) {
-    await page.waitForFunction(() => location.hash.includes("chooseProfile") || document.body?.innerText?.includes("Những ai đang xem?"), null, {timeout: 30000});
+    // A refusal dialog that only arrives after the password screen is gone would
+    // otherwise be waited out here for the full timeout, so it ends this wait
+    // with the app's own wording instead.
+    const deadline = Date.now() + PROFILE_SELECTION_TIMEOUT_MS;
+
+    for (;;) {
+        if (await hasProfileSelectionScreen(page)) break;
+
+        const refusal = await observeLoginRefusal(page);
+        if (refusal) throw loginRefusedError(refusal);
+
+        if (Date.now() >= deadline) {
+            throw new Error(
+                `Ứng dụng không mở màn hình chọn người dùng sau ${Math.round(PROFILE_SELECTION_TIMEOUT_MS / 1000)} giây.`
+            );
+        }
+        await page.waitForTimeout(PROFILE_SELECTION_POLL_MS);
+    }
+
     await expect(page.locator("#item_0")).toBeVisible();
+}
+
+async function hasProfileSelectionScreen(page) {
+    return page
+        .evaluate(() =>
+            location.hash.includes("chooseProfile") ||
+            Boolean(document.body?.innerText?.includes("Những ai đang xem?"))
+        )
+        .catch(() => false);
 }
 
 async function closeHomePopups(page, testInfo) {
@@ -2304,6 +2412,11 @@ module.exports = {
         normalizePlayRowIndex,
         skipFocusedViewMorePoster,
         assertSupportedListPageRoute,
+        waitForLoginResult,
+        observeLoginRefusal,
+        isDeviceLimitDialog,
+        hasProfileSelectionScreen,
+        LOGIN_RESULT_TIMEOUT_MS,
         advanceListPagePosition,
         LIST_PAGE_CONTENT_ROUTES,
     },

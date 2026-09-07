@@ -6,6 +6,18 @@ const {DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS}=require("../../app/test-configurati
 const CLOSE_POPUP_TEXT=/^(Đóng|Huỷ|Hủy|Quay về|Quay về trang chủ)$/i;
 const PLAYER_PLAYBACK_WAIT_SECONDS=DEFAULT_PLAYER_CHECK_TIMEOUT_SECONDS;
 const EXIT_DIALOG_IDS=["dialog_confirm_v2","dialog_alert_v2","dialog_alert_full","dialog_confirm_full"];
+// Playing a content that lives inside an album puts the album detail screen
+// between the player and the screen its poster was activated from.  That screen
+// plays nothing, so it is never a close boundary - it only widens the budget
+// `closePlayerOrDetail` needs, and by a measured amount: an album-launched
+// player answers Back once without changing state before it pauses and exits
+// (2 presses for an ordinary player, 3 here), and leaving the album detail
+// screen it falls back to costs one more.  The allowance is granted once, and
+// only for a player the app itself marks with `is_album=1` or after a Back press
+// actually lands on album detail, so no other close path is widened.
+const ALBUM_DETAIL_ROUTE="albumDetail";
+const ALBUM_PLAYER_QUERY_FLAG=/[?&]is_album=1(?:&|$)/u;
+const ALBUM_WAY_STATION_BACK_PRESSES=2;
 const DEFAULT_CLOSE_BACK_DELAY_MS=2500;
 const DEFAULT_CLOSE_BOUNDARY_TIMEOUT_MS=10000;
 const DEFAULT_CLOSE_BOUNDARY_POLLING_MS=250;
@@ -320,6 +332,31 @@ async function waitForCloseBoundary(page, observeBoundary, timeoutMs, pollingMs)
   return boundary;
 }
 
+// A page that cannot report its route - a unit-test double, a closed page -
+// simply reports no album, so the album allowance is never granted on a guess.
+async function readLocationHash(page) {
+  if (typeof page?.evaluate !== "function") return "";
+  return String(await page.evaluate(() => location.hash).catch(() => ""));
+}
+
+async function isAlbumDetailScreen(page) {
+  const hash = await readLocationHash(page);
+  return hash.replace(/^#/u, "").split("?")[0].trim() === ALBUM_DETAIL_ROUTE;
+}
+
+// The app carries the album origin in the player's own route, so a player that
+// has to unwind through album detail can be recognized while it is still open.
+async function isAlbumLaunchedPlayer(page) {
+  return ALBUM_PLAYER_QUERY_FLAG.test(await readLocationHash(page));
+}
+
+async function observeAlbumWayStationAllowance(page) {
+  const hash = await readLocationHash(page);
+  const isAlbum = ALBUM_PLAYER_QUERY_FLAG.test(hash) ||
+    hash.replace(/^#/u, "").split("?")[0].trim() === ALBUM_DETAIL_ROUTE;
+  return isAlbum ? ALBUM_WAY_STATION_BACK_PRESSES : 0;
+}
+
 async function closePlayerOrDetail(page, options = {}) {
   const pressBack = options.remotePress || navigation.remotePress;
   const dismissUnexpectedPopup = options.dismissUnexpectedPopup;
@@ -340,6 +377,10 @@ async function closePlayerOrDetail(page, options = {}) {
   let closeBackPresses = 0;
   let dismissedExitConfirmation = 0;
   let lastBoundary = null;
+  // Granted at most once, and only for a playback that demonstrably unwinds
+  // through an album detail screen, so a caller's budget is never widened
+  // speculatively.
+  let albumWayStationAllowance = await observeAlbumWayStationAllowance(page);
 
   async function observeBoundary() {
     const popup = await observePopup(page);
@@ -396,7 +437,7 @@ async function closePlayerOrDetail(page, options = {}) {
     return {closed: true, backPresses: closeBackPresses, dismissedExitConfirmation, boundary};
   }
 
-  while (closeBackPresses < maxBackPresses) {
+  while (closeBackPresses < maxBackPresses + albumWayStationAllowance) {
     await pressBack(page, "Backspace", backDelayMs);
     closeBackPresses += 1;
     boundary = await waitForCloseBoundary(
@@ -406,6 +447,10 @@ async function closePlayerOrDetail(page, options = {}) {
       boundaryPollingMs
     );
     lastBoundary = boundary;
+
+    if (!boundary.closed && albumWayStationAllowance === 0) {
+      albumWayStationAllowance = await observeAlbumWayStationAllowance(page);
+    }
 
     if (boundary.popup) {
       boundary = await dismissExitConfirmation();
@@ -619,4 +664,4 @@ async function getPlayerState(page) {
 }
 
 
-module.exports={assertPlayback,assertChannelPlayback,assertMoviePlayback,assertSearchContentPlayback,getVisiblePopup,getPlayerState,inspectPlaybackAfterWait,observeExitConfirmation,observePlayerOrDetailState,closePlayerOrDetail,waitForPlayerReady,safeArtifactName,PLAYER_PLAYBACK_WAIT_SECONDS,DEFAULT_CLOSE_BACK_DELAY_MS,DEFAULT_CLOSE_BOUNDARY_TIMEOUT_MS,DEFAULT_CLOSE_BOUNDARY_POLLING_MS,DEFAULT_MAX_CLOSE_BACK_PRESSES,MAX_CLOSE_BACK_PRESSES};
+module.exports={ALBUM_DETAIL_ROUTE,ALBUM_WAY_STATION_BACK_PRESSES,isAlbumDetailScreen,isAlbumLaunchedPlayer,assertPlayback,assertChannelPlayback,assertMoviePlayback,assertSearchContentPlayback,getVisiblePopup,getPlayerState,inspectPlaybackAfterWait,observeExitConfirmation,observePlayerOrDetailState,closePlayerOrDetail,waitForPlayerReady,safeArtifactName,PLAYER_PLAYBACK_WAIT_SECONDS,DEFAULT_CLOSE_BACK_DELAY_MS,DEFAULT_CLOSE_BOUNDARY_TIMEOUT_MS,DEFAULT_CLOSE_BOUNDARY_POLLING_MS,DEFAULT_MAX_CLOSE_BACK_PRESSES,MAX_CLOSE_BACK_PRESSES};

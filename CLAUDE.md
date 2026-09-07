@@ -32,6 +32,8 @@ npm run test:tv:contract             # run the TV contract spec (tests/run-test-
 npm run test:list:contract           # play_all_contents contract spec (no live app needed)
 npm run test:popup:contract          # playback popup detector spec (real DOM, no live app)
 npm run test:channel:contract        # channel-list profile spec (real DOM, no live app)
+npm run test:album:contract          # album-detail screen spec (real DOM, no live app)
+npm run test:keyboard:contract       # virtual-keyboard case spec (real DOM, no live app)
 npm run test:headed                  # interactive terminal runner for legacy specs
 npm run browsers:install             # install/cache the pinned Playwright Chromium
 npm run app:build / app:build:mac / app:build:win   # electron-builder packaging + artifact SHA-256 report
@@ -101,7 +103,11 @@ session. Do not change this to run in parallel without redesigning session owner
 
 ### Helper library layout (`tests/lib/`)
 
-- `navigation.js` — remote-control focus primitives and virtual-keyboard entry
+- `navigation.js` — remote-control focus primitives and virtual-keyboard entry (letter keys type
+  the keyboard's current case; `#key-uppercase-v2` is a shift-lock and the case is read from
+  `#key-a-v2`'s label, re-checked per character because the app rerenders the keyboard mid-typing)
+- `album-detail.js` — the `#albumDetail` screen an album poster opens: content-list traversal and
+  random content selection
 - `content-rows.js` — content-row discovery/navigation (carousels, view-more, row indexing)
 - `playback.js` — player state and playback health assertions
 - `waits.js` — readiness/pacing waits (the TV app has async transitions, not instant DOM updates)
@@ -135,6 +141,14 @@ session. Do not change this to run in parallel without redesigning session owner
   `wait_for_ready`) over relying on the `qaDescription` fallback compiler.
 - `play_row` on Home excludes the `homePage1` promotional row from numeric counting — public
   `rowIndex: 5` maps to `homePage2_4_*`.
+- An album poster (`.item_album`, `keyword="album"`) opens `#albumDetail` instead of a player, so
+  every play action (`play_row`, `play_all_contents`, `play_content`, `play_search_result`) routes
+  through `tests/lib/album-detail.js`: it enters the right-hand list, picks one content at random
+  and plays that before the ordinary player check. Cards are `album_card_<row>_<col>` and the list
+  is virtualized, so the random pick uses the declared `Tổng số phim, VOD : N` total and steps with
+  the remote instead of enumerating cards. Leaving needs two extra Back presses, granted by
+  `closePlayerOrDetail` when the player carries `is_album=1`; album detail is never a return
+  boundary. Contract spec: `npm run test:album:contract`.
 - `player_focus_related` opens the in-player related-content row
   (`#relativeContentPopup<n>_<row>_<col>`) and focuses a poster; the control bar
   auto-hides, so the second `ArrowDown` must land while it is still up. `press_ok`
@@ -162,6 +176,25 @@ session. Do not change this to run in parallel without redesigning session owner
   supported through a route-scoped profile because it marks focus with
   `is_focus="1"` instead of the shared focus class; do not widen
   `FOCUS_SELECTORS` for it.
+
+## Login result
+
+- After submitting the password, `waitForLoginResult` (tests/lib/workflows.js) waits for a
+  **positive** answer — profile selection, or the device-limit dialog that precedes it — and throws
+  the app's own dialog wording on a refusal. Never treat "the password prompt disappeared" as
+  success: the app tears that screen down before either answer arrives, and doing so made every
+  wrong-password case burn the device-limit (15s) and profile-selection (30s) timeouts and report a
+  misleading profile-selection error.
+
+## Failure reporting
+
+- The user report (`app/test-report.js`) is written for people: one readable sentence, the app's own
+  popup message, and the screenshot of the moment the step failed. Raw assertion dumps/locators must
+  not be rendered there — they stay in `test-case-result.json` and the Playwright report.
+- `tests/lib/test-case-action-runner.js` captures that evidence (`step.popupText`,
+  `step.failureScreenshotDataUrl`) **before** `onActionError` cleanup navigates away from the
+  failure. `app/failure-message.js` owns the wording and strips a dialog's chrome (`Thông báo`
+  heading, `( Mã … - Ver … )` build stamp, close-button label).
 
 ## Graphify (knowledge graph)
 
