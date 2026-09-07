@@ -1,4 +1,5 @@
 const TEST_CONFIGURATION = typeof require === "function" ? require("../test-configuration") : globalThis.MYTV_TEST_CONFIGURATION;
+const FAILURE_MESSAGE = typeof require === "function" ? require("../failure-message") : globalThis.MYTV_FAILURE_MESSAGE;
 const API_CURL = typeof require === "function" ? require("../api-curl") : globalThis.MYTV_API_CURL;
 
 function maskActionForDisplay(action) {
@@ -3221,10 +3222,14 @@ function createRendererController({document, windowRef, runner, storage, deferIn
         const passed = Boolean(run.passed);
         const executionResult = run.executionResult || run;
         const caseResult = executionResult.caseResult || run.caseResult || null;
-        const failedStepMessage = caseResult?.steps?.find((step) => step?.status === "failed" && step.message)?.message;
+        // The server-side report shows this message to QA, so it carries the
+        // readable failure sentence, not the raw Playwright assertion dump.
+        const failure = passed
+            ? {summary: ""}
+            : FAILURE_MESSAGE.describeCaseFailure(caseResult, executionResult.message || run.message || "");
         const message = passed
             ? "Testcase chạy thành công."
-            : String(failedStepMessage || executionResult.message || run.message || "Testcase chạy thất bại.");
+            : String(failure.summary || "Testcase chạy thất bại.");
 
         const screenshots = await convertScreenshotToWebpBase64(resolveCaseScreenshotDataUrl(caseResult), {doc, win});
 

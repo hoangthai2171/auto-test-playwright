@@ -30,7 +30,13 @@ const ROW_RETURN_RENDER_DELAY_MS = 1500;
 const HOME_PAGE_ROW_MAX_ATTEMPTS = 18;
 const HOME_PAGE_ROW_RENDER_TIMEOUT_MS = 5000;
 const HOME_PAGE_ROW_RENDER_POLLING_MS = 250;
-const VIEW_MORE_POSTER_SELECTOR = '.view_more[item_view_more="1"]';
+// A view-more poster is marked either by the `item_view_more="1"` data
+// attribute or by the `.view_more` class. Real rows ship posters that carry the
+// attribute WITHOUT the class, so requiring both let those posters through as
+// ordinary content and row playback opened the category screen instead of
+// stepping over them. Either marker alone is trusted: no content card carries
+// them.
+const VIEW_MORE_POSTER_SELECTOR = '[item_view_more="1"], .view_more';
 // Content cards carry their own labels (status badges, countdown timers,
 // episode counters) that match the generic heading selector. They belong to a
 // single card, so they must never be read as a row heading.
@@ -346,14 +352,21 @@ async function getFocusedViewMoreMetadata(page, scope) {
     ? scope
     : Number(typeof scope === "object" && scope !== null ? scope.rowY || 0 : 0);
 
-  return page.evaluate(({targetRowY, targetRowId}) => {
+  return page.evaluate(({targetRowY, targetRowId, viewMoreSelector, cardSelector}) => {
     const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
-    const poster = focused?.closest?.('.view_more[item_view_more="1"]');
+    const poster = focused?.closest?.(viewMoreSelector);
     if (!poster || !isVisible(poster)) return null;
+    // `closest` walks ancestors, so a wrapper carrying the marker would report
+    // every card under it as view-more and row playback would silently skip the
+    // whole row. A poster never contains another card.
+    if (poster.querySelector(cardSelector)) return null;
 
     const rect = poster.getBoundingClientRect();
     const container = targetRowId ? document.getElementById(targetRowId) : null;
     if (container) {
+      // contains() counts the node itself, so the row container must be
+      // rejected explicitly.
+      if (poster === container || poster.contains(container)) return null;
       if (!container.contains(poster)) return null;
     } else if (targetRowY > 0 && Math.abs(rect.y - targetRowY) > 80) {
       return null;
@@ -381,7 +394,12 @@ async function getFocusedViewMoreMetadata(page, scope) {
       return rect.width > 0 && rect.height > 0 &&
         style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
     }
-  }, {targetRowY: rowY, targetRowId: rowId});
+  }, {
+    targetRowY: rowY,
+    targetRowId: rowId,
+    viewMoreSelector: VIEW_MORE_POSTER_SELECTOR,
+    cardSelector: CONTENT_CARD_SELECTOR,
+  });
 }
 
 // A row is titled by the closest heading above it. Distance ordering matters on
@@ -1242,7 +1260,7 @@ async function collectStructuralContentRows(page, options = {}) {
               contentId: attributes.content_id || attributes["content-id"] || attributes["data-content-id"] || "",
               attributes,
               poster: image?.currentSrc || image?.src || "",
-              isViewMore: card.getAttribute("item_view_more") === "1",
+              isViewMore: card.matches(config.viewMoreSelector),
               rect: {
                 x: Math.round(rect.x),
                 y: Math.round(rect.y),
@@ -1260,6 +1278,7 @@ async function collectStructuralContentRows(page, options = {}) {
       rowSelector: ROW_CONTAINER_SELECTOR,
       titleSelector: ROW_TITLE_SELECTOR,
       cardSelector: CONTENT_CARD_SELECTOR,
+      viewMoreSelector: VIEW_MORE_POSTER_SELECTOR,
       contract: STRUCTURAL_ROW_CONTRACT,
       attributeNames: CONTENT_ITEM_CONTRACT.attributes || [],
       labelAttributeNames: CARD_LABEL_ATTRIBUTES,

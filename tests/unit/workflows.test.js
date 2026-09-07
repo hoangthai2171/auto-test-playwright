@@ -10,7 +10,7 @@ test("skips a focused view-more poster with remote Right navigation", async () =
   const page = {
     evaluate: async (callback) => {
       const source = String(callback);
-      if (source.includes("closest?.('.view_more[item_view_more=\"1\"]')")) {
+      if (source.includes("closest?.(viewMoreSelector)")) {
         return focusedIndex === 0
           ? {id: "view-more", title: "", rect: {x: 280, y: 200, width: 150, height: 200}, isViewMore: true}
           : null;

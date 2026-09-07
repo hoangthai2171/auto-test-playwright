@@ -33,6 +33,7 @@ test("builds a compact passed test entry", () => {
     rowPlaybackItems: [],
     homeTrailerItems: [],
     error: "",
+    errorDetail: "",
   });
 });
 
@@ -323,7 +324,7 @@ test("uses a failed step message when no failed item is available", () => {
     },
   });
 
-  assert.equal(entry.error, "Không thể tìm thấy dịch vụ kênh");
+  assert.equal(entry.error, "Bước 1 – Mở dịch vụ: Không thể tìm thấy dịch vụ kênh");
 });
 
 test("keeps a player-check screenshot on a failed expected result", () => {

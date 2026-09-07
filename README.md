@@ -386,9 +386,11 @@ left-menu label.
 
 When `focus_text` immediately follows `focus_row` and its text is exactly
 `Xem tất cả`, `Xem thêm`, or `View more` (accent-insensitive), it focuses the
-row's trusted `.view_more[item_view_more="1"]` poster with remote horizontal
-navigation. The poster may have a blank `content_name`; the marker is the
-source of truth. If Enter opens a row grid or service screen, the action passes
+row's trusted view-more poster with remote horizontal navigation. The trusted
+marker is `[item_view_more="1"], .view_more`: the app ships posters that carry the
+`item_view_more="1"` attribute without the `.view_more` class, so either marker
+alone identifies the poster. The poster may have a blank `content_name`; the
+marker is the source of truth. If Enter opens a row grid or service screen, the action passes
 only after a non-Home destination with visible content rows is observed. A
 visible tooltip/toast or recognized no-data/error popup fails the action, and a
 view-more label without a preceding `focus_row` fails closed rather than using
@@ -733,6 +735,34 @@ pass/fail result, and player/error screenshot. Each Browser case's full
 Playwright HTML report and test-results are isolated under its
 `userData/browser-runs/<batchId>/...` directory for debugging; the compact
 report remains the stable user-facing summary.
+
+### Waiting for a focus target
+
+`remoteFocus` reads the target's geometry with `page.evaluate`, which Playwright
+does not retry — unlike `waitForFunction`, `expect.poll`, or a locator action —
+and the suite runs with the default `retries: 0`. A screen that was still
+rendering therefore used to fail on the first look. The target rectangle is now
+polled every 200ms for up to 3s (`TARGET_RECT_WAIT_MS` in
+`tests/lib/navigation.js`): it returns as soon as the element has geometry, so a
+settled screen still costs one `evaluate`. Pass `targetWaitMs: 0` in the options
+of `remoteFocusById` / `remoteFocusBySelector` / `remoteFocusByText` /
+`remoteFocusByKeyText` for a probe that expects the element to be absent and
+must not pay the wait.
+
+### Failure wording
+
+A failed case is reported as one sentence, not as the runner's raw error.
+`app/failure-message.js` turns the raw text into that sentence: it strips the
+terminal colour codes Playwright leaves in its assertion dumps, names the step
+and the item it was aiming at (`Bước 4 – Phát nội dung "Mai": …`), and maps the
+technical shapes to what actually happened — a `toBeTruthy()` dump with a `null`
+value becomes "content not found on screen", a `waitForFunction` timeout becomes
+"not found after N seconds of waiting, the app is slow or the item is not
+shown", and an LG failure code becomes its Vietnamese meaning. The raw text is
+kept underneath as `Chi tiết kỹ thuật` in the report and unchanged in
+`test-case-result.json` and the Playwright report, so nothing is lost for
+debugging. The same sentence is what the app sends back to the flow-case API as
+`testResult.message`.
 
 Interactive Browser preview is supported for exactly one selected Browser case;
 use Live or None when running multiple cases. LG selection remains a separately

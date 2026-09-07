@@ -258,7 +258,7 @@ The supported action allowlist is:
 - `open_home`: waits for the ready home state.
 - `focus_row`: requires a row/category name and navigates to it using its first visible item as the TV focus anchor. An optional positive 1-based `itemIndex` uses remote horizontal navigation to focus that absolute poster position, including items that are initially outside the viewport; it fails only when the row cannot reach the requested position. Home rows are matched by visible headings/content and do not depend on dynamic row IDs.
 - `focus_row_first_item`: focuses the leftmost item in the currently active row, regardless of content type.
-- `focus_text`: focuses a visible control by its human-readable text through remote navigation. Immediately after `focus_row` for the Home `Thể loại` row, it scans every reachable service poster in that carousel, moving right and re-reading the row until it finds the requested service or reaches the end. Immediately after any `focus_row`, the exact aliases `Xem tất cả`, `Xem thêm`, and `View more` focus the trusted `.view_more[item_view_more="1"]` poster, even when `content_name` is blank; without row context they fail closed. It never falls back to a same-named left-menu item.
+- `focus_text`: focuses a visible control by its human-readable text through remote navigation. Immediately after `focus_row` for the Home `Thể loại` row, it scans every reachable service poster in that carousel, moving right and re-reading the row until it finds the requested service or reaches the end. Immediately after any `focus_row`, the exact aliases `Xem tất cả`, `Xem thêm`, and `View more` focus the trusted view-more poster (marker `[item_view_more="1"], .view_more` - either signal alone, because real rows ship the attribute without the class), even when `content_name` is blank; without row context they fail closed. It never falls back to a same-named left-menu item.
 - `press_ok`: sends the remote OK/Enter key. After a Home `Thể loại` service
   poster or a pending view-more poster it immediately requires a non-Home
   destination with visible content rows; a visible toast/tooltip or
@@ -549,8 +549,11 @@ Home target may be present in the DOM while offscreen, partially visible, or
 still missing its title/heading during lazy rendering; the resolver must reveal
 it through remote vertical navigation, wait for the target row's stable IDs and
 card geometry, and never fall back to row-title matching for a numeric request.
-Row playback skips the trusted `.view_more[item_view_more="1"]` navigation poster
-instead of activating or recording it. Row playback failure messages enumerate
+Row playback skips the trusted view-more navigation poster instead of activating
+or recording it. The marker is `[item_view_more="1"], .view_more`: a poster carrying
+only the attribute, with no `.view_more` class, is still a view-more poster and
+must never be activated. `tests/view-more-marker-contract.spec.js` locks this
+against a real DOM. Row playback failure messages enumerate
 each failed content ID and name.
 
 After the shared player/detail close boundary is detected, row playback waits

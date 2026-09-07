@@ -2,6 +2,11 @@ const {expect}=require("playwright/test");
 const {FOCUS_SELECTORS}=require("./selectors");
 
 const DEFAULT_REMOTE_PRESS_DELAY = 100;
+// Reading the target rectangle is a one-shot page.evaluate: Playwright retries
+// locator actions and waitForFunction, but not a plain evaluate, so a screen
+// that is still rendering has to be waited for here.
+const TARGET_RECT_WAIT_MS = 3000;
+const TARGET_RECT_POLL_MS = 200;
 const VIRTUAL_KEYBOARD_ROWS = [
   ["a", "b", "c", "d", "e", "f", "1", "2", "3"],
   ["g", "h", "i", "j", "k", "l", "4", "5", "6"],
@@ -160,9 +165,11 @@ function cssEscape(value) {
   return value.replace(/\\/g, "\\\\").replace(/"/g, '\\"');
 }
 
-async function remoteFocusByText(page, text, maxMoves = 40) {
+async function remoteFocusByText(page, text, maxMoves = 40, options = {}) {
   await remoteFocus(page, {
     maxMoves,
+    targetLabel: `mục có nội dung "${text.source}"`,
+    targetWaitMs: options.targetWaitMs,
     isTarget: (state) => text.test(state.text) || text.test(state.label),
     getTargetRect: async () =>
       page.evaluate((source) => {
@@ -201,9 +208,11 @@ async function remoteFocusByText(page, text, maxMoves = 40) {
   });
 }
 
-async function remoteFocusByKeyText(page, char, maxMoves = 50) {
+async function remoteFocusByKeyText(page, char, maxMoves = 50, options = {}) {
   await remoteFocus(page, {
     maxMoves,
+    targetLabel: `phím "${char}" trên bàn phím ảo`,
+    targetWaitMs: options.targetWaitMs,
     isTarget: (state) => state.text.toLowerCase() === char.toLowerCase(),
     getTargetRect: async () =>
       page.evaluate((targetChar) => {
@@ -251,6 +260,8 @@ async function remoteFocusByKeyText(page, char, maxMoves = 50) {
 async function remoteFocusById(page, id, maxMoves = 50, options = {}) {
   await remoteFocus(page, {
     maxMoves,
+    targetLabel: `mục "${id}"`,
+    targetWaitMs: options.targetWaitMs,
     preferredDirection: options.preferredDirection,
     snapshotCache: options.snapshotCache,
     isTarget: (state) => {
@@ -308,6 +319,8 @@ async function remoteFocusById(page, id, maxMoves = 50, options = {}) {
 async function remoteFocusBySelector(page, selector, maxMoves = 50, options = {}) {
   await remoteFocus(page, {
     maxMoves,
+    targetLabel: `mục "${selector}"`,
+    targetWaitMs: options.targetWaitMs,
     preferredDirection: options.preferredDirection,
     snapshotCache: options.snapshotCache,
     isTarget: () => false,
@@ -351,9 +364,32 @@ async function remoteFocusBySelector(page, selector, maxMoves = 50, options = {}
   });
 }
 
-async function remoteFocus(page, { isTarget, isTargetElement, getTargetRect, maxMoves, preferredDirection, snapshotCache }) {
-  let targetRect = await getTargetRect();
-  expect(targetRect).toBeTruthy();
+// Polls the target geometry until the element is rendered. Returns as soon as it
+// appears, so a screen that is already settled costs one evaluate. A
+// `targetWaitMs` of 0 keeps the old single-shot behaviour for probe callers.
+async function waitForTargetRect(page, getTargetRect, targetWaitMs = TARGET_RECT_WAIT_MS) {
+  const attempts = Math.max(1, Math.ceil(Number(targetWaitMs) / TARGET_RECT_POLL_MS) || 1);
+  let rect = await getTargetRect();
+
+  for (let attempt = 1; attempt < attempts && !rect; attempt++) {
+    if (typeof page?.waitForTimeout !== "function") break;
+    await page.waitForTimeout(TARGET_RECT_POLL_MS);
+    rect = await getTargetRect().catch(() => null);
+  }
+
+  return rect;
+}
+
+async function remoteFocus(page, { isTarget, isTargetElement, getTargetRect, maxMoves, preferredDirection, snapshotCache, targetLabel, targetWaitMs = TARGET_RECT_WAIT_MS }) {
+  let targetRect = await waitForTargetRect(page, getTargetRect, targetWaitMs);
+  // A missing rectangle means the element is absent or invisible even after the
+  // wait, so report what could not be found instead of a bare failed assertion.
+  if (!targetRect) {
+    const waited = Number(targetWaitMs) > 0 ? ` sau ${Number(targetWaitMs) / 1000} giây chờ` : "";
+    throw new Error(
+      `Không tìm thấy ${targetLabel || "mục cần chọn"} trên màn hình để đưa con trỏ tới${waited} (mục không hiển thị hoặc chưa được tải).`
+    );
+  }
 
   for (let attempt = 0; attempt < maxMoves; attempt++) {
     const state = await getFocusedState(page);
@@ -387,7 +423,8 @@ async function remoteFocus(page, { isTarget, isTargetElement, getTargetRect, max
   ) return;
 
   throw new Error(
-    `Could not focus target with remote keys. Current focus: ${JSON.stringify(finalState)}`
+    `Không đưa được con trỏ tới ${targetLabel || "mục cần chọn"} sau ${maxMoves} lần bấm phím điều hướng. ` +
+      `Con trỏ đang dừng ở: ${finalState.text || finalState.id || "không xác định"}.`
   );
 }
 

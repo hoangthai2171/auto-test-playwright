@@ -263,6 +263,7 @@ test("records and attaches a failed step before rethrowing the original error", 
         status: "failed",
         durationMs: 7,
         message: "service navigation failed",
+        target: "Phim truyện",
       }],
       expectedResult: "",
     });

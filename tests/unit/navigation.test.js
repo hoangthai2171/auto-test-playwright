@@ -85,3 +85,67 @@ test("focuses a selector target through remote navigation without reading its la
 
   assert.deepEqual(presses, ["ArrowUp"]);
 });
+
+test("waits for a target that is still rendering instead of failing on the first look", async () => {
+  const targetRect = {x: 100, y: 100, width: 180, height: 60};
+  const waits = [];
+  let looks = 0;
+
+  const page = {
+    evaluate: async () => ({id: "target", text: "", label: "", rect: targetRect}),
+    keyboard: {press: async () => {}},
+    waitForTimeout: async (ms) => waits.push(ms),
+  };
+
+  await navigation.remoteFocus(page, {
+    maxMoves: 3,
+    isTarget: (state) => state.id === "target",
+    // The row is still being built: the poster only has geometry on the third look.
+    getTargetRect: async () => (++looks < 3 ? null : targetRect),
+  });
+
+  assert.equal(looks, 3);
+  assert.deepEqual(waits, [200, 200]);
+});
+
+test("stops waiting for a target that never renders and names it in the error", async () => {
+  const waits = [];
+  const page = {
+    // A string argument is the target-rect lookup, an object argument is the
+    // focus containment check; neither ever finds the poster.
+    evaluate: async (_callback, argument) => {
+      if (typeof argument === "string") return null;
+      if (argument && typeof argument === "object") return false;
+      return {id: "elsewhere", text: "", label: "", rect: {x: 0, y: 0, width: 10, height: 10}};
+    },
+    keyboard: {press: async () => {}},
+    waitForTimeout: async (ms) => waits.push(ms),
+  };
+
+  await assert.rejects(
+    navigation.remoteFocusById(page, "specialModuleID_2_3", 5, {targetWaitMs: 1000}),
+    /Không tìm thấy mục "specialModuleID_2_3" trên màn hình để đưa con trỏ tới sau 1 giây chờ/u
+  );
+
+  assert.deepEqual(waits, [200, 200, 200, 200]);
+});
+
+test("keeps a single look when a probe caller opts out of the wait", async () => {
+  const waits = [];
+  const page = {
+    evaluate: async (_callback, argument) => {
+      if (typeof argument === "string") return null;
+      if (argument && typeof argument === "object") return false;
+      return {id: "elsewhere", text: "", label: "", rect: {x: 0, y: 0, width: 10, height: 10}};
+    },
+    keyboard: {press: async () => {}},
+    waitForTimeout: async (ms) => waits.push(ms),
+  };
+
+  await assert.rejects(
+    navigation.remoteFocusById(page, "optional_button", 5, {targetWaitMs: 0}),
+    /Không tìm thấy mục "optional_button" trên màn hình để đưa con trỏ tới \(/u
+  );
+
+  assert.deepEqual(waits, []);
+});

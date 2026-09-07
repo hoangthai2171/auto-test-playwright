@@ -1,3 +1,5 @@
+const {describeCaseFailure} = require("./failure-message");
+
 // Actions whose per-poster results are rendered as the playback table instead of
 // the generic failed-item list.
 const ROW_PLAYBACK_ACTIONS = new Set(["play_row", "play_all_contents"]);
@@ -126,9 +128,11 @@ function collectHomeTrailerItems(caseResult) {
 
 function buildTestReportEntry({testCaseId, testCaseName, exitCode, caseResult, errorMessage = ""}) {
   const status = exitCode === 0 && caseResult?.status !== "failed" ? "passed" : "failed";
-  const failedStepMessage = (caseResult?.steps || [])
-    .find((step) => step?.status === "failed" && step.message)
-    ?.message || "";
+  // The raw runner error is a Playwright assertion dump or timeout trace; the
+  // report shows the readable sentence and keeps the raw text as a detail line.
+  const failure = status === "failed"
+    ? describeCaseFailure(caseResult, errorMessage)
+    : {summary: "", detail: ""};
   return {
     id: String(caseResult?.testCaseId || testCaseId),
     name: String(caseResult?.name || testCaseName || "Test case " + testCaseId),
@@ -138,9 +142,8 @@ function buildTestReportEntry({testCaseId, testCaseName, exitCode, caseResult, e
     failedItems: collectFailedItems(caseResult),
     rowPlaybackItems: collectRowPlaybackItems(caseResult),
     homeTrailerItems: collectHomeTrailerItems(caseResult),
-    error: status === "failed"
-      ? String(errorMessage || failedStepMessage || (!caseResult ? "Test failed" : ""))
-      : "",
+    error: status === "failed" ? String(failure.summary || "Test case chạy thất bại.") : "",
+    errorDetail: status === "failed" ? String(failure.detail || "") : "",
   };
 }
 
@@ -205,7 +208,7 @@ function renderUserReport(report) {
     "th{background:#222631;color:#cbd1dc}.status-passed{color:#46d083;font-weight:700;text-transform:capitalize}.status-failed{color:#ff7a7a;font-weight:700;text-transform:capitalize}",
     ".details-button{padding:6px 12px;border:1px solid #596579;border-radius:4px;background:#2a3140;color:#fff;cursor:pointer}",
     ".hidden{display:none}.details-row td{background:#0f1117;padding:18px}.detail-section+.detail-section{margin-top:18px}.detail-section h2{font-size:14px;margin:0 0 8px}.expected-result{margin:0;white-space:pre-wrap;word-break:break-word}.failure-table,.trailer-table,.row-playback-table{background:#14161b}.failure-table th,.failure-table td,.trailer-table th,.trailer-table td,.row-playback-table th,.row-playback-table td{padding:10px}",
-    ".poster{max-width:100px;max-height:120px;object-fit:contain}.screenshot{max-width:360px;max-height:220px;object-fit:contain;background:#050608}.completion-screenshot{max-width:560px;max-height:315px;object-fit:contain;background:#050608}.empty{color:#9aa3b2}.error-summary{white-space:pre-wrap;word-break:break-word}",
+    ".poster{max-width:100px;max-height:120px;object-fit:contain}.screenshot{max-width:360px;max-height:220px;object-fit:contain;background:#050608}.completion-screenshot{max-width:560px;max-height:315px;object-fit:contain;background:#050608}.empty{color:#9aa3b2}.error-summary{white-space:pre-wrap;word-break:break-word;margin:0 0 8px}.error-detail{white-space:pre-wrap;word-break:break-word;color:#9aa3b2;font-size:12px;margin:0 0 12px}",
     "</style></head><body><main><h1>MyTV Test Report</h1>",
     '<p class="muted">Generated ' + escapeHtml(report?.generatedAt || "") + "</p>",
     "<table><thead><tr><th>Test ID</th><th>Test Name</th><th>Status</th><th></th></tr></thead>",
@@ -246,10 +249,16 @@ function renderCompletionScreenshot(entry, heading) {
     "</section>";
 }
 
+function renderFailureTechnicalDetail(entry) {
+  if (!entry?.errorDetail) return "";
+  return '<p class="error-detail">Chi tiết kỹ thuật: ' + escapeHtml(entry.errorDetail) + "</p>";
+}
+
 function renderFailedItems(entry) {
   const items = Array.isArray(entry.failedItems) ? entry.failedItems : [];
   if (!items.length) {
-    return '<div class="empty error-summary">' + escapeHtml(entry.error || "No failed item details were recorded.") + "</div>";
+    return '<div class="error-summary">' + escapeHtml(entry.error || "Không ghi nhận được chi tiết lỗi.") + "</div>" +
+      renderFailureTechnicalDetail(entry);
   }
 
   const rows = items.map((item) => (
@@ -258,7 +267,10 @@ function renderFailedItems(entry) {
     "</td><td>" + renderImage(item.screenshot, "Screenshot for " + item.name, "screenshot") +
     "</td></tr>"
   )).join("");
-  return '<table class="failure-table"><thead><tr><th>Failed Item Name</th><th>Poster</th><th>Screenshot</th></tr></thead><tbody>' + rows + "</tbody></table>";
+  const summary = entry.error
+    ? '<div class="error-summary">' + escapeHtml(entry.error) + "</div>" + renderFailureTechnicalDetail(entry)
+    : "";
+  return summary + '<table class="failure-table"><thead><tr><th>Failed Item Name</th><th>Poster</th><th>Screenshot</th></tr></thead><tbody>' + rows + "</tbody></table>";
 }
 
 function renderRowPlaybackItems(entry) {

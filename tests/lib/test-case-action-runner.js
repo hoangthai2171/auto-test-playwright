@@ -4,6 +4,7 @@ const workflows = require("./workflows");
 const { normalizeVietnameseText } = require("./text-utils");
 const { captureCurrentAppScreenshot } = require("./artifacts");
 const { normalizePlayerCheckTimeoutSeconds, normalizeAppEnvironment } = require("../../app/test-configuration");
+const { describeActionTarget } = require("../../app/failure-message");
 
 const PLAYER_RETURN_DELAY_MS = 2000;
 // A paused player answers the first Back by hiding its control bar, so leaving
@@ -251,6 +252,10 @@ function createActionRunner({ handlers = {}, stepRunner, afterAction, onActionEr
         step.status = "failed";
         step.durationMs = Date.now() - startedAt;
         step.message = errorMessage(error);
+        // The report names the item a failed step was aiming at, which the raw
+        // error text often does not carry.
+        const failedTarget = describeActionTarget(action);
+        if (failedTarget) step.target = failedTarget;
         if (error?.details !== undefined) step.details = error.details;
         result.status = "failed";
         steps.push(step);

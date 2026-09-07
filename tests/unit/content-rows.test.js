@@ -8,8 +8,9 @@ const {ROW_RETURN_RENDER_DELAY_MS} = contentRows;
 // getFocusedViewMoreMetadata probes with {targetRowY, targetRowId}; the marker
 // sweep adds a selector, so the probe is the argument without one.
 function isViewMoreProbe(argument) {
-  return Boolean(argument) && typeof argument === "object" &&
-    "targetRowId" in argument && !("selector" in argument);
+  // The focused-view-more probe carries the marker selector under its own name;
+  // the row-level failure-reason probe passes it as `selector`.
+  return Boolean(argument) && typeof argument === "object" && "viewMoreSelector" in argument;
 }
 
 test("matches a service card by its own label, not by the joined attribute blob", async () => {
@@ -520,7 +521,7 @@ test("reports a missing view-more poster when the row ends without the marker", 
       assert.deepEqual(argument, {
         targetRowY: 200,
         targetRowId: "",
-        selector: '.view_more[item_view_more="1"]',
+        selector: '[item_view_more="1"], .view_more',
       });
       return false;
     },
