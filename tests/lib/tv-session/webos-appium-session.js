@@ -24,7 +24,7 @@ const WEBOS_REMOTE_KEYS = Object.freeze({
 });
 const DOM_PROBE = `return {
   bodyText: (document.body && document.body.innerText) || "",
-  focused: ((document.querySelector(".focused") || document.querySelector('[data-focused="true"]')) || {}).outerHTML || "",
+  focused: ((document.querySelector(".focused") || document.querySelector('[data-focused="true"]') || document.querySelector('[is_focus="1"]')) || {}).outerHTML || "",
   active: ((document.querySelector("#dialog_confirm_v2 .active, #dialog_alert_v2 .active, #dialog_alert_full .active, #dialog_confirm_full .active")) || {}).outerHTML || "",
   screenUrl: location.href
 };`;

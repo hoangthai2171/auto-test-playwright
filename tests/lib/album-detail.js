@@ -132,7 +132,11 @@ async function observeAlbumDetailScreen(page) {
     }
 
     function describeFocus() {
-      const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
+      // Album detail marks focus with `.focused` on most builds and with
+      // `is_focus="1"` on the rest, so the attribute answers when no focus
+      // class is on screen.
+      const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible) ||
+        Array.from(document.querySelectorAll('[is_focus="1"]')).find(isVisible);
       if (!focused) return {kind: "none", id: "", row: null, col: null, title: ""};
 
       const card = focused.matches(selectors.card) ? focused : focused.closest(selectors.card);

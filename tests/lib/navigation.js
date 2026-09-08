@@ -388,7 +388,7 @@ async function remoteFocusBySelector(page, selector, maxMoves = 50, options = {}
         const rect = target.getBoundingClientRect();
         const style = getComputedStyle(target);
         return (
-          target.classList.contains("focused") &&
+          (target.classList.contains("focused") || target.getAttribute("is_focus") === "1") &&
           rect.width > 0 &&
           rect.height > 0 &&
           style.display !== "none" &&

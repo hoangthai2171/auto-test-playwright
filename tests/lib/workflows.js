@@ -1140,7 +1140,7 @@ async function focusStableSearchResult(page, result) {
 async function isFocusedOnSearchResult(page, id) {
     return page.evaluate((targetId) => {
         const target = document.getElementById(targetId);
-        const focused = document.querySelector(".focused");
+        const focused = document.querySelector(".focused") || document.querySelector('[is_focus="1"]');
         if (!target || !focused) return false;
         return target === focused || target.contains(focused) || focused.contains(target);
     }, id);

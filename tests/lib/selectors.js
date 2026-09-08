@@ -9,11 +9,24 @@ const POPUP_FOCUS_DIALOG_IDS = Object.freeze([
 const POPUP_ACTIVE_FOCUS_SELECTORS = Object.freeze(
   POPUP_FOCUS_DIALOG_IDS.map((id) => `#${id} .active`)
 );
+// The app marks focus with two different markers. `.focused` is the common one,
+// but several widgets (channel list, and rows on Home, album detail,
+// specialModule/specialModuleListV2/shortHome) mark the focused element with an
+// `is_focus="1"` attribute and no focus class at all. The attribute is a
+// fallback rather than an equal: when both markers are on screen the class is
+// the live one, and a stale `is_focus="1"` can survive on a widget that is no
+// longer the focus owner.
+const IS_FOCUS_ATTRIBUTE = "is_focus";
+const IS_FOCUS_SELECTOR = `[${IS_FOCUS_ATTRIBUTE}="1"]`;
+// The screen markers in priority order, without the dialog selectors. Use this
+// when the question is "which element on the screen is focused"; use
+// FOCUS_SELECTORS when a modal dialog also has to be answered for.
+const SCREEN_FOCUS_SELECTORS = Object.freeze([`.${FOCUSED_CLASS}`, IS_FOCUS_SELECTOR]);
 // Dialog focus is intentionally listed first. The underlying screen can keep
 // its old `.focused` element while a modal dialog is open.
 const FOCUS_SELECTORS = Object.freeze([
   ...POPUP_ACTIVE_FOCUS_SELECTORS,
-  `.${FOCUSED_CLASS}`,
+  ...SCREEN_FOCUS_SELECTORS,
 ]);
 const FOCUS_SELECTOR = FOCUS_SELECTORS.join(", ");
 
@@ -28,6 +41,11 @@ const SELECTOR_CONTRACTS = Object.freeze({
       {
         name: "popup-active-class",
         selectors: POPUP_ACTIVE_FOCUS_SELECTORS,
+      },
+      {
+        name: "is-focus-attribute",
+        selectors: [IS_FOCUS_SELECTOR],
+        attributes: [IS_FOCUS_ATTRIBUTE],
       },
     ],
   },
@@ -177,6 +195,9 @@ function getSelectorAlternatives(name) {
 
 module.exports = {
   FOCUSED_CLASS,
+  IS_FOCUS_ATTRIBUTE,
+  IS_FOCUS_SELECTOR,
+  SCREEN_FOCUS_SELECTORS,
   POPUP_FOCUS_DIALOG_IDS,
   POPUP_ACTIVE_FOCUS_SELECTORS,
   FOCUS_SELECTORS,

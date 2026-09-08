@@ -12,7 +12,8 @@ Save durable decisions, non-obvious fixes, and reusable test lessons. Never save
 MyTV Auto Test is a Playwright test-automation suite for the MyTV HTML5 TV web app, wrapped in an
 Electron desktop runner that executes server-shaped test cases (`testcased.json` schema) rather than
 ad-hoc scripts. The target app behaves like a TV interface: navigation uses a remote-control focus
-model (`.focused` / `.active` classes) and text entry goes through the app's on-screen virtual
+model (`.focused` / `.active` classes, or an `is_focus="1"` attribute on the widgets that use no
+focus class) and text entry goes through the app's on-screen virtual
 keyboard — never native form input or mouse-driven interaction.
 
 This repo also has a detailed `AGENTS.md` with the full architecture writeup and a `README.md` with
@@ -172,10 +173,24 @@ session. Do not change this to run in parallel without redesigning session owner
 - `play_all_contents` plays a content-list page opened from a `Xem tất cả` poster
   (`specialModuleList`, `specialModuleListV2`, `shortHome`, `channel-list`) in
   reading order, with
-  optional `count` (posters) or `rowCount` (rows). `channel-list` is also
-  supported through a route-scoped profile because it marks focus with
-  `is_focus="1"` instead of the shared focus class; do not widen
-  `FOCUS_SELECTORS` for it.
+  optional `count` (posters) or `rowCount` (rows). `channel-list` still has its
+  own profile for its row/item classes and id scheme, but not for its focus
+  marker.
+
+## Focus markers
+
+- The app marks the focused element in two ways: the `.focused` class, and an
+  `is_focus="1"` attribute on widgets that carry no focus class. The attribute is
+  not channel-list-only — Home rows, album detail and the
+  `specialModule`/`specialModuleListV2`/`shortHome` lists can use it too — so
+  every focus read falls back to `[is_focus="1"]` when no visible `.focused`
+  is on screen.
+- Priority is fixed and must stay that way: dialog `.active` (`FOCUS_SELECTORS`
+  in `tests/lib/selectors.js`), then `.focused`, then `[is_focus="1"]`. The class
+  is the live marker; a stale `is_focus="1"` can survive on a widget that no
+  longer owns focus. Never collapse the two into one `querySelectorAll(".focused,
+  [is_focus='1']")` — that hands the answer to document order instead of priority.
+- Contract spec: `npm run test:focus:contract`.
 
 ## Login result
 

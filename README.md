@@ -204,7 +204,8 @@ transition to profile selection, remotely selects `Tiếp tục`, and waits for 
 popup to close before continuing. The four supported dialog families
 (`#dialog_confirm_v2`, `#dialog_alert_v2`, `#dialog_alert_full`, and
 `#dialog_confirm_full`) report their active button with `.active`; normal
-controls report focus with `.focused`.
+controls report focus with `.focused`, or with an `is_focus="1"` attribute on
+the widgets that set no focus class.
 
 When the account-login method opens MyTV's service-consent screen, the login
 helper handles it with native remote focus: it moves up to
@@ -400,12 +401,13 @@ exclusive, and with neither the whole list is played. The action requires the
 current route to be `specialModuleList`, `specialModuleListV2`, `shortHome`, or
 `channel-list`, and fails closed anywhere else.
 
-`channel-list` is a different widget: its rows and items use their own classes,
-its ids are `item_<row>_<col>`, and focus is an `is_focus="1"` attribute rather
-than the shared focus class. It is handled by a profile scoped to that route, so
-the global focus contract - and therefore `play_row`, `play_content`,
-`play_home_trailers` and the LG TV target - is unchanged. A channel carries no
-name in the DOM, so it is reported by its channel number plus `content-id`, and
+`channel-list` is a different widget: its rows and items use their own classes
+and its ids are `item_<row>_<col>`, so it is handled by a profile scoped to that
+route. Its `is_focus="1"` focus marker, however, is read everywhere: any screen
+that marks the focused element with that attribute instead of `.focused` is
+understood by every action, including `play_row`, `play_content`,
+`play_home_trailers` and the LG TV target. A channel carries no name in the DOM,
+so it is reported by its channel number plus `content-id`, and
 activation confirms focus from the grid's own marker before Enter, with one
 guarded retry for the first item while the freshly opened page is still
 settling. The channel list loads a whole category at once, so it has no

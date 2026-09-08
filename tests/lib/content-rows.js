@@ -72,25 +72,25 @@ const CARD_LABEL_ATTRIBUTES = Object.freeze([
 // every row up front.
 const LIST_PAGE_ITEM_ID_PATTERN = /^(.*)_(\d+)_(\d+)$/u;
 // A content-list page comes in two shapes. The default grid is built by
-// clsItemViewRelative and marks focus with the shared `.focused` class. The
-// channel list is built by clsGridViewChannelDynamic instead: different row and
-// item classes, its own row-container id scheme, and focus expressed as an
-// `is_focus="1"` attribute rather than a class. The channel shape is described
-// here rather than in the global focus contract so no other action or target
-// changes behavior.
+// clsItemViewRelative, the channel list by clsGridViewChannelDynamic: different
+// row and item classes and its own row-container id scheme. Both shapes can
+// mark focus either with the `.focused` class or with an `is_focus="1"`
+// attribute, so each profile lists both markers and only differs in which one
+// it expects first - the channel list leads with the attribute, every other
+// grid with the class.
 const LIST_PAGE_PROFILES = Object.freeze([
   Object.freeze({
     name: "content-grid",
     itemSelector: ".cate_content_item",
     rowSelector: ".cate_content_row",
-    focusSelector: ".focused",
+    focusSelectors: Object.freeze([".focused", '[is_focus="1"]']),
     rowIdPrefix: "",
   }),
   Object.freeze({
     name: "channel-grid",
     itemSelector: ".homepage_channel_item",
     rowSelector: ".channellist_item_row_new",
-    focusSelector: '[is_focus="1"]',
+    focusSelectors: Object.freeze(['[is_focus="1"]', ".focused"]),
     rowIdPrefix: "channellist_item_row",
   }),
 ]);
@@ -354,7 +354,8 @@ async function getFocusedViewMoreMetadata(page, scope) {
     : Number(typeof scope === "object" && scope !== null ? scope.rowY || 0 : 0);
 
   return page.evaluate(({targetRowY, targetRowId, viewMoreSelector, cardSelector}) => {
-    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible) ||
+      Array.from(document.querySelectorAll('[is_focus="1"]')).find(isVisible);
     const poster = focused?.closest?.(viewMoreSelector);
     if (!poster || !isVisible(poster)) return null;
     // `closest` walks ancestors, so a wrapper carrying the marker would report
@@ -425,12 +426,14 @@ async function isFocusedInsideRow(page, rowId) {
       const container = document.getElementById(rowContainerId);
       if (!container) return null;
 
-      const focused = Array.from(document.querySelectorAll(".focused")).find((element) => {
+      const isVisible = (element) => {
         const rect = element.getBoundingClientRect();
         const style = getComputedStyle(element);
         return rect.width > 0 && rect.height > 0 &&
           style.display !== "none" && style.visibility !== "hidden" && Number(style.opacity) !== 0;
-      });
+      };
+      const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible) ||
+        Array.from(document.querySelectorAll('[is_focus="1"]')).find(isVisible);
       if (!focused) return false;
 
       return container.contains(focused) || focused.contains(container);
@@ -1487,7 +1490,8 @@ async function expectFocusedContent(page) {
 
 async function isFocusedContentItem(page) {
   return page.evaluate(() => {
-    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible) ||
+      Array.from(document.querySelectorAll('[is_focus="1"]')).find(isVisible);
     if (!focused) return false;
 
     const rect = focused.getBoundingClientRect();
@@ -1552,7 +1556,8 @@ async function isFocusedOnContentItem(page, item) {
   if (!item?.id) return false;
 
   return page.evaluate((targetId) => {
-    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible) ||
+      Array.from(document.querySelectorAll('[is_focus="1"]')).find(isVisible);
     if (!focused) return false;
     const target = document.getElementById(targetId);
     return focusWithinTarget(focused, target);
@@ -1598,7 +1603,8 @@ async function isFocusedOnRowItems(page, items) {
   if (!targetIds.length) return false;
 
   return page.evaluate((ids) => {
-    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible) ||
+      Array.from(document.querySelectorAll('[is_focus="1"]')).find(isVisible);
     if (!focused) return false;
 
     return ids.some((id) => {
@@ -1644,7 +1650,8 @@ async function isFocusedOnRowItems(page, items) {
 
 async function getFocusedContentMetadata(page) {
   return page.evaluate(() => {
-    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible) ||
+      Array.from(document.querySelectorAll('[is_focus="1"]')).find(isVisible);
     if (!focused) {
       return {
         id: "",
@@ -1905,7 +1912,8 @@ async function isFocusedNearRow(page, scope) {
     ? scope
     : Number(typeof scope === "object" && scope !== null ? scope.rowY || 0 : 0);
   return page.evaluate((targetY) => {
-    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible);
+    const focused = Array.from(document.querySelectorAll(".focused")).find(isVisible) ||
+      Array.from(document.querySelectorAll('[is_focus="1"]')).find(isVisible);
     if (!focused) return false;
 
     const rect = focused.getBoundingClientRect();
@@ -1937,13 +1945,8 @@ async function getFocusedListPagePosition(page) {
     return null;
 
     function readProfilePosition(profile) {
-      const focused = Array.from(document.querySelectorAll(profile.focusSelector)).find(isVisible);
-      if (!focused) return null;
-
-      const card = focused.matches?.(profile.itemSelector)
-        ? focused
-        : focused.closest?.(profile.itemSelector);
-      if (!card || !isVisible(card)) return null;
+      const card = findFocusedCard(profile);
+      if (!card) return null;
 
       const match = new RegExp(pattern, "u").exec(card.id || "");
       if (!match) return null;
@@ -1973,6 +1976,23 @@ async function getFocusedListPagePosition(page) {
       };
     }
 
+    // A screen can carry a visible marker that belongs to another widget - a
+    // leftover `.focused` beside a live `is_focus="1"` card, for instance - so
+    // every marked element is considered and the first one that resolves to a
+    // card of this profile wins, instead of only the first marked element.
+    function findFocusedCard(profile) {
+      for (const selector of profile.focusSelectors) {
+        for (const marked of Array.from(document.querySelectorAll(selector))) {
+          if (!isVisible(marked)) continue;
+          const card = marked.matches?.(profile.itemSelector)
+            ? marked
+            : marked.closest?.(profile.itemSelector);
+          if (card && isVisible(card)) return card;
+        }
+      }
+      return null;
+    }
+
     function isVisible(element) {
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
@@ -1988,10 +2008,7 @@ async function getFocusedListPagePosition(page) {
 async function getFocusedListPageMetadata(page) {
   return page.evaluate(({profiles}) => {
     for (const profile of profiles) {
-      const focused = Array.from(document.querySelectorAll(profile.focusSelector)).find(isVisible);
-      const card = focused?.matches?.(profile.itemSelector)
-        ? focused
-        : focused?.closest?.(profile.itemSelector);
+      const card = findFocusedCard(profile);
       if (!card) continue;
 
       const image = card.querySelector("img");
@@ -2020,6 +2037,19 @@ async function getFocusedListPageMetadata(page) {
 
     return {profile: "", id: "", title: "", channelNumber: "", contentId: "", poster: ""};
 
+    function findFocusedCard(profile) {
+      for (const selector of profile.focusSelectors) {
+        for (const marked of Array.from(document.querySelectorAll(selector))) {
+          if (!isVisible(marked)) continue;
+          const card = marked.matches?.(profile.itemSelector)
+            ? marked
+            : marked.closest?.(profile.itemSelector);
+          if (card && isVisible(card)) return card;
+        }
+      }
+      return null;
+    }
+
     function isVisible(element) {
       const rect = element.getBoundingClientRect();
       const style = getComputedStyle(element);
@@ -2045,9 +2075,9 @@ async function expectFocusedListPageContent(page) {
   return position;
 }
 
-// The channel grid has no `.focused` class for remoteFocusById to steer by, so
-// reaching the first card is done with bounded remote steps that read the
-// position back. Failing to reach it is a hard failure, never a silent start
+// The channel grid marks focus with `is_focus="1"` and no `.focused` class for
+// remoteFocusById to steer by, so reaching the first card is done with bounded
+// remote steps that read the position back. Failing to reach it is a hard failure, never a silent start
 // from the middle of the page.
 async function focusChannelListGridStart(page) {
   let position = await getFocusedListPagePosition(page).catch(() => null);

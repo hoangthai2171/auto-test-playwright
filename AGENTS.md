@@ -294,12 +294,12 @@ The supported action allowlist is:
   positive `rowCount` limits the number of rows; the two are mutually exclusive
   and neither means the whole list. Supported routes are `specialModuleList`,
   `specialModuleListV2`, `shortHome` and `channel-list`; any other screen fails
-  closed. `channel-list` is a separate widget with its own row/item classes,
-  `item_<row>_<col>` ids, and focus expressed as an `is_focus="1"` attribute
-  instead of the shared focus class, so it runs through a profile scoped to that
-  route and leaves the global focus contract - and every other action and target
-  - untouched. Channels carry no DOM name and are reported by channel number
-  plus `content-id`; activation confirms focus from the grid marker and retries
+  closed. `channel-list` is a separate widget with its own row/item classes and
+  `item_<row>_<col>` ids, so it runs through a profile scoped to that route. Its
+  `is_focus="1"` focus marker is no longer part of that exception: the marker is
+  read across the whole app as a fallback for `.focused` (see "Focus markers").
+  Channels carry no DOM name and are reported by channel number plus
+  `content-id`; activation confirms focus from the grid marker and retries
   Enter once while a freshly opened list is still settling. The channel list
   loads a category at once, so it has no load-more. The
   list page detaches rows scrolled out of the visible window and calls its
@@ -417,7 +417,8 @@ device-limit popup (`Vượt quá số lượng thiết bị cho phép`), remote
 `Tiếp tục`, and waits for that popup to close before selecting a profile. The
 shared focus model reads `.active` inside `#dialog_confirm_v2`,
 `#dialog_alert_v2`, `#dialog_alert_full`, `#dialog_confirm_full`, and the
-`#user-consent-popup` root; regular controls continue to use `.focused`. Generic
+`#user-consent-popup` root; regular controls use `.focused`, falling back to an
+`is_focus="1"` attribute where the widget sets no focus class. Generic
 case cleanup still calls `window.processLogOut` after the run to release the
 account.
 
@@ -533,8 +534,29 @@ desktop form fields.
 - `ArrowUp`, `ArrowDown`, `ArrowLeft`, and `ArrowRight` move focus.
 - `Enter` activates the focused target.
 - `Backspace` or `Escape` goes back.
-- `remoteFocusById` and `remoteFocusByText` verify the `.focused` state.
+- `remoteFocusById` and `remoteFocusByText` verify the focused state.
 - Virtual-keyboard helpers enter each character through focused keyboard keys.
+
+### Focus markers
+
+The app expresses focus with two markers, and a screen can use either one:
+
+- `.focused` - the class used by most screens.
+- `is_focus="1"` - an attribute used by widgets that set no focus class. The
+  channel list always does; Home rows, album detail and the
+  `specialModule`/`specialModuleListV2`/`shortHome` lists can.
+
+Reads resolve them in a fixed priority: dialog `.active` first (the underlying
+screen keeps its old marker while a modal is open), then `.focused`, then
+`[is_focus="1"]`, taking the first *visible* match at each step. The order is
+part of the contract - the class is the live marker, while a stale
+`is_focus="1"` can survive on a widget that no longer owns focus - so the two
+must never be merged into one selector, which would answer by document order
+instead. `FOCUS_SELECTORS`, `SCREEN_FOCUS_SELECTORS` and `IS_FOCUS_SELECTOR` in
+`tests/lib/selectors.js` are the single source for the list. The list-page
+profiles keep their own per-profile order (the channel grid leads with the
+attribute) and scan every marked element until one resolves to a card of that
+profile. Contract spec: `npm run test:focus:contract`.
 
 ### Vietnamese matching
 

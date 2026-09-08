@@ -3,7 +3,7 @@
 const {normalizeVietnameseText} = require("../text-utils");
 const {normalizePlayerCheckTimeoutSeconds} = require("../../../app/test-configuration");
 
-const FOCUS_SELECTORS = [".focused", '[data-focused="true"]', ".active"];
+const FOCUS_SELECTORS = [".focused", '[data-focused="true"]', '[is_focus="1"]', ".active"];
 const CONTENT_TYPES = new Set(["channel", "movie", "content"]);
 const USER_CONSENT_ACCEPT_ALL_ID = "user-consent-popup-accept-all-checkbox";
 const USER_CONSENT_FOOTER_ID = "user-consent-popup-footer-checkbox";

@@ -73,7 +73,7 @@ function getHash(url) {
 async function defaultFocusedState(page) {
   if (typeof page?.evaluate !== "function") return null;
   return page.evaluate(() => {
-    const element = document.querySelector(".focused");
+    const element = document.querySelector(".focused") || document.querySelector('[is_focus="1"]');
     if (!element) return null;
     const rect = element.getBoundingClientRect();
     const style = window.getComputedStyle(element);
