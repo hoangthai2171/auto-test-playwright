@@ -403,6 +403,28 @@ The supported action allowlist is:
   commits it, and across the last action when the `expectedResult` is a player
   or paused-player check.
 - `assert_screen`: checks visible body text.
+- `focus_row_item`: requires a 1-based `itemIndex` (1-200) and focuses that
+  position inside the row a previous step already focused - the indexed
+  counterpart of `focus_row_first_item`. Both follow the player context: while
+  the in-player related-content row is on screen they address its posters, and
+  everywhere else a content row of the page.
+- `press_arrow`: sends one remote arrow key; `direction` is `up`, `down`,
+  `left` or `right`. It lets a case spell out the keys a tester would press
+  instead of naming the destination.
+- `focus_text` inside an open player: names one of the labelled control-bar
+  buttons - or a section of the player: a name containing `liên quan` opens the
+  related-content row - rather than page text. The labels come from the bar the player
+  renders, so an unknown name fails closed and lists the ones on offer. OK on
+  `Tập kế tiếp` (`#player-button-forward`) is held to a changed media source and
+  the episode that follows; the other buttons open their own control and require
+  nothing of playback. The "Bỏ qua giới thiệu" overlay (`#video-skip-content`)
+  is drawn in the same band as that row and answers Up/Down in its place, so
+  the walk waits for the app to hide it (a few seconds into playback) instead
+  of pressing into it - arrow keys aimed at the row while it shows land on the
+  seek bar. Content switched inside the player - a related poster, an episode,
+  or "Tập kế tiếp" - opens on top of the player it was launched from, so the
+  expected-result cleanup grants four Back presses whenever a step reported a
+  content switch.
 - `press_back`: sends Backspace; optional `count` repeats it.
 - `wait_for_ready`: accepts `app`, `home`, `content`, or `player`.
 

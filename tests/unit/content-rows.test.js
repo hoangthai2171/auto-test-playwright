@@ -1309,3 +1309,35 @@ test("still accepts a word-bounded row name match immediately", async () => {
   assert.equal(row.title, "VTV Cab");
   assert.deepEqual(state.presses, []);
 });
+
+test("does not let one label word answer for two requested words", async () => {
+  const {normalizeVietnameseText} = require("../lib/text-utils");
+  // Stripping diacritics turns both "bộ" and "bỏ" into "bo", so a set-based
+  // coverage check made "Phim lẻ không thể bỏ lỡ" a strong match for the
+  // different row "Phim bộ không thể bỏ lỡ".
+  const rowOf = (title) => ({
+    rowId: `row-${title}`,
+    title,
+    normalizedTitle: normalizeVietnameseText(title),
+    rowY: 500,
+    onScreen: true,
+    items: [{id: "item-0", title, rect: {x: 100, y: 500, width: 245, height: 138}, visible: true}],
+  });
+  const rows = [
+    rowOf("Phim lẻ không thể bỏ lỡ"),
+    rowOf("Phim bộ không thể bỏ lỡ"),
+  ];
+
+  const matches = contentRows.__test.scoreContentRowMatches(rows, normalizeVietnameseText("Phim bộ không thể bỏ lỡ"));
+
+  assert.equal(matches.length, 1);
+  assert.equal(matches[0].row.title, "Phim bộ không thể bỏ lỡ");
+  assert.equal(matches[0].score, 100);
+
+  // The words of a genuinely matching row still cover it in any order.
+  const reordered = contentRows.__test.scoreContentRowMatches(
+    [rowOf("Không thể bỏ lỡ: phim bộ")],
+    normalizeVietnameseText("Phim bộ không thể bỏ lỡ")
+  );
+  assert.equal(reordered[0]?.score, 80);
+});

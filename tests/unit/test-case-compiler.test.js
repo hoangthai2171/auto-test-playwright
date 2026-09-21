@@ -623,3 +623,85 @@ test("compiles the Mở dịch vụ wording with a quoted service name", () => {
     [{action: "open_service", service: "Phim truyện"}]
   );
 });
+
+test("strips a plain step number as well as the B-prefixed one", () => {
+  assert.deepEqual(
+    compileQaDescription("1. Vào trang chủ ứng dụng\n2) Nhấn phím OK"),
+    [{action: "open_home"}, {action: "press_ok"}]
+  );
+});
+
+test("compiles an indexed item of the row the previous step focused", () => {
+  assert.deepEqual(
+    compileQaDescription("1. Chọn play item thứ 3"),
+    [{action: "focus_row_item", itemIndex: 3}, {action: "press_ok"}]
+  );
+  assert.deepEqual(
+    compileQaDescription("1. Focus item thứ 2"),
+    [{action: "focus_row_item", itemIndex: 2}]
+  );
+  // A row selector belongs to focus_row, not to the current-row action.
+  assert.deepEqual(
+    compileQaDescription('1. Di chuyển focus vào poster phim thứ 2 của dòng cate "Phim mới"'),
+    [{action: "focus_row", rowName: "Phim mới", itemIndex: 2}]
+  );
+});
+
+test("compiles a named button or icon the same way as an item", () => {
+  assert.deepEqual(
+    compileQaDescription('1. Bấm vào nút "Tập kế tiếp"'),
+    [{action: "focus_text", text: "Tập kế tiếp"}, {action: "press_ok"}]
+  );
+  assert.deepEqual(
+    compileQaDescription('1. Focus vào icon "Tập kế tiếp"'),
+    [{action: "focus_text", text: "Tập kế tiếp"}]
+  );
+});
+
+test("compiles a spelled-out arrow press", () => {
+  const cases = [
+    ["1. Bấm mũi tên lên", "up"],
+    ["1. Di chuyển lên", "up"],
+    ["1. Nhấn phím xuống", "down"],
+    ["1. Bấm sang phải", "right"],
+    ["1. left", "left"],
+  ];
+  for (const [line, direction] of cases) {
+    assert.deepEqual(compileQaDescription(line), [{action: "press_arrow", direction}], line);
+  }
+});
+
+test("compiles a player section named in quotes", () => {
+  assert.deepEqual(
+    compileQaDescription('1. Focus vào "Phim liên quan"'),
+    [{action: "focus_text", text: "Phim liên quan"}]
+  );
+  // A quoted name stays a name; only the positional wording is the related
+  // action, so neither grammar claims the other's line.
+  assert.deepEqual(
+    compileQaDescription("1. Chọn phim liên quan đầu tiên"),
+    [{action: "player_focus_related"}]
+  );
+});
+
+test("compiles the play wording for the first item of the current row", () => {
+  for (const line of [
+    "1. Chọn play item đầu tiên",
+    "1. Chọn play nội item đầu tiên",
+    "1. Phát nội dung đầu tiên",
+  ]) {
+    assert.deepEqual(
+      compileQaDescription(line),
+      [{action: "focus_row_first_item"}, {action: "press_ok"}],
+      line
+    );
+  }
+
+  // Without a play verb it only focuses, and an explicit OK line owns the
+  // activation when it follows.
+  assert.deepEqual(compileQaDescription("1. Focus vào item đầu tiên"), [{action: "focus_row_first_item"}]);
+  assert.deepEqual(
+    compileQaDescription("1. Chọn play item đầu tiên\n2. Bấm phím OK"),
+    [{action: "focus_row_first_item"}, {action: "press_ok"}]
+  );
+});

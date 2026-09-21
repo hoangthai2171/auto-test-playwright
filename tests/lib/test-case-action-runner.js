@@ -10,13 +10,22 @@ const PLAYER_RETURN_DELAY_MS = 2000;
 // A paused player answers the first Back by hiding its control bar, so leaving
 // it needs one more press than closing a playing player.
 const PAUSED_PLAYER_BACK_PRESSES = 4;
-// Playing a related poster opens that content on top of the player it was
-// launched from, so leaving it unwinds one screen more than a single playback.
-const RELATED_PLAYBACK_BACK_PRESSES = 4;
+// Switching content inside the player - a related poster, an episode, or
+// "Tập kế tiếp" - opens it on top of the player it was launched from, so
+// leaving unwinds one screen more than a single playback.
+const CONTENT_SWITCH_BACK_PRESSES = 4;
 const VIEW_MORE_LABELS = new Set(["xem tat ca", "xem them", "view more"]);
 // Actions that already checked a player for every poster they visited, so the
 // expected-result pass must not re-open one.
 const ROW_PLAYBACK_ACTIONS = new Set(["play_row", "play_all_contents"]);
+// The player route is reached before the player finishes mounting.
+const PLAYER_ROUTE_PATTERN = /player|playback/iu;
+const ARROW_KEYS = Object.freeze({
+  up: "ArrowUp",
+  down: "ArrowDown",
+  left: "ArrowLeft",
+  right: "ArrowRight",
+});
 // Actions that drive the remote inside an already open player. They must find
 // the player open and must leave it open for the OK press that commits them.
 const PLAYER_CONTROL_ACTIONS = new Set([
@@ -360,7 +369,7 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
       );
       pausedScreenshotDataUrl = await capturePlayerCheckScreenshot(page, testInfo);
       await finishPlayerCheck(page, helpers, {
-        ...playerCloseOptions(testCase),
+        ...playerCloseOptions(testCase, steps),
         maxBackPresses: PAUSED_PLAYER_BACK_PRESSES,
       });
       return {
@@ -377,7 +386,7 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
       }
       try {
         await finishPlayerCheck(page, helpers, {
-          ...playerCloseOptions(testCase),
+          ...playerCloseOptions(testCase, steps),
           maxBackPresses: PAUSED_PLAYER_BACK_PRESSES,
         });
       } catch (cleanupError) {
@@ -409,7 +418,7 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
       await page.waitForTimeout(timeoutSeconds * 1000);
       await assertPlayerReadyAfterWait(helpers, page, timeoutSeconds);
       playerScreenshotDataUrl = await capturePlayerCheckScreenshot(page, testInfo);
-      await finishPlayerCheck(page, helpers, playerCloseOptions(testCase));
+      await finishPlayerCheck(page, helpers, playerCloseOptions(testCase, steps));
       return {
         type: "player",
         verified: "Player is open and playing normally",
@@ -421,7 +430,7 @@ async function verifyExpectedResult({page, testInfo, testCase, steps, helpers, p
         error.playerCheckScreenshotDataUrl = playerScreenshotDataUrl;
       }
       try {
-        await finishPlayerCheck(page, helpers, playerCloseOptions(testCase));
+        await finishPlayerCheck(page, helpers, playerCloseOptions(testCase, steps));
       } catch (cleanupError) {
         if (error && typeof error === "object") error.playerCleanupError = errorMessage(cleanupError);
       }
@@ -461,11 +470,14 @@ async function assertPlayerReadyAfterWait(helpers, page, timeoutSeconds) {
   throw error;
 }
 
-function playerCloseOptions(testCase) {
-  return (testCase?.actions || []).some((action) =>
-    action?.action === "player_focus_related" || action?.action === "player_focus_episode")
-    ? {maxBackPresses: RELATED_PLAYBACK_BACK_PRESSES}
-    : {};
+function playerCloseOptions(testCase, steps = []) {
+  const switchedContent = (testCase?.actions || []).some((action) =>
+    action?.action === "player_focus_related" || action?.action === "player_focus_episode") ||
+    // Any step that reported a content switch counts, which covers naming the
+    // "Tập kế tiếp" button through focus_text.
+    (steps || []).some((step) => step?.result?.contentChanged === true);
+
+  return switchedContent ? {maxBackPresses: CONTENT_SWITCH_BACK_PRESSES} : {};
 }
 
 function isPlayerCheckingAction(action) {
@@ -643,7 +655,18 @@ async function resolveReadyWait(helpers, page, testInfo, name) {
   }
 }
 
+// A positional step ("item đầu tiên", "item thứ 3") addresses the player's
+// related-content row only while that row is the thing on screen; everywhere
+// else it still means a content row of the page.
+async function observedPlayerRelatedRow(helpers, page) {
+  if (typeof helpers.observePlayerControlState !== "function") return null;
+  const state = await helpers.observePlayerControlState(page).catch(() => null);
+  if (!state || state.state === "closed") return null;
+  return state.relatedRowVisible === true || state.focus?.scope === "related" ? state : null;
+}
+
 function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}) {
+  const focusedPlayerRelatedRow = (page) => observedPlayerRelatedRow(helpers, page);
   let mostRecentlyFocusedRow = null;
   let pendingServiceName = "";
   let pendingViewMoreTarget = null;
@@ -681,6 +704,8 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
     focus_row_first_item: async ({ page }) => {
       pendingServiceName = "";
       pendingViewMoreTarget = null;
+      const relatedRow = await focusedPlayerRelatedRow(page);
+      if (relatedRow) return helpers.focusPlayerRelatedContent(page, {itemIndex: 1, remotePress: helpers.remotePress});
       return helpers.focusFirstItemInCurrentContentRow(page);
     },
     focus_text: async ({ page, action }) => {
@@ -714,6 +739,24 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
       }
 
       pendingServiceName = "";
+
+      // Inside an open player there is no page text to walk to: a named target
+      // is one of the labelled control-bar buttons ("Tập kế tiếp", "Chọn tập").
+      // The OK that opened the player belongs to the previous step, so the
+      // screen may still be loading; the route already says where we are.
+      const playerControlState = typeof helpers.observePlayerControlState === "function"
+        ? await helpers.observePlayerControlState(page).catch(() => null)
+        : null;
+      const inPlayer = Boolean(playerControlState) &&
+        (playerControlState.state !== "closed" || PLAYER_ROUTE_PATTERN.test(playerControlState.route || ""));
+      if (inPlayer) {
+        return helpers.focusPlayerControlByLabel(page, {
+          label: action.text,
+          state: playerControlState,
+          remotePress: helpers.remotePress,
+        });
+      }
+
       return helpers.remoteFocusByText(
         page,
         new RegExp(`^\\s*${escapeRegExp(action.text.trim())}\\s*$`, "iu")
@@ -823,6 +866,19 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
       helpers.togglePlayerPlayback(page, {
         remotePress: helpers.remotePress,
       }),
+    focus_row_item: async ({ page, action }) => {
+      const relatedRow = await focusedPlayerRelatedRow(page);
+      if (relatedRow) {
+        return helpers.focusPlayerRelatedContent(page, {
+          itemIndex: action.itemIndex,
+          remotePress: helpers.remotePress,
+        });
+      }
+      return helpers.focusItemInCurrentContentRow(page, {itemIndex: action.itemIndex});
+    },
+    press_arrow: async ({ page, action }) => {
+      await helpers.remotePress(page, ARROW_KEYS[action.direction]);
+    },
     player_focus_related: ({ page, action }) =>
       helpers.focusPlayerRelatedContent(page, {
         itemIndex: action.itemIndex,

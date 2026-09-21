@@ -511,6 +511,7 @@ const EPISODE_PAGE = `
     #player-button-forward {left: 836px;}
     #player-button-partition {left: 906px;}
     #player-button-quality {left: 976px;}
+    #video-skip-content {position: absolute; top: 554px; left: 877px; width: 291px; height: 66px;}
     #episode_panel {position: absolute; top: 83px; left: 647px; width: 613px;}
     #episode_panel span {display: block; width: 239px; height: 60px;}
     .hidden {display: none;}
@@ -527,6 +528,7 @@ const EPISODE_PAGE = `
       <span id="media_player_duration">42:04</span>
     </div>
   </div>
+  <span id="video-skip-content" class="video-skip-btn hidden">Bỏ qua giới thiệu</span>
   <div id="episode_panel" class="hidden">
     <div id="moviePartitions_0" class="movie-partition-row">44 phút Tập 1</div>
     <span id="moviePartitions_0_0" class="movie-partition-poster" partition="1" content-id="164735"></span>
@@ -650,4 +652,89 @@ test("fails closed when the player has no episode button", async ({page}) => {
 
   await expect(playerControl.openPlayerEpisodes(page, {pressDelayMs: 50, openTimeoutMs: 400}))
     .rejects.toThrow(/control-bar button row|player-button-partition/u);
+});
+
+test("focuses a control-bar button by its label and plays the next episode", async ({page}) => {
+  await page.setContent(EPISODE_PAGE);
+
+  const focused = await playerControl.focusPlayerControlByLabel(page, {
+    label: "Tập kế tiếp",
+    pressDelayMs: 50,
+    openTimeoutMs: 500,
+  });
+
+  expect(focused.type).toBe("player_focus_control");
+  expect(focused.id).toBe("player-button-forward");
+  expect(focused.label).toBe("Tập kế tiếp");
+});
+
+test("reads the labels the control bar renders", async ({page}) => {
+  await page.setContent(EPISODE_PAGE);
+  await page.evaluate(() => document.getElementById("media_player_new").classList.remove("hidden"));
+
+  const state = await playerControl.observePlayerControlState(page);
+
+  expect(state.controlButtons.map((button) => button.label)).toEqual([
+    "Tập kế tiếp",
+    "Chọn tập",
+    "Chất lượng (Auto)",
+  ]);
+});
+
+test("fails closed on a control-bar button the player does not offer", async ({page}) => {
+  await page.setContent(EPISODE_PAGE);
+
+  await expect(playerControl.focusPlayerControlByLabel(page, {label: "Ghi hình", pressDelayMs: 50, buttonTimeoutMs: 0}))
+    .rejects.toThrow(/nothing named "Ghi hình"/u);
+});
+
+
+test("waits out the skip-intro overlay before entering the button row", async ({page}) => {
+  await page.setContent(EPISODE_PAGE);
+  // The overlay owns the band the button row lives in and hides itself a few
+  // seconds into playback.
+  await page.evaluate(() => {
+    const skip = document.getElementById("video-skip-content");
+    skip.classList.remove("hidden");
+    setTimeout(() => skip.classList.add("hidden"), 1500);
+  });
+
+  expect(await playerControl.observePlayerControlState(page).then((state) => state.skipOverlayVisible)).toBe(true);
+
+  const focused = await playerControl.focusPlayerControlByLabel(page, {
+    label: "Tập kế tiếp",
+    pressDelayMs: 50,
+    openTimeoutMs: 500,
+  });
+
+  expect(focused.id).toBe("player-button-forward");
+  expect(await playerControl.observePlayerControlState(page).then((state) => state.skipOverlayVisible)).toBe(false);
+});
+
+test("fails closed when the skip-intro overlay never hides", async ({page}) => {
+  await page.setContent(EPISODE_PAGE);
+  await page.evaluate(() => document.getElementById("video-skip-content").classList.remove("hidden"));
+
+  await expect(playerControl.focusPlayerControlByLabel(page, {
+    label: "Tập kế tiếp",
+    pressDelayMs: 50,
+    skipOverlayTimeoutMs: 800,
+  })).rejects.toThrow(/Bỏ qua giới thiệu.*overlay to hide/su);
+});
+
+test("a label naming the related section opens that row", async ({page}) => {
+  await page.setContent(RELATED_PAGE);
+
+  const result = await playerControl.focusPlayerControlByLabel(page, {
+    label: "Phim liên quan",
+    pressDelayMs: 50,
+    openTimeoutMs: 500,
+  });
+
+  expect(result.type).toBe("player_focus_related");
+  expect(result.id).toBe("relativeContentPopup2_0_0");
+
+  const state = await playerControl.observePlayerControlState(page);
+  expect(state.relatedRowVisible).toBe(true);
+  expect(state.focus.scope).toBe("related");
 });

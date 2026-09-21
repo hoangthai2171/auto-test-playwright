@@ -3,6 +3,7 @@ const ALLOWED_ACTIONS = new Set([
   "open_home",
   "focus_row",
   "focus_row_first_item",
+  "focus_row_item",
   "focus_text",
   "press_ok",
   "open_service",
@@ -19,11 +20,14 @@ const ALLOWED_ACTIONS = new Set([
   "player_open_episodes",
   "player_focus_episode",
   "assert_screen",
+  "press_arrow",
   "press_back",
   "wait_for_ready",
 ]);
 
 const READY_NAMES = new Set(["app", "home", "content", "player"]);
+const ARROW_DIRECTIONS = new Set(["up", "down", "left", "right"]);
+const MAX_ROW_ITEM_INDEX = 200;
 const PLAYER_SEEK_DIRECTIONS = new Set(["forward", "backward"]);
 const MAX_PLAYER_SEEK_STEPS = 60;
 const MAX_RELATED_ITEM_INDEX = 60;
@@ -34,6 +38,7 @@ const ACTION_KEYS = {
   open_home: ["action"],
   focus_row: ["action", "rowName", "itemIndex"],
   focus_row_first_item: ["action"],
+  focus_row_item: ["action", "itemIndex"],
   focus_text: ["action", "text"],
   press_ok: ["action"],
   open_service: ["action", "service"],
@@ -50,6 +55,7 @@ const ACTION_KEYS = {
   player_open_episodes: ["action"],
   player_focus_episode: ["action", "episode"],
   assert_screen: ["action", "text"],
+  press_arrow: ["action", "direction"],
   press_back: ["action", "count"],
   wait_for_ready: ["action", "name"],
 };
@@ -209,6 +215,17 @@ function validateAction(action, path = "action") {
     throw new Error(`${path}.episode must be an integer between 1 and ${MAX_EPISODE_NUMBER}`);
   }
 
+  if (
+    action.action === "focus_row_item" &&
+    (!Number.isInteger(action.itemIndex) || action.itemIndex < 1 || action.itemIndex > MAX_ROW_ITEM_INDEX)
+  ) {
+    throw new Error(`${path}.itemIndex must be an integer between 1 and ${MAX_ROW_ITEM_INDEX}`);
+  }
+
+  if (action.action === "press_arrow" && !ARROW_DIRECTIONS.has(action.direction)) {
+    throw new Error(`${path}.direction must be one of up, down, left, or right`);
+  }
+
   if (action.action === "assert_screen" && !isNonEmptyString(action.text)) {
     throw new Error(`${path}.text must be a non-empty string`);
   }
@@ -322,6 +339,8 @@ module.exports = {
   MAX_PLAYER_SEEK_STEPS,
   MAX_RELATED_ITEM_INDEX,
   MAX_EPISODE_NUMBER,
+  MAX_ROW_ITEM_INDEX,
+  ARROW_DIRECTIONS,
   validateTestCaseList,
   validateTestCase,
   validateAction,

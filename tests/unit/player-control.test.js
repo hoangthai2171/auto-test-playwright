@@ -20,10 +20,16 @@ function createState(overrides = {}) {
   const position = {currentLabel: "00:11", currentSeconds: 11, remainingLabel: "2:25:22", remainingSeconds: 8722, timeshiftLabels: [], ...(overrides.position || {})};
   if (position.targetSeconds === undefined) position.targetSeconds = position.currentSeconds;
 
+  const controlButtons = overrides.controlButtons || [
+    {id: "player-button-forward", label: "Tập kế tiếp", onScreen: true},
+    {id: "player-button-partition", label: "Chọn tập", onScreen: true},
+    {id: "player-button-quality", label: "Chất lượng (Auto)", onScreen: true},
+  ];
   const episodes = {panelOpen: false, focusedEpisode: null, focusedLabel: "", playingEpisode: null, ...(overrides.episodes || {})};
 
   return {
     episodes,
+    controlButtons,
     state: "player",
     route: "moviePlayerNew",
     detailOnScreen: false,
@@ -612,4 +618,117 @@ test("OK on an episode poster must play the episode it named", async () => {
     playerControl.pressPlayerOk(mismatched, {remotePress: pressRecorder(mismatched), timeoutMs: 0}),
     /Player playing after OK in the player state/u
   );
+});
+
+test("resolves a control-bar button by the label the screen shows", async () => {
+  const controlBar = createState({
+    state: "control_bar",
+    controlBarVisible: true,
+    focus: {scope: "play_pause", id: "player-button-play", rect: PLAY_PAUSE_RECT},
+  });
+  const onForward = createState({
+    state: "control_bar",
+    controlBarVisible: true,
+    focus: {scope: "control_button", id: "player-button-forward", rect: {x: 897, y: 545, width: 40, height: 65}},
+  });
+  const page = createPage([createState(), controlBar, onForward]);
+
+  const result = await playerControl.focusPlayerControlByLabel(page, {
+    label: "Tập kế tiếp",
+    remotePress: pressRecorder(page),
+  });
+
+  assert.deepEqual(page.presses, ["ArrowDown", "ArrowUp"]);
+  assert.equal(result.type, "player_focus_control");
+  assert.equal(result.id, "player-button-forward");
+  assert.equal(result.label, "Tập kế tiếp");
+});
+
+test("matches a control-bar label without diacritics or exact casing", async () => {
+  const onQuality = createState({
+    state: "control_bar",
+    controlBarVisible: true,
+    focus: {scope: "control_button", id: "player-button-quality", rect: {x: 1037, y: 545, width: 40, height: 65}},
+  });
+  const page = createPage([onQuality]);
+
+  const result = await playerControl.focusPlayerControlByLabel(page, {
+    label: "chat luong",
+    remotePress: pressRecorder(page),
+  });
+
+  assert.equal(result.id, "player-button-quality");
+  assert.deepEqual(page.presses, []);
+});
+
+test("fails closed on a control-bar button the player does not offer", async () => {
+  const page = createPage([createState()]);
+
+  await assert.rejects(
+    playerControl.focusPlayerControlByLabel(page, {
+      label: "Ghi hình",
+      remotePress: pressRecorder(page),
+      buttonTimeoutMs: 0,
+    }),
+    /nothing named "Ghi hình".*Tập kế tiếp, Chọn tập/su
+  );
+  assert.deepEqual(page.presses, []);
+});
+
+test("OK on Tập kế tiếp must play the episode that follows", async () => {
+  const onForward = createState({
+    state: "control_bar",
+    controlBarVisible: true,
+    focus: {scope: "control_button", id: "player-button-forward", rect: {x: 897, y: 545, width: 40, height: 65}},
+    video: {source: "blob:episode-3"},
+    episodes: {panelOpen: false, focusedEpisode: null, focusedLabel: "", playingEpisode: 3},
+  });
+  const nextEpisode = createState({
+    video: {source: "blob:episode-4", currentTime: 5},
+    episodes: {panelOpen: false, focusedEpisode: null, focusedLabel: "", playingEpisode: 4},
+  });
+  const sameEpisode = createState({
+    video: {source: "blob:episode-3"},
+    episodes: {panelOpen: false, focusedEpisode: null, focusedLabel: "", playingEpisode: 3},
+  });
+
+  const page = createPage([onForward, nextEpisode]);
+  const result = await playerControl.pressPlayerOk(page, {remotePress: pressRecorder(page)});
+
+  assert.deepEqual(page.presses, ["Enter"]);
+  assert.equal(result.expected, "playing");
+  assert.equal(result.requestedEpisode, 4);
+  assert.equal(result.episode, 4);
+  assert.equal(result.contentChanged, true);
+
+  // Staying on the same episode means the button did nothing.
+  const stuck = createPage([onForward, sameEpisode]);
+  await assert.rejects(
+    playerControl.pressPlayerOk(stuck, {remotePress: pressRecorder(stuck), timeoutMs: 0}),
+    /Player playing after OK in the control_bar state/u
+  );
+});
+
+test("a label naming the related section opens that row", async () => {
+  const controlBar = createState({
+    state: "control_bar",
+    controlBarVisible: true,
+    focus: {scope: "play_pause", id: "player-button-play", rect: PLAY_PAUSE_RECT},
+  });
+  const related = createState({
+    focus: {scope: "related", id: "relativeContentPopup2_0_0"},
+    video: {paused: true},
+  });
+  const page = createPage([createState(), controlBar, related]);
+
+  const result = await playerControl.focusPlayerControlByLabel(page, {
+    label: "Phim liên quan",
+    remotePress: pressRecorder(page),
+    openTimeoutMs: 0,
+  });
+
+  // Down opens the control bar, Down again swaps it for the related row.
+  assert.deepEqual(page.presses, ["ArrowDown", "ArrowDown"]);
+  assert.equal(result.type, "player_focus_related");
+  assert.equal(result.id, "relativeContentPopup2_0_0");
 });

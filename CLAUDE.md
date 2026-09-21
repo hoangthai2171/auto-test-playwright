@@ -154,6 +154,13 @@ session. Do not change this to run in parallel without redesigning session owner
   (`#relativeContentPopup<n>_<row>_<col>`) and focuses a poster; the control bar
   auto-hides, so the second `ArrowDown` must land while it is still up. `press_ok`
   then plays that content and requires the media source to change.
+- `focus_row_item` focuses item N of the row a previous step focused, and
+  `press_arrow` sends one remote arrow so a case can spell out its own key
+  presses. Inside an open player `focus_text` names a control-bar button
+  (labels read from the bar itself) or a section - a name with `liên quan`
+  opens the related row, and the positional steps then address that row; OK on "Tập kế tiếp" must reach the next
+  episode. The "Bỏ qua giới thiệu" overlay shares the button row's band and
+  takes its place in the focus chain, so the walk waits for it to hide.
 - `player_open_episodes` / `player_focus_episode` drive a series' episode picker
   behind `#player-button-partition`; posters name their episode in a `partition`
   attribute, and Left/Right only walk the control-bar button row (on play/pause

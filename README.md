@@ -326,6 +326,7 @@ initial action vocabulary is:
 - `open_home`
 - `focus_row`
 - `focus_row_first_item`
+- `focus_row_item`
 - `focus_text`
 - `press_ok`
 - `open_service`
@@ -342,6 +343,7 @@ initial action vocabulary is:
 - `player_open_episodes`
 - `player_focus_episode`
 - `assert_screen`
+- `press_arrow`
 - `press_back`
 - `wait_for_ready`
 
@@ -491,6 +493,8 @@ Playback actions use only content currently visible in the TV page's rows:
 {"action":"player_focus_related","itemIndex":3}
 {"action":"player_open_episodes"}
 {"action":"player_focus_episode","episode":5}
+{"action":"focus_row_item","itemIndex":3}
+{"action":"press_arrow","direction":"up"}
 ```
 
 `play_content` verifies the selected item is playing. `play_row` opens each
@@ -576,6 +580,32 @@ episode instead of counting positions, steps Down/Up until the numbers match,
 and fails closed when the list ends first. The player also names the episode it
 is on, so `press_ok` on an episode poster requires both a changed media source
 and the promised episode number.
+
+`focus_row_item` is the indexed counterpart of `focus_row_first_item`: the row
+was chosen by the previous step, so only the 1-based position inside it is
+given.
+
+`press_arrow` sends one remote arrow (`up`, `down`, `left`, `right`). A case may
+spell out the keys it would press on a remote - "Bấm mũi tên lên", then focus a
+button, then OK - and the player actions cope with either wording: focus that
+already sits in the control-bar button row stays there instead of being
+realigned through play/pause.
+
+Inside an open player, `focus_text` names a control-bar button or a section of
+the player instead of page text. A name containing `liên quan` opens the
+related-content row, and `focus_row_first_item` / `focus_row_item` follow the
+same context: while that row is on screen they address its posters, and
+everywhere else they still mean a content row of the page. The labels are read from the bar the player actually renders ("Tập kế
+tiếp", "Chọn tập", "Chất lượng (Auto)", "Phụ đề & Âm thanh", "Phản hồi"), so a
+case names the button the way the screen does and the ids stay an
+implementation detail; an unknown name fails closed and lists what the bar
+offers. `Tập kế tiếp` is the one button that changes what is playing, so OK on
+it requires a changed media source and the episode that follows.
+
+Reaching that row waits out the `Bỏ qua giới thiệu` overlay: the app draws it
+where the button row is and gives it the row's place in the focus chain, so
+arrows aimed at the row while it shows open the seek bar instead. It hides
+itself a few seconds into playback.
 
 A seek stays pending until OK commits it. Inside the player, `press_ok` means
 "commit whatever is focused", and what that must produce is derived from the

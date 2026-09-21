@@ -112,7 +112,7 @@ const FOCUS_SETTLE_TIMEOUT_MS = 3000;
 const FOCUS_SETTLE_POLL_MS = 120;
 
 function configureContentRows(next={}){Object.assign(dependencies,next);return module.exports;}
-function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,getFocusedListPagePosition,getFocusedListPageMetadata,expectFocusedListPageContent,focusListPageGridStart,focusChannelListGridStart,activateFocusedChannelListItem,moveToNextListPageContent,returnToListPageContent};}
+function createContentRowsApi(next={}){configureContentRows(next);return {collectVisibleContentRows,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,focusItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,getFocusedListPagePosition,getFocusedListPageMetadata,expectFocusedListPageContent,focusListPageGridStart,focusChannelListGridStart,activateFocusedChannelListItem,moveToNextListPageContent,returnToListPageContent};}
 function remotePress(...args){return dependencies.remotePress(...args);}
 function remoteFocusById(...args){return dependencies.remoteFocusById(...args);}
 function remoteFocusByText(...args){return dependencies.remoteFocusByText(...args);}
@@ -809,10 +809,31 @@ function isFocusedServiceItem(focused, service) {
     .some((value) => value && serviceLabels.includes(value));
 }
 
+async function findFocusedContentRow(page, candidates) {
+  for (const row of candidates) {
+    if (await isFocusedOnRowItems(page, row.items)) return row;
+  }
+  // Focus can sit on a card the visible-item window missed; the row
+  // container still answers definitively.
+  for (const row of candidates) {
+    if ((await isFocusedInsideRow(page, row.rowId)) === true) return row;
+  }
+
+  const focused = await getFocusedState(page).catch(() => null);
+  if (!focused?.rect) return null;
+
+  return candidates
+    .map((row) => ({
+      row,
+      distance: Math.abs((row.rowY || row.items[0]?.rect.y || 0) - focused.rect.y),
+    }))
+    .sort((a, b) => a.distance - b.distance)[0]?.row || null;
+}
+
 async function focusFirstItemInCurrentContentRow(page, options = {}) {
   const snapshotCache = options.snapshotCache || createDomSnapshotCache();
   const rows = await collectVisibleContentRows(page, {snapshotCache});
-  const focusedRow = await findFocusedRow(rows);
+  const focusedRow = await findFocusedContentRow(page, rows);
 
   if (!focusedRow) {
     throw new Error("Không xác định được hàng/cate hiện tại để focus nội dung đầu tiên");
@@ -820,27 +841,29 @@ async function focusFirstItemInCurrentContentRow(page, options = {}) {
 
   await focusFirstRowStart(page, focusedRow.items[0], {snapshotCache});
   return focusedRow;
+}
 
-  async function findFocusedRow(candidates) {
-    for (const row of candidates) {
-      if (await isFocusedOnRowItems(page, row.items)) return row;
-    }
-    // Focus can sit on a card the visible-item window missed; the row
-    // container still answers definitively.
-    for (const row of candidates) {
-      if ((await isFocusedInsideRow(page, row.rowId)) === true) return row;
-    }
-
-    const focused = await getFocusedState(page).catch(() => null);
-    if (!focused?.rect) return null;
-
-    return candidates
-      .map((row) => ({
-        row,
-        distance: Math.abs((row.rowY || row.items[0]?.rect.y || 0) - focused.rect.y),
-      }))
-      .sort((a, b) => a.distance - b.distance)[0]?.row || null;
+// The indexed counterpart of focusFirstItemInCurrentContentRow: the row was
+// already chosen by a previous step, so only the position inside it is given.
+async function focusItemInCurrentContentRow(page, options = {}) {
+  const itemIndex = Number.isInteger(options.itemIndex) ? options.itemIndex : 1;
+  if (itemIndex < 1) {
+    throw new Error(`Vị trí nội dung phải là số nguyên dương: ${options.itemIndex}`);
   }
+  if (itemIndex === 1) return focusFirstItemInCurrentContentRow(page, options);
+
+  const snapshotCache = options.snapshotCache || createDomSnapshotCache();
+  const rows = await collectVisibleContentRows(page, {snapshotCache});
+  const focusedRow = await findFocusedContentRow(page, rows);
+
+  if (!focusedRow) {
+    throw new Error(`Không xác định được hàng/cate hiện tại để focus nội dung thứ ${itemIndex}`);
+  }
+
+  return focusIndexedContentRow(page, focusedRow, itemIndex, {
+    snapshotCache,
+    rowName: focusedRow.title || "hiện tại",
+  });
 }
 
 async function findVisibleContentItemByName(page, name, {type = "content", snapshotCache} = {}) {
@@ -1186,8 +1209,24 @@ function scoreNormalizedTextMatch(label, target) {
   // Row/category names are labels, not content titles. Do not let a generic
   // fuzzy partial-token match select “Drama Trung không thể bỏ lỡ” for the
   // requested row “Thể loại”.
-  const matchedTokens = targetTokens.filter((token) => labelTokens.includes(token));
-  const coverage = matchedTokens.length / targetTokens.length;
+  // Every requested word must be present, counted as a bag rather than a set.
+  // Stripping diacritics collapses distinct words onto one token - "bộ" and
+  // "bỏ" both become "bo" - so the single "bo" of "Phim lẻ không thể bỏ lỡ"
+  // must not answer for both "bo" tokens of "Phim bộ không thể bỏ lỡ", which
+  // is a different row.
+  const available = new Map();
+  for (const token of labelTokens) {
+    available.set(token, (available.get(token) || 0) + 1);
+  }
+  let matchedTokens = 0;
+  for (const token of targetTokens) {
+    const remaining = available.get(token) || 0;
+    if (remaining === 0) continue;
+    available.set(token, remaining - 1);
+    matchedTokens += 1;
+  }
+
+  const coverage = matchedTokens / targetTokens.length;
   if (coverage === 1) return 80;
   return 0;
 }
@@ -2289,4 +2328,4 @@ async function returnToListPageContent(page, {item, routes = [], profile = ""} =
 }
 
 
-module.exports={configureContentRows,createContentRowsApi,collectVisibleContentRows,findRowHeading,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,getFocusedListPagePosition,getFocusedListPageMetadata,expectFocusedListPageContent,focusListPageGridStart,focusChannelListGridStart,activateFocusedChannelListItem,moveToNextListPageContent,returnToListPageContent,isListPageReturnBoundary,ROW_RETURN_RENDER_DELAY_MS};
+module.exports={__test:{scoreContentRowMatches,scoreNormalizedTextMatch},configureContentRows,createContentRowsApi,collectVisibleContentRows,findRowHeading,focusRequestedContentRow,focusViewMorePosterInCurrentRow,focusServiceCategoryItem,focusFirstItemInCurrentContentRow,focusItemInCurrentContentRow,findVisibleContentItemByName,collectFirstRowPlayableItems,focusFirstRowStart,expectFocusedContent,isFocusedContentItem,isFocusedOnContentItem,isFocusedOnRowItems,getFocusedContentMetadata,getFocusedViewMoreMetadata,contentItemSignature,isFocusedNearRow,moveToNextFirstRowContent,returnToFirstRowContent,openFocusedContentForPlayback,getFocusedListPagePosition,getFocusedListPageMetadata,expectFocusedListPageContent,focusListPageGridStart,focusChannelListGridStart,activateFocusedChannelListItem,moveToNextListPageContent,returnToListPageContent,isListPageReturnBoundary,ROW_RETURN_RENDER_DELAY_MS};

@@ -24,6 +24,7 @@ function createTvMyTvActionHandlers({semantic} = {}) {
     open_home: () => requiredOperation(semantic, "openHome")(),
     focus_row: ({action}) => requiredOperation(semantic, "focusRow")({rowName: action.rowName, itemIndex: action.itemIndex}),
     focus_row_first_item: () => requiredOperation(semantic, "focusRowFirstItem")(),
+    focus_row_item: ({action}) => requiredOperation(semantic, "focusRowItem")({itemIndex: action.itemIndex}),
     focus_text: ({action}) => requiredOperation(semantic, "focusText")(action.text),
     open_service: ({action}) => requiredOperation(semantic, "openService")(action.service),
     open_search: () => requiredOperation(semantic, "openSearch")(),

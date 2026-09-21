@@ -8,8 +8,10 @@ function hasOwn(value, key) {
   return Object.prototype.hasOwnProperty.call(value, key);
 }
 
+// A step may be numbered "B1." or plainly "1." / "1)"; the number is never part
+// of the step itself.
 function prepareStepLine(line) {
-  return line.replace(/^B\d+\s*\.\s*/iu, "").trim();
+  return line.replace(/^B?\s*\d+\s*[.)]\s*/iu, "").trim();
 }
 
 function getCaseId(context) {
@@ -32,6 +34,9 @@ function ambiguousStepError(context, originalLine) {
 const OK_STEP_PATTERN = /^(?:nhan|bam|chon)(?: chon)?(?: phim)? (?:ok|enter)(?:\s+de\s+.+?)?[.!?…。！？]*$/u;
 const RELATED_PLAY_VERBS = /^(?:phat|play|choi)$/u;
 const EPISODE_PLAY_VERBS = /^(?:phat|play|choi|xem)$/u;
+// "Chọn play nội item đầu tiên", "Focus vào poster đầu tiên bên trái", ...
+const FIRST_ITEM_STEP_PATTERN =
+  /^(?:(chon|bam|nhan|phat|play|choi|xem|mo|di chuyen den|di chuyen toi|di chuyen|focus)(?:\s+(chon|play|phat))?\s+)?(?:vao\s+)?(?:focus\s+(?:vao\s+)?)?(?:noi dung\s+|noi\s+)?(?:item|poster|noi dung|muc|phim|kenh)\s+dau tien(?:\s+ben trai)?[.!?…。！？]*$/u;
 const PLAYER_SEEK_FORWARD = /^(?:toi|tien|len|truoc|nhanh|phai|forward)$/u;
 const PLAYER_SEEK_BACKWARD = /^(?:lui|lai|ve|nguoc|trai|back|backward)$/u;
 
@@ -81,14 +86,14 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
-      return /^(?:(?:di chuyen)(?: den)?(?: va)?\s+)?focus vao (?:muc|item)\s+["“].+?["”][.!?…。！？]*$/u.test(normalizedLine);
+      return /^(?:(?:di chuyen)(?: den)?(?: va)?\s+)?focus vao (?:(?:muc|item|nut|icon|button)\s+)?["“].+?["”][.!?…。！？]*$/u.test(normalizedLine);
     },
     compile(preparedLine, normalizedLine) {
       const normalizedMatch = normalizedLine.match(
-        /^(?:(?:di chuyen)(?: den)?(?: va)?\s+)?focus vao (?:muc|item)\s+["“](.+?)["”][.!?…。！？]*$/u
+        /^(?:(?:di chuyen)(?: den)?(?: va)?\s+)?focus vao (?:(?:muc|item|nut|icon|button)\s+)?["“](.+?)["”][.!?…。！？]*$/u
       );
       const preparedMatch = preparedLine.match(
-        /^(?:(?:di chuyển)(?: đến)?(?: và)?\s+)?focus vào (?:mục|item)\s+["“](.+?)["”][.!?…。！？]*$/iu
+        /^(?:(?:di chuyển)(?: đến)?(?: và)?\s+)?focus vào (?:(?:mục|item|nút|icon|button)\s+)?["“](.+?)["”][.!?…。！？]*$/iu
       );
 
       if (!normalizedMatch) return null;
@@ -200,14 +205,14 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
-      return /^(?:chon|bam|nhan)\s+vao\s+(?:muc|item|poster)\s+["“].+?["”][.!?…。！？]*$/u.test(normalizedLine);
+      return /^(?:chon|bam|nhan)\s+vao\s+(?:muc|item|poster|nut|icon|button)\s+["“].+?["”][.!?…。！？]*$/u.test(normalizedLine);
     },
     compile(preparedLine, normalizedLine, context = {}) {
       const normalizedMatch = normalizedLine.match(
-        /^(?:chon|bam|nhan)\s+vao\s+(?:muc|item|poster)\s+["“](.+?)["”][.!?…。！？]*$/u
+        /^(?:chon|bam|nhan)\s+vao\s+(?:muc|item|poster|nut|icon|button)\s+["“](.+?)["”][.!?…。！？]*$/u
       );
       const preparedMatch = preparedLine.match(
-        /^(?:chọn|bấm|nhấn)\s+vào\s+(?:mục|item|poster)\s+["“](.+?)["”][.!?…。！？]*$/iu
+        /^(?:chọn|bấm|nhấn)\s+vào\s+(?:mục|item|poster|nút|icon|button)\s+["“](.+?)["”][.!?…。！？]*$/iu
       );
 
       if (!normalizedMatch) return null;
@@ -284,7 +289,7 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
-      return /\blien quan\b/u.test(normalizedLine);
+      return /\blien quan\s+(?:dau tien|thu\s+\d+)/u.test(normalizedLine);
     },
     compile(_preparedLine, normalizedLine, context = {}) {
       const match = normalizedLine.match(
@@ -347,16 +352,63 @@ const STEP_COMPILERS = [
   },
   {
     matches(normalizedLine) {
-      return /^(?:di chuyen\s+(?:den\s+)?)?focus vao\s+(?:item|poster|noi dung|muc|phim|kenh)\s+dau tien(?:\s+ben trai)?[.!?…。！？]*$/u.test(normalizedLine);
+      return /\b(?:item|poster|noi dung|phim|kenh)\s+thu\s+\d+/u.test(normalizedLine) &&
+        !/\bdong\b|\bhang\b|\bcate\b|\brow\b/u.test(normalizedLine);
+    },
+    compile(_preparedLine, normalizedLine, context = {}) {
+      const match = normalizedLine.match(
+        /^(?:(chon|bam|nhan|phat|play|choi|xem|mo)(?:\s+(chon|play|phat))?\s+)?(?:vao\s+)?(?:focus\s+(?:vao\s+)?)?(?:item|poster|noi dung|phim|kenh)\s+thu\s+(\d+)[.!?…。！？]*$/u
+      );
+      if (!match) return null;
+
+      const action = {action: "focus_row_item", itemIndex: Number(match[3])};
+
+      // "Chọn play item thứ 3" is focus plus the OK that starts it; a bare
+      // "Focus item thứ 3" only focuses, and an explicit OK line owns the
+      // activation when it follows.
+      const verbs = `${match[1] || ""} ${match[2] || ""}`.trim();
+      if (!/\b(?:phat|play|choi|xem)\b/u.test(verbs)) return action;
+      if (OK_STEP_PATTERN.test(context.nextNormalizedLine || "")) return action;
+      return [action, {action: "press_ok"}];
+    },
+  },
+  {
+    matches(normalizedLine) {
+      return /^(?:bam|nhan|an)?\s*(?:phim\s+)?(?:mui ten|nut|phim)?\s*(?:len|xuong|trai|phai|sang trai|sang phai|up|down|left|right)[.!?…。！？]*$/u.test(normalizedLine) ||
+        /^di chuyen\s+(?:len|xuong|sang trai|sang phai|trai|phai)[.!?…。！？]*$/u.test(normalizedLine);
     },
     compile(_preparedLine, normalizedLine) {
-      if (!/^(?:di chuyen\s+(?:den\s+)?)?focus vao\s+(?:item|poster|noi dung|muc|phim|kenh)\s+dau tien(?:\s+ben trai)?[.!?…。！？]*$/u.test(normalizedLine)) {
-        return null;
-      }
+      const match = normalizedLine.match(
+        /^(?:(?:bam|nhan|an|di chuyen)\s+)?(?:phim\s+)?(?:mui ten|nut|phim)?\s*(len|xuong|sang trai|sang phai|trai|phai|up|down|left|right)[.!?…。！？]*$/u
+      );
+      if (!match) return null;
+
+      const direction = {
+        len: "up", up: "up",
+        xuong: "down", down: "down",
+        trai: "left", "sang trai": "left", left: "left",
+        phai: "right", "sang phai": "right", right: "right",
+      }[match[1]];
+      if (!direction) return null;
+
+      return {action: "press_arrow", direction};
+    },
+  },
+  {
+    matches(normalizedLine) {
+      return FIRST_ITEM_STEP_PATTERN.test(normalizedLine);
+    },
+    compile(_preparedLine, normalizedLine, context = {}) {
+      const match = normalizedLine.match(FIRST_ITEM_STEP_PATTERN);
+      if (!match) return null;
 
       // The row was already focused by the previous step; this only moves to
-      // its leftmost item.
-      return {action: "focus_row_first_item"};
+      // its leftmost item. A play verb also activates it.
+      const action = {action: "focus_row_first_item"};
+      const verbs = `${match[1] || ""} ${match[2] || ""}`.trim();
+      if (!/\b(?:phat|play|choi|xem)\b/u.test(verbs)) return action;
+      if (OK_STEP_PATTERN.test(context.nextNormalizedLine || "")) return action;
+      return [action, {action: "press_ok"}];
     },
   },
   {

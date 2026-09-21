@@ -427,6 +427,7 @@ test("creates exactly the default handlers and logs in with action credentials i
     "assert_screen",
     "focus_row",
     "focus_row_first_item",
+    "focus_row_item",
     "focus_text",
     "login",
     "open_home",
@@ -442,6 +443,7 @@ test("creates exactly the default handlers and logs in with action credentials i
     "player_open_episodes",
     "player_seek",
     "player_toggle_play",
+    "press_arrow",
     "press_back",
     "press_ok",
     "search_content",
@@ -1928,4 +1930,73 @@ test("unwinds the extra screen a related-content playback leaves behind", async 
   // Only the case that played a related item needs the deeper unwind; a plain
   // playback keeps the shared helper's own default.
   assert.deepEqual(closeCalls, [4, undefined]);
+});
+
+test("unwinds the extra screen after any in-player content switch", async () => {
+  const closeCalls = [];
+  const page = {id: "page", waitForTimeout: async () => {}};
+  const helpers = createHandlerHelpers({
+    waitForPlayerReady: async () => {},
+    closePlayerOrDetail: async (_page, options) => closeCalls.push(options.maxBackPresses),
+  });
+
+  // Naming the "Tập kế tiếp" button switches content without a player_* action
+  // in the case, so the step result is what says the stack got deeper.
+  await runTestCase(page, createTestInfo(), {
+    id: "next-episode-close",
+    name: "Next episode close",
+    expectedResult: "Play bình thường",
+    actions: [{action: "focus_text", text: "Tập kế tiếp"}, {action: "press_ok"}],
+  }, {
+    helpers,
+    handlers: {
+      focus_text: async () => ({type: "player_focus_control", id: "player-button-forward"}),
+      press_ok: async () => ({type: "player_press_ok", playing: true, contentChanged: true}),
+    },
+    stepRunner: async (_page, _testInfo, _label, callback) => callback(),
+  });
+
+  assert.deepEqual(closeCalls, [4]);
+});
+
+test("positional steps address the player's related row while it is on screen", async () => {
+  const calls = [];
+  const page = {id: "page"};
+  const testInfo = createTestInfo();
+  let relatedRowVisible = true;
+  const helpers = createHandlerHelpers({
+    observePlayerControlState: async () => ({
+      state: "player",
+      relatedRowVisible,
+      focus: {scope: relatedRowVisible ? "related" : "none"},
+    }),
+    focusPlayerRelatedContent: async (_page, options) => {
+      calls.push(["related", options.itemIndex]);
+      return {type: "player_focus_related", itemIndex: options.itemIndex};
+    },
+    focusFirstItemInCurrentContentRow: async () => {
+      calls.push(["row-first"]);
+      return {title: "Phim lẻ không thể bỏ lỡ"};
+    },
+    focusItemInCurrentContentRow: async (_page, options) => {
+      calls.push(["row-item", options.itemIndex]);
+      return {title: "Phim lẻ không thể bỏ lỡ"};
+    },
+  });
+  const handlers = createDefaultActionHandlers({helpers});
+
+  await handlers.focus_row_first_item({page, testInfo, action: {action: "focus_row_first_item"}});
+  await handlers.focus_row_item({page, testInfo, action: {action: "focus_row_item", itemIndex: 3}});
+
+  // With the row gone they mean a content row of the page again.
+  relatedRowVisible = false;
+  await handlers.focus_row_first_item({page, testInfo, action: {action: "focus_row_first_item"}});
+  await handlers.focus_row_item({page, testInfo, action: {action: "focus_row_item", itemIndex: 2}});
+
+  assert.deepEqual(calls, [
+    ["related", 1],
+    ["related", 3],
+    ["row-first"],
+    ["row-item", 2],
+  ]);
 });

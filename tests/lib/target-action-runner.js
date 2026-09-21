@@ -4,15 +4,24 @@ const {compileTestCase} = require("./test-case-compiler");
 const {requireActionCapabilities} = require("./target-action-context");
 const {createTvMyTvActionHandlers} = require("./tv-mytv-actions");
 
+const TARGET_ARROW_KEYS = Object.freeze({
+  up: "ArrowUp",
+  down: "ArrowDown",
+  left: "ArrowLeft",
+  right: "ArrowRight",
+});
+
 const ACTION_CAPABILITIES = Object.freeze({
   wait_for_ready: ["domInspection"],
   press_ok: [],
+  press_arrow: [],
   press_back: [],
   assert_screen: ["domInspection"],
   login: ["targetSemanticActions"],
   open_home: ["targetSemanticActions"],
   focus_row: ["targetSemanticActions"],
   focus_row_first_item: ["targetSemanticActions"],
+  focus_row_item: ["targetSemanticActions"],
   focus_text: ["targetSemanticActions"],
   open_service: ["targetSemanticActions"],
   open_search: ["targetSemanticActions"],
@@ -49,6 +58,7 @@ function createTargetActionHandlers(context) {
       return context.helpers.waitForReady(context.session, action.name);
     },
     press_ok: () => context.session.press("Enter"),
+    press_arrow: ({action}) => context.session.press(TARGET_ARROW_KEYS[action.direction]),
     press_back: async ({action}) => {
       for (let index = 0; index < (action.count ?? 1); index += 1) await context.session.press("Backspace");
     },

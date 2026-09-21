@@ -17,7 +17,8 @@ hợp lệ trước khi gửi cho MyTV Auto Test.
 
 ## Chuyển đổi xác định
 
-Với từng dòng không rỗng, theo thứ tự: (1) chỉ bỏ tiền tố tùy chọn như `B1.`;
+Với từng dòng không rỗng, theo thứ tự: (1) chỉ bỏ tiền tố số thứ tự tùy chọn
+(`B1.`, `1.` hoặc `1)`);
 (2) giữ dòng gốc để báo lỗi và giữ nguyên tên, dịch vụ, credential;
 (3) viết thường, bỏ dấu, đổi `đ`/`Đ` thành `d`, chuẩn hóa khoảng trắng;
 (4) khớp chính xác một grammar được hỗ trợ và phát sinh action theo grammar đó;
@@ -60,9 +61,12 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 | `open_home` | `Vào trang chủ`, `Vào trang chủ app/ứng dụng`, `Vào màn hình trang chủ ứng dụng`, `Vào home` | `{"action":"open_home"}` |
 | `open_service` | `Vào/Mở dịch vụ <service>` (tên có thể đặt trong ngoặc kép) | Giữ service; dấu ngoặc kép bao trọn tên bị bỏ, dấu câu bên trong tên được giữ; `kênh` tìm alias `Truyền hình`. |
 | `focus_row` | `Di chuyển đến dòng "<row>"`, `Di chuyển đến dòng cate/hàng/subcate/row "<row>"`; `... focus vào poster đầu tiên ... "<row>"`; hoặc `... poster <type> thứ <n> ... "<row>"` | `rowName`; câu có số thêm `itemIndex` dương, 1-based. |
+| `focus_row_item` | `Chọn/Phát/Play/Focus [vào] item\|poster\|nội dung\|phim\|kênh thứ <n>` (không kèm tên dòng) | `itemIndex` 1-based (1..200) trong dòng đã focus ở bước trước; động từ play (`Chọn play`, `Phát`, `Xem`) thêm `press_ok` trừ khi dòng kế tiếp đã là lệnh OK. |
+| `press_arrow` | `Bấm/Nhấn/Ấn [phím] [mũi tên] <lên\|xuống\|trái\|phải>`; `Di chuyển <lên\|xuống\|sang trái\|sang phải>`; `up\|down\|left\|right` | `direction` là `up`, `down`, `left`, `right`. |
+| `focus_row_first_item` (+ `press_ok`) | `Chọn/Phát/Play/Xem [nội dung] item/poster/phim/kênh đầu tiên` | Động từ play thêm `press_ok` trừ khi dòng kế tiếp đã là lệnh OK. |
 | `focus_row_first_item` | `Di chuyển focus đến ... đầu tiên bên trái` (kể cả `subcate` hiện tại); `Focus vào item/poster/nội dung đầu tiên` | Focus item trái nhất của row hiện tại, không phụ thuộc loại nội dung. |
-| `focus_text` | `Focus vào mục/item "<text>"`; `Di chuyển [đến] [và] focus vào mục/item "<text>"`; hoặc focus nút `Xem ngay` của trailer Home | `text`; sau `focus_row` ở row `Thể loại`, quét poster dịch vụ. `Xem tất cả`, `Xem thêm`, `View more` dùng poster view-more tin cậy, không fallback menu trái. |
-| `focus_text` (+ `press_ok`) | `Bấm/Chọn/Nhấn vào mục/item/poster "<text>"` | Phát sinh `focus_text`; thêm `press_ok` trừ khi dòng kế tiếp đã là lệnh OK, để không Enter hai lần. |
+| `focus_text` | `Focus vào ["<text>"]` hoặc `Focus vào mục/item/nút/icon/button "<text>"`; `Di chuyển [đến] [và] focus vào mục/item "<text>"`; hoặc focus nút `Xem ngay` của trailer Home | `text`; sau `focus_row` ở row `Thể loại`, quét poster dịch vụ. `Xem tất cả`, `Xem thêm`, `View more` dùng poster view-more tin cậy, không fallback menu trái. |
+| `focus_text` (+ `press_ok`) | `Bấm/Chọn/Nhấn vào mục/item/poster/nút/icon/button "<text>"` | Phát sinh `focus_text`; thêm `press_ok` trừ khi dòng kế tiếp đã là lệnh OK, để không Enter hai lần. |
 | `press_ok` | `Bấm/Chọn/Nhấn [phím] OK` hoặc `enter`, có thể kèm mệnh đề mục đích `... để play` | `{"action":"press_ok"}`; poster dịch vụ Home phải qua kiểm tra activation. Trong player, OK commit seek đang chờ / nút đang focus; kết quả bắt buộc suy ra từ trạng thái hiện tại (đang seek hoặc ở detail thì phải phát lại, đang phát thì phải pause và hiện control bar). |
 | `open_search` | `Vào tìm kiếm`, `Vào trang tìm kiếm`, `Vào trang tìm kiếm nội dung` | `{"action":"open_search"}` |
 | `search_content` | `Tìm/Tìm kiếm/Search <phim\|movie\|kênh\|channel\|nội dung\|content> "<name>"` | `type` là `movie`, `channel` hoặc `content`; tìm sau khi nhập bàn phím ảo. |
@@ -132,10 +136,11 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 
 ## Danh sách action cho phép và validate
 
-Chỉ chấp nhận đúng 22 giá trị:
+Chỉ chấp nhận đúng 24 giá trị:
 
 ```text
-login, open_home, focus_row, focus_row_first_item, focus_text, press_ok,
+login, open_home, focus_row, focus_row_first_item, focus_row_item, focus_text,
+press_ok, press_arrow,
 open_service, open_search, search_content, play_content, play_search_result,
 play_row, play_all_contents, play_home_trailers, player_seek,
 player_toggle_play, player_focus_related, player_open_episodes,
@@ -157,6 +162,8 @@ player_focus_episode, assert_screen, press_back, wait_for_ready
 | `player_focus_related` | — | `itemIndex` |
 | `player_open_episodes` | — | — |
 | `player_focus_episode` | `episode` | — |
+| `focus_row_item` | `itemIndex` | — |
+| `press_arrow` | `direction` | — |
 | `press_back` | — | `count` |
 | `wait_for_ready` | `name` | — |
 

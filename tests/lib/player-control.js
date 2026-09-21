@@ -1,4 +1,5 @@
 const navigation = require("./navigation");
+const {normalizeVietnameseText} = require("./text-utils");
 
 // The VOD player exposes three screen states and each one answers the remote
 // differently (see README "Player control"):
@@ -20,7 +21,9 @@ const PLAYER_SELECTORS = Object.freeze({
   episodeItem: "[id^='moviePartitions'].movie-partition-poster",
   episodeRow: "[id^='moviePartitions'].movie-partition-row",
   episodeButton: "#player-button-partition",
+  controlButton: "[id^='player-button-']:not(#player-button-play)",
   titleBar: "#hide-when-timeshift",
+  skipOverlay: "#video-skip-content",
   currentTime: "#media_player_current",
   remainingTime: "#media_player_duration",
   promoVideo: "#promo-video-next",
@@ -58,6 +61,10 @@ const MAX_EPISODE_STEPS = 400;
 const MAX_CONTROL_BUTTON_STEPS = 8;
 const EPISODE_PRESS_DELAY_MS = 600;
 const EPISODE_PANEL_TIMEOUT_MS = 10000;
+// "Tập kế tiếp" is the one control-bar button that changes what is playing.
+const NEXT_EPISODE_BUTTON_ID = "player-button-forward";
+const CONTROL_BUTTON_TIMEOUT_MS = 8000;
+const SKIP_OVERLAY_TIMEOUT_MS = 40000;
 
 function normalizeSeekDirection(value) {
   const direction = String(value ?? DEFAULT_SEEK_DIRECTION).trim().toLowerCase();
@@ -163,6 +170,11 @@ async function observePlayerControlState(page) {
         .sort((a, b) => (b.readyState - a.readyState) || (b.currentTime - a.currentTime))[0] ||
       null;
 
+    // "Bỏ qua giới thiệu" is drawn in the same band as the control bar's button
+    // row and takes its place in the focus chain while it shows.
+    const skipOverlayVisible = isOnScreen(pick(selectors.skipOverlay));
+    const relatedRowVisible = Array.from(document.querySelectorAll(selectors.relatedItem)).some(isOnScreen);
+
     const detailOnScreen = isOnScreen(detail);
     const controlBarVisible = isOnScreen(controlBar) || isOnScreen(playPauseButton);
     const timeshiftVisible = isOnScreen(timeshiftBar);
@@ -253,11 +265,22 @@ async function observePlayerControlState(page) {
       detailOnScreen,
       controlBarVisible,
       timeshiftVisible,
+      skipOverlayVisible,
+      relatedRowVisible,
       focus: {
         scope: focusScope,
         ...(describe(focusedElement) || {id: "", className: "", text: "", rect: {x: 0, y: 0, width: 0, height: 0}}),
       },
       playPauseRect: describe(playPauseButton)?.rect || null,
+      // The top row of the control bar is labelled ("Tập kế tiếp", "Chọn tập",
+      // ...), so a case can name a button instead of knowing its id.
+      controlButtons: Array.from((controlBar || document).querySelectorAll(selectors.controlButton))
+        .map((button) => ({
+          id: button.id,
+          label: (button.textContent || "").replace(/\s+/gu, " ").trim().slice(0, 60),
+          onScreen: isOnScreen(button),
+        }))
+        .filter((button) => button.id),
       episodes: {
         panelOpen: episodePanelOpen,
         focusedEpisode: episodeNumber,
@@ -316,6 +339,8 @@ function describeState(state) {
   return JSON.stringify({
     state: state?.state,
     focus: state?.focus?.scope,
+    focusId: state?.focus?.id,
+    focusText: state?.focus?.text?.slice(0, 40),
     timeshiftVisible: state?.timeshiftVisible,
     position: state?.position?.currentLabel,
     target: state?.position?.targetSeconds,
@@ -540,11 +565,26 @@ async function focusPlayerControlButton(page, options = {}) {
   const buttonId = String(options.buttonId || "").trim();
   const remotePress = options.remotePress || navigation.remotePress;
   const pressDelayMs = Number(options.pressDelayMs ?? EPISODE_PRESS_DELAY_MS);
-  let state = await preparePlayerForRemoteControl(page, {...options, state: options.state});
+  // Focus already inside the button row (a case can spell out its own Up press)
+  // stays there; realigning through play/pause would only risk dropped keys.
+  let state = options.state || (await observePlayerControlState(page));
+  if (state.focus.scope !== "control_button") {
+    state = await preparePlayerForRemoteControl(page, {...options, state});
+  }
 
   const settle = (predicate, timeoutMs) => waitForPlayerControlState(page, predicate, {
     timeoutMs: timeoutMs ?? options.openTimeoutMs ?? RELATED_STEP_TIMEOUT_MS,
   }).catch((error) => error?.details?.playerControlState || observePlayerControlState(page));
+
+  // The skip-intro overlay sits where the button row is and answers Up/Down in
+  // its place, so the row is unreachable - and arrow keys aimed at it land on
+  // the seek bar instead - until the app hides it a few seconds into playback.
+  if (state.skipOverlayVisible) {
+    state = await waitForPlayerControlState(page, (candidate) => candidate.skipOverlayVisible === false, {
+      timeoutMs: options.skipOverlayTimeoutMs ?? SKIP_OVERLAY_TIMEOUT_MS,
+      reason: 'The player "Bỏ qua giới thiệu" overlay to hide so the control-bar button row can be reached',
+    });
+  }
 
   // Down opens the control bar on the play/pause button; Up then enters the
   // button row above it.
@@ -586,6 +626,65 @@ async function focusPlayerControlButton(page, options = {}) {
   );
   error.details = {playerControlState: state};
   throw error;
+}
+
+// A case names a control-bar button the way the screen labels it; the ids are
+// an implementation detail, so the label is resolved against the row the player
+// actually renders.
+function matchControlButton(state, label) {
+  const wanted = normalizeVietnameseText(label);
+  if (!wanted) return null;
+  const buttons = state.controlButtons || [];
+  return buttons.find((button) => normalizeVietnameseText(button.label) === wanted) ||
+    buttons.find((button) => normalizeVietnameseText(button.label).includes(wanted)) ||
+    buttons.find((button) => normalizeVietnameseText(button.id).includes(wanted)) ||
+    null;
+}
+
+// The related-content row is a section of the player rather than a button, so a
+// case naming it ("Phim liên quan", "Nội dung liên quan") means open that row.
+const RELATED_SECTION_PATTERN = /\blien quan\b/u;
+
+async function focusPlayerControlByLabel(page, options = {}) {
+  const label = String(options.label || "").trim();
+  if (RELATED_SECTION_PATTERN.test(normalizeVietnameseText(label))) {
+    return focusPlayerRelatedContent(page, {...options, itemIndex: options.itemIndex ?? 1});
+  }
+  // The caller's observation can predate the player, so readiness is waited for
+  // here rather than assumed from whatever snapshot was handed in.
+  let state = await ensureRemoteReadyPlayer(page, options);
+  let button = matchControlButton(state, label);
+
+  if (!button) {
+    // The control bar mounts together with the player; a label asked for during
+    // that transition must not be reported as missing.
+    state = await waitForPlayerControlState(
+      page,
+      (candidate) => Boolean(matchControlButton(candidate, label)),
+      {timeoutMs: options.buttonTimeoutMs ?? CONTROL_BUTTON_TIMEOUT_MS}
+    ).catch((error) => error?.details?.playerControlState || state);
+    button = matchControlButton(state, label);
+  }
+
+  if (!button) {
+    const available = (state.controlButtons || []).map((candidate) => candidate.label).filter(Boolean);
+    const error = new Error(
+      `The player has nothing named "${label}"` +
+      (available.length ? `; its control bar offers: ${available.join(", ")}` : "")
+    );
+    error.details = {playerControlState: state};
+    throw error;
+  }
+
+  const focused = await focusPlayerControlButton(page, {...options, state, buttonId: button.id});
+
+  return {
+    type: "player_focus_control",
+    label: button.label,
+    id: button.id,
+    requestedLabel: label,
+    playbackPaused: focused.video.paused === true,
+  };
 }
 
 // "Chọn tập" opens a vertical list of episode posters. Each poster carries the
@@ -808,6 +907,7 @@ async function togglePlayerPlayback(page, options = {}) {
 // about playback can be required of it.
 function expectedOutcomeAfterOk(before) {
   if (before.focus.scope === "related" || before.focus.scope === "episode") return "playing";
+  if (before.focus.id === NEXT_EPISODE_BUTTON_ID) return "playing";
   if (before.state === "detail") return "playing";
   if (before.focus.scope === "timeshift") return "playing";
   if (before.state === "player" || before.focus.scope === "play_pause") {
@@ -830,14 +930,18 @@ async function pressPlayerOk(page, options = {}) {
 
   // A related poster swaps the content, so playing the same media again would
   // mean the poster never opened.
+  const nextEpisodeRequested = before.focus.id === NEXT_EPISODE_BUTTON_ID;
   const requireNewMedia = options.requireNewMedia ??
-    (before.focus.scope === "related" || before.focus.scope === "episode");
-  // The player names the episode it is on, so an episode poster can be held to
-  // the episode it promised - but only when the app shows one at all.
-  const expectedEpisode = before.focus.scope === "episode" &&
-    typeof before.episodes.playingEpisode === "number"
+    (before.focus.scope === "related" || before.focus.scope === "episode" || nextEpisodeRequested);
+  // The player names the episode it is on, so a poster can be held to the
+  // episode it promised and "Tập kế tiếp" to the one that follows - but only
+  // when the app shows an episode at all.
+  const knownEpisode = typeof before.episodes.playingEpisode === "number";
+  const expectedEpisode = before.focus.scope === "episode" && knownEpisode
     ? before.episodes.focusedEpisode
-    : null;
+    : nextEpisodeRequested && knownEpisode
+      ? before.episodes.playingEpisode + 1
+      : null;
   const predicate = expected === "playing"
     ? (state) => isPlayingState(state) &&
       (!requireNewMedia || state.video.source !== before.video.source) &&
@@ -860,8 +964,8 @@ async function pressPlayerOk(page, options = {}) {
     playing: isPlayingState(after),
     paused: after.video.paused === true,
     ...(requireNewMedia ? {contentChanged: after.video.source !== before.video.source} : {}),
-    ...(before.focus.scope === "episode"
-      ? {episode: after.episodes.playingEpisode, requestedEpisode: before.episodes.focusedEpisode}
+    ...(before.focus.scope === "episode" || nextEpisodeRequested
+      ? {episode: after.episodes.playingEpisode, requestedEpisode: expectedEpisode}
       : {}),
     controlBarVisible: after.controlBarVisible === true,
     positionSeconds: Math.round(after.video.currentTime),
@@ -885,6 +989,7 @@ module.exports = {
   focusPlayerRelatedContent,
   normalizeRelatedItemIndex,
   focusPlayerControlButton,
+  focusPlayerControlByLabel,
   openPlayerEpisodes,
   focusPlayerEpisode,
   normalizeEpisodeNumber,
