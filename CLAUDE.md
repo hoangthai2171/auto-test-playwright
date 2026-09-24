@@ -160,7 +160,9 @@ session. Do not change this to run in parallel without redesigning session owner
   (labels read from the bar itself) or a section - a name with `liên quan`
   opens the related row, and the positional steps then address that row; OK on "Tập kế tiếp" must reach the next
   episode. The "Bỏ qua giới thiệu" overlay shares the button row's band and
-  takes its place in the focus chain, so the walk waits for it to hide.
+  takes its place in the focus chain, so every player action presses it first
+  (which moves playback past the intro); it is waited out instead only when
+  something else owns the focus.
 - `player_open_episodes` / `player_focus_episode` drive a series' episode picker
   behind `#player-button-partition`; posters name their episode in a `partition`
   attribute, and Left/Right only walk the control-bar button row (on play/pause

@@ -199,9 +199,12 @@
   "197": "play-all-contents-contract.spec.js",
   "198": "channel-list-profile-contract.spec.js",
   "199": "normalizePlayerCheckTimeoutSeconds",
+  "200": "player-control-contract.spec.js",
   "201": "playback.test.js",
   "202": "firmwareVersion",
+  "203": "visible-popup-contract.spec.js",
   "204": "lg-toolchain-npm-closure.js",
+  "205": "osVersion",
   "206": "app-cleanup.test.js",
   "207": "focusServiceCategoryItem",
   "209": "locator-contracts.spec.js",
@@ -209,7 +212,6 @@
   "211": "app-environment.test.js",
   "212": "focus-marker-contract.spec.js",
   "213": "album-detail.test.js",
-  "215": "nextStepRequiresPlayer",
   "218": "view-more-marker-contract.spec.js",
   "219": "createdAt"
 }

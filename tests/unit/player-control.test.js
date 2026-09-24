@@ -732,3 +732,66 @@ test("a label naming the related section opens that row", async () => {
   assert.equal(result.type, "player_focus_related");
   assert.equal(result.id, "relativeContentPopup2_0_0");
 });
+
+test("presses the skip-intro overlay before the action that follows", async () => {
+  const withSkip = createState({
+    skipOverlayVisible: true,
+    focus: {scope: "other", id: "video-skip-content", text: "Bỏ qua giới thiệu"},
+  });
+  const afterSkip = createState({skipOverlayVisible: false});
+  const page = createPage([withSkip, afterSkip]);
+
+  const result = await playerControl.dismissSkipIntroOverlay(page, {remotePress: pressRecorder(page)});
+
+  assert.deepEqual(page.presses, ["Enter"]);
+  assert.equal(result.pressed, true);
+  assert.equal(result.state.skipOverlayVisible, false);
+});
+
+test("waits the skip-intro overlay out when something else owns the focus", async () => {
+  // OK would land on whatever is focused instead, so it is never pressed blind.
+  const notFocused = createState({
+    skipOverlayVisible: true,
+    focus: {scope: "play_pause", id: "player-button-play", rect: PLAY_PAUSE_RECT},
+  });
+  const gone = createState({skipOverlayVisible: false});
+  const page = createPage([notFocused, gone]);
+
+  const result = await playerControl.dismissSkipIntroOverlay(page, {
+    remotePress: pressRecorder(page),
+    skipFocusTimeoutMs: 0,
+  });
+
+  assert.deepEqual(page.presses, []);
+  assert.equal(result.pressed, false);
+});
+
+test("readiness hands every action a player with no skip-intro overlay left", async () => {
+  const withSkip = createState({
+    skipOverlayVisible: true,
+    focus: {scope: "other", id: "video-skip-content", text: "Bỏ qua giới thiệu"},
+  });
+  const page = createPage([withSkip, createState({skipOverlayVisible: false})]);
+
+  const state = await playerControl.ensureRemoteReadyPlayer(page, {remotePress: pressRecorder(page)});
+
+  assert.deepEqual(page.presses, ["Enter"]);
+  assert.equal(state.skipOverlayVisible, false);
+});
+
+test("an OK the case asked for lands after the overlay is out of the way", async () => {
+  const withSkip = createState({
+    skipOverlayVisible: true,
+    focus: {scope: "other", id: "video-skip-content", text: "Bỏ qua giới thiệu"},
+  });
+  const playing = createState({skipOverlayVisible: false});
+  const paused = createState({skipOverlayVisible: false, video: {paused: true}, controlBarVisible: true, state: "control_bar"});
+  const page = createPage([withSkip, playing, paused]);
+
+  const result = await playerControl.pressPlayerOk(page, {remotePress: pressRecorder(page)});
+
+  // One Enter closes the overlay, the next is the case's own OK.
+  assert.deepEqual(page.presses, ["Enter", "Enter"]);
+  assert.equal(result.expected, "paused");
+  assert.equal(result.paused, true);
+});

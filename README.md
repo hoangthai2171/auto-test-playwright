@@ -602,10 +602,13 @@ implementation detail; an unknown name fails closed and lists what the bar
 offers. `Tập kế tiếp` is the one button that changes what is playing, so OK on
 it requires a changed media source and the episode that follows.
 
-Reaching that row waits out the `Bỏ qua giới thiệu` overlay: the app draws it
-where the button row is and gives it the row's place in the focus chain, so
-arrows aimed at the row while it shows open the seek bar instead. It hides
-itself a few seconds into playback.
+Every player action starts by pressing the `Bỏ qua giới thiệu` overlay when a
+freshly opened player shows one: the app draws it where the control bar's button
+row is and gives it that row's place in the focus chain, so arrows aimed at the
+row while it shows open the seek bar instead. Pressing it is what the button
+means - playback moves past the intro. OK only reaches it while it owns the
+focus; when something else does, the overlay is waited out instead of pressing
+blind (the app hides it a few seconds into playback either way).
 
 A seek stays pending until OK commits it. Inside the player, `press_ok` means
 "commit whatever is focused", and what that must produce is derived from the

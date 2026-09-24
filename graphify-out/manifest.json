@@ -15,8 +15,8 @@
     "semantic_hash": ""
   },
   "package.json": {
-    "mtime": 1788837105.0803056,
-    "ast_hash": "d8caf12c1ab04ca7386da858806b4d85",
+    "mtime": 1789974204.4945045,
+    "ast_hash": "ae1513073dfe823f7081e5dcebec396c",
     "semantic_hash": ""
   },
   "playwright.config.js": {
@@ -100,8 +100,8 @@
     "semantic_hash": ""
   },
   "AGENTS.md": {
-    "mtime": 1789964774.8630662,
-    "ast_hash": "b92af1a281531e4f0d7dc1b6978c3cd0",
+    "mtime": 1790234831.8758967,
+    "ast_hash": "43568d6d1359ffc77d88f8be64abff4e",
     "semantic_hash": ""
   },
   "IDEA.md": {
@@ -110,8 +110,8 @@
     "semantic_hash": ""
   },
   "README.md": {
-    "mtime": 1789964774.8629124,
-    "ast_hash": "dcd2b4d86a8ae685171feb6aa16790af",
+    "mtime": 1790234831.8755789,
+    "ast_hash": "e1efecca7594bf8d525d8c7ab58b3522",
     "semantic_hash": ""
   },
   "app/renderer/index.html": {
@@ -1365,8 +1365,8 @@
     "semantic_hash": ""
   },
   "tests/lib/player-control.js": {
-    "mtime": 1789964512.1581857,
-    "ast_hash": "204fe157e3b4a4197687aeb15c32b0d0",
+    "mtime": 1790234728.1934655,
+    "ast_hash": "04cdd77e759c0751e7d2a0abfd82249f",
     "semantic_hash": ""
   },
   "tests/play-all-contents-contract.spec.js": {
@@ -1375,8 +1375,8 @@
     "semantic_hash": ""
   },
   "tests/player-control-contract.spec.js": {
-    "mtime": 1789964774.8626904,
-    "ast_hash": "67d9687bb27dd93627c880f2c149f522",
+    "mtime": 1790234750.76452,
+    "ast_hash": "bc315145d9a99ec175d102006f6d2440",
     "semantic_hash": ""
   },
   "tests/unit/api-curl.test.js": {
@@ -1390,8 +1390,8 @@
     "semantic_hash": ""
   },
   "tests/unit/player-control.test.js": {
-    "mtime": 1789964754.830705,
-    "ast_hash": "bf3f3cb9d5123d314fe2dabecd71d22a",
+    "mtime": 1790234802.8431385,
+    "ast_hash": "84f345089d38882a56450fb3bda34e4c",
     "semantic_hash": ""
   },
   "tests/unit/test-result-screenshot.test.js": {
@@ -1405,8 +1405,8 @@
     "semantic_hash": ""
   },
   "CLAUDE.md": {
-    "mtime": 1789964774.8633616,
-    "ast_hash": "4549fed48b02bcf50016982c138d8f8c",
+    "mtime": 1790234831.876124,
+    "ast_hash": "84a2f788a6d3fc9c3a7c30ea52cef9ec",
     "semantic_hash": ""
   },
   "app/app-update-installer.js": {

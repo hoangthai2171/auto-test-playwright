@@ -588,6 +588,15 @@ const EPISODE_PAGE = `
         const step = event.key === "ArrowRight" ? 1 : -1;
         ui.buttonIndex = Math.min(buttons().length - 1, Math.max(0, ui.buttonIndex + step));
       } else if (event.key === "Enter") {
+        const skip = document.getElementById("video-skip-content");
+        if (skip.classList.contains("focused") && !skip.classList.contains("hidden")) {
+          // Pressing it skips the intro: the overlay closes and playback jumps.
+          skip.classList.add("hidden");
+          skip.classList.remove("focused");
+          window.__player.currentTime = 180;
+          render();
+          return;
+        }
         if (ui.panel) {
           window.__player = {
             paused: false,
@@ -737,4 +746,39 @@ test("a label naming the related section opens that row", async ({page}) => {
   const state = await playerControl.observePlayerControlState(page);
   expect(state.relatedRowVisible).toBe(true);
   expect(state.focus.scope).toBe("related");
+});
+
+test("presses the skip-intro overlay when it owns the focus", async ({page}) => {
+  await page.setContent(EPISODE_PAGE);
+  await page.evaluate(() => {
+    const skip = document.getElementById("video-skip-content");
+    skip.classList.remove("hidden");
+    skip.classList.add("focused");
+  });
+
+  const dismissal = await playerControl.dismissSkipIntroOverlay(page, {pressDelayMs: 50});
+
+  expect(dismissal.pressed).toBe(true);
+  const state = await playerControl.observePlayerControlState(page);
+  expect(state.skipOverlayVisible).toBe(false);
+  // Pressing it is what moves playback past the intro.
+  expect(state.video.currentTime).toBe(180);
+});
+
+test("every player action starts by pressing the skip-intro overlay", async ({page}) => {
+  await page.setContent(EPISODE_PAGE);
+  await page.evaluate(() => {
+    const skip = document.getElementById("video-skip-content");
+    skip.classList.remove("hidden");
+    skip.classList.add("focused");
+  });
+
+  const focused = await playerControl.focusPlayerControlByLabel(page, {
+    label: "Tập kế tiếp",
+    pressDelayMs: 50,
+    openTimeoutMs: 500,
+  });
+
+  expect(focused.id).toBe("player-button-forward");
+  expect(await playerControl.observePlayerControlState(page).then((state) => state.skipOverlayVisible)).toBe(false);
 });

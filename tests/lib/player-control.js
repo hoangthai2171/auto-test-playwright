@@ -65,6 +65,8 @@ const EPISODE_PANEL_TIMEOUT_MS = 10000;
 const NEXT_EPISODE_BUTTON_ID = "player-button-forward";
 const CONTROL_BUTTON_TIMEOUT_MS = 8000;
 const SKIP_OVERLAY_TIMEOUT_MS = 40000;
+const SKIP_OVERLAY_FOCUS_TIMEOUT_MS = 6000;
+const SKIP_OVERLAY_ID = "video-skip-content";
 
 function normalizeSeekDirection(value) {
   const direction = String(value ?? DEFAULT_SEEK_DIRECTION).trim().toLowerCase();
@@ -445,6 +447,39 @@ async function focusPlayPauseButton(page, options = {}) {
   throw error;
 }
 
+// The app shows "Bỏ qua giới thiệu" over a freshly opened player, in the band
+// the control bar's button row lives in and ahead of it in the focus chain.
+// Every player action therefore starts by pressing it, which is what the button
+// means: playback moves past the intro.
+async function dismissSkipIntroOverlay(page, options = {}) {
+  const remotePress = options.remotePress || navigation.remotePress;
+  let state = options.state || (await observePlayerControlState(page));
+  if (state.skipOverlayVisible !== true) return {pressed: false, state};
+
+  // OK only reaches the overlay while it owns the focus. When something else
+  // does, pressing would activate that instead, so the overlay is waited out -
+  // the app hides it a few seconds into playback either way.
+  if (state.focus.id !== SKIP_OVERLAY_ID) {
+    state = await waitForPlayerControlState(
+      page,
+      (candidate) => candidate.skipOverlayVisible === false || candidate.focus.id === SKIP_OVERLAY_ID,
+      {timeoutMs: options.skipFocusTimeoutMs ?? SKIP_OVERLAY_FOCUS_TIMEOUT_MS}
+    ).catch((error) => error?.details?.playerControlState || state);
+  }
+
+  if (state.skipOverlayVisible !== true || state.focus.id !== SKIP_OVERLAY_ID) {
+    return {pressed: false, state};
+  }
+
+  await remotePress(page, "Enter", options.pressDelayMs ?? OK_PRESS_DELAY_MS);
+  state = await waitForPlayerControlState(page, (candidate) => candidate.skipOverlayVisible === false, {
+    timeoutMs: options.skipOverlayTimeoutMs ?? SKIP_OVERLAY_TIMEOUT_MS,
+    reason: 'The player "Bỏ qua giới thiệu" overlay to close after OK',
+  });
+
+  return {pressed: true, state};
+}
+
 // Readiness only: the player answers the remote and the detail menu no longer
 // owns the screen. Callers that need a specific focus align it themselves.
 async function ensureRemoteReadyPlayer(page, options = {}) {
@@ -465,6 +500,10 @@ async function ensureRemoteReadyPlayer(page, options = {}) {
 
   if (state.state === "detail") {
     state = await enterPlayerFromDetail(page, {...options, state});
+  }
+
+  if (options.dismissSkipIntro !== false && state.skipOverlayVisible === true) {
+    ({state} = await dismissSkipIntroOverlay(page, {...options, state}));
   }
 
   return state;
@@ -925,7 +964,14 @@ async function pressPlayerOk(page, options = {}) {
     throw error;
   }
 
-  const expected = options.expect || expectedOutcomeAfterOk(before);
+  // The overlay is pressed first so the case's own OK still lands on what the
+  // case named rather than on "Bỏ qua giới thiệu".
+  const skipIntro = options.dismissSkipIntro === false
+    ? {pressed: false, state: before}
+    : await dismissSkipIntroOverlay(page, {...options, state: before});
+  const beforeOk = skipIntro.pressed ? skipIntro.state : before;
+
+  const expected = options.expect || expectedOutcomeAfterOk(beforeOk);
   await remotePress(page, "Enter", options.pressDelayMs ?? OK_PRESS_DELAY_MS);
 
   // A related poster swaps the content, so playing the same media again would
@@ -983,6 +1029,7 @@ module.exports = {
   waitForPlayerControlState,
   enterPlayerFromDetail,
   focusPlayPauseButton,
+  dismissSkipIntroOverlay,
   ensureRemoteReadyPlayer,
   preparePlayerForRemoteControl,
   seekPlayer,

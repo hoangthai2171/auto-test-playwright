@@ -419,9 +419,12 @@ The supported action allowlist is:
   the episode that follows; the other buttons open their own control and require
   nothing of playback. The "Bỏ qua giới thiệu" overlay (`#video-skip-content`)
   is drawn in the same band as that row and answers Up/Down in its place, so
-  the walk waits for the app to hide it (a few seconds into playback) instead
-  of pressing into it - arrow keys aimed at the row while it shows land on the
-  seek bar. Content switched inside the player - a related poster, an episode,
+  arrow keys aimed at the row while it shows land on the seek bar instead. Every
+  player action therefore begins by pressing that overlay - readiness
+  (`ensureRemoteReadyPlayer`) and `press_ok` both do, so the case's own OK still
+  lands on what the case named. Pressing it moves playback past the intro, which
+  is what the button means. It is only pressed while it owns the focus; when
+  something else does, it is waited out rather than pressed blind. Content switched inside the player - a related poster, an episode,
   or "Tập kế tiếp" - opens on top of the player it was launched from, so the
   expected-result cleanup grants four Back presses whenever a step reported a
   content switch.
