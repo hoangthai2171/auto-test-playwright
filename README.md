@@ -337,6 +337,7 @@ initial action vocabulary is:
 - `play_row`
 - `play_all_contents`
 - `play_home_trailers`
+- `check_poster_images`
 - `player_seek`
 - `player_toggle_play`
 - `player_focus_related`
@@ -486,6 +487,7 @@ Playback actions use only content currently visible in the TV page's rows:
 {"action":"play_all_contents","count":10}
 {"action":"play_all_contents","rowCount":3}
 {"action":"play_home_trailers"}
+{"action":"check_poster_images"}
 {"action":"player_seek","direction":"forward","steps":5}
 {"action":"player_seek","direction":"backward","steps":2}
 {"action":"player_toggle_play"}
@@ -504,6 +506,20 @@ continues after individual failures. Its `rowIndex` is 1-based; omit `count` to
 request all items. The row playback JSON/HTML report includes the name and
 poster of each attempted item, including failed items. When failures occur, the
 action error also lists them as `content ID - content name` entries.
+
+`check_poster_images` checks every poster of the page the previous steps opened
+(Home or a service page such as Phim truyện / Truyền hình). It walks the page
+with remote Down to the last row. The walk ends when Down stops moving focus
+(Home) or moves it back onto a row already visited (a service page wraps from
+its last row to the first). Rows scrolled past are detached from the DOM,
+so every step is read and the verdicts accumulate by poster id — and walks a row
+to the right while it still has posters that were never given an image. A poster
+fails when its image did not load (including one still loading on screen after
+8 seconds) or shows the app's `no-image-channel.png` / `no-image-movie.png`
+placeholder. The step fails when at least one poster fails, and the user report
+lists each broken poster's ID and name. qaDescription wording:
+`Kiểm tra hình poster lỗi`. Browser-only. Contract spec:
+`npm run test:poster:contract`.
 
 `play_home_trailers` tests every distinct promotional trailer shown on Home. It
 uses remote `Xem ngay` → player/Album-detail check → Back navigation so

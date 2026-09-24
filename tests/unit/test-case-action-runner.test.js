@@ -425,6 +425,7 @@ test("creates exactly the default handlers and logs in with action credentials i
 
   assert.deepEqual(Object.keys(handlers).sort(), [
     "assert_screen",
+    "check_poster_images",
     "focus_row",
     "focus_row_first_item",
     "focus_row_item",

@@ -13,6 +13,7 @@ const domScan = require("./dom-scan");
 const domSnapshots = require("./dom-snapshots");
 const batchBudget = require("./batch-budget");
 const homeTrailers = require("./home-trailers");
+const posterImages = require("./poster-images");
 
 module.exports = {
   ...textUtils,
@@ -30,6 +31,8 @@ module.exports = {
   ...domSnapshots,
   ...batchBudget,
   ...homeTrailers,
+  checkPagePosterImages: posterImages.checkPagePosterImages,
+  observePosterImages: posterImages.observePosterImages,
   __internal: {
     ...navigation.__internal,
     ...playerControl.__internal,

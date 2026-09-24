@@ -856,6 +856,8 @@ function createDefaultActionHandlers({ helpers, playerCheckTimeoutSeconds } = {}
       helpers.playAllHomeTrailers(page, testInfo, {
         ...playbackWaitOptions,
       }),
+    check_poster_images: ({ page, testInfo }) =>
+      helpers.checkPagePosterImages(page, testInfo),
     player_seek: ({ page, action }) =>
       helpers.seekPlayer(page, {
         direction: action.direction,

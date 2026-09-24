@@ -138,6 +138,7 @@ session. Do not change this to run in parallel without redesigning session owner
   execution contract" section for the current vocabulary: `login`, `open_home`, `focus_row`,
   `focus_text`, `press_ok`, `open_service`, `open_search`, `search_content`, `play_content`,
   `play_search_result`, `play_row`, `play_all_contents`, `play_home_trailers`,
+  `check_poster_images`,
   `player_seek`, `player_toggle_play`, `assert_screen`, `press_back`,
   `wait_for_ready`) over relying on the `qaDescription` fallback compiler.
 - `play_row` on Home excludes the `homePage1` promotional row from numeric counting — public
@@ -179,6 +180,11 @@ session. Do not change this to run in parallel without redesigning session owner
   outcome from the current state (commit/play, pause a playing player, or toggle
   play/pause), and `expectedResult` pause wording (`Pause player/màn hình`)
   verifies an open, paused player.
+- `check_poster_images` (`tests/lib/poster-images.js`) walks every row of the
+  current page with remote Down (and Right while a row still has posters with no
+  image yet) and fails when any poster's image did not load or shows
+  `no-image-channel.png` / `no-image-movie.png`; the report lists broken posters
+  by ID and name. Contract spec: `npm run test:poster:contract`.
 - `play_all_contents` plays a content-list page opened from a `Xem tất cả` poster
   (`specialModuleList`, `specialModuleListV2`, `shortHome`, `channel-list`) in
   reading order, with

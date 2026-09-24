@@ -32,6 +32,7 @@ test("builds a compact passed test entry", () => {
     failedItems: [],
     rowPlaybackItems: [],
     homeTrailerItems: [],
+    brokenPosterItems: [],
     error: "",
     errorPopup: "",
     failureScreenshot: "",
@@ -461,4 +462,35 @@ test("renders a passed test's expected result and completion screenshot in expan
   assert.match(html, /data:image\/png;base64,passed/);
   assert.match(html, /Screenshot after Home passed/);
   assert.doesNotMatch(html, /Passed Screenshot/);
+});
+
+test("lists broken posters by id and name in their own table", () => {
+  const entry = buildTestReportEntry({
+    testCaseId: "poster-1",
+    testCaseName: "Kiểm tra poster lỗi",
+    exitCode: 1,
+    caseResult: {
+      testCaseId: "poster-1",
+      name: "Kiểm tra poster lỗi",
+      status: "failed",
+      steps: [{
+        index: 2,
+        action: "check_poster_images",
+        status: "failed",
+        message: "Có 1 poster bị lỗi hình: homePage2_4_3 - Bóng đá",
+        details: {
+          type: "check_poster_images",
+          results: [{index: 1, id: "homePage2_4_3", name: "Bóng đá", status: "failed", poster: "x.png"}],
+        },
+      }],
+    },
+  });
+
+  assert.deepEqual(entry.brokenPosterItems, [{id: "homePage2_4_3", name: "Bóng đá"}]);
+  assert.deepEqual(entry.failedItems, []);
+  assert.match(entry.error, /Có 1 poster hiển thị hình lỗi/u);
+
+  const html = renderUserReport({generatedAt: "now", tests: [entry]});
+  assert.match(html, /Poster lỗi hình \(1\)/u);
+  assert.match(html, /<td>homePage2_4_3<\/td><td>Bóng đá<\/td>/u);
 });

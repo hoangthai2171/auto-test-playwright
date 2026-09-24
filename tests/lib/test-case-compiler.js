@@ -137,6 +137,21 @@ const STEP_COMPILERS = [
     },
   },
   {
+    // "Kiểm tra hình poster lỗi", "Kiểm tra poster bị lỗi hình", ... The check
+    // covers the page the previous steps opened; naming another page here is
+    // not supported, so a trailing destination is left to fail as unparsed.
+    matches(normalizedLine) {
+      return /^kiem tra\b.*\bposter\b/u.test(normalizedLine) && /\bloi\b/u.test(normalizedLine);
+    },
+    compile(_preparedLine, normalizedLine) {
+      if (!/^kiem tra\s+(?:(?:cac|tat ca)\s+)?(?:(?:hinh anh|hinh|anh)\s+)?poster(?:\s+(?:bi|hien thi))?\s+loi(?:\s+(?:hinh anh|hinh|anh))?[.!?…。！？]*$/u.test(normalizedLine)) {
+        return null;
+      }
+
+      return {action: "check_poster_images"};
+    },
+  },
+  {
     matches(normalizedLine) {
       return /^di chuyen focus vao poster\s+(?:kenh|phim|noi dung|channel|movie|content)\s+thu\s+\d+\s+cua dong\s+(?:subcate|cate|hang cate|row)\s+["“].+?["”][.!?…。！？]*$/u.test(normalizedLine);
     },

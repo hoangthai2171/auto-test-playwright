@@ -3,6 +3,7 @@ const fs = require("node:fs/promises");
 const {test} = require("./fixtures/mytv-session-fixture");
 const {loadLocalTestCases, loadCachedTestCases, findTestCaseById} = require("./lib/test-case-source");
 const {runTestCase} = require("./lib/test-case-action-runner");
+const {compileTestCase} = require("./lib/test-case-compiler");
 const {logoutApp} = require("./lib/app-cleanup");
 const {captureCurrentAppScreenshot} = require("./lib/artifacts");
 const {waitForServiceScreenImages} = require("./lib/service-screenshot");
@@ -14,6 +15,9 @@ const {
 
 const HOME_TRAILER_CASE_TIMEOUT_MS = 10 * 60 * 1000;
 const EXHAUSTIVE_ROW_CASE_TIMEOUT_MS = 30 * 60 * 1000;
+// Walking every row of a page (and a row to its end when posters still wait
+// for an image) outlasts the default case budget.
+const POSTER_IMAGE_CASE_TIMEOUT_MS = 15 * 60 * 1000;
 
 async function writeCaseResult(resultPath, result) {
   if (!resultPath) return;
@@ -41,6 +45,8 @@ test("run server-driven MyTV test case", async ({page, options}, testInfo) => {
     test.setTimeout(HOME_TRAILER_CASE_TIMEOUT_MS);
   } else if (isExhaustivePlayRowCase(testCase)) {
     test.setTimeout(EXHAUSTIVE_ROW_CASE_TIMEOUT_MS);
+  } else if (isPosterImageCase(testCase)) {
+    test.setTimeout(POSTER_IMAGE_CASE_TIMEOUT_MS);
   }
 
   try {
@@ -105,6 +111,15 @@ function isHomeTrailerCase(testCase) {
   return /(?:chạy|phát|play)\s+(?:toàn bộ|tất cả|các)\s+(?:tra(?:iler|iller))\b[\s\S]*\b(?:trang chủ|home)\b/iu.test(
     String(testCase?.qaDescription || "")
   );
+}
+
+function isPosterImageCase(testCase) {
+  try {
+    return compileTestCase(testCase).actions.some((action) => action.action === "check_poster_images");
+  } catch {
+    // An unparsable case fails in the runner with its own message.
+    return false;
+  }
 }
 
 function isExhaustivePlayRowCase(testCase) {

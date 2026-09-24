@@ -705,3 +705,28 @@ test("compiles the play wording for the first item of the current row", () => {
     [{action: "focus_row_first_item"}, {action: "press_ok"}]
   );
 });
+
+test("compiles the broken-poster check step after opening Home", () => {
+  const compiled = compileTestCase({
+    id: "poster-1",
+    name: "Kiểm tra poster lỗi",
+    qaDescription: "B1. Đăng nhập TK ts1/111222\nB2. Vào trang chủ ứng dụng\nB3. Kiểm tra hình poster lỗi",
+    expectedResult: "Không có poster nào lỗi",
+  });
+
+  assert.deepEqual(compiled.actions.slice(1), [
+    {action: "open_home"},
+    {action: "check_poster_images"},
+  ]);
+});
+
+test("does not guess a broken-poster check that names another page", () => {
+  assert.throws(
+    () => compileTestCase({
+      id: "poster-2",
+      name: "Kiểm tra poster lỗi",
+      qaDescription: "Kiểm tra hình poster lỗi trên trang Phim truyện",
+    }),
+    /Không thể parse được bước/u
+  );
+});

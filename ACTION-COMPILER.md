@@ -74,6 +74,7 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 | `play_search_result` | `Phát/Play <type> tìm được/vừa tìm/tìm thấy` | Có thể kèm `type`; dùng sau `search_content` nếu chưa xác lập result. |
 | `play_row` | `Phát/Play <n\|tất cả\|toàn bộ> [nội dung] [phim\|kênh] của hàng cate thứ <rowIndex>` hoặc `... hàng cate "<rowName>"` | `<n>` thành `count`; `tất cả`/`toàn bộ` bỏ count; đúng một row selector, không `type`; index Home bỏ row quảng bá. |
 | `play_all_contents` | `Phát/Play/Chạy <toàn bộ\|tất cả> [nội dung\|poster\|phim\|kênh\|short] trong/ở/tại/của [trang] danh sách`; `... <n> dòng [đầu tiên] trong danh sách`; `... <n> <poster\|nội dung\|phim\|kênh\|short> [đầu tiên] trong danh sách` | Không tham số = phát hết trang danh sách; `<n> dòng` thành `rowCount`; `<n> poster/nội dung` thành `count`; không có row selector. |
+| `check_poster_images` | `Kiểm tra [các\|tất cả] [hình\|ảnh\|hình ảnh] poster [bị\|hiển thị] lỗi [hình\|ảnh]` | `{"action":"check_poster_images"}`; kiểm tra trang mà các bước trước đã mở, chỉ Browser. |
 | `play_home_trailers` | `Chạy/Phát/Play (toàn bộ\|tất cả\|các) (trailer\|trailler) (ở\|trên\|tại) (trang chủ\|Home)` | `{"action":"play_home_trailers"}`; chỉ Browser, không cố định số lượng. |
 | `player_seek` | `Tua <tới\|tiến\|lên\|trước\|nhanh\|phải\|forward> [<n> bước\|lần\|step]`; `Tua <lùi\|lại\|về\|ngược\|trái\|back> [<n> bước]` | `direction` là `forward`/`backward`, `<n>` thành `steps` (mặc định 1, tối đa 60; 1 bước = 1 lần nhấn trên thanh tua, bước nhảy do app quyết định). Chỉ Browser. Dạng khác (`Tua tới 5 phút`) fail closed. |
 | `player_toggle_play` | `Tạm dừng`, `Pause`, `Tiếp tục phát`, `Phát tiếp`, `Resume` (có thể kèm `phim/video/player/nội dung`) | `{"action":"player_toggle_play"}`; nhấn OK trên `#player-button-play` và kiểm tra trạng thái pause đảo chiều. Chỉ Browser. |
@@ -128,6 +129,14 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
   có screenshot và trạng thái; lỗi một poster không dừng cả danh sách, action fail
   nếu có poster fail hoặc không poster nào phát được. `count`/`rowCount` là giới
   hạn duy nhất; không có giới hạn thời gian ngầm.
+- `check_poster_images` cuộn remote xuống tới hàng cuối của trang hiện tại (và
+  sang phải khi hàng còn poster chưa được gán hình); dừng khi phím xuống không
+  còn đổi focus (Home) hoặc focus quay về một hàng đã đi qua (trang dịch vụ
+  quay vòng từ hàng cuối về hàng đầu), gom kết quả theo id poster
+  vì hàng đã cuộn qua bị gỡ khỏi DOM. Poster lỗi khi hình không tải được (kể cả
+  còn đang tải trên màn hình sau 8 giây) hoặc hiển thị `no-image-channel.png` /
+  `no-image-movie.png`. Có ít nhất 1 poster lỗi thì action fail; report liệt kê
+  ID và tên poster lỗi.
 - `play_home_trailers` đọc title promo tin cậy, remote tới `Xem ngay`, chụp
   screenshot và quay Home đến khi hết/lặp. Video khỏe là `playable`, Album
   detail nhìn thấy là `album_opened`, còn lại `failed`; giữ tên, status, loại
@@ -136,13 +145,13 @@ Giữ nguyên giá trị dễ đọc từ nguồn. `phim`, `kênh`, `nội dung`
 
 ## Danh sách action cho phép và validate
 
-Chỉ chấp nhận đúng 24 giá trị:
+Chỉ chấp nhận đúng 25 giá trị:
 
 ```text
 login, open_home, focus_row, focus_row_first_item, focus_row_item, focus_text,
 press_ok, press_arrow,
 open_service, open_search, search_content, play_content, play_search_result,
-play_row, play_all_contents, play_home_trailers, player_seek,
+play_row, play_all_contents, play_home_trailers, check_poster_images, player_seek,
 player_toggle_play, player_focus_related, player_open_episodes,
 player_focus_episode, assert_screen, press_back, wait_for_ready
 ```
@@ -150,7 +159,7 @@ player_focus_episode, assert_screen, press_back, wait_for_ready
 | Action | Bắt buộc | Tùy chọn |
 | --- | --- | --- |
 | `login` | `username`, `password` | — |
-| `open_home`, `focus_row_first_item`, `press_ok`, `open_search`, `play_home_trailers`, `player_toggle_play` | — | — |
+| `open_home`, `focus_row_first_item`, `press_ok`, `open_search`, `play_home_trailers`, `check_poster_images`, `player_toggle_play` | — | — |
 | `focus_row` | `rowName` | `itemIndex` |
 | `focus_text`, `assert_screen` | `text` | — |
 | `open_service` | `service` | — |

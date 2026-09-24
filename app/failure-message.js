@@ -23,6 +23,7 @@ const ACTION_LABELS = {
     play_row: "Phát các nội dung trong hàng",
     play_all_contents: "Phát các nội dung trong danh sách",
     play_home_trailers: "Phát trailer trang chủ",
+    check_poster_images: "Kiểm tra hình poster",
     player_seek: "Tua trong trình phát",
     player_toggle_play: "Phát/tạm dừng trình phát",
     player_focus_related: "Chọn nội dung liên quan trong trình phát",
@@ -51,6 +52,7 @@ const ACTION_SUBJECTS = {
     play_row: "nội dung trong hàng cần phát",
     play_all_contents: "danh sách nội dung cần phát",
     play_home_trailers: "trailer trên trang chủ",
+    check_poster_images: "poster trên trang",
     player_seek: "thanh tua của trình phát",
     player_toggle_play: "nút phát/tạm dừng của trình phát",
     player_focus_related: "hàng nội dung liên quan trong trình phát",
@@ -69,6 +71,11 @@ const ASSERTION_MEANINGS = [
     {
         pattern: /playback failed with popup:\s*(.+)$/iu,
         text: (match) => `ứng dụng báo lỗi khi phát nội dung: "${match[1].trim()}"`,
+    },
+    {
+        // The poster ids and names are listed in the report's own table.
+        pattern: /^Có (\d+) poster bị lỗi hình/u,
+        text: (match) => `có ${match[1]} poster hiển thị hình lỗi trên trang (danh sách poster lỗi bên dưới)`,
     },
     {
         pattern: /Could not focus the player play\/pause button/iu,

@@ -3,13 +3,15 @@ const {describeCaseFailure} = require("./failure-message");
 // Actions whose per-poster results are rendered as the playback table instead of
 // the generic failed-item list.
 const ROW_PLAYBACK_ACTIONS = new Set(["play_row", "play_all_contents"]);
+// Broken posters are listed in their own id/name table.
+const POSTER_IMAGE_ACTION = "check_poster_images";
 
 function collectFailedItems(caseResult) {
   const items = [];
   const seen = new Set();
 
   for (const step of caseResult?.steps || []) {
-    if (ROW_PLAYBACK_ACTIONS.has(step?.action)) continue;
+    if (ROW_PLAYBACK_ACTIONS.has(step?.action) || step?.action === POSTER_IMAGE_ACTION) continue;
     collect(step?.result);
     collect(step?.details);
   }
@@ -126,6 +128,27 @@ function collectHomeTrailerItems(caseResult) {
   }
 }
 
+function collectBrokenPosterItems(caseResult) {
+  const items = [];
+  const seen = new Set();
+
+  for (const step of caseResult?.steps || []) {
+    if (step?.action !== POSTER_IMAGE_ACTION) continue;
+    for (const item of [...(step?.result?.results || []), ...(step?.details?.results || [])]) {
+      const normalized = {
+        id: String(item?.id || ""),
+        name: String(item?.name || ""),
+      };
+      const key = normalized.id + "|" + normalized.name;
+      if (seen.has(key)) continue;
+      seen.add(key);
+      items.push(normalized);
+    }
+  }
+
+  return items;
+}
+
 function buildTestReportEntry({testCaseId, testCaseName, exitCode, caseResult, errorMessage = ""}) {
   const status = exitCode === 0 && caseResult?.status !== "failed" ? "passed" : "failed";
   // The raw runner error is a Playwright assertion dump or timeout trace; the
@@ -142,6 +165,7 @@ function buildTestReportEntry({testCaseId, testCaseName, exitCode, caseResult, e
     failedItems: collectFailedItems(caseResult),
     rowPlaybackItems: collectRowPlaybackItems(caseResult),
     homeTrailerItems: collectHomeTrailerItems(caseResult),
+    brokenPosterItems: collectBrokenPosterItems(caseResult),
     error: status === "failed" ? String(failure.summary || "Test case chạy thất bại.") : "",
     // What the app itself said, and the screen at the moment it said it. The
     // raw assertion dump is deliberately left out: this report is read by
@@ -228,7 +252,7 @@ function renderTestDetails(entry) {
     escapeHtml(entry.expectedResult || "Not provided") +
     "</p></section>";
   const rowPlaybackResults = renderRowPlaybackItems(entry);
-  const homeTrailerResults = renderHomeTrailerItems(entry);
+  const homeTrailerResults = renderHomeTrailerItems(entry) + renderBrokenPosterItems(entry);
 
   if (entry.status !== "passed") {
     return expectedResult + '<section class="detail-section"><h2>Failure Details</h2>' +
@@ -324,6 +348,17 @@ function renderHomeTrailerItems(entry) {
   return '<section class="detail-section"><h2>Home Trailer Results</h2><table class="trailer-table"><thead><tr><th>Trailer Name</th><th>Status</th><th>Activation Check</th><th>Player/Album Check Screenshot</th><th>Error</th></tr></thead><tbody>' + rows + "</tbody></table></section>";
 }
 
+function renderBrokenPosterItems(entry) {
+  const items = Array.isArray(entry?.brokenPosterItems) ? entry.brokenPosterItems : [];
+  if (!items.length) return "";
+
+  const rows = items.map((item) => (
+    "<tr><td>" + escapeHtml(item.id || "—") + "</td><td>" + escapeHtml(item.name || "—") + "</td></tr>"
+  )).join("");
+
+  return '<section class="detail-section"><h2>Poster lỗi hình (' + items.length + ')</h2><table class="trailer-table"><thead><tr><th>Poster ID</th><th>Tên poster</th></tr></thead><tbody>' + rows + "</tbody></table></section>";
+}
+
 function isSuccessfulHomeTrailerStatus(status) {
   return status === "playable" || status === "album_opened";
 }
@@ -336,4 +371,5 @@ module.exports = {
   collectFailedItems,
   collectRowPlaybackItems,
   collectHomeTrailerItems,
+  collectBrokenPosterItems,
 };
